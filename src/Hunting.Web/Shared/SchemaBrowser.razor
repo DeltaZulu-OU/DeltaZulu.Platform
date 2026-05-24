@@ -1,0 +1,85 @@
+@namespace Hunting.Web.Shared
+@using Hunting.Core.Schema
+@inject Hunting.Core.Catalog.ApprovedViewCatalog Catalog
+
+<nav class="schema-browser">
+    <div class="schema-browser-header">Tables</div>
+
+    @foreach (var (name, view) in Catalog.Views.OrderBy(kv => kv.Key))
+    {
+        <details class="schema-table">
+            <summary class="schema-table-name" @onclick="() => OnTableClick(name)">
+                <span class="schema-icon">▶</span> @name
+            </summary>
+            <ul class="schema-columns">
+                @foreach (var col in view.Columns)
+                {
+                    <li class="schema-column" @onclick="() => OnColumnClick(col.Name)">
+                        <span class="schema-col-name">@col.Name</span>
+                        <span class="schema-col-type">@col.KustoType.ToKustoName()</span>
+                    </li>
+                }
+            </ul>
+        </details>
+    }
+
+    @if (!Catalog.Views.Any())
+    {
+        <p class="schema-empty">No tables registered.</p>
+    }
+</nav>
+
+<div class="schema-samples">
+    <div class="schema-samples-header">Sample Queries</div>
+    @foreach (var sample in _samples)
+    {
+        <button class="schema-sample" @onclick="() => OnSampleClick(sample.Kql)">
+            @sample.Label
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<string> OnInsertText { get; set; }
+
+    private readonly SampleQuery[] _samples =
+    [
+        // ─── DeviceProcessEvents ──────────────────────────────────────────
+        new("Process: all events (last 1h)",
+            "DeviceProcessEvents\n| where Timestamp > ago(1h)\n| take 100"),
+        new("Process: count by device",
+            "DeviceProcessEvents\n| summarize count() by DeviceName\n| sort by count_ desc"),
+        new("Process: PowerShell activity",
+            "DeviceProcessEvents\n| where FileName has \"powershell\"\n| project Timestamp, DeviceName, AccountName, ProcessCommandLine\n| take 50"),
+        new("Process: credential access tools",
+            "DeviceProcessEvents\n| where FileName in (\"mimikatz.exe\", \"procdump.exe\", \"rundll32.exe\")\n| where ProcessCommandLine has \"lsass\" or ProcessCommandLine has \"sekurlsa\"\n| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine"),
+        new("Process: encoded PowerShell",
+            "DeviceProcessEvents\n| where FileName =~ \"powershell.exe\"\n| where ProcessCommandLine contains \"-enc\" or ProcessCommandLine contains \"-EncodedCommand\"\n| project Timestamp, DeviceName, AccountName, ProcessCommandLine"),
+        new("Process: persistence mechanisms",
+            "DeviceProcessEvents\n| where FileName in (\"schtasks.exe\", \"reg.exe\", \"sc.exe\", \"at.exe\")\n| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine\n| sort by Timestamp desc"),
+        // ─── DeviceNetworkEvents ──────────────────────────────────────────
+        new("Network: all connections (last 1h)",
+            "DeviceNetworkEvents\n| where Timestamp > ago(1h)\n| take 100"),
+        new("Network: suspicious ports",
+            "DeviceNetworkEvents\n| where RemotePort in (4444, 1337, 8888, 9999, 31337)\n| project Timestamp, DeviceName, LocalIP, RemoteIP, RemotePort, InitiatingProcessFileName"),
+        new("Network: SMB lateral movement",
+            "DeviceNetworkEvents\n| where RemotePort == 445\n| where not(RemoteIP startswith \"10.1.1.\")\n   or InitiatingProcessFileName in (\"cmd.exe\", \"powershell.exe\", \"wmic.exe\")\n| project Timestamp, DeviceName, LocalIP, RemoteIP, RemoteUrl, InitiatingProcessFileName"),
+        new("Network: beaconing (no hostname)",
+            "DeviceNetworkEvents\n| where isempty(RemoteUrl)\n| summarize count(), dcount(RemotePort) by DeviceName, RemoteIP, InitiatingProcessFileName\n| where count_ > 3\n| sort by count_ desc"),
+        new("Network: count by remote IP",
+            "DeviceNetworkEvents\n| summarize count() by RemoteIP, RemotePort\n| sort by count_ desc\n| take 20"),
+        new("Network: PowerShell DNS queries",
+            "DeviceNetworkEvents\n| where RemotePort == 53\n| where InitiatingProcessFileName has \"powershell\" or InitiatingProcessFileName has \"cmd\"\n| project Timestamp, DeviceName, RemoteUrl, InitiatingProcessFileName, InitiatingProcessCommandLine"),
+    ];
+
+    private void OnTableClick(string table)
+        => OnInsertText.InvokeAsync(table);
+
+    private void OnColumnClick(string col)
+        => OnInsertText.InvokeAsync(col);
+
+    private void OnSampleClick(string kql)
+        => OnInsertText.InvokeAsync(kql);
+
+    private sealed record SampleQuery(string Label, string Kql);
+}

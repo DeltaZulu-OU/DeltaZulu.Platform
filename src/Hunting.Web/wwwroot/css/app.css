@@ -1,0 +1,304 @@
+/* ─── Reset and base ────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg-dark:    #0d1117;
+    --bg-panel:   #161b22;
+    --bg-sidebar: #0d1117;
+    --bg-input:   #1c2128;
+    --bg-table-h: #1c2128;
+    --bg-table-r: #161b22;
+    --bg-table-a: #1a2030;
+    --border:     #30363d;
+    --accent:     #1f6feb;
+    --accent-h:   #388bfd;
+    --success:    #3fb950;
+    --warning:    #d29922;
+    --error:      #f85149;
+    --info:       #58a6ff;
+    --text-main:  #c9d1d9;
+    --text-dim:   #8b949e;
+    --text-head:  #e6edf3;
+    --font-mono:  'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    --font-ui:    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --radius:     6px;
+    --shadow:     0 4px 16px rgba(0,0,0,.4);
+}
+
+html, body { height: 100%; background: var(--bg-dark); color: var(--text-main);
+             font-family: var(--font-ui); font-size: 14px; }
+
+/* ─── Shell layout ──────────────────────────────────────────────────────── */
+.hunt-shell {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ─── Sidebar ───────────────────────────────────────────────────────────── */
+.hunt-sidebar {
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.hunt-logo {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+}
+.hunt-logo-text { font-size: 15px; font-weight: 600; color: var(--text-head); }
+
+/* ─── Schema browser ────────────────────────────────────────────────────── */
+.schema-browser { padding: 8px 0; }
+.schema-browser-header,
+.schema-samples-header {
+    padding: 6px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.schema-table summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 16px;
+    cursor: pointer;
+    color: var(--text-main);
+    font-size: 13px;
+    user-select: none;
+}
+.schema-table summary:hover { background: var(--bg-input); }
+.schema-icon { font-size: 10px; transition: transform .15s; }
+.schema-table[open] > summary .schema-icon { transform: rotate(90deg); }
+.schema-table-name { font-weight: 500; }
+
+.schema-columns { list-style: none; padding: 0 0 4px 0; }
+.schema-column {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 16px 3px 30px;
+    cursor: pointer;
+    font-size: 12px;
+}
+.schema-column:hover { background: var(--bg-input); }
+.schema-col-name { color: var(--text-main); }
+.schema-col-type { color: var(--text-dim); font-family: var(--font-mono); font-size: 11px; }
+.schema-empty { padding: 12px 16px; color: var(--text-dim); font-size: 13px; }
+
+/* ─── Sample queries ────────────────────────────────────────────────────── */
+.schema-samples { padding: 8px 0; border-top: 1px solid var(--border); margin-top: 4px; }
+.schema-sample {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 5px 16px;
+    font-size: 12px;
+    color: var(--info);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.schema-sample:hover { background: var(--bg-input); }
+
+/* ─── Main content ──────────────────────────────────────────────────────── */
+.hunt-main { display: flex; flex-direction: column; overflow: hidden; }
+
+.hunt-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* ─── Editor panel ──────────────────────────────────────────────────────── */
+.hunt-editor-panel {
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.hunt-editor-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+}
+.hunt-editor-label { font-size: 12px; color: var(--text-dim); font-weight: 600;
+                      text-transform: uppercase; letter-spacing: .06em; }
+.hunt-toolbar-actions { display: flex; gap: 8px; }
+
+.hunt-editor-container { position: relative; }
+
+.hunt-editor-textarea {
+    display: block;
+    width: 100%;
+    min-height: 200px;
+    background: var(--bg-input);
+    color: var(--text-main);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 12px 16px;
+    border: none;
+    resize: vertical;
+    outline: none;
+    tab-size: 4;
+}
+
+/* ─── Diagnostics ───────────────────────────────────────────────────────── */
+.hunt-diagnostics { padding: 8px 16px; background: var(--bg-panel); }
+.hunt-diagnostic {
+    padding: 6px 10px;
+    margin-bottom: 4px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-family: var(--font-mono);
+    border-left: 3px solid var(--error);
+    background: color-mix(in srgb, var(--error) 12%, var(--bg-panel));
+}
+.hunt-diagnostic.warning  { border-color: var(--warning); background: color-mix(in srgb, var(--warning) 12%, var(--bg-panel)); }
+.hunt-diagnostic.info     { border-color: var(--info);    background: color-mix(in srgb, var(--info) 10%, var(--bg-panel)); }
+.hunt-diag-phase { font-size: 11px; color: var(--text-dim); margin-right: 8px; }
+
+/* ─── Buttons ───────────────────────────────────────────────────────────── */
+.hunt-btn {
+    padding: 5px 14px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-family: var(--font-ui);
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg-input);
+    color: var(--text-main);
+    transition: background .15s, border-color .15s;
+}
+.hunt-btn:hover:not(:disabled) { background: var(--bg-table-a); border-color: var(--accent); }
+.hunt-btn:disabled { opacity: .5; cursor: default; }
+.hunt-btn-run { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.hunt-btn-run:hover:not(:disabled) { background: var(--accent-h); border-color: var(--accent-h); }
+.hunt-btn-sql { font-size: 12px; padding: 4px 10px; }
+
+/* ─── Results panel ─────────────────────────────────────────────────────── */
+.hunt-results-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.hunt-results-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.hunt-results-label { font-size: 12px; color: var(--text-dim); }
+.hunt-error-label { color: var(--error); }
+.hunt-idle-label { color: var(--text-dim); font-style: italic; }
+
+.hunt-sql-preview {
+    background: var(--bg-input);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 160px;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+/* ─── Results table ─────────────────────────────────────────────────────── */
+.hunt-table-wrapper {
+    flex: 1;
+    overflow: auto;
+}
+
+.hunt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+
+.hunt-th {
+    position: sticky;
+    top: 0;
+    background: var(--bg-table-h);
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    border-bottom: 2px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+.hunt-th:hover { color: var(--text-main); }
+
+.hunt-tr { border-bottom: 1px solid var(--border); }
+.hunt-tr:nth-child(even) { background: var(--bg-table-r); }
+.hunt-tr:hover { background: var(--bg-table-a); }
+
+.hunt-td {
+    padding: 6px 12px;
+    color: var(--text-main);
+    vertical-align: top;
+    max-width: 480px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hunt-empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+/* ─── Pagination ────────────────────────────────────────────────────────── */
+.hunt-pagination {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-panel);
+    font-size: 12px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+}
+
+/* ─── Blazor error overlay ──────────────────────────────────────────────── */
+#blazor-error-ui {
+    background: var(--error);
+    bottom: 0; left: 0; right: 0;
+    position: fixed;
+    padding: 8px 16px;
+    display: none;
+    z-index: 1000;
+    color: #fff;
+}
+#blazor-error-ui.blazor-error-ui-visible { display: flex; justify-content: space-between; }

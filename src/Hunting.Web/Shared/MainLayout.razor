@@ -1,0 +1,15 @@
+@inherits LayoutComponentBase
+@namespace Hunting.Web.Shared
+
+<div class="hunt-shell">
+    <aside class="hunt-sidebar">
+        <div class="hunt-logo">
+            <span class="hunt-logo-text">🔍 Hunting Workbench</span>
+        </div>
+        <SchemaBrowser />
+    </aside>
+
+    <main class="hunt-main">
+        @Body
+    </main>
+</div>

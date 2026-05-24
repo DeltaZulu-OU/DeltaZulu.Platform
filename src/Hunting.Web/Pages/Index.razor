@@ -1,0 +1,262 @@
+@page "/"
+@namespace Hunting.Web.Pages
+@inject Hunting.Web.Services.QueryService QueryService
+@inject Hunting.Core.Catalog.ApprovedViewCatalog Catalog
+@implements IDisposable
+
+<div class="hunt-page">
+    <!-- ─── Editor panel ─────────────────────────────────────────── -->
+    <section class="hunt-editor-panel">
+        <div class="hunt-editor-toolbar">
+            <span class="hunt-editor-label">KQL Query</span>
+            <div class="hunt-toolbar-actions">
+                <button class="hunt-btn hunt-btn-run"
+                        disabled="@_running"
+                        @onclick="RunQuery">
+                    @(_running ? "Running…" : "▶ Run (Shift+Enter)")
+                </button>
+                <button class="hunt-btn hunt-btn-clear"
+                        @onclick="Clear">
+                    Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- Monaco editor placeholder — wired via JS interop -->
+        <div class="hunt-editor-container">
+            <textarea id="kql-editor"
+                      class="hunt-editor-textarea"
+                      placeholder="Enter KQL query…"
+                      spellcheck="false"
+                      @bind="_kql"
+                      @bind:event="oninput"
+                      @onkeydown="HandleKey"
+                      rows="12">@_kql</textarea>
+        </div>
+
+        @if (_diagnostics.Any())
+        {
+            <div class="hunt-diagnostics">
+                @foreach (var d in _diagnostics)
+                {
+                    <div class="hunt-diagnostic hunt-diagnostic-@d.Severity.ToString().ToLower()">
+                        <span class="hunt-diag-phase">[@d.Phase]</span>
+                        @d.Message
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <!-- ─── Results panel ───────────────────────────────────────── -->
+    <section class="hunt-results-panel">
+        <div class="hunt-results-toolbar">
+            <span class="hunt-results-label">
+                @if (_result is not null && _result.Success)
+                {
+                    <span>@_result.RowCount rows · @_elapsed.TotalMilliseconds.ToString("F0") ms</span>
+                }
+                else if (_result is not null && !_result.Success)
+                {
+                    <span class="hunt-error-label">Query failed</span>
+                }
+                else
+                {
+                    <span class="hunt-idle-label">No results yet</span>
+                }
+            </span>
+            @if (_result?.GeneratedSql is string genSql)
+            {
+                <button class="hunt-btn hunt-btn-sql"
+                        @onclick="() => _showSql = !_showSql">
+                    @(_showSql ? "Hide SQL" : "Show SQL")
+                </button>
+            }
+        </div>
+
+        @if (_showSql && _result?.GeneratedSql is string sql)
+        {
+            <pre class="hunt-sql-preview">@sql</pre>
+        }
+
+        @if (_result?.Success == true && _result.RowCount > 0)
+        {
+            <div class="hunt-table-wrapper">
+                <table class="hunt-table">
+                    <thead>
+                        <tr>
+                            @foreach (var col in _result.Columns)
+                            {
+                                <th class="hunt-th" @onclick="() => SortBy(col.Name)">
+                                    @col.Name
+                                    @if (_sortColumn == col.Name)
+                                    {
+                                        @(_sortAsc ? " ▲" : " ▼")
+                                    }
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in VisibleRows())
+                        {
+                            <tr class="hunt-tr">
+                                @for (int i = 0; i < row.Length; i++)
+                                {
+                                    <td class="hunt-td">@FormatCell(row[i])</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (_result.RowCount > _pageSize)
+            {
+                <div class="hunt-pagination">
+                    <button class="hunt-btn" disabled="@(_page == 0)"
+                            @onclick="() => _page--">◀ Prev</button>
+                    <span>Page @(_page + 1) of @TotalPages</span>
+                    <button class="hunt-btn" disabled="@(_page >= TotalPages - 1)"
+                            @onclick="() => _page++">Next ▶</button>
+                </div>
+            }
+        }
+        else if (_result?.Success == true && _result.RowCount == 0)
+        {
+            <div class="hunt-empty">Query returned no rows.</div>
+        }
+    </section>
+</div>
+
+@code {
+    // ─── State ──────────────────────────────────────────────────────
+
+    private string _kql = string.Empty;
+    private bool _running;
+    private Hunting.Data.QueryResult? _result;
+    private TimeSpan _elapsed;
+    private List<Hunting.Core.Policy.QueryDiagnostic> _diagnostics = [];
+    private bool _showSql;
+
+    // Sorting
+    private string? _sortColumn;
+    private bool _sortAsc = true;
+
+    // Pagination
+    private int _page;
+    private const int _pageSize = 100;
+    private int TotalPages => (_result?.RowCount ?? 0 + _pageSize - 1) / _pageSize;
+
+    // Cancellation for ongoing queries
+    private CancellationTokenSource _cts = new();
+
+    // ─── Query execution ────────────────────────────────────────────
+
+    private async Task RunQuery()
+    {
+        if (_running || string.IsNullOrWhiteSpace(_kql)) return;
+
+        _cts.Cancel();
+        _cts = new CancellationTokenSource();
+
+        _running = true;
+        _result = null;
+        _diagnostics = [];
+        _showSql = false;
+        _page = 0;
+        _sortColumn = null;
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            _result = await QueryService.ExecuteAsync(_kql, _cts.Token);
+            sw.Stop();
+            _elapsed = sw.Elapsed;
+
+            _diagnostics = _result.Diagnostics.All.ToList();
+        }
+        finally
+        {
+            _running = false;
+        }
+    }
+
+    // ─── Keyboard shortcut (Shift+Enter) ───────────────────────────
+
+    private async Task HandleKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && e.ShiftKey)
+            await RunQuery();
+    }
+
+    // ─── Text insertion from sidebar ────────────────────────────────
+
+    public async Task InsertText(string text)
+    {
+        _kql = text;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ─── Sort and paginate ──────────────────────────────────────────
+
+    private void SortBy(string colName)
+    {
+        if (_sortColumn == colName)
+            _sortAsc = !_sortAsc;
+        else
+        {
+            _sortColumn = colName;
+            _sortAsc = true;
+        }
+        _page = 0;
+    }
+
+    private IEnumerable<object?[]> VisibleRows()
+    {
+        if (_result is null) return [];
+
+        var rows = _result.Rows.AsEnumerable();
+
+        if (_sortColumn is not null)
+        {
+            var colIdx = _result.Columns
+                .Select((c, i) => (c.Name, i))
+                .FirstOrDefault(t => t.Name == _sortColumn).i;
+
+            rows = _sortAsc
+                ? rows.OrderBy(r => r[colIdx])
+                : rows.OrderByDescending(r => r[colIdx]);
+        }
+
+        return rows.Skip(_page * _pageSize).Take(_pageSize);
+    }
+
+    // ─── Formatting ─────────────────────────────────────────────────
+
+    private static string FormatCell(object? value)
+    {
+        if (value is null) return "";
+        if (value is DateTimeOffset dto) return dto.ToString("yyyy-MM-dd HH:mm:ss");
+        if (value is DateTime dt) return dt.ToString("yyyy-MM-dd HH:mm:ss");
+        var s = value.ToString() ?? "";
+        // Truncate long JSON/command lines
+        return s.Length > 200 ? s[..200] + "…" : s;
+    }
+
+    private void Clear()
+    {
+        _kql = string.Empty;
+        _result = null;
+        _diagnostics = [];
+        _showSql = false;
+    }
+
+    // ─── Lifecycle ──────────────────────────────────────────────────
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}
