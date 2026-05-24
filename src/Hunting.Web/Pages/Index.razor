@@ -2,6 +2,7 @@
 @namespace Hunting.Web.Pages
 @inject Hunting.Web.Services.QueryService QueryService
 @inject Hunting.Core.Catalog.ApprovedViewCatalog Catalog
+@inject Hunting.Web.Services.EditorBus EditorBus
 @implements IDisposable
 
 <div class="hunt-page">
@@ -115,10 +116,14 @@
             {
                 <div class="hunt-pagination">
                     <button class="hunt-btn" disabled="@(_page == 0)"
-                            @onclick="() => _page--">◀ Prev</button>
+                            @onclick="() => _page--">
+                        ◀ Prev
+                    </button>
                     <span>Page @(_page + 1) of @TotalPages</span>
                     <button class="hunt-btn" disabled="@(_page >= TotalPages - 1)"
-                            @onclick="() => _page++">Next ▶</button>
+                            @onclick="() => _page++">
+                        Next ▶
+                    </button>
                 </div>
             }
         }
@@ -192,10 +197,13 @@
 
     // ─── Text insertion from sidebar ────────────────────────────────
 
-    public async Task InsertText(string text)
+    protected override void OnInitialized()
+        => EditorBus.InsertRequested += HandleInsertRequested;
+
+    private void HandleInsertRequested(string text)
     {
         _kql = text;
-        await InvokeAsync(StateHasChanged);
+        InvokeAsync(StateHasChanged);
     }
 
     // ─── Sort and paginate ──────────────────────────────────────────
@@ -256,6 +264,7 @@
 
     public void Dispose()
     {
+        EditorBus.InsertRequested -= HandleInsertRequested;
         _cts.Cancel();
         _cts.Dispose();
     }

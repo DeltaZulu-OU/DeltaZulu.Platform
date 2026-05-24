@@ -10,8 +10,7 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 
 // Schema catalog — singleton, shared across all Blazor circuits
-builder.Services.AddSingleton<ApprovedViewCatalog>(sp =>
-{
+builder.Services.AddSingleton<ApprovedViewCatalog>(sp => {
     var catalog = new ApprovedViewCatalog();
     catalog.Register(DeviceProcessEventsSchema.View);
     catalog.Register(DeviceNetworkEventsSchema.View);
@@ -37,6 +36,9 @@ builder.Services.AddSingleton<QueryRuntime>(sp =>
 // Query execution service with Blazor-level lock for single-connection MVP
 builder.Services.AddSingleton<QueryService>();
 
+// Per-circuit channel bridging the layout sidebar to the editor page
+builder.Services.AddScoped<EditorBus>();
+
 var app = builder.Build();
 
 // ─── Schema bootstrap ─────────────────────────────────────────────────────────
@@ -61,15 +63,14 @@ app.Run();
 
 static async Task BootstrapSchemaAsync(WebApplication app)
 {
-    await Task.Run(() =>
-    {
+    await Task.Run(() => {
         var applier = app.Services.GetRequiredService<SchemaApplier>();
         var emitter = new Hunting.Core.DuckDbSql.SchemaEmitter();
 
         var ddl = emitter.EmitAll(
-            rawTables:      [DeviceProcessEventsSchema.RawWindowsEventJson],
+            rawTables: [DeviceProcessEventsSchema.RawWindowsEventJson],
             internalTables: [],
-            parserViews:    [DeviceProcessEventsSchema.SysmonProcessCreate,
+            parserViews: [DeviceProcessEventsSchema.SysmonProcessCreate,
                              DeviceNetworkEventsSchema.SysmonNetworkConnect],
             canonicalViews: [DeviceProcessEventsSchema.View,
                              DeviceNetworkEventsSchema.View]);
