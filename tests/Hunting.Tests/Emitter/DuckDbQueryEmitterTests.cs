@@ -698,6 +698,41 @@ public sealed partial class DuckDbQueryEmitterTests
     }
 
     [TestMethod]
+    [Description("guid(...) emits TRY_CAST(... AS UUID)")]
+    public void Func_Guid()
+    {
+        var node = new ProjectNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("gid", new FunctionCall("guid", [new LiteralScalar("74be27de-1e4e-49d9-b579-fe0b331d3642", LiteralKind.String)]))]);
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "TRY_CAST('74be27de-1e4e-49d9-b579-fe0b331d3642' AS UUID)");
+    }
+
+    [TestMethod]
+    [Description("decimal(...) emits CAST(... AS DECIMAL)")]
+    public void Func_Decimal()
+    {
+        var node = new ProjectNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("d", new FunctionCall("decimal", [new LiteralScalar(1.5, LiteralKind.Real)]))]);
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "CAST(1.5 AS DECIMAL)");
+    }
+
+    [TestMethod]
+    [Description("countof(s, search) emits length-delta formula")]
+    public void Func_CountOf()
+    {
+        var node = new ProjectNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("c", new FunctionCall("countof", [new ColumnRef("FileName"), new LiteralScalar("exe", LiteralKind.String)]))]);
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "length(FileName)");
+        AssertSqlContains(sql, "replace(FileName, 'exe', '')");
+        AssertSqlContains(sql, "nullif(length('exe'), 0)");
+    }
+
+    [TestMethod]
     [Description("where|project over base scan collapses single-use filter CTE into one SELECT block")]
     public void WhereInProject_OptimizedMode_CollapsesSingleUseFilterCte()
     {

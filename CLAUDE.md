@@ -181,16 +181,20 @@ Non-negotiable for MVP. Violating any requires explicit discussion and documente
 5. **The checklist governs scope.** `[ ]` = deferred, `[B]` = blocked. Do not implement
    either without updating the checklist and roadmap first.
 
-6. **Two-seam testing.** Every translator and emitter change needs test cases at the
+6. **After every implementation change, update status docs in the same change set.**
+   At minimum:
+   - update the implementation-status/feature-parity table in `README.md`,
+   - update `docs/ROADMAP.md` to reflect changed priorities/status, and
+   - update `docs/kql-syntax-coverage-checklist.md` for any newly supported/deferred/blocked constructs.
+   Do not leave code and status documents out of sync across commits.
+
+7. **Two-seam testing.** Every translator and emitter change needs test cases at the
    appropriate seam. Untested translation paths are not shipped.
 
-7. **Single DuckDB connection for MVP.** `DuckDbConnectionFactory` provides one shared
+8. **Single DuckDB connection for MVP.** `DuckDbConnectionFactory` provides one shared
    connection. No pooling, no concurrent writes, no Quack protocol until post-MVP.
 
-8. **Do not introduce a post-translation planner.** The two-stage path
-   (`KustoToRelational` → `RelNode` → `DuckDbQueryEmitter`) is active. No `RelationalPlanner`,
-   `Planning/` namespace, `Plan` diagnostic phase, or planner test seam until the POC works
-   end-to-end and three concrete SQL-quality problems justify it.
+9. **Ensure the post-translation planner does not break query logic or syntax.**
 
 ## Known Kusto.Language API Facts
 
@@ -299,4 +303,3 @@ Until that work is explicitly accepted: no `Planning/` namespace, no `Plan` diag
 no planner test seam. The two-seam test model is the active architecture.
 
 ---
-

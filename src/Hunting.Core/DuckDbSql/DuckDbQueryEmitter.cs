@@ -193,6 +193,7 @@ public sealed partial class DuckDbQueryEmitter
         AggregateNode agg => EmitAggregate(agg),
         SortNode sort => EmitSort(sort),
         LimitNode limit => EmitLimit(limit),
+        SampleNode sample => EmitSample(sample),
         DistinctNode dist => EmitDistinct(dist),
         JoinNode join => EmitJoin(join),
         LetBindingNode let_ => EmitLet(let_),
@@ -724,6 +725,15 @@ public sealed partial class DuckDbQueryEmitter
         return (stage, null);
     }
 
+    private (string Source, string? Columns) EmitSample(SampleNode sample)
+    {
+        var source = StageFrom(sample.Input);
+        var stage = NextStage();
+        _ctes.Add((stage, $"SELECT * FROM {source} USING SAMPLE reservoir({sample.Count} ROWS)"));
+        _stageNames.Add(stage);
+        return (stage, null);
+    }
+
     // ─── Join ───────────────────────────────────────────────────────
 
     private (string Source, string? Columns) EmitJoin(JoinNode join)
@@ -736,6 +746,8 @@ public sealed partial class DuckDbQueryEmitter
         {
             JoinKind.Inner => "INNER JOIN",
             JoinKind.LeftOuter => "LEFT JOIN",
+            JoinKind.RightOuter => "RIGHT JOIN",
+            JoinKind.FullOuter => "FULL OUTER JOIN",
             JoinKind.LeftSemi => "SEMI JOIN",
             JoinKind.LeftAnti => "ANTI JOIN",
             _ => throw new NotSupportedException($"Unsupported join kind: {join.Kind}")
@@ -973,7 +985,10 @@ public sealed partial class DuckDbQueryEmitter
             "todouble" or "toreal" => $"CAST({args[0]} AS DOUBLE)",
             "tobool" => $"CAST({args[0]} AS BOOLEAN)",
             "todecimal" => $"CAST({args[0]} AS DECIMAL)",
+            "decimal" => $"CAST({args[0]} AS DECIMAL)",
             "toguid" => $"CAST({args[0]} AS VARCHAR)",
+            "guid" => $"TRY_CAST({args[0]} AS UUID)",
+            "countof" => $"((length({args[0]}) - length(replace({args[0]}, {args[1]}, ''))) / nullif(length({args[1]}), 0))",
 
             // Conditional
             "iff" or "iif" => $"CASE WHEN {args[0]} THEN {args[1]} ELSE {args[2]} END",

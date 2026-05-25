@@ -224,7 +224,7 @@ Ordered by hunting-workflow impact:
 1. `mv-expand` — dynamic array unpacking (common in Defender queries)
 2. Dynamic member access (`d.key`, `d[0]`) — JSON path emission
 3. `format_datetime` — Kusto-to-strftime format string translation
-4. Additional join kinds (`rightouter`, `fullouter`)
+4. Additional join kinds (`rightsemi`, `rightanti`)
 5. `has_any` / `has_all` — OR/AND chain of regex word-boundary matches
 6. `monaco-kusto` full integration (if deferred from Phase 4)
 7. ASIM parser import pipeline — bulk bootstrap from Sentinel parser definitions

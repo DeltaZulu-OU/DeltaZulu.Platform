@@ -49,7 +49,7 @@ approximation diagnostic, or reject.
 - [ ] `range` — generated series → `SELECT x FROM range(start, stop+1, step) AS t(x)` — *complexity: endpoint semantics differ between KQL and DuckDB*
 - [ ] `top-nested` — hierarchical top-N — *complexity: recursive aggregation*
 - [ ] `top-hitters` — approximate top-N by frequency — *frequency*
-- [ ] `sample` — random row sampling — *frequency: `ORDER BY random() LIMIT n` or DuckDB `USING SAMPLE`*
+- [x] `sample` — random row sampling — staged `USING SAMPLE reservoir(n ROWS)` (**caveat**: nondeterministic; tests assert shape/count bounds, not exact rows)
 - [ ] `sample-distinct` — random distinct values — *frequency*
 
 ### 1.2 Join Operators
@@ -58,8 +58,8 @@ approximation diagnostic, or reject.
 - [x] `join kind=leftouter` — left outer join → `LEFT JOIN`
 - [x] `join kind=leftsemi` / `kind=semi` — semi join → `WHERE EXISTS (SELECT 1 FROM right WHERE ...)`  or DuckDB `SEMI JOIN`
 - [x] `join kind=leftanti` / `kind=anti` — anti join → `WHERE NOT EXISTS (...)` or DuckDB `ANTI JOIN`
-- [ ] `join kind=rightouter` — right outer join → `RIGHT JOIN` — *frequency*
-- [ ] `join kind=fullouter` — full outer join → `FULL OUTER JOIN` — *frequency*
+- [x] `join kind=rightouter` — right outer join → `RIGHT JOIN`
+- [x] `join kind=fullouter` — full outer join → `FULL OUTER JOIN`
 - [ ] `join kind=rightanti` — right anti join — *frequency*
 - [ ] `join kind=rightsemi` — right semi join — *frequency*
 - [B] `join` (bare, no kind) — Kusto default is `innerunique` (deduplicates left side before joining); must reject until innerunique semantics are implemented. Do not silently emit SQL `INNER JOIN`.
@@ -146,8 +146,8 @@ approximation diagnostic, or reject.
 - [x] Datetime literals — `datetime(2025-01-01)`
 - [x] Timespan literals — `1d`, `2h`, `30m`, `10s`, `500ms`, `time(1.02:03:04)`
 - [ ] `dynamic` literals — `dynamic([1, 2, 3])`, `dynamic({"key": "val"})` — *complexity: JSON literal parsing + type inference*
-- [ ] GUID literals — `guid(...)` — *frequency*
-- [ ] Decimal literals — `decimal(...)` — *frequency*
+- [x] GUID literals/function-form — `guid(...)` → `TRY_CAST(... AS UUID)` (**caveat**: invalid GUID casts to `NULL` under DuckDB `TRY_CAST`)
+- [x] Decimal literals/function-form — `decimal(...)` → `CAST(... AS DECIMAL)` (**caveat**: precision/scale follow DuckDB defaults unless schema policy overrides)
 - [x] Raw string literals — `@"no\escape"`
 - [ ] Multi-line string literals — *frequency*
 - [ ] Obfuscated string literals — `h"..."` / `H"..."` — *frequency*
@@ -252,7 +252,7 @@ approximation diagnostic, or reject.
 - [x] `extract(regex, group, s)` → `regexp_extract(s, regex, group)` (**caveat**: KQL returns empty string on no match; DuckDB returns NULL. Emitter must wrap: `COALESCE(regexp_extract(...), '')`)
 - [ ] `extract_all(regex, s)` → needs list result handling — *complexity: returns list of matches*
 - [x] `indexof(s, lookup)` → `strpos(s, lookup) - 1`
-- [ ] `countof(s, search)` — occurrence count — *frequency*
+- [x] `countof(s, search)` — occurrence count — emitted via length-delta formula with zero-length guard
 - [x] `reverse(s)` → `reverse(s)`
 - [ ] `parse_url(url)` — URL component extraction — *complexity: returns dynamic object*
 - [ ] `parse_urlquery(query)` — query parameter extraction — *dependency: depends on parse_url*

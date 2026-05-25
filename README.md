@@ -10,6 +10,17 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 
 - Phases 0–2 (schema + translation + runtime) are functionally complete.
 - Phase 3 (Blazor UI experience) is the next major milestone.
+- Feature parity snapshot (from `docs/kql-syntax-coverage-checklist.md`) now uses an in-scope-only statistics table (out-of-scope constructs excluded):
+
+| Feature parity status (in scope only) | Count | Percent of in-scope total |
+|---|---:|---:|
+| MVP translated (`[x]`) | 151 | 47.3% |
+| Metadata-only (`[m]`) | 2 | 0.6% |
+| Blocked for semantic safety (`[B]`) | 3 | 0.9% |
+| Deferred (`[ ]`) | 163 | 51.1% |
+| **Total in-scope constructs** | **319** | **100%** |
+
+MVP-ready parity = `[x] + [m]` = **153 / 319 (48.0%)**.
 - The repository currently includes:
   - `Hunting.Core`: translation, relational model, catalog/policy, and DuckDB SQL emitter.
   - `Hunting.Schema`: dedicated schema-definition project (public view schemas + parser mappings).  - `Hunting.Data`: connection factory, schema application, runtime orchestration, and mock seeding.

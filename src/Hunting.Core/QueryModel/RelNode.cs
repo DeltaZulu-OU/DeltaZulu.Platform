@@ -20,6 +20,7 @@ public sealed record AggregateNode(
 public sealed record SortNode(RelNode Input, IReadOnlyList<SortExpr> Sorts) : RelNode;
 
 public sealed record LimitNode(RelNode Input, int Count) : RelNode;
+public sealed record SampleNode(RelNode Input, int Count) : RelNode;
 
 /// <summary>
 /// Represents KQL 'distinct col1, col2' — emits SELECT DISTINCT.
@@ -121,7 +122,7 @@ public sealed record ProjectionExpr(string Alias, ScalarExpr Expression);
 public sealed record SortExpr(ScalarExpr Expression, SortDirection Direction, NullOrder Nulls = NullOrder.Default);
 
 public enum JoinKind
-{ Inner, LeftOuter, LeftSemi, LeftAnti }
+{ Inner, LeftOuter, RightOuter, FullOuter, LeftSemi, LeftAnti }
 
 public enum SortDirection
 { Asc, Desc }

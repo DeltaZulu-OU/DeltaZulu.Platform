@@ -223,6 +223,7 @@ public sealed class KustoToRelational
         SummarizeOperator summ => TranslateSummarize(summ, input),
         SortOperator sort => TranslateSort(sort, input),
         TakeOperator take => TranslateTake(take, input),
+        SampleOperator sample => TranslateSample(sample, input),
         TopOperator top => TranslateTop(top, input),
         DistinctOperator dist => TranslateDistinct(dist, input),
         CountOperator => TranslateCount(input),
@@ -304,6 +305,12 @@ public sealed class KustoToRelational
         return new LimitNode(input, count);
     }
 
+    private RelNode TranslateSample(SampleOperator sample, RelNode input)
+    {
+        var count = GetIntLiteral(sample.Expression);
+        return new SampleNode(input, count);
+    }
+
     private RelNode TranslateTop(TopOperator top, RelNode input)
     {
         // TopOperator has flat structure: Expression (count) + ByExpression (sort expr)
@@ -360,6 +367,8 @@ public sealed class KustoToRelational
         {
             case "inner": kind = JoinKind.Inner; break;
             case "leftouter": kind = JoinKind.LeftOuter; break;
+            case "rightouter": kind = JoinKind.RightOuter; break;
+            case "fullouter": kind = JoinKind.FullOuter; break;
             case "leftsemi" or "semi": kind = JoinKind.LeftSemi; break;
             case "leftanti" or "anti": kind = JoinKind.LeftAnti; break;
             default:

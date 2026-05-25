@@ -370,6 +370,44 @@ public sealed class KustoToRelationalTests
         Assert.AreEqual(JoinKind.LeftAnti, join.Kind);
     }
 
+    [TestMethod]
+    [Description("join kind=rightouter → JoinNode with RightOuter")]
+    public void Join_RightOuter()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | join kind=rightouter (DeviceProcessEvents | take 5) on DeviceName
+            """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var join = AssertIs<JoinNode>(result);
+        Assert.AreEqual(JoinKind.RightOuter, join.Kind);
+    }
+
+    [TestMethod]
+    [Description("join kind=fullouter → JoinNode with FullOuter")]
+    public void Join_FullOuter()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | join kind=fullouter (DeviceProcessEvents | take 5) on DeviceName
+            """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var join = AssertIs<JoinNode>(result);
+        Assert.AreEqual(JoinKind.FullOuter, join.Kind);
+    }
+
+    [TestMethod]
+    [Description("sample n translates to SampleNode")]
+    public void Sample_TranslatesToSampleNode()
+    {
+        var (result, diag) = Translate("DeviceProcessEvents | sample 10");
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var sample = AssertIs<SampleNode>(result);
+        Assert.AreEqual(10, sample.Count);
+    }
+
     // ─── Spec-derived: sort default direction ────────────────────
 
     [TestMethod]

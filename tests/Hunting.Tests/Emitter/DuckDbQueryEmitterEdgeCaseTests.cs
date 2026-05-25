@@ -647,6 +647,43 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
         AssertSqlContains(sql, "ANTI JOIN");
     }
 
+    [TestMethod]
+    [Description("RIGHT JOIN emitted for RightOuter")]
+    public void Join_RightOuterJoin()
+    {
+        var node = new JoinNode(
+            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("DeviceProcessEvents"),
+            JoinKind.RightOuter,
+            new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "RIGHT JOIN");
+    }
+
+    [TestMethod]
+    [Description("FULL OUTER JOIN emitted for FullOuter")]
+    public void Join_FullOuterJoin()
+    {
+        var node = new JoinNode(
+            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("DeviceProcessEvents"),
+            JoinKind.FullOuter,
+            new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "FULL OUTER JOIN");
+    }
+
+    [TestMethod]
+    [Description("SampleNode emits USING SAMPLE reservoir(n ROWS)")]
+    public void Tabular_Sample_EmitsReservoir()
+    {
+        var node = new SampleNode(new ScanNode("DeviceProcessEvents"), 7);
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "USING SAMPLE reservoir(7 ROWS)");
+    }
+
     // ─── Null test functions ────────────────────────────────────────
 
     [TestMethod]
