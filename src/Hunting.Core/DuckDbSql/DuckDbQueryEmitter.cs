@@ -12,10 +12,31 @@ using QueryModel;
 ///
 /// SQL is transient — generated, executed, discarded.
 /// </summary>
-public sealed class DuckDbQueryEmitter
+public sealed partial class DuckDbQueryEmitter
 {
+    private sealed record TerminalTopK(string Source, string OrderBy, int Limit);
+
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"^SELECT \* FROM (main\.[A-Za-z_][A-Za-z0-9_]*)$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex TrivialSourceStageRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"^SELECT \* FROM (?<source>[A-Za-z0-9_.]+) ORDER BY (?<order>.+) LIMIT (?<limit>\d+)$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex TerminalTopKRegex();
+    
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"^SELECT (?<proj>.+) FROM (?<source>[A-Za-z0-9_.]+)(?<group>\s+GROUP BY .+)?$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex FinalStageInlineRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"__kql_stage_\d+")]
+    private static partial System.Text.RegularExpressions.Regex StageRefRegex();
+
     private int _stageCounter;
     private readonly List<(string Name, string Sql)> _ctes = [];
+    private readonly HashSet<string> _stageNames = new(StringComparer.Ordinal);
     private readonly int _defaultLimit;
     // Scalar let bindings: name → emitted SQL expression, populated by EmitLet.
     // EmitScalar checks this dictionary for ColumnRef resolution so that
@@ -36,10 +57,13 @@ public sealed class DuckDbQueryEmitter
     {
         _stageCounter = 0;
         _ctes.Clear();
+        _stageNames.Clear();
         _scalarBindings.Clear();
 
         var (finalSource, columns) = EmitNode(node);
         var hasUserLimit = HasLimit(node);
+        var terminalTopK = ShapeSql(ref finalSource);
+        TryInlineFinalStage(ref finalSource, ref columns);
 
         var sb = new StringBuilder();
 
@@ -60,9 +84,14 @@ public sealed class DuckDbQueryEmitter
 
         sb.Append("SELECT ");
         sb.Append(columns ?? "*");
-        sb.Append(" FROM ").Append(finalSource);
+        sb.Append(" FROM ").Append(terminalTopK?.Source ?? finalSource);
 
-        if (!hasUserLimit)
+        if (terminalTopK is not null)
+        {
+            sb.Append(" ORDER BY ").Append(terminalTopK.OrderBy);
+            sb.Append(" LIMIT ").Append(terminalTopK.Limit);
+        }
+        else if (!hasUserLimit)
         {
             sb.Append(" LIMIT ").Append(_defaultLimit);
         }
@@ -103,11 +132,147 @@ public sealed class DuckDbQueryEmitter
         var stage = NextStage();
         var sql = $"SELECT {cols ?? "*"} FROM {source}";
         _ctes.Add((stage, sql));
+        _stageNames.Add(stage);
         return stage;
     }
 
-    private bool IsStageReference(string source) =>
-        _ctes.Exists(c => string.Equals(c.Name, source, StringComparison.Ordinal));
+    private bool IsStageReference(string source) => _stageNames.Contains(source);
+
+    private TerminalTopK? ShapeSql(ref string finalSource)
+    {
+        var terminalTopK = TryExtractTerminalTopK(finalSource);
+        var substitutions = new Dictionary<string, string>(StringComparer.Ordinal);
+        var refCounts = BuildStageRefCounts();
+        for (var i = _ctes.Count - 1; i >= 0; i--)
+        {
+            var cte = _ctes[i];
+            var match = TrivialSourceStageRegex().Match(cte.Sql);
+            if (!match.Success)
+            {
+                continue;
+            }
+
+            var usage = refCounts.TryGetValue(cte.Name, out var count) ? count : 0;
+            // If a trivial source stage is referenced exactly once, we can inline it
+            // into that consumer. If it is referenced zero times, it is already dead
+            // after earlier shaping (e.g. terminal top-k extraction) and can be dropped.
+            if (usage > 1)
+            {
+                continue;
+            }
+
+            substitutions[cte.Name] = match.Groups[1].Value;
+            _ctes.RemoveAt(i);
+            _stageNames.Remove(cte.Name);
+        }
+
+        if (substitutions.Count > 0)
+        {
+            for (var i = 0; i < _ctes.Count; i++)
+            {
+                var sql = _ctes[i].Sql;
+                foreach (var pair in substitutions)
+                {
+                    sql = sql.Replace(pair.Key, pair.Value, StringComparison.Ordinal);
+                }
+
+                _ctes[i] = (_ctes[i].Name, sql);
+            }
+
+            foreach (var pair in substitutions)
+            {
+                if (string.Equals(finalSource, pair.Key, StringComparison.Ordinal))
+                {
+                    finalSource = pair.Value;
+                }
+
+                if (terminalTopK is not null
+                    && string.Equals(terminalTopK.Source, pair.Key, StringComparison.Ordinal))
+                {
+                    terminalTopK = terminalTopK with { Source = pair.Value };
+                }
+            }
+        }
+
+        return terminalTopK;
+    }
+
+    private Dictionary<string, int> BuildStageRefCounts()
+    {
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var cte in _ctes)
+        {
+            foreach (System.Text.RegularExpressions.Match match in StageRefRegex().Matches(cte.Sql))
+            {
+                var stageRef = match.Value;
+                counts[stageRef] = counts.TryGetValue(stageRef, out var count) ? count + 1 : 1;
+            }
+        }
+
+        return counts;
+    }
+
+    private TerminalTopK? TryExtractTerminalTopK(string finalSource)
+    {
+        var idx = _ctes.FindIndex(c => string.Equals(c.Name, finalSource, StringComparison.Ordinal));
+        if (idx < 0)
+        {
+            return null;
+        }
+
+        var terminal = _ctes[idx];
+        var match = TerminalTopKRegex().Match(terminal.Sql);
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        _ctes.RemoveAt(idx);
+        _stageNames.Remove(terminal.Name);
+        return new TerminalTopK(
+            match.Groups["source"].Value,
+            match.Groups["order"].Value,
+            int.Parse(match.Groups["limit"].Value));
+    }
+
+    private void TryInlineFinalStage(ref string finalSource, ref string? columns)
+    {
+        if (!string.Equals(columns, "*", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var currentSource = finalSource;
+        var idx = _ctes.FindIndex(c => string.Equals(c.Name, currentSource, StringComparison.Ordinal));
+        finalSource = currentSource;
+        if (idx < 0)
+        {
+            return;
+        }
+
+        var cte = _ctes[idx];
+        var m = FinalStageInlineRegex().Match(cte.Sql);
+        if (!m.Success)
+        {
+            return;
+        }
+
+        // Inline only when this final stage is not referenced by any other CTE.
+        var refs = _ctes.Count(x => !string.Equals(x.Name, cte.Name, StringComparison.Ordinal)
+            && x.Sql.Contains(cte.Name, StringComparison.Ordinal));
+        if (refs != 0)
+        {
+            return;
+        }
+
+        columns = m.Groups["proj"].Value;
+        var source = m.Groups["source"].Value;
+        var groupBy = m.Groups["group"].Value;
+        finalSource = string.IsNullOrWhiteSpace(groupBy) ? source : $"{source}{groupBy}";
+
+        _ctes.RemoveAt(idx);
+        _stageNames.Remove(cte.Name);
+    }
 
     // ─── Scan ───────────────────────────────────────────────────────
 
@@ -121,6 +286,7 @@ public sealed class DuckDbQueryEmitter
         var stage = NextStage();
         var pred = EmitScalar(filter.Predicate);
         _ctes.Add((stage, $"SELECT * FROM {source} WHERE {pred}"));
+        _stageNames.Add(stage);
         return (stage, null);
     }
 
@@ -141,6 +307,7 @@ public sealed class DuckDbQueryEmitter
         var extensions = string.Join(", ", extend.Extensions.Select(EmitProjection));
         var stage = NextStage();
         _ctes.Add((stage, $"SELECT *, {extensions} FROM {source}"));
+        _stageNames.Add(stage);
         return (stage, null);
     }
 
@@ -164,6 +331,7 @@ public sealed class DuckDbQueryEmitter
         }
 
         _ctes.Add((stage, sql));
+        _stageNames.Add(stage);
         return (stage, null);
     }
 
@@ -175,6 +343,7 @@ public sealed class DuckDbQueryEmitter
         var orders = string.Join(", ", sort.Sorts.Select(s => EmitTabularSortExpr(s, sort.Input)));
         var stage = NextStage();
         _ctes.Add((stage, $"SELECT * FROM {source} ORDER BY {orders}"));
+        _stageNames.Add(stage);
         return (stage, null);
     }
 
@@ -186,6 +355,7 @@ public sealed class DuckDbQueryEmitter
         var cols = string.Join(", ", dist.Projections.Select(EmitProjection));
         var stage = NextStage();
         _ctes.Add((stage, $"SELECT DISTINCT {cols} FROM {source}"));
+        _stageNames.Add(stage);
         return (stage, null);
     }
 
@@ -203,12 +373,14 @@ public sealed class DuckDbQueryEmitter
             var orders = string.Join(", ", sort.Sorts.Select(s => EmitTabularSortExpr(s, sort.Input)));
             var fused = NextStage();
             _ctes.Add((fused, $"SELECT * FROM {sortSource} ORDER BY {orders} LIMIT {limit.Count}"));
+            _stageNames.Add(fused);
             return (fused, null);
         }
 
         var source = StageFrom(limit.Input);
         var stage = NextStage();
         _ctes.Add((stage, $"SELECT * FROM {source} LIMIT {limit.Count}"));
+        _stageNames.Add(stage);
         return (stage, null);
     }
 
@@ -231,6 +403,7 @@ public sealed class DuckDbQueryEmitter
 
         var stage = NextStage();
         _ctes.Add((stage, $"SELECT * FROM {leftSource} {joinKind} {rightSource} ON {pred}"));
+        _stageNames.Add(stage);
         return (stage, null);
     }
 
@@ -250,7 +423,9 @@ public sealed class DuckDbQueryEmitter
         {
             // Tabular let: emit the subquery as a named CTE.
             var (tabSource, tabCols) = EmitNode(let_.TabularValue);
-            _ctes.Add((EscapeIdent(let_.Name), $"SELECT {tabCols ?? "*"} FROM {tabSource}"));
+            var letName = EscapeIdent(let_.Name);
+            _ctes.Add((letName, $"SELECT {tabCols ?? "*"} FROM {tabSource}"));
+            _stageNames.Add(letName);
         }
 
         return EmitNode(let_.Body);

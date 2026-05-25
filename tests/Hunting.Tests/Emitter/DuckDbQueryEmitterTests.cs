@@ -630,6 +630,32 @@ public sealed partial class DuckDbQueryEmitterTests
         var passThrough = System.Text.RegularExpressions.Regex.Matches(norm, @"AS \(SELECT \* FROM __kql_stage_\d+\)").Count;
         Assert.AreEqual(0, passThrough);
         AssertSqlContains(sql, "ORDER BY count_ DESC LIMIT 20");
+        Assert.MatchesRegex(@"ORDER\s+BY\s+count_\s+DESC\s+LIMIT\s+20\s*;?\s*$", norm);
+        Assert.DoesNotContain("NULLS LAST", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(
+            @"__kql_stage_\d+\s+AS\s*\(\s*SELECT\s+\*\s+FROM\s+main\.DeviceNetworkEvents\s*\)",
+            norm);
+        Assert.DoesNotMatchRegex(@"SELECT\s+\*\s+FROM\s+__kql_stage_\d+\s*;?\s*$", norm);
+        AssertSqlContains(sql, "FROM main.DeviceNetworkEvents");
+    }
+
+    [TestMethod]
+    [Description("sort|take over base scan: terminal top-k remains outermost and does not reference removed source CTE")]
+    public void Emit_Simplification_ScanSortTake_NoDanglingStageReference()
+    {
+        var node = new LimitNode(
+            new SortNode(
+                new ScanNode("DeviceNetworkEvents"),
+                [new SortExpr(new ColumnRef("RemoteIP"), SortDirection.Desc)]),
+            5);
+
+        var sql = _emitter.Emit(node);
+        var norm = NormSql(sql);
+        Assert.MatchesRegex(@"ORDER\s+BY\s+RemoteIP\s+DESC\s+NULLS\s+LAST\s+LIMIT\s+5\s*;?\s*$", norm);
+        Assert.DoesNotMatchRegex(
+            @"__kql_stage_\d+\s+AS\s*\(\s*SELECT\s+\*\s+FROM\s+main\.DeviceNetworkEvents\s*\)",
+            norm);
+        AssertSqlContains(sql, "ORDER BY RemoteIP DESC NULLS LAST LIMIT 5");
     }
 
 
