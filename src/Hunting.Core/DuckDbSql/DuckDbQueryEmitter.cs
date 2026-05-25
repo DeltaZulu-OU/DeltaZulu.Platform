@@ -90,11 +90,24 @@ public sealed class DuckDbQueryEmitter
     private string StageFrom(RelNode input)
     {
         var (source, cols) = EmitNode(input);
+        // Pass-through elimination: when the input already produced a standalone
+        // CTE stage and no column projection needs to be applied, reuse that
+        // stage directly instead of emitting a redundant `SELECT * FROM stage`
+        // wrapper. Base-table scans (`main.X`) are never CTE references, so the
+        // scan still gets its own stage.
+        if (cols is null && IsStageReference(source))
+        {
+            return source;
+        }
+
         var stage = NextStage();
         var sql = $"SELECT {cols ?? "*"} FROM {source}";
         _ctes.Add((stage, sql));
         return stage;
     }
+
+    private bool IsStageReference(string source) =>
+        _ctes.Exists(c => string.Equals(c.Name, source, StringComparison.Ordinal));
 
     // ─── Scan ───────────────────────────────────────────────────────
 
@@ -159,7 +172,7 @@ public sealed class DuckDbQueryEmitter
     private (string Source, string? Columns) EmitSort(SortNode sort)
     {
         var source = StageFrom(sort.Input);
-        var orders = string.Join(", ", sort.Sorts.Select(EmitSortExpr));
+        var orders = string.Join(", ", sort.Sorts.Select(s => EmitTabularSortExpr(s, sort.Input)));
         var stage = NextStage();
         _ctes.Add((stage, $"SELECT * FROM {source} ORDER BY {orders}"));
         return (stage, null);
@@ -180,6 +193,19 @@ public sealed class DuckDbQueryEmitter
 
     private (string Source, string? Columns) EmitLimit(LimitNode limit)
     {
+        // Sort/take fusion: a SortNode directly beneath a LimitNode is a single
+        // top-k operation. Emit ORDER BY and LIMIT in one query block rather than
+        // two stages — this also avoids depending on ordering surviving an
+        // intermediate CTE boundary.
+        if (limit.Input is SortNode sort)
+        {
+            var sortSource = StageFrom(sort.Input);
+            var orders = string.Join(", ", sort.Sorts.Select(s => EmitTabularSortExpr(s, sort.Input)));
+            var fused = NextStage();
+            _ctes.Add((fused, $"SELECT * FROM {sortSource} ORDER BY {orders} LIMIT {limit.Count}"));
+            return (fused, null);
+        }
+
         var source = StageFrom(limit.Input);
         var stage = NextStage();
         _ctes.Add((stage, $"SELECT * FROM {source} LIMIT {limit.Count}"));
@@ -655,6 +681,66 @@ public sealed class DuckDbQueryEmitter
     };
 
     // ─── Sort expression ────────────────────────────────────────────
+
+    /// <summary>
+    /// Tabular ORDER BY term. Mirrors <see cref="EmitSortExpr"/> but drops the
+    /// NULLS modifier when the analyst did not request one and the sort key is
+    /// provably non-nullable — null ordering is then unobservable, so the
+    /// explicit modifier is noise. Window ORDER BY clauses keep explicit NULLS
+    /// ordering via <see cref="EmitSortExpr"/>.
+    /// </summary>
+    private string EmitTabularSortExpr(SortExpr sort, RelNode sortInput)
+    {
+        if (sort.Nulls == NullOrder.Default
+            && sort.Expression is ColumnRef col
+            && IsNonNullableColumn(sortInput, col.Name))
+        {
+            var c = EmitScalar(sort.Expression);
+            var d = sort.Direction == SortDirection.Desc ? " DESC" : " ASC";
+            return $"{c}{d}";
+        }
+
+        return EmitSortExpr(sort);
+    }
+
+    /// <summary>
+    /// True when <paramref name="column"/> is provably non-nullable at the
+    /// output of <paramref name="node"/>. Recognizes count-family aggregates and
+    /// looks through row- and value-preserving operators. Any operator that
+    /// could introduce nulls or redefine the column (project/extend/distinct/
+    /// join) conservatively ends the search.
+    /// </summary>
+    private static bool IsNonNullableColumn(RelNode node, string column)
+    {
+        switch (node)
+        {
+            case AggregateNode agg:
+                foreach (var a in agg.Aggregates)
+                {
+                    if (string.Equals(a.Alias, column, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return IsNonNullableAggregate(a.Expression);
+                    }
+                }
+                return false;
+            case FilterNode f:
+                return IsNonNullableColumn(f.Input, column);
+            case SortNode s:
+                return IsNonNullableColumn(s.Input, column);
+            case LimitNode l:
+                return IsNonNullableColumn(l.Input, column);
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// Count-family aggregates always return a non-null integer (zero for empty
+    /// groups), so a column produced by one cannot be NULL.
+    /// </summary>
+    private static bool IsNonNullableAggregate(ScalarExpr expr) =>
+        expr is FunctionCall fn
+        && fn.Name.ToLowerInvariant() is "count" or "countif" or "dcount" or "dcountif";
 
     private string EmitSortExpr(SortExpr sort)
     {

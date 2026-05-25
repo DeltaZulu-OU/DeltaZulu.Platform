@@ -87,11 +87,19 @@ public sealed class DuckDbQueryEmitter
     private string StageFrom(RelNode input)
     {
         var (source, cols) = EmitNode(input);
+        if (cols is null && IsStageReference(source))
+        {
+            return source;
+        }
+
         var stage = NextStage();
         var sql = $"SELECT {cols ?? "*"} FROM {source}";
         _ctes.Add((stage, sql));
         return stage;
     }
+
+    private bool IsStageReference(string source) =>
+        _ctes.Exists(c => string.Equals(c.Name, source, StringComparison.Ordinal));
 
     // ─── Scan ───────────────────────────────────────────────────────
 
@@ -157,7 +165,7 @@ public sealed class DuckDbQueryEmitter
     private (string Source, string? Columns) EmitSort(SortNode sort)
     {
         var source = StageFrom(sort.Input);
-        var orders = string.Join(", ", sort.Sorts.Select(EmitSortExpr));
+        var orders = string.Join(", ", sort.Sorts.Select(s => EmitTabularSortExpr(s, sort.Input)));
         var stage = NextStage();
         _ctes.Add((stage, $"SELECT * FROM {source} ORDER BY {orders}"));
         return (stage, null);
@@ -178,6 +186,15 @@ public sealed class DuckDbQueryEmitter
 
     private (string Source, string? Columns) EmitLimit(LimitNode limit)
     {
+        if (limit.Input is SortNode sort)
+        {
+            var sortSource = StageFrom(sort.Input);
+            var orders = string.Join(", ", sort.Sorts.Select(s => EmitTabularSortExpr(s, sort.Input)));
+            var fused = NextStage();
+            _ctes.Add((fused, $"SELECT * FROM {sortSource} ORDER BY {orders} LIMIT {limit.Count}"));
+            return (fused, null);
+        }
+
         var source = StageFrom(limit.Input);
         var stage = NextStage();
         _ctes.Add((stage, $"SELECT * FROM {source} LIMIT {limit.Count}"));
@@ -636,6 +653,46 @@ public sealed class DuckDbQueryEmitter
     }
 
     // ─── Sort expression ────────────────────────────────────────────
+
+    private string EmitTabularSortExpr(SortExpr sort, RelNode sortInput)
+    {
+        if (sort.Nulls == NullOrder.Default
+            && sort.Expression is ColumnRef col
+            && IsNonNullableColumn(sortInput, col.Name))
+        {
+            var c = EmitScalar(sort.Expression);
+            var d = sort.Direction == SortDirection.Desc ? " DESC" : " ASC";
+            return $"{c}{d}";
+        }
+
+        return EmitSortExpr(sort);
+    }
+
+    private static bool IsNonNullableColumn(RelNode node, string column)
+    {
+        switch (node)
+        {
+            case AggregateNode agg:
+                foreach (var a in agg.Aggregates)
+                {
+                    if (string.Equals(a.Alias, column, StringComparison.OrdinalIgnoreCase))
+                        return IsNonNullableAggregate(a.Expression);
+                }
+                return false;
+            case FilterNode f:
+                return IsNonNullableColumn(f.Input, column);
+            case SortNode s:
+                return IsNonNullableColumn(s.Input, column);
+            case LimitNode l:
+                return IsNonNullableColumn(l.Input, column);
+            default:
+                return false;
+        }
+    }
+
+    private static bool IsNonNullableAggregate(ScalarExpr expr) =>
+        expr is FunctionCall fn
+        && fn.Name.ToLowerInvariant() is "count" or "countif" or "dcount" or "dcountif";
 
     private string EmitSortExpr(SortExpr sort)
     {

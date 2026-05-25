@@ -611,6 +611,27 @@ public sealed partial class DuckDbQueryEmitterTests
         AssertSqlContains(sql, "SELECT DISTINCT FileName, DeviceName FROM");
     }
 
+    // ─── Pipeline simplification ────────────────────────────────────
+
+    [TestMethod]
+    [Description("summarize|sort|take: no pass-through CTEs, fused ORDER BY+LIMIT, count_ has no redundant NULLS modifier")]
+    public void Emit_Simplification_TopKPipeline()
+    {
+        var node = new LimitNode(
+            new SortNode(
+                new AggregateNode(
+                    new ScanNode("DeviceNetworkEvents"),
+                    Aggregates: [new ProjectionExpr("count_", new FunctionCall("count", []))],
+                    GroupBy: [new ColumnRef("RemoteIP"), new ColumnRef("RemotePort")]),
+                [new SortExpr(new ColumnRef("count_"), SortDirection.Desc)]),
+            20);
+        var sql = _emitter.Emit(node);
+        var norm = NormSql(sql);
+        var passThrough = System.Text.RegularExpressions.Regex.Matches(norm, @"AS \(SELECT \* FROM __kql_stage_\d+\)").Count;
+        Assert.AreEqual(0, passThrough);
+        AssertSqlContains(sql, "ORDER BY count_ DESC LIMIT 20");
+    }
+
 
     // ─── Helpers ────────────────────────────────────────────────────
 

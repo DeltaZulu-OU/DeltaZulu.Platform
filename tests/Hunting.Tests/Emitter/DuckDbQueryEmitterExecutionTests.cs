@@ -429,4 +429,48 @@ public sealed class DuckDbQueryEmitterExecutionTests
 
         AssertExecutes(node, expectedMinRows: 5);
     }
+
+    // ─── Pipeline simplification executes correctly ─────────────────
+
+    [TestMethod]
+    [Description("Top-k pipeline (summarize|sort|take) executes; fused, correctly ordered and bounded")]
+    public void Execute_Simplification_TopKOrderedAndBounded()
+    {
+        // summarize count() by FileName | sort by count_ desc | take 3
+        var node =
+            new LimitNode(
+                new SortNode(
+                    new AggregateNode(
+                        new ScanNode("DeviceProcessEvents"),
+                        Aggregates: [new ProjectionExpr("count_", new FunctionCall("count", []))],
+                        GroupBy: [new ColumnRef("FileName")]),
+                    [new SortExpr(new ColumnRef("count_"), SortDirection.Desc)]),
+                3);
+
+        var sql = _emitter.Emit(node);
+
+        // ORDER BY and LIMIT fused into one block; count(*) is non-nullable so no NULLS modifier.
+        var norm = System.Text.RegularExpressions.Regex.Replace(sql.Trim(), @"\s+", " ");
+        Assert.Contains("ORDER BY count_ DESC LIMIT 3", norm, $"Expected fused top-k block.\nSQL: {sql}");
+
+        var counts = new List<long>();
+        using (var cmd = _conn.CreateCommand())
+        {
+            cmd.CommandText = sql;
+            using var reader = cmd.ExecuteReader();
+            var countOrdinal = reader.GetOrdinal("count_");
+            while (reader.Read())
+            {
+                counts.Add(Convert.ToInt64(reader.GetValue(countOrdinal)));
+            }
+        }
+
+        Assert.AreEqual(3, counts.Count, "take 3 must bound the result to 3 rows");
+        Assert.AreEqual(2L, counts[0], "cmd.exe occurs twice and must sort first");
+        for (var i = 1; i < counts.Count; i++)
+        {
+            Assert.IsTrue(counts[i] <= counts[i - 1],
+                $"counts must be non-increasing: {string.Join(",", counts)}");
+        }
+    }
 }

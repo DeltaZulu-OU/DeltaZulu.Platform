@@ -198,6 +198,24 @@ mode shows generated SQL.
 
 **Status:** Complete.
 
+### 5a. Emitter SQL-shape simplification ✅
+
+Three semantics-preserving cleanups applied at the **emitter seam** (`DuckDbQueryEmitter`),
+because CTE stages are an emitter artifact and do not exist in the `RelNode` tree the planner
+rewrites:
+
+1. **Pass-through CTE elimination** — `StageFrom` reuses an existing stage instead of emitting a
+   redundant `SELECT * FROM stage` wrapper when no projection is applied.
+2. **Sort/take fusion** — a `SortNode` directly beneath a `LimitNode` emits `ORDER BY ... LIMIT n`
+   in one query block (single top-k operation).
+3. **Redundant NULLS-ordering removal** — the explicit NULLS modifier is dropped when the sort key
+   is provably non-nullable (count-family aggregates), determined by walking the sort input
+   subtree. Conservative: nullable keys (e.g. `sum`) and analyst-specified null ordering are
+   preserved.
+
+Covered at the emitter seam in `tools/TestRunner` (`Emitter.Simplification`) and
+`tests/Hunting.Tests/Emitter/` (unit + execution parity).
+
 ---
 
 
@@ -236,4 +254,4 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 | DuckDB connection in Blazor Server | `DuckDbConnectionFactory` + `QueryService` serialization | ✅ Implemented |
 ---
 
-*Last updated: 2026-05-25 — Phase 5 planner completed; standalone planning docs removed*
+*Last updated: 2026-05-25 — Phase 5 planner completed; emitter SQL-shape simplification (5a) added*
