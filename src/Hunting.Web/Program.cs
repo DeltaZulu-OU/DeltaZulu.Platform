@@ -47,6 +47,7 @@ builder.Services.AddSingleton<QueryService>();
 
 // Per-circuit channel bridging the layout sidebar to the editor page
 builder.Services.AddScoped<EditorBus>();
+builder.Services.AddScoped<LanguageService>();
 
 var app = builder.Build();
 

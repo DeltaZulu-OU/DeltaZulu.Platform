@@ -3,8 +3,9 @@
 @inject Hunting.Web.Services.QueryService QueryService
 @inject Hunting.Core.Catalog.ApprovedViewCatalog Catalog
 @inject Hunting.Web.Services.EditorBus EditorBus
+@inject Hunting.Web.Services.LanguageService LanguageService
 @inject ISnackbar Snackbar
-@implements IDisposable
+@implements IAsyncDisposable
 
 <div class="hunt-page">
     <!-- ─── Editor panel ─────────────────────────────────────────── -->
@@ -26,14 +27,7 @@
 
         <!-- Monaco editor placeholder — wired via JS interop -->
         <div class="hunt-editor-container">
-            <textarea id="kql-editor"
-                      class="hunt-editor-textarea"
-                      placeholder="Enter KQL query…"
-                      spellcheck="false"
-                      @bind="_kql"
-                      @bind:event="oninput"
-                      @onkeydown="HandleKey"
-                      rows="12">@_kql</textarea>
+            <div id="kql-editor" class="hunt-editor-textarea"></div>
         </div>
 
         @if (_diagnostics.Any())
@@ -136,32 +130,23 @@
 </div>
 
 @code {
-    // ─── State ──────────────────────────────────────────────────────
-
     private string _kql = string.Empty;
     private bool _running;
     private Hunting.Data.QueryResult? _result;
     private TimeSpan _elapsed;
     private List<Hunting.Core.Policy.QueryDiagnostic> _diagnostics = [];
     private bool _showSql;
-
-    // Sorting
     private string? _sortColumn;
     private bool _sortAsc = true;
-
-    // Pagination
     private int _page;
     private const int _pageSize = 100;
     private int TotalPages => (_result?.RowCount ?? 0 + _pageSize - 1) / _pageSize;
-
-    // Cancellation for ongoing queries
     private CancellationTokenSource _cts = new();
     private readonly Queue<string> _snackbarKeys = new();
 
-    // ─── Query execution ────────────────────────────────────────────
-
     private async Task RunQuery()
     {
+        _kql = await LanguageService.GetEditorValueAsync();
         if (_running || string.IsNullOrWhiteSpace(_kql)) return;
 
         _cts.Cancel();
@@ -210,26 +195,18 @@
         }
     }
 
-    // ─── Keyboard shortcut (Shift+Enter) ───────────────────────────
-
-    private async Task HandleKey(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter" && e.ShiftKey)
-            await RunQuery();
-    }
-
-    // ─── Text insertion from sidebar ────────────────────────────────
-
     protected override void OnInitialized()
         => EditorBus.InsertRequested += HandleInsertRequested;
 
     private void HandleInsertRequested(string text)
     {
         _kql = text;
-        InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(async () =>
+        {
+            await LanguageService.SetEditorValueAsync(text);
+            StateHasChanged();
+        });
     }
-
-    // ─── Sort and paginate ──────────────────────────────────────────
 
     private void SortBy(string colName)
     {
@@ -263,32 +240,42 @@
         return rows.Skip(_page * _pageSize).Take(_pageSize);
     }
 
-    // ─── Formatting ─────────────────────────────────────────────────
-
     private static string FormatCell(object? value)
     {
         if (value is null) return "";
         if (value is DateTimeOffset dto) return dto.ToString("yyyy-MM-dd HH:mm:ss");
         if (value is DateTime dt) return dt.ToString("yyyy-MM-dd HH:mm:ss");
         var s = value.ToString() ?? "";
-        // Truncate long JSON/command lines
         return s.Length > 200 ? s[..200] + "…" : s;
     }
 
-    private void Clear()
+    private async Task Clear()
     {
         _kql = string.Empty;
         _result = null;
         _diagnostics = [];
         _showSql = false;
+        await LanguageService.SetEditorValueAsync(_kql);
     }
 
-    // ─── Lifecycle ──────────────────────────────────────────────────
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
 
-    public void Dispose()
+        var schema = Catalog.Views.Values
+            .Select(v => new Hunting.Web.Services.KqlTableSchema(
+                v.Name,
+                v.Columns.Select(c => c.Name).ToArray()))
+            .ToArray();
+
+        await LanguageService.InitializeKqlEditorAsync("kql-editor", _kql, RunQuery, schema);
+    }
+
+    public async ValueTask DisposeAsync()
     {
         EditorBus.InsertRequested -= HandleInsertRequested;
         _cts.Cancel();
         _cts.Dispose();
+        await LanguageService.DisposeAsync();
     }
 }
