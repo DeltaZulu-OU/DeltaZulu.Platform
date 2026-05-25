@@ -168,6 +168,7 @@ public sealed class RelationalPlannerTests
         Assert.IsNotNull(planner.LastRunStats);
         Assert.IsGreaterThanOrEqualTo(1, planner.LastRunStats!.Iterations);
         Assert.IsGreaterThanOrEqualTo(1, planner.LastRunStats.TotalRulesAttempted);
+        Assert.IsFalse(planner.LastRunStats.HitRuleApplicationBudget);
         Assert.HasCount(4, planner.LastRunStats.PassStats, "Expected four registered planner passes");
     }
 
@@ -382,5 +383,48 @@ public sealed class RelationalPlannerTests
         var proj = (ProjectNode)sort.Input;
         Assert.Contains(p => p.Alias == "DeviceName", proj.Projections,
             "The case-insensitively referenced column must not be pruned");
+    }
+
+    [TestMethod]
+    [Description("Function names are case-insensitive and should be treated as equivalent for common scalar hoisting")]
+    public void CommonScalarHoist_FunctionNameCaseInsensitive_Deduplicates()
+    {
+        var planner = new RelationalPlanner();
+
+        RelNode node = new ProjectNode(
+            new ScanNode("DeviceProcessEvents"),
+            [
+                new ProjectionExpr("X", new FunctionCall("tolower", [new ColumnRef("DeviceName")])) ,
+                new ProjectionExpr("Y", new FunctionCall("ToLower", [new ColumnRef("DeviceName")]))
+            ]);
+
+        var planned = planner.Plan(node, new PlannerContext(Enabled: true));
+
+        var outer = (ProjectNode)planned;
+        Assert.IsInstanceOfType<ExtendNode>(outer.Input);
+        Assert.IsInstanceOfType<ColumnRef>(outer.Projections[1].Expression,
+            "Function name casing differences should not block common subexpression hoisting");
+    }
+
+    [TestMethod]
+    [Description("Planner enforces a global rule-application budget as a control against runaway optimization")]
+    public void PlannerContext_MaxRuleApplications_StopsEarlyAndSetsBudgetFlag()
+    {
+        var planner = new RelationalPlanner();
+
+        RelNode node = new ProjectNode(
+            new ProjectNode(
+                new ScanNode("DeviceProcessEvents"),
+                [
+                    new ProjectionExpr("A", new ColumnRef("DeviceName")),
+                    new ProjectionExpr("B", new ColumnRef("Timestamp"))
+                ]),
+            [new ProjectionExpr("A", new ColumnRef("A"))]);
+
+        _ = planner.Plan(node, new PlannerContext(Enabled: true, MaxIterations: 10, MaxRuleApplications: 1));
+
+        Assert.IsNotNull(planner.LastRunStats);
+        Assert.IsTrue(planner.LastRunStats!.HitRuleApplicationBudget,
+            "A tight rule budget should stop optimization and be observable in telemetry");
     }
 }

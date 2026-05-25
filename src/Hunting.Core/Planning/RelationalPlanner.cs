@@ -12,12 +12,13 @@ public interface IPlannerTelemetry
     PlannerRunStats? LastRunStats { get; }
 }
 
-public sealed record PlannerContext(bool Enabled, int MaxIterations = 3);
+public sealed record PlannerContext(bool Enabled, int MaxIterations = 3, int MaxRuleApplications = 10_000);
 
 public sealed record PlannerRunStats(
     int Iterations,
     int TotalRulesAttempted,
     int TotalRulesApplied,
+    bool HitRuleApplicationBudget,
     IReadOnlyList<PlannerPassStat> PassStats);
 
 public sealed record PlannerPassStat(string Name, int Attempted, int Applied);
@@ -56,6 +57,9 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
         var current = root;
         var max = Math.Max(1, context.MaxIterations);
         var passAgg = _passes.ToDictionary(p => p.Name, _ => (attempted: 0, applied: 0), StringComparer.Ordinal);
+        var ruleBudget = Math.Max(1, context.MaxRuleApplications);
+        var totalApplied = 0;
+        var hitBudget = false;
         var iterations = 0;
 
         for (var i = 0; i < max; i++)
@@ -67,15 +71,22 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             {
                 var next = pass.Apply(current, out var changed, out var attempted, out var applied);
                 passAgg[pass.Name] = (passAgg[pass.Name].attempted + attempted, passAgg[pass.Name].applied + applied);
+                totalApplied += applied;
 
                 if (changed)
                 {
                     changedAny = true;
                     current = next;
                 }
+
+                if (totalApplied >= ruleBudget)
+                {
+                    hitBudget = true;
+                    break;
+                }
             }
 
-            if (!changedAny)
+            if (hitBudget || !changedAny)
             {
                 break;
             }
@@ -89,6 +100,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             Iterations: iterations,
             TotalRulesAttempted: passStats.Sum(s => s.Attempted),
             TotalRulesApplied: passStats.Sum(s => s.Applied),
+            HitRuleApplicationBudget: hitBudget,
             PassStats: passStats);
 
         return current;
@@ -531,7 +543,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
         LiteralScalar l => $"lit:{l.Kind}:{l.Value}",
         BinaryScalar b => $"bin:{b.Op}:({ScalarKey(b.Left)}):({ScalarKey(b.Right)})",
         UnaryScalar u => $"un:{u.Op}:({ScalarKey(u.Operand)})",
-        FunctionCall f => $"fn:{f.Name}({string.Join(',', f.Args.Select(ScalarKey))})",
+        FunctionCall f => $"fn:{f.Name.ToLowerInvariant()}({string.Join(',', f.Args.Select(ScalarKey))})",
         CaseScalar c => $"case:{string.Join('|', c.Branches.Select(b => ScalarKey(b.When) + "=>" + ScalarKey(b.Then)))}:else:{ScalarKey(c.Else)}",
         // The window specification (partitioning, ordering, frame) is part of the
         // expression's identity. Omitting it would treat two window functions with
@@ -633,7 +645,7 @@ public sealed class NoOpRelationalPlanner : IRelationalPlanner, IPlannerTelemetr
     public RelNode Plan(RelNode root, PlannerContext context)
     {
         LastRunStats = context.Enabled
-            ? new PlannerRunStats(1, 0, 0, [])
+            ? new PlannerRunStats(1, 0, 0, false, [])
             : null;
         return root;
     }
