@@ -270,16 +270,14 @@
         _drawerMode = DrawerMode.Sql;
         _drawerTitle = "Generated SQL";
         _drawerTypeLabel = "Beautified and syntax-highlighted";
-        var decodedSql = System.Net.WebUtility.HtmlDecode(sql);
-        _drawerSqlHtml = HighlightSql(BeautifySql(decodedSql));
+        _drawerSqlHtml = HighlightSql(BeautifySql(sql));
         _showDrawer = true;
     }
 
     private async Task CopySqlToClipboard()
     {
         if (_result?.GeneratedSql is not string sql) return;
-        var decodedSql = System.Net.WebUtility.HtmlDecode(sql);
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", decodedSql);
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", sql);
         Snackbar.Add("SQL copied to clipboard.", Severity.Success);
     }
 
@@ -413,11 +411,28 @@
 
     private static string HighlightSql(string sql)
     {
-        var encoded = System.Net.WebUtility.HtmlEncode(sql);
+        var placeholders = new List<string>();
+        var withPlaceholders = System.Text.RegularExpressions.Regex.Replace(
+            sql,
+            "'([^']|'')*'",
+            m =>
+            {
+                placeholders.Add(m.Value);
+                return $"__SQL_STRING_{placeholders.Count - 1}__";
+            });
+
+        var encoded = System.Net.WebUtility.HtmlEncode(withPlaceholders);
         encoded = System.Text.RegularExpressions.Regex.Replace(encoded, "(--.*)$", "<span class=\"sql-comment\">$1</span>", System.Text.RegularExpressions.RegexOptions.Multiline);
-        encoded = System.Text.RegularExpressions.Regex.Replace(encoded, "('([^']|'')*')", "<span class=\"sql-string\">$1</span>");
         encoded = System.Text.RegularExpressions.Regex.Replace(encoded, "\\b(SELECT|FROM|WHERE|GROUP BY|ORDER BY|HAVING|LIMIT|JOIN|LEFT JOIN|RIGHT JOIN|INNER JOIN|OUTER JOIN|ON|AND|OR|AS|UNION|WITH)\\b", "<span class=\"sql-keyword\">$1</span>");
         encoded = System.Text.RegularExpressions.Regex.Replace(encoded, "\\b([0-9]+)\\b", "<span class=\"sql-number\">$1</span>");
+
+        for (var i = 0; i < placeholders.Count; i++)
+        {
+            var token = $"__SQL_STRING_{i}__";
+            var encodedLiteral = System.Net.WebUtility.HtmlEncode(placeholders[i]);
+            encoded = encoded.Replace(token, $"<span class=\"sql-string\">{encodedLiteral}</span>", StringComparison.Ordinal);
+        }
+
         return encoded;
     }
 

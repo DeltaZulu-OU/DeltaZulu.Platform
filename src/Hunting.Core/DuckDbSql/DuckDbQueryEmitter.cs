@@ -951,7 +951,7 @@ public sealed partial class DuckDbQueryEmitter
         var operand = EmitScalar(un.Operand);
         return un.Op switch
         {
-            ScalarUnaryOp.Not => $"(NOT {operand})",
+            ScalarUnaryOp.Not => $"NOT ({operand})",
             ScalarUnaryOp.Negate => $"(-{operand})",
             _ => throw new NotSupportedException($"Unsupported unary op: {un.Op}")
         };

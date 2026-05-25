@@ -93,7 +93,7 @@ public sealed class QueryRuntime
         string sql;
         try
         {
-            var emitter = new DuckDbQueryEmitter(_defaultLimit);
+            var emitter = new DuckDbQueryEmitter(_defaultLimit, applyDefaultLimit: false);
             sql = emitter.Emit(relNode);
             debugTrace?.Add($"Emit complete: sqlLength={sql.Length}");
         }
