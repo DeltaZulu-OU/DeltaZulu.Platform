@@ -30,6 +30,11 @@ public sealed partial class DuckDbQueryEmitter
         @"^SELECT (?<proj>.+) FROM (?<source>[A-Za-z0-9_.]+)(?<group>\s+GROUP BY .+)?$",
         System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex FinalStageInlineRegex();
+    
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"^SELECT \* FROM (?<source>[A-Za-z0-9_.]+) WHERE (?<pred>.+)$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex FilterStageInlineRegex();
 
     [System.Text.RegularExpressions.GeneratedRegex(@"__kql_stage_\d+")]
     private static partial System.Text.RegularExpressions.Regex StageRefRegex();
@@ -38,6 +43,7 @@ public sealed partial class DuckDbQueryEmitter
     private readonly List<(string Name, string Sql)> _ctes = [];
     private readonly HashSet<string> _stageNames = new(StringComparer.Ordinal);
     private readonly int _defaultLimit;
+    private readonly bool _applyDefaultLimit;
     // Scalar let bindings: name → emitted SQL expression, populated by EmitLet.
     // EmitScalar checks this dictionary for ColumnRef resolution so that
     // `let cutoff = ago(7d); T | where Timestamp > cutoff` emits
@@ -45,9 +51,10 @@ public sealed partial class DuckDbQueryEmitter
     private readonly Dictionary<string, string> _scalarBindings =
         new(StringComparer.OrdinalIgnoreCase);
 
-    public DuckDbQueryEmitter(int defaultLimit = 10_000)
+    public DuckDbQueryEmitter(int defaultLimit = 10_000, bool applyDefaultLimit = true)
     {
         _defaultLimit = defaultLimit;
+        _applyDefaultLimit = applyDefaultLimit;
     }
 
     /// <summary>
@@ -64,6 +71,7 @@ public sealed partial class DuckDbQueryEmitter
         var hasUserLimit = HasLimit(node);
         var terminalTopK = ShapeSql(ref finalSource);
         TryInlineSingleUseAggregateStageIntoTerminalTopK(ref terminalTopK, ref columns);
+        TryInlineSingleUseFilterStageIntoProjection(ref finalSource, ref columns);
         TryInlineFinalStage(ref finalSource, ref columns);
 
         var sb = new StringBuilder();
@@ -92,7 +100,7 @@ public sealed partial class DuckDbQueryEmitter
             sb.Append(" ORDER BY ").Append(terminalTopK.OrderBy);
             sb.Append(" LIMIT ").Append(terminalTopK.Limit);
         }
-        else if (!hasUserLimit)
+        else if (!hasUserLimit && _applyDefaultLimit)
         {
             sb.Append(" LIMIT ").Append(_defaultLimit);
         }
@@ -271,6 +279,39 @@ public sealed partial class DuckDbQueryEmitter
         var groupBy = m.Groups["group"].Value;
         finalSource = string.IsNullOrWhiteSpace(groupBy) ? source : $"{source}{groupBy}";
 
+        _ctes.RemoveAt(idx);
+        _stageNames.Remove(cte.Name);
+    }
+    
+    private void TryInlineSingleUseFilterStageIntoProjection(ref string finalSource, ref string? columns)
+    {
+        if (columns is null || string.Equals(columns, "*", StringComparison.Ordinal))
+        {
+            return;
+        }
+        var currentSource = finalSource;
+        var idx = _ctes.FindIndex(c => string.Equals(c.Name, currentSource, StringComparison.Ordinal));
+        finalSource = currentSource;
+        if (idx < 0)
+        {
+            return;
+        }
+
+        var cte = _ctes[idx];
+        var m = FilterStageInlineRegex().Match(cte.Sql);
+        if (!m.Success)
+        {
+            return;
+        }
+
+        var refs = _ctes.Count(x => !string.Equals(x.Name, cte.Name, StringComparison.Ordinal)
+            && x.Sql.Contains(cte.Name, StringComparison.Ordinal));
+        if (refs != 0)
+        {
+            return;
+        }
+
+        finalSource = $"{m.Groups["source"].Value} WHERE {m.Groups["pred"].Value}";
         _ctes.RemoveAt(idx);
         _stageNames.Remove(cte.Name);
     }

@@ -662,6 +662,65 @@ public sealed partial class DuckDbQueryEmitterTests
         AssertSqlContains(sql, "ORDER BY RemoteIP DESC NULLS LAST LIMIT 5");
     }
 
+    [TestMethod]
+    [Description("where|project over base scan collapses single-use filter CTE into one SELECT block")]
+    public void WhereInProject_OptimizedMode_CollapsesSingleUseFilterCte()
+    {
+        var node = new ProjectNode(
+            new FilterNode(
+                new ScanNode("DeviceNetworkEvents"),
+                new BinaryScalar(
+                    new ColumnRef("RemotePort"),
+                    ScalarBinaryOp.In,
+                    new ListScalar(
+                    [
+                        new LiteralScalar(4444, LiteralKind.Int),
+                        new LiteralScalar(1337, LiteralKind.Int),
+                        new LiteralScalar(8888, LiteralKind.Int),
+                        new LiteralScalar(9999, LiteralKind.Int),
+                        new LiteralScalar(31337, LiteralKind.Int)
+                    ]))),
+            [
+                new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
+                new ProjectionExpr("DeviceName", new ColumnRef("DeviceName")),
+                new ProjectionExpr("LocalIP", new ColumnRef("LocalIP")),
+                new ProjectionExpr("RemoteIP", new ColumnRef("RemoteIP")),
+                new ProjectionExpr("RemotePort", new ColumnRef("RemotePort")),
+                new ProjectionExpr("InitiatingProcessFileName", new ColumnRef("InitiatingProcessFileName"))
+            ]);
+
+        var sql = _emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
+        Assert.DoesNotMatchRegex(@"SELECT\s+\*", norm);
+        AssertSqlContains(sql, "FROM main.DeviceNetworkEvents WHERE (RemotePort IN (4444, 1337, 8888, 9999, 31337))");
+        Assert.MatchesRegex(
+            @"SELECT\s+Timestamp\s*,\s*DeviceName\s*,\s*LocalIP\s*,\s*RemoteIP\s*,\s*RemotePort\s*,\s*InitiatingProcessFileName\s+FROM\s+main\.DeviceNetworkEvents",
+            norm);
+    }
+
+    [TestMethod]
+    [Description("Default LIMIT is opt-in; semantic mode can emit no implicit limit")]
+    public void WhereInProject_SemanticMode_DoesNotAddImplicitLimit()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: false);
+        var node = new ProjectNode(
+            new FilterNode(
+                new ScanNode("DeviceNetworkEvents"),
+                new BinaryScalar(
+                    new ColumnRef("RemotePort"),
+                    ScalarBinaryOp.In,
+                    new ListScalar([new LiteralScalar(4444, LiteralKind.Int), new LiteralScalar(31337, LiteralKind.Int)]))),
+            [new ProjectionExpr("RemotePort", new ColumnRef("RemotePort"))]);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+        Assert.DoesNotContain("LIMIT 10000", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"\bLIMIT\b", norm);
+    }
+
 
     // ─── Helpers ────────────────────────────────────────────────────
 
