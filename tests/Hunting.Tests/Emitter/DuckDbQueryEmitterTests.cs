@@ -441,9 +441,9 @@ public sealed partial class DuckDbQueryEmitterTests
     [TestMethod]
     [Description("Unknown function names are rejected")]
     public void Func_Unknown_ThrowsNotSupported() => Assert.ThrowsExactly<NotSupportedException>(() =>
-                                                              _emitter.Emit(new ExtendNode(
-                                                                  new ScanNode("DeviceProcessEvents"),
-                                                                  [new ProjectionExpr("r", new FunctionCall("custom_function_xyz",
+                                                                  _emitter.Emit(new ExtendNode(
+                                                                      new ScanNode("DeviceProcessEvents"),
+                                                                      [new ProjectionExpr("r", new FunctionCall("custom_function_xyz",
                     [new ColumnRef("FileName"), new LiteralScalar(42, LiteralKind.Int)]))])));
 
     [TestMethod]
@@ -476,8 +476,6 @@ public sealed partial class DuckDbQueryEmitterTests
         AssertSqlContains(sql, "LIMIT 100");
     }
 
-
-
     [TestMethod]
     [Description("has_cs uses case-sensitive regex without lower()")]
     public void Op_HasCs_CaseSensitiveRegex()
@@ -506,8 +504,6 @@ public sealed partial class DuckDbQueryEmitterTests
         AssertSqlContains(sql, "regexp_matches(ProcessCommandLine");
         AssertSqlContains(sql, "'c'");
     }
-
-
 
     [TestMethod]
     [Description("not has emits NOT regexp_matches with word boundary")]

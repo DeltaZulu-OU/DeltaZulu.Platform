@@ -72,18 +72,18 @@ public sealed class DuckDbWindowSpecTests
         return v is null
             ? throw new InvalidOperationException("Value is null")
             : v switch
-        {
-            long l => l,
-            int i => i,
-            short s => s,
-            byte b => b,
-            System.Numerics.BigInteger bi => (long)bi,
-            decimal d => (long)d,
-            double db => (long)db,
-            float f => (long)f,
-            string s => long.Parse(s),
-            _ => Convert.ToInt64(v)
-        };
+            {
+                long l => l,
+                int i => i,
+                short s => s,
+                byte b => b,
+                System.Numerics.BigInteger bi => (long)bi,
+                decimal d => (long)d,
+                double db => (long)db,
+                float f => (long)f,
+                string s => long.Parse(s),
+                _ => Convert.ToInt64(v)
+            };
     }
 
     // ─── lag() — KQL: prev() ────────────────────────────────────────

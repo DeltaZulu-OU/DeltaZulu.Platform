@@ -42,7 +42,6 @@ public sealed class RelationalPlannerTests
         Assert.HasCount(2, outer.Projections);
     }
 
-
     [TestMethod]
     public void FilterOverPassthroughProject_PushesDown()
     {
@@ -76,7 +75,6 @@ public sealed class RelationalPlannerTests
 
         Assert.IsInstanceOfType<FilterNode>(planned);
     }
-
 
     [TestMethod]
     public void FilterUsingProjectedAlias_PushesDownWithRemap()
@@ -117,7 +115,6 @@ public sealed class RelationalPlannerTests
         Assert.AreEqual(once, twice, "Planner should converge to fixed point and remain stable");
     }
 
-
     [TestMethod]
     public void FilterOverDuplicateAliasProject_DoesNotPushDown()
     {
@@ -137,7 +134,6 @@ public sealed class RelationalPlannerTests
         Assert.IsInstanceOfType<FilterNode>(planned, "Ambiguous alias mapping must not be pushed down");
     }
 
-
     [TestMethod]
     public void PlannerContext_MaxIterations_AtLeastOnePass()
     {
@@ -155,7 +151,6 @@ public sealed class RelationalPlannerTests
         var outer = (ProjectNode)planned;
         Assert.IsInstanceOfType<ScanNode>(outer.Input);
     }
-
 
     [TestMethod]
     public void PlannerStats_AreCaptured_WhenEnabled()
@@ -175,7 +170,6 @@ public sealed class RelationalPlannerTests
         Assert.IsGreaterThanOrEqualTo(1, planner.LastRunStats.TotalRulesAttempted);
         Assert.HasCount(4, planner.LastRunStats.PassStats, "Expected four registered planner passes");
     }
-
 
     [TestMethod]
     public void ProjectionPruning_Removes_Unused_ProjectColumns()
@@ -197,7 +191,6 @@ public sealed class RelationalPlannerTests
         var prune = stats.PassStats.First(s => s.Name == "ProjectionPruningPass");
         Assert.IsGreaterThan(0, prune.Applied, "Projection pruning should apply at least one rewrite");
     }
-
 
     [TestMethod]
     public void ProjectionPruning_WithExtend_PreservesRequiredPassthroughInputColumns()
@@ -243,7 +236,6 @@ public sealed class RelationalPlannerTests
         Assert.IsInstanceOfType<ExtendNode>(outer.Input);
         Assert.IsInstanceOfType<ColumnRef>(outer.Projections[1].Expression, "Second duplicate should be rewritten to reference first computed alias");
     }
-
 
     [TestMethod]
     public void CommonScalarHoist_OnExtend_ReusesDuplicateExpressionsWithoutProjectInjection()

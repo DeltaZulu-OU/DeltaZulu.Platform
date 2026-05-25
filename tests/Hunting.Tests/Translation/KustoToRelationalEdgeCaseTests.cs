@@ -3,8 +3,8 @@ namespace Hunting.Tests.Translation;
 using Hunting.Core.Catalog;
 using Hunting.Core.Policy;
 using Hunting.Core.QueryModel;
-using Hunting.Schema.Definitions;
 using Hunting.Core.Translation;
+using Hunting.Schema.Definitions;
 
 /// <summary>
 /// Edge case, error path, and adversarial tests for the KQL-to-RelNode translator.
@@ -185,7 +185,7 @@ public sealed class KustoToRelationalEdgeCaseTests
         var (result, diag) = Translate(
             """
             DeviceProcessEvents
-            /* 
+            /*
                This is a multi-line comment
                that spans several lines
             */

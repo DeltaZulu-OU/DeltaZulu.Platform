@@ -1,7 +1,7 @@
 namespace Hunting.Schema.Definitions;
 
-using Hunting.Core.Schema;
 using Hunting.Core.Mapping;
+using Hunting.Core.Schema;
 using static Hunting.Core.Mapping.MapDsl;
 
 /// <summary>
@@ -47,16 +47,16 @@ public static class DeviceNetworkEventsSchema
     ];
 
     public static readonly CanonicalViewDef View = new(
-        Schema:      "main",
-        Name:        "DeviceNetworkEvents",
+        Schema: "main",
+        Name: "DeviceNetworkEvents",
         ParserViews: ["internal.v_network_sysmon_connect"],
-        Columns:     Columns,
+        Columns: Columns,
         Description: "Network connection events from all configured sources");
 
     public static readonly ParserViewDef SysmonNetworkConnect = new(
-        Schema:          "internal",
-        Name:            "v_network_sysmon_connect",
-        SourceName:      "Microsoft Sysmon Event ID 3",
+        Schema: "internal",
+        Name: "v_network_sysmon_connect",
+        SourceName: "Microsoft Sysmon Event ID 3",
         CanonicalTarget: "DeviceNetworkEvents",
         Mapping: new MappingQueryDef(
             SourceObject: "raw.windows_event_json",
@@ -84,6 +84,6 @@ public static class DeviceNetworkEventsSchema
                 Map("InitiatingProcessSHA256",          JsonText(Col("event_data"), "$.Hashes")),
                 Map("ReportId",                         Lit(null)),
             ]),
-        Columns:     Columns,
+        Columns: Columns,
         Description: "Sysmon Event ID 3 (Network Connection) parser");
 }

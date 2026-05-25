@@ -6,7 +6,7 @@ using QueryModel;
 
 /// <summary>
 /// Emits DuckDB SQL from a RelNode query tree.
-/// 
+///
 /// Canonical emission uses CTE staging (__kql_stage_N) to preserve pipeline
 /// operator boundaries. Each tabular operator becomes a named CTE stage.
 /// The final SELECT reads from the last stage.
@@ -38,12 +38,12 @@ public sealed partial class DuckDbQueryEmitter
         @"^SELECT \* FROM (?<source>.+) LIMIT (?<limit>\d+)$",
         RegexOptions.IgnoreCase)]
     private static partial Regex TerminalLimitRegex();
-    
+
     [GeneratedRegex(
         @"^SELECT (?<proj>.+) FROM (?<source>[A-Za-z0-9_.]+)(?<group>\s+GROUP BY .+)?$",
         RegexOptions.IgnoreCase)]
     private static partial Regex FinalStageInlineRegex();
-    
+
     [GeneratedRegex(
         @"^SELECT \* FROM (?<source>[A-Za-z0-9_.]+) WHERE (?<pred>.+)$",
         RegexOptions.IgnoreCase)]
@@ -57,6 +57,7 @@ public sealed partial class DuckDbQueryEmitter
     private readonly HashSet<string> _stageNames = new(StringComparer.Ordinal);
     private readonly int _defaultLimit;
     private readonly bool _applyDefaultLimit;
+
     // Scalar let bindings: name → emitted SQL expression, populated by EmitLet.
     // EmitScalar checks this dictionary for ColumnRef resolution so that
     // `let cutoff = ago(7d); T | where Timestamp > cutoff` emits
@@ -415,7 +416,7 @@ public sealed partial class DuckDbQueryEmitter
         _ctes.RemoveAt(idx);
         _stageNames.Remove(cte.Name);
     }
-    
+
     private void TryInlineSingleUseFilterStageIntoProjection(ref string finalSource, ref string? columns)
     {
         if (columns is null || string.Equals(columns, "*", StringComparison.Ordinal))
@@ -854,6 +855,7 @@ public sealed partial class DuckDbQueryEmitter
 
         return $"({left} {sqlOp} ({string.Join(", ", items)}))";
     }
+
     private string EmitUnary(UnaryScalar un)
     {
         var operand = EmitScalar(un.Operand);
@@ -1016,6 +1018,7 @@ public sealed partial class DuckDbQueryEmitter
             _ => throw new NotSupportedException($"Not a has operator: {bin.Op}")
         };
     }
+
     /// DuckDB official docs do NOT list ago() as a function.
     /// The documented pattern is current_timestamp - INTERVAL.
     /// Source: https://duckdb.org/docs/current/sql/functions/timestamp
@@ -1057,6 +1060,7 @@ public sealed partial class DuckDbQueryEmitter
         // Non-literal part: fall back to CAST-based approach
         return $"({args[2]} + CAST(CAST({args[1]} AS VARCHAR) || ' ' || REPLACE({args[0]}, '''', '') AS INTERVAL))";
     }
+
     /// <summary>
     /// Helper for bin/bin_at: if the argument is a timespan literal,
     /// emit it as INTERVAL directly rather than relying on the generic
@@ -1192,12 +1196,16 @@ public sealed partial class DuckDbQueryEmitter
                     }
                 }
                 return false;
+
             case FilterNode f:
                 return IsNonNullableColumn(f.Input, column);
+
             case SortNode s:
                 return IsNonNullableColumn(s.Input, column);
+
             case LimitNode l:
                 return IsNonNullableColumn(l.Input, column);
+
             default:
                 return false;
         }

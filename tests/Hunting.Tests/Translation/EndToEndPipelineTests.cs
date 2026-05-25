@@ -3,10 +3,9 @@ namespace Hunting.Tests.Translation;
 using Hunting.Core.Catalog;
 using Hunting.Core.DuckDbSql;
 using Hunting.Core.Planning;
-using Hunting.Core.Policy;
 using Hunting.Core.QueryModel;
-using Hunting.Schema.Definitions;
 using Hunting.Data;
+using Hunting.Schema.Definitions;
 
 /// <summary>
 /// Full end-to-end tests: KQL string → Translate → Emit → Execute against
@@ -69,7 +68,6 @@ public sealed class EndToEndPipelineTests
         Assert.AreEqual("ProcessCommandLine", result.Columns[2].Name);
     }
 
-
     [TestMethod]
     [Description("Planner flag on with no-op planner preserves generated SQL and results")]
     public void Planner_NoOp_PreservesBehavior()
@@ -93,7 +91,6 @@ public sealed class EndToEndPipelineTests
         Assert.IsNull(off.PlannerStatsJson, "Planner stats should be hidden when planner is disabled");
         Assert.IsNotNull(on.PlannerStatsJson, "Planner stats should be present in developer mode when planner runs");
     }
-
 
     [TestMethod]
     [Description("Planner flag on with default planner preserves query semantics")]
@@ -142,7 +139,6 @@ public sealed class EndToEndPipelineTests
         Assert.IsTrue(result.Diagnostics.HasErrors);
         Assert.Contains(e => e.Message.Contains("logical planning stage", StringComparison.OrdinalIgnoreCase), result.Diagnostics.Errors);
     }
-
 
     [TestMethod]
     [Description("Planner max iterations is forwarded to planner context")]
@@ -312,6 +308,7 @@ public sealed class EndToEndPipelineTests
 
     private static void AssertSuccess(QueryResult result) => Assert.IsTrue(result.Success,
             $"Query failed:\n{string.Join("\n", result.Diagnostics.All.Select(d => d.ToString()))}");
+
     private sealed class ThrowingPlanner : IRelationalPlanner
     {
         public RelNode Plan(RelNode root, PlannerContext context) => throw new InvalidOperationException("planner boom");
@@ -320,6 +317,7 @@ public sealed class EndToEndPipelineTests
     private sealed class CapturingPlanner : IRelationalPlanner
     {
         public PlannerContext? LastContext { get; private set; }
+
         public RelNode Plan(RelNode root, PlannerContext context)
         {
             LastContext = context;

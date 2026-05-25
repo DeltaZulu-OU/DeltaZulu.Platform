@@ -36,14 +36,22 @@ public sealed record MappingQueryDef(
 public static class MapDsl
 {
     public static ColumnExpr Col(string name) => new(name);
+
     public static LiteralExpr Lit(object? value) => new(value);
+
     public static JsonTextExpr JsonText(ExprDef col, string path) => new(col, path);
+
     public static RegexExtractExpr RegexExtract(ExprDef input, string pattern, int group) => new(input, pattern, group);
+
     public static CastExpr Cast(ExprDef input, DuckDbType type) => new(input, type);
+
     public static FunctionExpr Fn(string name, params ExprDef[] args) => new(name, args);
+
     public static ProjectionDef Map(string target, ExprDef expr) => new(target, expr);
 
     public static BinaryExpr Eq(ExprDef left, ExprDef right) => new(left, BinaryOp.Eq, right);
+
     public static BinaryExpr And(ExprDef left, ExprDef right) => new(left, BinaryOp.And, right);
+
     public static BinaryExpr Or(ExprDef left, ExprDef right) => new(left, BinaryOp.Or, right);
 }

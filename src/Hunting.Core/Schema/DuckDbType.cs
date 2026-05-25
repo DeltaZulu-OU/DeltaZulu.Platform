@@ -20,15 +20,15 @@ public static class DuckDbTypeExtensions
 {
     public static string ToSql(this DuckDbType type) => type switch
     {
-        DuckDbType.Varchar   => "VARCHAR",
-        DuckDbType.BigInt    => "BIGINT",
-        DuckDbType.Integer   => "INTEGER",
-        DuckDbType.Double    => "DOUBLE",
-        DuckDbType.Boolean   => "BOOLEAN",
+        DuckDbType.Varchar => "VARCHAR",
+        DuckDbType.BigInt => "BIGINT",
+        DuckDbType.Integer => "INTEGER",
+        DuckDbType.Double => "DOUBLE",
+        DuckDbType.Boolean => "BOOLEAN",
         DuckDbType.Timestamp => "TIMESTAMP",
-        DuckDbType.Date      => "DATE",
-        DuckDbType.Json      => "JSON",
-        DuckDbType.Blob      => "BLOB",
+        DuckDbType.Date => "DATE",
+        DuckDbType.Json => "JSON",
+        DuckDbType.Blob => "BLOB",
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown DuckDB type")
     };
 }

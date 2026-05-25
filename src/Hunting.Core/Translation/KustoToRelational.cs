@@ -1,8 +1,8 @@
 namespace Hunting.Core.Translation;
 
+using Catalog;
 using Kusto.Language;
 using Kusto.Language.Syntax;
-using Catalog;
 using Policy;
 using QueryModel;
 

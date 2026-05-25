@@ -3,8 +3,8 @@ namespace Hunting.Tests.Translation;
 using Hunting.Core.Catalog;
 using Hunting.Core.Policy;
 using Hunting.Core.QueryModel;
-using Hunting.Schema.Definitions;
 using Hunting.Core.Translation;
+using Hunting.Schema.Definitions;
 
 /// <summary>
 /// Red-green-refactor harness for KQL → RelNode translation.

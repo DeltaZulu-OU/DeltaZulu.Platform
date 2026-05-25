@@ -1,11 +1,11 @@
 namespace Hunting.Data;
 
+using System.Text.Json;
 using DuckDB.NET.Data;
 using Hunting.Core.Catalog;
 using Hunting.Core.DuckDbSql;
 using Hunting.Core.Planning;
 using Hunting.Core.Policy;
-using System.Text.Json;
 using Hunting.Core.Translation;
 
 /// <summary>

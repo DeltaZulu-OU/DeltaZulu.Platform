@@ -1,8 +1,9 @@
 using Hunting.Core.Catalog;
-using Hunting.Schema.Definitions;
 using Hunting.Data;
+using Hunting.Schema.Definitions;
 using Hunting.Web.Services;
 using MudBlazor.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ─── Services ────────────────────────────────────────────────────────────────
@@ -27,8 +28,7 @@ builder.Services.AddSingleton<DuckDbConnectionFactory>(sp =>
 builder.Services.AddSingleton<SchemaApplier>();
 
 // Query runtime — singleton; single connection is serialized by the factory lock
-builder.Services.AddSingleton<QueryRuntime>(sp =>
-{
+builder.Services.AddSingleton<QueryRuntime>(sp => {
     var plannerEnabled = builder.Configuration.GetValue<bool>("Planner:Enabled", false);
     var plannerMaxIterations = builder.Configuration.GetValue<int>("Planner:MaxIterations", 3);
 

@@ -25,6 +25,7 @@ public sealed record PlannerPassStat(string Name, int Attempted, int Applied);
 internal interface IPlannerPass
 {
     string Name { get; }
+
     RelNode Apply(RelNode node, out bool changed, out int attempted, out int applied);
 }
 
@@ -193,7 +194,6 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
         }
     }
 
-
     private sealed class ProjectionPruningPass : IPlannerPass
     {
         public string Name => "ProjectionPruningPass";
@@ -290,15 +290,18 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
 
                 case LimitNode l:
                     return l with { Input = RewriteNode(l.Input, required, ref attempted, ref applied) };
+
                 case JoinNode j:
                     // conservative: do not prune across join boundaries in v1
                     return j with { Left = RewriteNode(j.Left, new HashSet<string>(StringComparer.Ordinal), ref attempted, ref applied), Right = RewriteNode(j.Right, new HashSet<string>(StringComparer.Ordinal), ref attempted, ref applied) };
+
                 case LetBindingNode lb:
                     return lb with
                     {
                         Body = RewriteNode(lb.Body, required, ref attempted, ref applied),
                         TabularValue = lb.TabularValue is null ? null : RewriteNode(lb.TabularValue, new HashSet<string>(StringComparer.Ordinal), ref attempted, ref applied)
                     };
+
                 default:
                     return node;
             }
@@ -350,7 +353,6 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
 
             return new ExtendNode(input, rewrittenExt);
         }
-
 
         private static IReadOnlyList<ProjectionExpr> TryHoistExtensions(
             IReadOnlyList<ProjectionExpr> extensions,
@@ -428,6 +430,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             return new ProjectNode(inner, outProj);
         }
     }
+
     private static bool TryPushFilterBelowProject(ScalarExpr predicate, ProjectNode project, out RelNode rewritten)
     {
         rewritten = project;
@@ -487,7 +490,6 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
         return true;
     }
 
-
     private static string ScalarKey(ScalarExpr expr) => expr switch
     {
         ColumnRef c => $"col:{c.Name}",
@@ -495,7 +497,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
         BinaryScalar b => $"bin:{b.Op}:({ScalarKey(b.Left)}):({ScalarKey(b.Right)})",
         UnaryScalar u => $"un:{u.Op}:({ScalarKey(u.Operand)})",
         FunctionCall f => $"fn:{f.Name}({string.Join(',', f.Args.Select(ScalarKey))})",
-        CaseScalar c => $"case:{string.Join('|', c.Branches.Select(b => ScalarKey(b.When)+ "=>" +ScalarKey(b.Then)))}:else:{ScalarKey(c.Else)}",
+        CaseScalar c => $"case:{string.Join('|', c.Branches.Select(b => ScalarKey(b.When) + "=>" + ScalarKey(b.Then)))}:else:{ScalarKey(c.Else)}",
         WindowScalarExpr w => $"win:{w.FunctionName}({string.Join(',', w.Args.Select(ScalarKey))})",
         ListScalar l => $"list:{string.Join(',', l.Items.Select(ScalarKey))}",
         StarExpr => "star",
@@ -533,16 +535,20 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             case ColumnRef c:
                 sink.Add(c.Name);
                 break;
+
             case BinaryScalar b:
                 CollectColumnRefs(b.Left, sink);
                 CollectColumnRefs(b.Right, sink);
                 break;
+
             case UnaryScalar u:
                 CollectColumnRefs(u.Operand, sink);
                 break;
+
             case FunctionCall f:
                 foreach (var a in f.Args) CollectColumnRefs(a, sink);
                 break;
+
             case CaseScalar c:
                 foreach (var (w, t) in c.Branches)
                 {
@@ -551,11 +557,13 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 }
                 CollectColumnRefs(c.Else, sink);
                 break;
+
             case WindowScalarExpr w:
                 foreach (var a in w.Args) CollectColumnRefs(a, sink);
                 foreach (var p in w.Window.PartitionBy) CollectColumnRefs(p, sink);
                 foreach (var o in w.Window.OrderBy) CollectColumnRefs(o.Expression, sink);
                 break;
+
             case ListScalar l:
                 foreach (var i in l.Items) CollectColumnRefs(i, sink);
                 break;

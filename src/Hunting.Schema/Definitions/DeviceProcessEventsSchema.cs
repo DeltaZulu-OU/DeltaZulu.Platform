@@ -1,7 +1,7 @@
 namespace Hunting.Schema.Definitions;
 
-using Hunting.Core.Schema;
 using Hunting.Core.Mapping;
+using Hunting.Core.Schema;
 using static Hunting.Core.Mapping.MapDsl;
 
 /// <summary>

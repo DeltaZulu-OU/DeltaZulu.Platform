@@ -96,7 +96,8 @@ public sealed record WindowFrame(
     WindowBound Start,
     WindowBound End);
 
-public enum WindowFrameType { Rows, Range }
+public enum WindowFrameType
+{ Rows, Range }
 
 /// <summary>
 /// A window frame bound: UNBOUNDED PRECEDING, N PRECEDING, CURRENT ROW,
@@ -119,13 +120,17 @@ public sealed record ProjectionExpr(string Alias, ScalarExpr Expression);
 
 public sealed record SortExpr(ScalarExpr Expression, SortDirection Direction, NullOrder Nulls = NullOrder.Default);
 
-public enum JoinKind { Inner, LeftOuter, LeftSemi, LeftAnti }
+public enum JoinKind
+{ Inner, LeftOuter, LeftSemi, LeftAnti }
 
-public enum SortDirection { Asc, Desc }
+public enum SortDirection
+{ Asc, Desc }
 
-public enum NullOrder { Default, First, Last }
+public enum NullOrder
+{ Default, First, Last }
 
-public enum LiteralKind { String, Long, Int, Real, Bool, DateTime, Null, Timespan }
+public enum LiteralKind
+{ String, Long, Int, Real, Bool, DateTime, Null, Timespan }
 
 public enum ScalarBinaryOp
 {

@@ -1,9 +1,8 @@
 namespace Hunting.Tests.Spike;
 
-using DuckDB.NET.Data;
 using Hunting.Core.DuckDbSql;
-using Hunting.Schema.Definitions;
 using Hunting.Data;
+using Hunting.Schema.Definitions;
 
 /// <summary>
 /// Integration tests for the full schema pipeline:
