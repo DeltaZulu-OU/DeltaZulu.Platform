@@ -18,6 +18,13 @@ public sealed partial class DuckDbQueryEmitter
     private sealed record TerminalTopK(string Source, string OrderBy, int Limit);
     private sealed record TerminalOrder(string Source, string OrderBy);
     private sealed record TerminalLimit(string Source, int Limit);
+    private sealed record SelectStageShape(
+        string Projection,
+        string Source,
+        string? Predicate = null,
+        string? GroupByClause = null,
+        string? OrderBy = null,
+        int? Limit = null);
 
     [GeneratedRegex(
         @"^SELECT \* FROM (main\.[A-Za-z_][A-Za-z0-9_]*)$",
@@ -312,6 +319,46 @@ public sealed partial class DuckDbQueryEmitter
         return refs;
     }
 
+    private static SelectStageShape? ParseSelectShape(string sql)
+    {
+        var topK = TerminalTopKRegex().Match(sql);
+        if (topK.Success)
+        {
+            return new SelectStageShape(
+                Projection: "*",
+                Source: topK.Groups["source"].Value,
+                OrderBy: topK.Groups["order"].Value,
+                Limit: int.Parse(topK.Groups["limit"].Value));
+        }
+
+        var order = TerminalOrderRegex().Match(sql);
+        if (order.Success)
+        {
+            return new SelectStageShape("*", order.Groups["source"].Value, OrderBy: order.Groups["order"].Value);
+        }
+
+        var filter = FilterStageInlineRegex().Match(sql);
+        if (filter.Success)
+        {
+            return new SelectStageShape(
+                Projection: "*",
+                Source: filter.Groups["source"].Value,
+                Predicate: filter.Groups["pred"].Value);
+        }
+
+        var final = FinalStageInlineRegex().Match(sql);
+        if (final.Success)
+        {
+            return new SelectStageShape(
+                Projection: final.Groups["proj"].Value,
+                Source: final.Groups["source"].Value,
+                GroupByClause: final.Groups["group"].Value);
+        }
+
+        return null;
+    }
+
+
     private TerminalTopK? TryExtractTerminalTopK(string finalSource)
     {
         var idx = _ctes.FindIndex(c => string.Equals(c.Name, finalSource, StringComparison.Ordinal));
@@ -321,8 +368,8 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         var terminal = _ctes[idx];
-        var match = TerminalTopKRegex().Match(terminal.Sql);
-        if (!match.Success)
+        var parsed = ParseSelectShape(terminal.Sql);
+        if (parsed is null || parsed.OrderBy is null || parsed.Limit is null || parsed.Projection != "*")
         {
             return null;
         }
@@ -330,9 +377,9 @@ public sealed partial class DuckDbQueryEmitter
         _ctes.RemoveAt(idx);
         _stageNames.Remove(terminal.Name);
         return new TerminalTopK(
-            match.Groups["source"].Value,
-            match.Groups["order"].Value,
-            int.Parse(match.Groups["limit"].Value));
+            parsed.Source,
+            parsed.OrderBy,
+            parsed.Limit.Value);
     }
 
     private TerminalOrder? TryExtractTerminalOrder(string finalSource)
@@ -344,17 +391,15 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         var terminal = _ctes[idx];
-        var match = TerminalOrderRegex().Match(terminal.Sql);
-        if (!match.Success)
+        var parsed = ParseSelectShape(terminal.Sql);
+        if (parsed is null || parsed.OrderBy is null || parsed.Limit is not null || parsed.Projection != "*")
         {
             return null;
         }
 
         _ctes.RemoveAt(idx);
         _stageNames.Remove(terminal.Name);
-        return new TerminalOrder(
-            match.Groups["source"].Value,
-            match.Groups["order"].Value);
+        return new TerminalOrder(parsed.Source, parsed.OrderBy);
     }
 
     private TerminalLimit? TryExtractTerminalLimit(string finalSource)
