@@ -443,3 +443,30 @@ html, body {
         display: flex;
         justify-content: space-between;
     }
+.hunt-timefilter-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-panel);
+    font-size: 12px;
+}
+
+.hunt-timefilter-label,
+.hunt-timefilter-status {
+    color: var(--text-dim);
+}
+
+.hunt-timefilter-select,
+.hunt-timefilter-date {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    border-radius: var(--radius);
+    padding: 4px 8px;
+}
+
+.hunt-timefilter-sep {
+    color: var(--text-dim);
+}

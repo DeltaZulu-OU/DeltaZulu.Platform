@@ -25,6 +25,33 @@
             </div>
         </div>
 
+        <div class="hunt-timefilter-toolbar">
+            <label class="hunt-timefilter-label" for="time-range">Time filter</label>
+            <select id="time-range" class="hunt-timefilter-select" @bind="_toolbar.SelectedTimeFilter">
+                @foreach (var preset in Hunting.Web.Services.QueryToolbarState.TimeFilterPresets)
+                {
+                    <option value="@preset.Key">@preset.Label</option>
+                }
+            </select>
+
+            @if (_toolbar.SelectedTimeFilter == "custom")
+            {
+                <input type="date" class="hunt-timefilter-date" @bind="_toolbar.CustomFromText" />
+                <span class="hunt-timefilter-sep">→</span>
+                <input type="date" class="hunt-timefilter-date" @bind="_toolbar.CustomToText" />
+            }
+
+            <span class="hunt-timefilter-status">@_toolbar.TimeFilterCaption</span>
+
+            <label class="hunt-timefilter-label" for="result-limit">Limit</label>
+            <select id="result-limit" class="hunt-timefilter-select" @bind="_toolbar.SelectedResultLimit">
+                @foreach (var opt in Hunting.Web.Services.QueryToolbarState.ResultLimitOptions)
+                {
+                    <option value="@opt">@(opt is null ? "None" : opt.Value.ToString())</option>
+                }
+            </select>
+        </div>
+
         <!-- Monaco editor placeholder — wired via JS interop -->
         <div class="hunt-editor-container">
             <div id="kql-editor" class="hunt-editor-textarea"></div>
@@ -131,6 +158,8 @@
 
 @code {
     private string _kql = string.Empty;
+    private readonly Hunting.Web.Services.QueryToolbarState _toolbar = new();
+
     private bool _running;
     private Hunting.Data.QueryResult? _result;
     private TimeSpan _elapsed;
@@ -162,8 +191,22 @@
         var sw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            _result = await QueryService.ExecuteAsync(_kql, _cts.Token);
-            _diagnostics = _result.Diagnostics.All.ToList();
+            if (_toolbar.TryBuildEffectiveQuery(_kql, out var effectiveQuery, out var warning))
+            {
+                _result = await QueryService.ExecuteAsync(effectiveQuery, _cts.Token);
+                _diagnostics = _result.Diagnostics.All.ToList();
+            }
+            else
+            {
+                _result = null;
+                _diagnostics =
+                [
+                    new Hunting.Core.Policy.QueryDiagnostic(
+                        Hunting.Core.Policy.DiagnosticSeverity.Warning,
+                        Hunting.Core.Policy.DiagnosticPhase.Policy,
+                        warning)
+                ];
+            }
         }
         finally
         {
