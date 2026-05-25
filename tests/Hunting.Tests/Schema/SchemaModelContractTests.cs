@@ -1,6 +1,5 @@
-using Hunting.Core.Mapping;
 using Hunting.Core.Schema;
-using Hunting.Core.Schema.Definitions;
+using Hunting.Schema.Definitions;
 
 namespace Hunting.Tests.Schema;
 
@@ -25,8 +24,8 @@ public class SchemaModelContractTests
 
         Assert.AreEqual("main.DeviceProcessEvents", DeviceProcessEventsSchema.View.QualifiedName);
         Assert.AreEqual("raw.windows_event_json", DeviceProcessEventsSchema.RawWindowsEventJson.QualifiedName);
-        Assert.AreEqual(14, DeviceProcessEventsSchema.Columns.Count);
-        Assert.AreEqual(7, DeviceProcessEventsSchema.RawWindowsEventJson.Columns.Count);
-        Assert.AreEqual(14, DeviceProcessEventsSchema.SysmonProcessCreate.Mapping.Projections.Count);
+        Assert.HasCount(14, DeviceProcessEventsSchema.Columns);
+        Assert.HasCount(7, DeviceProcessEventsSchema.RawWindowsEventJson.Columns);
+        Assert.HasCount(14, DeviceProcessEventsSchema.SysmonProcessCreate.Mapping.Projections);
     }
 }

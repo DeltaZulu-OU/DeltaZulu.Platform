@@ -5,7 +5,7 @@ using Hunting.Core.DuckDbSql;
 using Hunting.Core.Planning;
 using Hunting.Core.Policy;
 using Hunting.Core.QueryModel;
-using Hunting.Core.Schema.Definitions;
+using Hunting.Schema.Definitions;
 using Hunting.Data;
 
 /// <summary>
@@ -140,7 +140,7 @@ public sealed class EndToEndPipelineTests
 
         Assert.IsFalse(result.Success);
         Assert.IsTrue(result.Diagnostics.HasErrors);
-        Assert.IsTrue(result.Diagnostics.Errors.Any(e => e.Message.Contains("logical planning stage", StringComparison.OrdinalIgnoreCase)));
+        Assert.Contains(e => e.Message.Contains("logical planning stage", StringComparison.OrdinalIgnoreCase), result.Diagnostics.Errors);
     }
 
 
@@ -294,7 +294,7 @@ public sealed class EndToEndPipelineTests
         AssertSuccess(result);
         Assert.IsNotNull(result.GeneratedSql);
         Assert.Contains("main.DeviceProcessEvents", result.GeneratedSql);
-        Assert.IsTrue(result.DebugTrace.Count > 0, "Developer mode should include debug trace events");
+        Assert.IsNotEmpty(result.DebugTrace, "Developer mode should include debug trace events");
     }
 
     [TestMethod]
@@ -305,7 +305,7 @@ public sealed class EndToEndPipelineTests
         Assert.IsFalse(result.Success);
         Assert.IsNull(result.GeneratedSql);
         Assert.IsNull(result.PlannerStatsJson);
-        Assert.IsTrue(result.DebugTrace.Count > 0, "Failure in developer mode should still include debug trace");
+        Assert.IsNotEmpty(result.DebugTrace, "Failure in developer mode should still include debug trace");
     }
 
     // ─── Helpers ────────────────────────────────────────────────────

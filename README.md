@@ -11,8 +11,8 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 - Phases 0–2 (schema + translation + runtime) are functionally complete.
 - Phase 3 (Blazor UI experience) is the next major milestone.
 - The repository currently includes:
-  - `Hunting.Core`: schema, translation, relational model, and DuckDB SQL emitter.
-  - `Hunting.Data`: connection factory, schema application, runtime orchestration, and mock seeding.
+  - `Hunting.Core`: translation, relational model, catalog/policy, and DuckDB SQL emitter.
+  - `Hunting.Schema`: dedicated schema-definition project (public view schemas + parser mappings).  - `Hunting.Data`: connection factory, schema application, runtime orchestration, and mock seeding.
   - `Hunting.Web`: Blazor Server host and early UI scaffolding.
   - `Hunting.Tests`: MSTest test suite.
 
@@ -38,7 +38,8 @@ Key constraints:
 
 ```text
 src/
-  Hunting.Core/        # Query model, translation, SQL emission, schema contracts
+  Hunting.Core/        # Query model, translation, SQL emission, schema contracts/types
+  Hunting.Schema/      # User-editable schema definitions (Device* schemas)
   Hunting.Data/        # DuckDB runtime and schema application
   Hunting.Web/         # Blazor Server app host + UI components
 

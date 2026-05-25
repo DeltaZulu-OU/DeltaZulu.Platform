@@ -3,7 +3,7 @@ namespace Hunting.Tests.Translation;
 using Hunting.Core.Catalog;
 using Hunting.Core.Policy;
 using Hunting.Core.QueryModel;
-using Hunting.Core.Schema.Definitions;
+using Hunting.Schema.Definitions;
 using Hunting.Core.Translation;
 
 /// <summary>

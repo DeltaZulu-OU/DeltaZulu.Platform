@@ -39,7 +39,7 @@ public sealed class RelationalPlannerTests
         Assert.IsInstanceOfType<ProjectNode>(planned);
         var outer = (ProjectNode)planned;
         Assert.IsInstanceOfType<ScanNode>(outer.Input);
-        Assert.AreEqual(2, outer.Projections.Count);
+        Assert.HasCount(2, outer.Projections);
     }
 
 
@@ -173,7 +173,7 @@ public sealed class RelationalPlannerTests
         Assert.IsNotNull(planner.LastRunStats);
         Assert.IsGreaterThanOrEqualTo(1, planner.LastRunStats!.Iterations);
         Assert.IsGreaterThanOrEqualTo(1, planner.LastRunStats.TotalRulesAttempted);
-        Assert.AreEqual(4, planner.LastRunStats.PassStats.Count, "Expected four registered planner passes");
+        Assert.HasCount(4, planner.LastRunStats.PassStats, "Expected four registered planner passes");
     }
 
 
@@ -195,7 +195,7 @@ public sealed class RelationalPlannerTests
 
         var stats = planner.LastRunStats!;
         var prune = stats.PassStats.First(s => s.Name == "ProjectionPruningPass");
-        Assert.IsTrue(prune.Applied > 0, "Projection pruning should apply at least one rewrite");
+        Assert.IsGreaterThan(0, prune.Applied, "Projection pruning should apply at least one rewrite");
     }
 
 
@@ -221,7 +221,7 @@ public sealed class RelationalPlannerTests
         var ext = (ExtendNode)outer.Input;
         var innerProj = (ProjectNode)ext.Input;
 
-        Assert.IsTrue(innerProj.Projections.Any(p => p.Alias == "A"), "Required passthrough column A must be preserved");
+        Assert.Contains(p => p.Alias == "A", innerProj.Projections, "Required passthrough column A must be preserved");
     }
 
     [TestMethod]
@@ -261,7 +261,7 @@ public sealed class RelationalPlannerTests
 
         Assert.IsInstanceOfType<ExtendNode>(planned);
         var ext = (ExtendNode)planned;
-        Assert.AreEqual(2, ext.Extensions.Count);
+        Assert.HasCount(2, ext.Extensions);
         Assert.IsInstanceOfType<ColumnRef>(ext.Extensions[1].Expression);
         Assert.AreEqual("X", ((ColumnRef)ext.Extensions[1].Expression).Name);
     }

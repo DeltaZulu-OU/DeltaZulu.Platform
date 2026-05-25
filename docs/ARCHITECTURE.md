@@ -187,7 +187,8 @@ infer `INTEGER` and break DESCRIBE validation.
 
 ```
 src/
-  Hunting.Core/     Schema, Mapping, Catalog, Policy, QueryModel, Translation, DuckDbSql
+  Hunting.Core/     Schema contracts/types, Mapping model, Catalog, Policy, QueryModel, Translation, DuckDbSql
+  Hunting.Schema/   DeviceProcessEventsSchema, DeviceNetworkEventsSchema (dedicated schema authoring surface)
   Hunting.Data/     DuckDbConnectionFactory, SchemaApplier, QueryRuntime, MockDataSeeder
   Hunting.Web/      Blazor Server UI, query editor MVP, schema browser, result grid (Phase 3 complete; Monaco integration in Phase 4)
 
@@ -201,9 +202,10 @@ docs/
 Dependency graph:
 
 ```
-Hunting.Web → Hunting.Core, Hunting.Data
+Hunting.Web → Hunting.Core, Hunting.Data, Hunting.Schema
 Hunting.Data → Hunting.Core
-Hunting.Tests → Hunting.Core, Hunting.Data
+Hunting.Schema → Hunting.Core
+Hunting.Tests → Hunting.Core, Hunting.Data, Hunting.Schema
 ```
 
 `Hunting.Core` has no project dependencies. All DuckDB references live in `Hunting.Data` and

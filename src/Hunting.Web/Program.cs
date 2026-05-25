@@ -1,5 +1,5 @@
 using Hunting.Core.Catalog;
-using Hunting.Core.Schema.Definitions;
+using Hunting.Schema.Definitions;
 using Hunting.Data;
 using Hunting.Web.Services;
 var builder = WebApplication.CreateBuilder(args);

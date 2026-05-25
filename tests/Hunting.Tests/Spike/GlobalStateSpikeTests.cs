@@ -1,7 +1,7 @@
 namespace Hunting.Tests.Spike;
 
 using Hunting.Core.Catalog;
-using Hunting.Core.Schema.Definitions;
+using Hunting.Schema.Definitions;
 using Kusto.Language;
 
 /// <summary>

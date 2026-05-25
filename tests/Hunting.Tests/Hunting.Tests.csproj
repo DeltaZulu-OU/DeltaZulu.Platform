@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Hunting.Core\Hunting.Core.csproj" />
     <ProjectReference Include="..\..\src\Hunting.Data\Hunting.Data.csproj" />
+      <ProjectReference Include="..\..\src\Hunting.Schema\Hunting.Schema.csproj" />
   </ItemGroup>
 
 </Project>

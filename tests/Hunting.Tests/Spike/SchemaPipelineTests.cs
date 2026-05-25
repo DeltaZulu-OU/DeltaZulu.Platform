@@ -2,7 +2,7 @@ namespace Hunting.Tests.Spike;
 
 using DuckDB.NET.Data;
 using Hunting.Core.DuckDbSql;
-using Hunting.Core.Schema.Definitions;
+using Hunting.Schema.Definitions;
 using Hunting.Data;
 
 /// <summary>

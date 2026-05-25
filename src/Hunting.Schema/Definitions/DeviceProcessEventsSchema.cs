@@ -1,7 +1,8 @@
-namespace Hunting.Core.Schema.Definitions;
+namespace Hunting.Schema.Definitions;
 
-using Mapping;
-using static Mapping.MapDsl;
+using Hunting.Core.Schema;
+using Hunting.Core.Mapping;
+using static Hunting.Core.Mapping.MapDsl;
 
 /// <summary>
 /// Canonical column definitions and parser view mappings for DeviceProcessEvents.

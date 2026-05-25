@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="src/Hunting.Core/Hunting.Core.csproj" />
+  <Project Path="src/Hunting.Schema/Hunting.Schema.csproj" />
   <Project Path="src/Hunting.Data/Hunting.Data.csproj" />
   <Project Path="src/Hunting.Web/Hunting.Web.csproj" />
   <Project Path="tests/Hunting.Tests/Hunting.Tests.csproj" />

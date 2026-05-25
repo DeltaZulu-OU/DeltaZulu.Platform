@@ -465,11 +465,11 @@ public sealed class DuckDbQueryEmitterExecutionTests
             }
         }
 
-        Assert.AreEqual(3, counts.Count, "take 3 must bound the result to 3 rows");
+        Assert.HasCount(3, counts, "take 3 must bound the result to 3 rows");
         Assert.AreEqual(2L, counts[0], "cmd.exe occurs twice and must sort first");
         for (var i = 1; i < counts.Count; i++)
         {
-            Assert.IsTrue(counts[i] <= counts[i - 1],
+            Assert.IsLessThanOrEqualTo(counts[i - 1], counts[i],
                 $"counts must be non-increasing: {string.Join(",", counts)}");
         }
     }
