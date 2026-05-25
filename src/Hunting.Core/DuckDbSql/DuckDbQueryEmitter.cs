@@ -16,6 +16,7 @@ public sealed partial class DuckDbQueryEmitter
 {
     private sealed record TerminalTopK(string Source, string OrderBy, int Limit);
     private sealed record TerminalOrder(string Source, string OrderBy);
+    private sealed record TerminalLimit(string Source, int Limit);
 
     [System.Text.RegularExpressions.GeneratedRegex(
         @"^SELECT \* FROM (main\.[A-Za-z_][A-Za-z0-9_]*)$",
@@ -31,6 +32,11 @@ public sealed partial class DuckDbQueryEmitter
         @"^SELECT \* FROM (?<source>[A-Za-z0-9_.]+) ORDER BY (?<order>.+)$",
         System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex TerminalOrderRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"^SELECT \* FROM (?<source>.+) LIMIT (?<limit>\d+)$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex TerminalLimitRegex();
     
     [System.Text.RegularExpressions.GeneratedRegex(
         @"^SELECT (?<proj>.+) FROM (?<source>[A-Za-z0-9_.]+)(?<group>\s+GROUP BY .+)?$",
@@ -81,6 +87,7 @@ public sealed partial class DuckDbQueryEmitter
         {
             finalSource = terminalOrder.Source;
         }
+        TerminalLimit? terminalLimit = null;
         TryInlineSingleUseAggregateStageIntoTerminalTopK(ref terminalTopK, ref columns);
         TryInlineSingleUseAggregateStageIntoTerminalOrder(ref terminalOrder, ref columns);
         if (terminalOrder is not null)
@@ -91,12 +98,35 @@ public sealed partial class DuckDbQueryEmitter
         }
         TryInlineSingleUseFilterStageIntoProjection(ref finalSource, ref columns);
         TryInlineFinalStage(ref finalSource, ref columns);
+        // Final-stage inlining can materialize the projection list from a stage source.
+        // Re-run filter inlining once so where|project|take shapes can collapse fully.
+        TryInlineSingleUseFilterStageIntoProjection(ref finalSource, ref columns);
         if (terminalOrder is not null)
         {
             // Keep terminal ORDER source aligned with later projection/filter inlining.
             // Without this, we can remove an intermediate stage from _ctes and still
             // reference it in final FROM (dangling __kql_stage_N).
             terminalOrder = terminalOrder with { Source = finalSource };
+        }
+        if (terminalTopK is null && terminalOrder is null)
+        {
+            terminalLimit = TryExtractTerminalLimit(finalSource);
+            if (terminalLimit is not null)
+            {
+                finalSource = terminalLimit.Source;
+                // LIMIT extraction can expose a terminal projection stage.
+                // Inline it (and then its single-use filter input) to fully
+                // collapse where|project|take into one SELECT block.
+                TryInlineFinalStage(ref finalSource, ref columns);
+                TryInlineSingleUseFilterStageIntoProjection(ref finalSource, ref columns);
+            }
+        }
+        if (terminalLimit is not null)
+        {
+            // Keep terminal LIMIT source aligned with later projection/filter inlining.
+            // Without this, we can remove an intermediate stage from _ctes and still
+            // reference it in final FROM (dangling __kql_stage_N).
+            terminalLimit = terminalLimit with { Source = finalSource };
         }
 
         var sb = new StringBuilder();
@@ -118,7 +148,7 @@ public sealed partial class DuckDbQueryEmitter
 
         sb.Append("SELECT ");
         sb.Append(columns ?? "*");
-        sb.Append(" FROM ").Append(terminalTopK?.Source ?? terminalOrder?.Source ?? finalSource);
+        sb.Append(" FROM ").Append(terminalTopK?.Source ?? terminalOrder?.Source ?? terminalLimit?.Source ?? finalSource);
 
         if (terminalTopK is not null)
         {
@@ -132,6 +162,10 @@ public sealed partial class DuckDbQueryEmitter
             {
                 sb.Append(" LIMIT ").Append(_defaultLimit);
             }
+        }
+        else if (terminalLimit is not null)
+        {
+            sb.Append(" LIMIT ").Append(terminalLimit.Limit);
         }
         else if (!hasUserLimit && _applyDefaultLimit)
         {
@@ -297,6 +331,28 @@ public sealed partial class DuckDbQueryEmitter
         return new TerminalOrder(
             match.Groups["source"].Value,
             match.Groups["order"].Value);
+    }
+
+    private TerminalLimit? TryExtractTerminalLimit(string finalSource)
+    {
+        var idx = _ctes.FindIndex(c => string.Equals(c.Name, finalSource, StringComparison.Ordinal));
+        if (idx < 0)
+        {
+            return null;
+        }
+
+        var terminal = _ctes[idx];
+        var match = TerminalLimitRegex().Match(terminal.Sql);
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        _ctes.RemoveAt(idx);
+        _stageNames.Remove(terminal.Name);
+        return new TerminalLimit(
+            match.Groups["source"].Value,
+            int.Parse(match.Groups["limit"].Value));
     }
 
     private void TryInlineFinalStage(ref string finalSource, ref string? columns)

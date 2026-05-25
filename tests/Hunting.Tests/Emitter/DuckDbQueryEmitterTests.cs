@@ -294,7 +294,7 @@ public sealed partial class DuckDbQueryEmitterTests
     // ─── Spec-derived: CTE staging ──────────────────────────────────
 
     [TestMethod]
-    [Description("Multi-stage pipeline emits CTE chain")]
+    [Description("Multi-stage linear pipeline can collapse into a single SELECT block")]
     public void Emit_CteStaging_MultiStage()
     {
         var node =
@@ -313,9 +313,10 @@ public sealed partial class DuckDbQueryEmitterTests
                 10);
 
         var sql = _emitter.Emit(node);
-        AssertSqlContains(sql, "WITH");
-        AssertSqlContains(sql, "__kql_stage_");
+        Assert.DoesNotContain("WITH", NormSql(sql), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("__kql_stage_", NormSql(sql), StringComparison.OrdinalIgnoreCase);
         AssertSqlContains(sql, "FileName = 'cmd.exe'");
+        AssertSqlContains(sql, "SELECT Timestamp, DeviceName FROM main.DeviceProcessEvents");
         AssertSqlContains(sql, "LIMIT 10");
     }
 
@@ -742,6 +743,42 @@ public sealed partial class DuckDbQueryEmitterTests
             norm);
         Assert.MatchesRegex(@"WHERE\s+\(+\s*RemotePort\s*=\s*53\s*\)+\s+AND\s+\(", norm);
         Assert.MatchesRegex(@"WHERE\s+\(+\s*RemotePort\s*=\s*53\s*\)+\s+AND\s+\(+.*powershell.*\s+OR\s+.*cmd.*\)+", norm);
+    }
+
+    [TestMethod]
+    [Description("where|project|take over base scan collapses into one SELECT/FROM/WHERE/LIMIT block")]
+    public void WhereProjectTake_OptimizedMode_CollapsesIntoSingleSelect()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: false);
+        var node = new LimitNode(
+            new ProjectNode(
+                new FilterNode(
+                    new ScanNode("DeviceProcessEvents"),
+                    new BinaryScalar(
+                        new ColumnRef("FileName"),
+                        ScalarBinaryOp.Has,
+                        new LiteralScalar("powershell", LiteralKind.String))),
+                [
+                    new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
+                    new ProjectionExpr("DeviceName", new ColumnRef("DeviceName")),
+                    new ProjectionExpr("AccountName", new ColumnRef("AccountName")),
+                    new ProjectionExpr("ProcessCommandLine", new ColumnRef("ProcessCommandLine"))
+                ]),
+            50);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
+        Assert.DoesNotMatchRegex(@"SELECT\s+\*", norm);
+        Assert.MatchesRegex(
+            @"SELECT\s+Timestamp\s*,\s*DeviceName\s*,\s*AccountName\s*,\s*ProcessCommandLine\s+FROM\s+main\.DeviceProcessEvents",
+            norm);
+        Assert.Contains("regexp_matches(lower(FileName)", norm, StringComparison.Ordinal);
+        Assert.Contains("powershell", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.MatchesRegex(@"\bLIMIT\s+50\s*;?\s*$", norm);
+        Assert.DoesNotContain("LIMIT 10000", norm, StringComparison.OrdinalIgnoreCase);
     }
 
     [TestMethod]
