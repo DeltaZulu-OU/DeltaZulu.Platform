@@ -3,6 +3,7 @@
 @inject Hunting.Web.Services.QueryService QueryService
 @inject Hunting.Core.Catalog.ApprovedViewCatalog Catalog
 @inject Hunting.Web.Services.EditorBus EditorBus
+@inject ISnackbar Snackbar
 @implements IDisposable
 
 <div class="hunt-page">
@@ -155,6 +156,7 @@
 
     // Cancellation for ongoing queries
     private CancellationTokenSource _cts = new();
+    private readonly Queue<string> _snackbarKeys = new();
 
     // ─── Query execution ────────────────────────────────────────────
 
@@ -176,14 +178,35 @@
         try
         {
             _result = await QueryService.ExecuteAsync(_kql, _cts.Token);
-            sw.Stop();
-            _elapsed = sw.Elapsed;
-
             _diagnostics = _result.Diagnostics.All.ToList();
         }
         finally
         {
+            sw.Stop();
+            _elapsed = sw.Elapsed;
+            ShowQueryDurationSnackbar(_elapsed);
             _running = false;
+        }
+    }
+
+    private void ShowQueryDurationSnackbar(TimeSpan elapsed)
+    {
+        var key = $"query-time-{Guid.NewGuid():N}";
+        var message = $"Query completed in {elapsed.TotalMilliseconds:F0} ms";
+
+        Snackbar.Add(message, Severity.Info, options =>
+        {
+            options.VisibleStateDuration = 3_000;
+            options.HideTransitionDuration = 150;
+            options.ShowTransitionDuration = 150;
+        }, key);
+
+        _snackbarKeys.Enqueue(key);
+
+        while (_snackbarKeys.Count > 3)
+        {
+            var oldestKey = _snackbarKeys.Dequeue();
+            Snackbar.RemoveByKey(oldestKey);
         }
     }
 

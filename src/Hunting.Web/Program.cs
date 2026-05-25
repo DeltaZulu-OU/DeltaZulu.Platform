@@ -2,12 +2,14 @@ using Hunting.Core.Catalog;
 using Hunting.Schema.Definitions;
 using Hunting.Data;
 using Hunting.Web.Services;
+using MudBlazor.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // ─── Services ────────────────────────────────────────────────────────────────
 
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+builder.Services.AddMudServices();
 
 // Schema catalog — singleton, shared across all Blazor circuits
 builder.Services.AddSingleton<ApprovedViewCatalog>(sp => {
