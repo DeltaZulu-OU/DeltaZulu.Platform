@@ -63,6 +63,7 @@ public sealed partial class DuckDbQueryEmitter
         var (finalSource, columns) = EmitNode(node);
         var hasUserLimit = HasLimit(node);
         var terminalTopK = ShapeSql(ref finalSource);
+        TryInlineSingleUseAggregateStageIntoTerminalTopK(ref terminalTopK, ref columns);
         TryInlineFinalStage(ref finalSource, ref columns);
 
         var sb = new StringBuilder();
@@ -237,7 +238,7 @@ public sealed partial class DuckDbQueryEmitter
 
     private void TryInlineFinalStage(ref string finalSource, ref string? columns)
     {
-        if (!string.Equals(columns, "*", StringComparison.Ordinal))
+        if (columns is not null && !string.Equals(columns, "*", StringComparison.Ordinal))
         {
             return;
         }
@@ -269,6 +270,52 @@ public sealed partial class DuckDbQueryEmitter
         var source = m.Groups["source"].Value;
         var groupBy = m.Groups["group"].Value;
         finalSource = string.IsNullOrWhiteSpace(groupBy) ? source : $"{source}{groupBy}";
+
+        _ctes.RemoveAt(idx);
+        _stageNames.Remove(cte.Name);
+    }
+
+    private void TryInlineSingleUseAggregateStageIntoTerminalTopK(
+        ref TerminalTopK? terminalTopK,
+        ref string? columns)
+    {
+        if (terminalTopK is null || (columns is not null && !string.Equals(columns, "*", StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        var sourceStage = terminalTopK.Source;
+        var idx = _ctes.FindIndex(c => string.Equals(c.Name, sourceStage, StringComparison.Ordinal));
+        if (idx < 0)
+        {
+            return;
+        }
+
+        var cte = _ctes[idx];
+        var m = FinalStageInlineRegex().Match(cte.Sql);
+        if (!m.Success)
+        {
+            return;
+        }
+
+        var groupBy = m.Groups["group"].Value;
+        if (string.IsNullOrWhiteSpace(groupBy))
+        {
+            return; // rule is intentionally scoped to aggregate shapes
+        }
+
+        var refs = _ctes.Count(x => !string.Equals(x.Name, cte.Name, StringComparison.Ordinal)
+            && x.Sql.Contains(cte.Name, StringComparison.Ordinal));
+        if (refs != 0)
+        {
+            return;
+        }
+
+        columns = m.Groups["proj"].Value;
+        terminalTopK = terminalTopK with
+        {
+            Source = $"{m.Groups["source"].Value}{groupBy}"
+        };
 
         _ctes.RemoveAt(idx);
         _stageNames.Remove(cte.Name);

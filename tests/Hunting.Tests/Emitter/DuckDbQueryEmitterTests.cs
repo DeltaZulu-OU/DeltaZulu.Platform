@@ -629,6 +629,8 @@ public sealed partial class DuckDbQueryEmitterTests
         var norm = NormSql(sql);
         var passThrough = System.Text.RegularExpressions.Regex.Matches(norm, @"AS \(SELECT \* FROM __kql_stage_\d+\)").Count;
         Assert.AreEqual(0, passThrough);
+        Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("__kql_stage_", norm, StringComparison.OrdinalIgnoreCase);
         AssertSqlContains(sql, "ORDER BY count_ DESC LIMIT 20");
         Assert.MatchesRegex(@"ORDER\s+BY\s+count_\s+DESC\s+LIMIT\s+20\s*;?\s*$", norm);
         Assert.DoesNotContain("NULLS LAST", norm, StringComparison.OrdinalIgnoreCase);
@@ -636,7 +638,9 @@ public sealed partial class DuckDbQueryEmitterTests
             @"__kql_stage_\d+\s+AS\s*\(\s*SELECT\s+\*\s+FROM\s+main\.DeviceNetworkEvents\s*\)",
             norm);
         Assert.DoesNotMatchRegex(@"SELECT\s+\*\s+FROM\s+__kql_stage_\d+\s*;?\s*$", norm);
+        AssertSqlContains(sql, "SELECT RemoteIP, RemotePort, count(*) AS count_");
         AssertSqlContains(sql, "FROM main.DeviceNetworkEvents");
+        AssertSqlContains(sql, "GROUP BY RemoteIP, RemotePort");
     }
 
     [TestMethod]
