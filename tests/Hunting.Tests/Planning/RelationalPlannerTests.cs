@@ -427,4 +427,24 @@ public sealed class RelationalPlannerTests
         Assert.IsTrue(planner.LastRunStats!.HitRuleApplicationBudget,
             "A tight rule budget should stop optimization and be observable in telemetry");
     }
+
+    [TestMethod]
+    [Description("Identity projection collapse should treat column aliases case-insensitively")]
+    public void IdentityProjectionCollapse_CaseOnlyAliasDifference_Collapses()
+    {
+        var planner = new RelationalPlanner();
+
+        RelNode node = new ProjectNode(
+            new ProjectNode(
+                new ScanNode("DeviceProcessEvents"),
+                [new ProjectionExpr("DeviceName", new ColumnRef("DeviceName"))]),
+            [new ProjectionExpr("devicename", new ColumnRef("DeviceName"))]);
+
+        var planned = planner.Plan(node, new PlannerContext(Enabled: true));
+
+        Assert.IsInstanceOfType<ProjectNode>(planned);
+        var project = (ProjectNode)planned;
+        Assert.IsInstanceOfType<ScanNode>(project.Input, "Outer identity projection should collapse to inner project");
+        Assert.AreEqual("DeviceName", project.Projections[0].Alias);
+    }
 }
