@@ -8,6 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="hunting.db" />
+    <None Remove="hunting.db.wal" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Hunting.Core\Hunting.Core.csproj" />
     <ProjectReference Include="..\Hunting.Data\Hunting.Data.csproj" />
   </ItemGroup>
