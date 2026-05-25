@@ -2,7 +2,9 @@ namespace Hunting.Tests.Translation;
 
 using Hunting.Core.Catalog;
 using Hunting.Core.DuckDbSql;
+using Hunting.Core.Planning;
 using Hunting.Core.Policy;
+using Hunting.Core.QueryModel;
 using Hunting.Core.Schema.Definitions;
 using Hunting.Data;
 
@@ -65,6 +67,105 @@ public sealed class EndToEndPipelineTests
         Assert.AreEqual("Timestamp", result.Columns[0].Name);
         Assert.AreEqual("DeviceName", result.Columns[1].Name);
         Assert.AreEqual("ProcessCommandLine", result.Columns[2].Name);
+    }
+
+
+    [TestMethod]
+    [Description("Planner flag on with no-op planner preserves generated SQL and results")]
+    public void Planner_NoOp_PreservesBehavior()
+    {
+        var catalog = new ApprovedViewCatalog();
+        catalog.Register(DeviceProcessEventsSchema.View);
+
+        var runtimeOff = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true, plannerEnabled: false);
+        var runtimeOn = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true, plannerEnabled: true, planner: new NoOpRelationalPlanner());
+
+        const string kql = "DeviceProcessEvents | where FileName == \"cmd.exe\" | project Timestamp, DeviceName | take 5";
+
+        var off = runtimeOff.Execute(kql);
+        var on = runtimeOn.Execute(kql);
+
+        AssertSuccess(off);
+        AssertSuccess(on);
+        Assert.AreEqual(off.RowCount, on.RowCount);
+        Assert.AreEqual(off.ColumnCount, on.ColumnCount);
+        Assert.AreEqual(off.GeneratedSql, on.GeneratedSql, "No-op planner should preserve emitted SQL");
+        Assert.IsNull(off.PlannerStatsJson, "Planner stats should be hidden when planner is disabled");
+        Assert.IsNotNull(on.PlannerStatsJson, "Planner stats should be present in developer mode when planner runs");
+    }
+
+
+    [TestMethod]
+    [Description("Planner flag on with default planner preserves query semantics")]
+    public void Planner_DefaultPlanner_PreservesSemantics()
+    {
+        var catalog = new ApprovedViewCatalog();
+        catalog.Register(DeviceProcessEventsSchema.View);
+
+        var runtimeOff = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true, plannerEnabled: false);
+        var runtimeOn = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true, plannerEnabled: true);
+
+        const string kql = "DeviceProcessEvents | where FileName == \"cmd.exe\" | project Timestamp, DeviceName | take 5";
+
+        var off = runtimeOff.Execute(kql);
+        var on = runtimeOn.Execute(kql);
+
+        AssertSuccess(off);
+        AssertSuccess(on);
+        Assert.AreEqual(off.RowCount, on.RowCount);
+        Assert.AreEqual(off.ColumnCount, on.ColumnCount);
+
+        for (var i = 0; i < off.RowCount; i++)
+        {
+            CollectionAssert.AreEqual(off.Rows[i], on.Rows[i]);
+        }
+    }
+
+    [TestMethod]
+    [Description("Planner exceptions are captured as diagnostics")]
+    public void Planner_Exception_ProducesDiagnostic()
+    {
+        var catalog = new ApprovedViewCatalog();
+        catalog.Register(DeviceProcessEventsSchema.View);
+
+        var runtime = new QueryRuntime(
+            catalog,
+            _factory,
+            defaultLimit: 10_000,
+            developerMode: true,
+            plannerEnabled: true,
+            planner: new ThrowingPlanner());
+
+        var result = runtime.Execute("DeviceProcessEvents | take 1");
+
+        Assert.IsFalse(result.Success);
+        Assert.IsTrue(result.Diagnostics.HasErrors);
+        Assert.IsTrue(result.Diagnostics.Errors.Any(e => e.Message.Contains("logical planning stage", StringComparison.OrdinalIgnoreCase)));
+    }
+
+
+    [TestMethod]
+    [Description("Planner max iterations is forwarded to planner context")]
+    public void Planner_MaxIterations_IsForwarded()
+    {
+        var catalog = new ApprovedViewCatalog();
+        catalog.Register(DeviceProcessEventsSchema.View);
+
+        var capturing = new CapturingPlanner();
+        var runtime = new QueryRuntime(
+            catalog,
+            _factory,
+            defaultLimit: 10_000,
+            developerMode: true,
+            plannerEnabled: true,
+            plannerMaxIterations: 7,
+            planner: capturing);
+
+        var result = runtime.Execute("DeviceProcessEvents | take 1");
+
+        AssertSuccess(result);
+        Assert.AreEqual(7, capturing.LastContext?.MaxIterations);
+        Assert.IsTrue(capturing.LastContext?.Enabled);
     }
 
     // ─── Hunting scenarios ──────────────────────────────────────────
@@ -193,6 +294,7 @@ public sealed class EndToEndPipelineTests
         AssertSuccess(result);
         Assert.IsNotNull(result.GeneratedSql);
         Assert.Contains("main.DeviceProcessEvents", result.GeneratedSql);
+        Assert.IsTrue(result.DebugTrace.Count > 0, "Developer mode should include debug trace events");
     }
 
     [TestMethod]
@@ -202,10 +304,26 @@ public sealed class EndToEndPipelineTests
         var result = _runtime.Execute("FakeTable | take 5");
         Assert.IsFalse(result.Success);
         Assert.IsNull(result.GeneratedSql);
+        Assert.IsNull(result.PlannerStatsJson);
+        Assert.IsTrue(result.DebugTrace.Count > 0, "Failure in developer mode should still include debug trace");
     }
 
     // ─── Helpers ────────────────────────────────────────────────────
 
     private static void AssertSuccess(QueryResult result) => Assert.IsTrue(result.Success,
             $"Query failed:\n{string.Join("\n", result.Diagnostics.All.Select(d => d.ToString()))}");
+    private sealed class ThrowingPlanner : IRelationalPlanner
+    {
+        public RelNode Plan(RelNode root, PlannerContext context) => throw new InvalidOperationException("planner boom");
+    }
+
+    private sealed class CapturingPlanner : IRelationalPlanner
+    {
+        public PlannerContext? LastContext { get; private set; }
+        public RelNode Plan(RelNode root, PlannerContext context)
+        {
+            LastContext = context;
+            return root;
+        }
+    }
 }

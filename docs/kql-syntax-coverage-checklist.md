@@ -21,8 +21,7 @@ Kusto service functions, external code plugins, cross-cluster references) are li
 
 For the POC, canonical SQL emission uses CTE staging (`__kql_stage_N`) to preserve
 KQL pipe semantics clearly. A future post-translation planner may later collapse,
-inline, retain, or reshape these stages, but that is not required for construct
-support or POC correctness. Safety rule: when KQL and DuckDB
+inline, retain, or reshape these stages. Planner rewrites are implemented as an optional optimization layer and must preserve semantics. Safety rule: when KQL and DuckDB
 differ, the converter must preserve KQL semantics, use a documented helper, emit a visible
 approximation diagnostic, or reject.
 
@@ -601,4 +600,4 @@ commands. These operate on Kusto cluster state, not on data.
 
 ---
 
-*Last updated: 2026-05-23 — Phase 0, revised from KQL-to-DuckDB translation spec*
+*Last updated: 2026-05-25 — Planner implementation complete; checklist references simplified*

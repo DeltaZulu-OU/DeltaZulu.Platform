@@ -113,11 +113,11 @@ QueryResult`. Single connection through `DuckDbConnectionFactory`. Returns `Quer
 
 ---
 
-## Phase 3 — Blazor UI ⏳ NOT STARTED
+## Phase 3 — Blazor UI ✅ COMPLETE
 
 **Objective:** Connect the translation pipeline to a usable analyst interface.
 
-**Gate:** `dotnet restore && dotnet test` must pass before Phase 3 begins.
+**Gate:** satisfied (`dotnet restore && dotnet test` passed before implementation).
 
 ### 3a. Query runtime service
 Wire `QueryRuntime` into Blazor Server dependency injection. Register
@@ -179,11 +179,27 @@ mode shows generated SQL.
 | Phase 0 | ✅ Complete | 3 days | |
 | Phase 1 | ✅ Complete | 7 days | |
 | Phase 2 | ✅ Complete | 12 days | |
-| Phase 3 | ⏳ Not started | 5–7 days | Gate: `dotnet restore && dotnet test` |
+| Phase 3 | ✅ Complete | 5–7 days | Gate satisfied; UI vertical slice working |
 | Phase 4 | ⏳ Partial | 3–5 days | 4a partial; 4b/c/d not started |
-| **Remaining** | | **8–12 days** | |
+| **Remaining** | | **3–5 days (Phase 4)** | |
 
 ---
+
+
+## Phase 5 — Planner v1 ✅ COMPLETE
+
+**Objective:** Introduce a semantics-preserving logical planner between translation and SQL emission.
+
+**Implemented:**
+1. Feature-flagged planner runtime integration (`Planner:Enabled`, `Planner:MaxIterations`).
+2. Safe passes: filter pushdown subset, identity projection collapse, projection pruning, common scalar hoisting.
+3. Planner observability in developer mode (`PlannerStatsJson`, `DebugTrace`).
+4. Planner seam + end-to-end test coverage for safety and parity scenarios.
+
+**Status:** Complete.
+
+---
+
 
 ## Post-MVP Priorities
 
@@ -202,31 +218,8 @@ Ordered by hunting-workflow impact:
 
 ## Post-POC / Future Challenges
 
-### Post-translation planner
+Planner strategy has been implemented in Phase 5. Future enhancements should be tracked directly in roadmap backlog items and tests.
 
-After the POC can parse supported KQL, lower it to `RelNode`, emit DuckDB SQL, execute the
-query, and return results through the UI, evaluate whether generated SQL quality requires a
-dedicated planning stage.
-
-The planner should be considered only when concrete examples show correct but suboptimal
-primitive SQL: excessive CTE staging, repeated JSON extraction across SELECT/WHERE/GROUP BY,
-unnecessary `SELECT *` propagation, filters emitted later than necessary, redundant projections
-after `extend`/`project` chains, awkward CTE output from tabular `let`, or join inputs carrying
-unnecessary columns.
-
-**Evaluation criterion:** open a planner design issue only after at least three concrete
-SQL-quality problems are captured with original KQL, primitive RelNode, emitted SQL, observed
-issue, proposed planned shape, and semantic equivalence test expectation.
-
-If justified, the future pipeline:
-
-```
-Kusto AST → Primitive RelNode → Planned RelNode → DuckDB SQL
-```
-
-The planner is a logical rewriting stage only. DuckDB handles physical optimization.
-
----
 
 ## Key Risks
 
@@ -240,8 +233,8 @@ The planner is a logical rewriting stage only. DuckDB handles physical optimizat
 | `SyntaxKind.NotMatchesRegexExpression` doesn't exist | Removed; uses `UnaryNotExpression` | ✅ Fixed |
 | Single DuckDB connection | MVP constraint; Quack protocol post-MVP | ✅ Documented |
 | `innerunique` join semantics | Blocked with policy error | ✅ Implemented |
-| DuckDB connection in Blazor Server | `DuckDbConnectionFactory` single-instance pattern | ⏳ Phase 3 |
+| DuckDB connection in Blazor Server | `DuckDbConnectionFactory` single-instance pattern | ✅ Implemented in Phase 3 |
 
 ---
 
-*Last updated: 2026-05-24 — Phases 0–2 complete; next gate: `dotnet restore && dotnet test`, then Phase 3*
+*Last updated: 2026-05-25 — Phase 5 planner completed; standalone planning docs removed*

@@ -3,7 +3,9 @@ namespace Hunting.Data;
 using DuckDB.NET.Data;
 using Hunting.Core.Catalog;
 using Hunting.Core.DuckDbSql;
+using Hunting.Core.Planning;
 using Hunting.Core.Policy;
+using System.Text.Json;
 using Hunting.Core.Translation;
 
 /// <summary>
@@ -19,19 +21,28 @@ public sealed class QueryRuntime
     private readonly DuckDbConnectionFactory _connectionFactory;
     private readonly int _defaultLimit;
     private readonly int _timeoutSeconds;
+    private readonly bool _plannerEnabled;
+    private readonly IRelationalPlanner _planner;
+    private readonly int _plannerMaxIterations;
 
     public QueryRuntime(
         ApprovedViewCatalog catalog,
         DuckDbConnectionFactory connectionFactory,
         int defaultLimit = 10_000,
         int timeoutSeconds = 30,
-        bool developerMode = false)
+        bool developerMode = false,
+        bool plannerEnabled = false,
+        int plannerMaxIterations = 3,
+        IRelationalPlanner? planner = null)
     {
         _catalog = catalog;
         _connectionFactory = connectionFactory;
         _defaultLimit = defaultLimit;
         _timeoutSeconds = timeoutSeconds;
         _developerMode = developerMode;
+        _plannerEnabled = plannerEnabled;
+        _planner = planner ?? new RelationalPlanner();
+        _plannerMaxIterations = plannerMaxIterations;
     }
 
     private readonly bool _developerMode;
@@ -42,39 +53,66 @@ public sealed class QueryRuntime
     public QueryResult Execute(string kql)
     {
         var diagnostics = new DiagnosticBag();
+        var debugTrace = _developerMode ? new List<string>() : null;
+        debugTrace?.Add($"Runtime start: plannerEnabled={_plannerEnabled}, plannerMaxIterations={_plannerMaxIterations}, timeoutSeconds={_timeoutSeconds}");
 
         // Phase 1: Parse + Translate
         var translator = new KustoToRelational(_catalog, diagnostics);
         var relNode = translator.Translate(kql);
+        debugTrace?.Add($"Translate complete: hasErrors={diagnostics.HasErrors}, relNode={(relNode is null ? "null" : relNode.GetType().Name)}");
 
         if (diagnostics.HasErrors || relNode is null)
         {
-            return QueryResult.FromDiagnostics(diagnostics);
+            return QueryResult.FromDiagnostics(diagnostics, debugTrace);
         }
 
-        // Phase 2: Emit SQL
+        // Phase 2: Optional logical planning
+        if (_plannerEnabled)
+        {
+            try
+            {
+                relNode = _planner.Plan(relNode, new PlannerContext(Enabled: true, MaxIterations: _plannerMaxIterations));
+                debugTrace?.Add($"Planner complete: relNode={relNode.GetType().Name}");
+            }
+            catch (Exception ex)
+            {
+                diagnostics.AddError(DiagnosticPhase.Emit,
+                    "Failed during logical planning stage.",
+                    ex.Message);
+                return QueryResult.FromDiagnostics(diagnostics, debugTrace);
+            }
+        }
+
+        string? plannerStats = null;
+        if (_developerMode && _plannerEnabled && _planner is IPlannerTelemetry telemetry && telemetry.LastRunStats is not null)
+        {
+            plannerStats = JsonSerializer.Serialize(telemetry.LastRunStats);
+        }
+
+        // Phase 3: Emit SQL
         string sql;
         try
         {
             var emitter = new DuckDbQueryEmitter(_defaultLimit);
             sql = emitter.Emit(relNode);
+            debugTrace?.Add($"Emit complete: sqlLength={sql.Length}");
         }
         catch (Exception ex)
         {
             diagnostics.AddError(DiagnosticPhase.Emit,
                 "Failed to generate SQL from query model.",
                 ex.Message);
-            return QueryResult.FromDiagnostics(diagnostics);
+            return QueryResult.FromDiagnostics(diagnostics, debugTrace);
         }
 
-        // Phase 3: Execute against DuckDB
+        // Phase 4: Execute against DuckDB
         try
         {
             var conn = _connectionFactory.GetConnection();
-            using var cts = new System.Threading.CancellationTokenSource(
-                TimeSpan.FromSeconds(_timeoutSeconds));
+            debugTrace?.Add("Execute start");
             using var cmd = conn.CreateCommand();
             cmd.CommandText = sql;
+            cmd.CommandTimeout = _timeoutSeconds;
 
             using var reader = cmd.ExecuteReader(System.Data.CommandBehavior.Default);
 
@@ -101,21 +139,22 @@ public sealed class QueryRuntime
 
             // GeneratedSql is only exposed in developer mode — SQL is an internal artifact
             var exposedSql = _developerMode ? sql : null;
-            return QueryResult.FromData(columns, rows, exposedSql, diagnostics);
+            debugTrace?.Add($"Execute complete: rows={rows.Count}, columns={columns.Count}");
+            return QueryResult.FromData(columns, rows, exposedSql, plannerStats, debugTrace, diagnostics);
         }
         catch (DuckDBException ex)
         {
             diagnostics.AddError(DiagnosticPhase.Execute,
                 NormalizeDuckDbError(ex.Message),
                 $"SQL: {sql}\nException: {ex.Message}");
-            return QueryResult.FromDiagnostics(diagnostics);
+            return QueryResult.FromDiagnostics(diagnostics, debugTrace);
         }
         catch (Exception ex)
         {
             diagnostics.AddError(DiagnosticPhase.Execute,
                 "An internal error occurred while executing the query.",
                 $"SQL: {sql}\nException: {ex.GetType().Name}: {ex.Message}");
-            return QueryResult.FromDiagnostics(diagnostics);
+            return QueryResult.FromDiagnostics(diagnostics, debugTrace);
         }
     }
 
@@ -162,6 +201,8 @@ public sealed class QueryResult
     public IReadOnlyList<ResultColumn> Columns { get; init; } = [];
     public IReadOnlyList<object?[]> Rows { get; init; } = [];
     public string? GeneratedSql { get; init; }
+    public string? PlannerStatsJson { get; init; }
+    public IReadOnlyList<string> DebugTrace { get; init; } = [];
     public DiagnosticBag Diagnostics { get; init; } = new();
 
     public int RowCount => Rows.Count;
@@ -171,18 +212,23 @@ public sealed class QueryResult
         List<ResultColumn> columns,
         List<object?[]> rows,
         string? sql,
+        string? plannerStatsJson,
+        List<string>? debugTrace,
         DiagnosticBag diagnostics) => new QueryResult
         {
             Success = true,
             Columns = columns,
             Rows = rows,
             GeneratedSql = sql,
+            PlannerStatsJson = plannerStatsJson,
+            DebugTrace = debugTrace ?? [],
             Diagnostics = diagnostics
         };
 
-    public static QueryResult FromDiagnostics(DiagnosticBag diagnostics) => new QueryResult
+    public static QueryResult FromDiagnostics(DiagnosticBag diagnostics, List<string>? debugTrace = null) => new QueryResult
     {
         Success = false,
+        DebugTrace = debugTrace ?? [],
         Diagnostics = diagnostics
     };
 }

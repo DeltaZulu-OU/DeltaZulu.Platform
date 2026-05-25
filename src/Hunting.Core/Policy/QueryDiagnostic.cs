@@ -53,6 +53,9 @@ public sealed class DiagnosticBag
     private readonly List<QueryDiagnostic> _items = [];
 
     public IReadOnlyList<QueryDiagnostic> All => _items;
+
+    public IReadOnlyList<QueryDiagnostic> Errors => _items.Where(d => d.IsError).ToList().AsReadOnly();
+
     public bool HasErrors => _items.Exists(d => d.IsError);
 
     public void Add(QueryDiagnostic diagnostic) => _items.Add(diagnostic);

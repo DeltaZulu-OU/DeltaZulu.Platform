@@ -26,12 +26,19 @@ builder.Services.AddSingleton<SchemaApplier>();
 
 // Query runtime — singleton; single connection is serialized by the factory lock
 builder.Services.AddSingleton<QueryRuntime>(sp =>
-    new QueryRuntime(
+{
+    var plannerEnabled = builder.Configuration.GetValue<bool>("Planner:Enabled", false);
+    var plannerMaxIterations = builder.Configuration.GetValue<int>("Planner:MaxIterations", 3);
+
+    return new QueryRuntime(
         sp.GetRequiredService<ApprovedViewCatalog>(),
         sp.GetRequiredService<DuckDbConnectionFactory>(),
         defaultLimit: 10_000,
         timeoutSeconds: 30,
-        developerMode: builder.Environment.IsDevelopment()));
+        developerMode: builder.Environment.IsDevelopment(),
+        plannerEnabled: plannerEnabled,
+        plannerMaxIterations: plannerMaxIterations);
+});
 
 // Query execution service with Blazor-level lock for single-connection MVP
 builder.Services.AddSingleton<QueryService>();
