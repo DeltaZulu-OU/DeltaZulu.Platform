@@ -72,9 +72,8 @@ kql-syntax-coverage-checklist.md
   319 in-scope constructs: [x] MVP / [ ] deferred / [B] blocked
   each [x] item has a DuckDB translation target
     ↓
-Red test cases (tools/TestRunner + Hunting.Tests)
-  268 standalone tests (no NuGet deps, run now)
-  254 MSTest tests (require dotnet restore)
+Red test cases (Hunting.Tests)
+  MSTest suites across translator, emitter, schema pipeline, and end-to-end execution
     ↓
 Implementation (Hunting.Core, Hunting.Data)
     ↓
@@ -90,8 +89,6 @@ The test harness operates at two independent seams:
   assert tree shape, not SQL. Locates failures in `KustoToRelational`.
 - **Emitter seam** (`Hunting.Tests/Emitter/`): hand-constructed `RelNode` → DuckDB SQL string.
   Tests assert whitespace-normalized SQL fragments. Locates failures in `DuckDbQueryEmitter`.
-- **Standalone runner** (`tools/TestRunner/`): zero-dependency (no NuGet), covers all pure C#
-  logic. 268 tests across 31 categories. Run with `dotnet run` from that directory.
 - **DuckDB spec tests** (`Hunting.Tests/Spike/`): verify every DuckDB function used as a
   translation target actually executes correctly in DuckDB.NET. Ground truth for the emitter.
 - **End-to-end tests** (`Translation/EndToEndPipelineTests.cs`): supplementary KQL → result
@@ -197,9 +194,6 @@ src/
 tests/
   Hunting.Tests/    Spike/, Translation/, Emitter/
 
-tools/
-  TestRunner/       Standalone zero-dependency test runner (268 tests, no NuGet)
-
 docs/
   KQL-to-DuckDB-translation-spec.md   Authoritative translation reference (796 KB)
 ```
@@ -210,7 +204,6 @@ Dependency graph:
 Hunting.Web → Hunting.Core, Hunting.Data
 Hunting.Data → Hunting.Core
 Hunting.Tests → Hunting.Core, Hunting.Data
-tools/TestRunner → inline copies of Hunting.Core source (no project reference)
 ```
 
 `Hunting.Core` has no project dependencies. All DuckDB references live in `Hunting.Data` and

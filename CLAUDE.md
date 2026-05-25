@@ -25,7 +25,6 @@ Phases 0, 1, and 2 are functionally complete. Phase 3 (Blazor UI) is the next ga
 |-------|--------|
 | Schema pipeline (write side) | Complete: `SchemaEmitter`, `SchemaApplier`, `MockDataSeeder` |
 | Translation pipeline (read side) | Complete: `KustoToRelational`, `DuckDbQueryEmitter`, `QueryRuntime` |
-| Standalone tests | **268 passing** — run `dotnet run` in `tools/TestRunner/` |
 | MSTest suite | 254 tests written; requires `dotnet restore` for live run |
 | Blazor UI | Skeleton `Program.cs` only — not started |
 
@@ -52,7 +51,6 @@ docs/ARCHITECTURE.md                     ← system contracts and structural con
   ↓
 kql-syntax-coverage-checklist.md         ← 319 constructs: [x] / [ ] / [B]
   ↓
-tools/TestRunner/Program.cs              ← 268 standalone tests (zero NuGet deps)
 tests/Hunting.Tests/**/*.cs              ← 254 MSTest tests
   ↓
 src/Hunting.Core/ + src/Hunting.Data/    ← implementation
@@ -61,22 +59,6 @@ src/Hunting.Core/ + src/Hunting.Data/    ← implementation
 A construct is done when its checklist entry is `[x]` and its tests pass. Nothing else counts.
 
 ## Test Harness Architecture
-
-### Standalone runner (`tools/TestRunner/`)
-
-No NuGet dependencies. Copies of core source files. Run immediately without `dotnet restore`.
-
-```bash
-cd tools/TestRunner
-dotnet run    # 268 tests, ~12 seconds
-```
-
-31 categories covering: schema model, all emitter operators, all function mappings (string,
-datetime, aggregation, conditional, null tests, type conversion, JSON, math), string operator
-variants (cs vs ci, has/has_cs/hasprefix/hassuffix), comparison and arithmetic operators,
-logical operators, window functions (lag/lead/row_number/cumsum/rank), joins (inner/left/semi/anti),
-identifier quoting, edge cases (injection safety, deep pipelines, emitter reuse), schema emitter
-(DDL generation, typed NULLs, UNION ALL count), and emitter robustness.
 
 ### MSTest suite (`tests/Hunting.Tests/`)
 
@@ -153,8 +135,6 @@ tests/
 
 tools/
   TestRunner/
-    Program.cs                   — 268 standalone tests
-    Core/                        — copied source files (no project reference)
 
 docs/
   KQL-to-DuckDB-translation-spec.md   — authoritative translation reference
@@ -273,7 +253,6 @@ Confirmed against `microsoft/Kusto-Query-Language` source during code review:
 ### Test Style
 
 - MSTest: `[TestMethod]`, `[Description]`, `[ClassInitialize]`
-- Standalone runner: `Assert(bool, name, category, detail)` / `AssertEq` / `AssertContains`
 - `Assert.Inconclusive` for explicitly red backlog tests (not for missing implementation)
 - Translator tests: assert `RelNode` tree shape, never SQL text
 - Emitter tests: `AssertContains(sql, fragment, name, cat)` with whitespace normalization
@@ -282,17 +261,16 @@ Confirmed against `microsoft/Kusto-Query-Language` source during code review:
 ## Session Instructions
 
 **Every session:**
-1. `cd tools/TestRunner && dotnet run` — confirm 268 still pass before making any changes.
+1. `dotnet restore && dotnet test` — confirm the suite is healthy before making changes.
 2. Check `ROADMAP.md` for current phase and next deliverable.
 3. Check `kql-syntax-coverage-checklist.md` for the specific construct if working on translation.
 
 **When adding a KQL construct:**
 1. Add `[x]` entry to checklist with DuckDB translation target.
-2. Write failing test in `tools/TestRunner/Program.cs` (new category if needed).
-3. Write failing MSTest in appropriate `Hunting.Tests/` file.
-4. Implement — minimum code to pass.
-5. Run standalone runner — must show 0 failures.
-6. Refactor.
+2. Write failing MSTest in appropriate `Hunting.Tests/` file.
+3. Implement — minimum code to pass.
+4. Run `dotnet test` and verify green.
+5. Refactor.
 
 **When making architectural decisions:**
 - Check constraints in this file first.

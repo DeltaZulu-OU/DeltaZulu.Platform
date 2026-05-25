@@ -15,7 +15,6 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
   - `Hunting.Data`: connection factory, schema application, runtime orchestration, and mock seeding.
   - `Hunting.Web`: Blazor Server host and early UI scaffolding.
   - `Hunting.Tests`: MSTest test suite.
-  - `tools/TestRunner`: standalone zero-NuGet test harness.
 
 ## Architecture at a Glance
 
@@ -46,9 +45,6 @@ src/
 tests/
   Hunting.Tests/       # MSTest suite across translation, emitter, runtime seams
 
-tools/
-  TestRunner/          # Standalone test runner with copied core files
-
 docs/
   ARCHITECTURE.md
   ROADMAP.md
@@ -72,12 +68,6 @@ From the repository root:
  dotnet test
 ```
 
-Standalone runner (no NuGet restore required for harness code itself):
-
-```bash
-cd tools/TestRunner
- dotnet run
-```
 
 ## Documentation
 
