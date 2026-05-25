@@ -46,10 +46,10 @@
             <span class="hunt-timefilter-status">@_toolbar.TimeFilterCaption</span>
 
             <label class="hunt-timefilter-label" for="result-limit">Limit</label>
-            <select id="result-limit" class="hunt-timefilter-select" @bind="_toolbar.SelectedResultLimit">
+            <select id="result-limit" class="hunt-timefilter-select" @bind="SelectedResultLimitValue">
                 @foreach (var opt in Hunting.Web.Services.QueryToolbarState.ResultLimitOptions)
                 {
-                    <option value="@opt">@(opt is null ? "None" : opt.Value.ToString())</option>
+                    <option value="@(opt?.ToString() ?? string.Empty)">@(opt is null ? "None" : opt.Value.ToString())</option>
                 }
             </select>
         </div>
@@ -206,6 +206,13 @@
     private int TotalPages => ((_result?.RowCount ?? 0) + _pageSize - 1) / _pageSize;
     private CancellationTokenSource _cts = new();
     private readonly Queue<string> _snackbarKeys = new();
+
+
+    private string SelectedResultLimitValue
+    {
+        get => _toolbar.SelectedResultLimit?.ToString() ?? string.Empty;
+        set => _toolbar.SelectedResultLimit = int.TryParse(value, out var parsed) ? parsed : null;
+    }
 
     private async Task RunQuery()
     {
