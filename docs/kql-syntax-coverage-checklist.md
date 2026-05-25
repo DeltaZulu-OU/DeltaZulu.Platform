@@ -489,24 +489,23 @@ approximation diagnostic, or reject.
 
 | Status | Count | Meaning |
 |--------|------:|---------|
-| `[x]` MVP | 154 | Direct translation to DuckDB SQL |
+| `[x]` MVP | 190 | Direct translation to DuckDB SQL |
 | `[m]` Metadata | 2 | Side-channel only, no SQL emitted |
 | `[B]` Blocked | 3 | Deliberately rejected to prevent silent semantic change |
-| `[ ]` Deferred | 160 | Post-MVP, reason annotated |
+| `[ ]` Deferred | 124 | Post-MVP, reason annotated |
 | **In scope** | **319** | |
-| N/A (out of scope) | 26 | See Section 10 |
+| N/A (out of scope) | N/A | Listed in Section 10 (not tracked as checklist rows) |
 
-MVP-ready = `[x]` + `[m]` = **156 / 319 (48.9%)**
+MVP-ready = `[x]` + `[m]` = **192 / 319 (60.2%)**
 
 ### Deferred by reason
 
 | Reason | Count | Meaning |
 |--------|------:|---------|
-| *frequency* | 84 | Valid translation exists but rare in hunting queries |
-| *complexity* | 45 | Significant implementation effort or no DuckDB equivalent |
-| *dependency* | 8 | Depends on another deferred item being implemented first |
-| *format* | 4 | Requires a format/syntax translation table |
-| **Total deferred** | **144** | 2 items uncategorized |
+| *frequency* | 48 | Valid translation exists but rare in hunting queries |
+| *complexity* | 1 | Significant implementation effort or no DuckDB equivalent |
+| *uncategorized* | 75 | Deferred without an explicit reason tag |
+| **Total deferred** | **124** | |
 
 ### Blocked items (3 total)
 

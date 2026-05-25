@@ -157,11 +157,10 @@ Wire `monaco-kusto` with generated schema JSON for column-aware intellisense and
 diagnostics. Deferred if version compatibility requires significant JS interop work during
 Phase 3.
 
-### 4c. Generated SQL preview ⏳
-`QueryResult.GeneratedSql` is already exposed. Developer mode UI toggle not yet built — depends
-on Phase 3 UI frame.
+### 4c. Generated SQL preview ✅
+`QueryResult.GeneratedSql` is exposed and surfaced in the UI with a developer toggle.
 
-### 4d. Second table family ⏳
+### 4d. Second table family ✅
 Add `DeviceNetworkEvents` with a Sysmon EID 3 (network connection) `ParserViewDef`. Proves the
 schema model and translator generalize beyond one table. Latent bugs surface here. Required
 before claiming "MVP complete."
@@ -251,4 +250,4 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 | DuckDB connection in Blazor Server | `DuckDbConnectionFactory` + `QueryService` serialization | ✅ Implemented |
 ---
 
-*Last updated: 2026-05-25 — Phase 5 planner completed; emitter SQL-shape simplification (5a) added*
+*Last updated: 2026-05-25 — Phase 4 now reflects completed 4c/4d; Phase 5 planner and 5a SQL-shape simplification complete*
