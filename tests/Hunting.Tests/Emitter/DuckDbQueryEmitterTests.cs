@@ -380,6 +380,238 @@ public sealed partial class DuckDbQueryEmitterTests
         AssertSqlContains(sql, "main.DeviceProcessEvents");
     }
 
+    // ─── Let binding semantics ─────────────────────────────────────
+
+    [TestMethod]
+    [Description("Scalar let values are inlined inside predicate")]
+    public void Let_Scalar_Inlined()
+    {
+        var node = new LetBindingNode(
+            Name: "cutoff",
+            ScalarValue: new FunctionCall("ago", [new LiteralScalar("7d", LiteralKind.Timespan)]),
+            TabularValue: null,
+            Body: new FilterNode(
+                new ScanNode("DeviceProcessEvents"),
+                new BinaryScalar(new ColumnRef("Timestamp"), ScalarBinaryOp.Gt, new ColumnRef("cutoff"))));
+
+        var sql = _emitter.Emit(node);
+        Assert.DoesNotContain(" > cutoff", NormSql(sql), "Scalar let name should not appear as bare SQL identifier");
+        AssertSqlContains(sql, "current_timestamp - INTERVAL '7 days'");
+    }
+
+    [TestMethod]
+    [Description("Scalar let state does not leak into subsequent emit calls")]
+    public void Let_Scalar_IsolationAcrossEmits()
+    {
+        _emitter.Emit(new LetBindingNode(
+            Name: "magic",
+            ScalarValue: new LiteralScalar(42, LiteralKind.Int),
+            TabularValue: null,
+            Body: new ScanNode("DeviceProcessEvents")));
+
+        var sql = _emitter.Emit(new FilterNode(
+            new ScanNode("DeviceProcessEvents"),
+            new BinaryScalar(new ColumnRef("magic"), ScalarBinaryOp.Gt, new LiteralScalar(0, LiteralKind.Int))));
+
+        AssertSqlContains(sql, "magic > 0");
+        Assert.DoesNotContain("42", sql, "Previous scalar let value should not leak into later query emissions");
+    }
+
+    [TestMethod]
+    [Description("Tabular let creates named CTE")]
+    public void Let_Tabular_EmitsNamedCte()
+    {
+        var node = new LetBindingNode(
+            Name: "PowerShellProcs",
+            TabularValue: new FilterNode(
+                new ScanNode("DeviceProcessEvents"),
+                new BinaryScalar(new ColumnRef("FileName"), ScalarBinaryOp.Eq,
+                    new LiteralScalar("powershell.exe", LiteralKind.String))),
+            ScalarValue: null,
+            Body: new ScanNode("DeviceProcessEvents"));
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "WITH");
+        AssertSqlContains(sql, "PowerShellProcs");
+        AssertSqlContains(sql, "powershell.exe");
+    }
+
+    [TestMethod]
+    [Description("Unknown function names are rejected")]
+    public void Func_Unknown_ThrowsNotSupported()
+    {
+        Assert.ThrowsExactly<NotSupportedException>(() =>
+            _emitter.Emit(new ExtendNode(
+                new ScanNode("DeviceProcessEvents"),
+                [new ProjectionExpr("r", new FunctionCall("custom_function_xyz",
+                    [new ColumnRef("FileName"), new LiteralScalar(42, LiteralKind.Int)]))])));
+    }
+
+    [TestMethod]
+    [Description("Join ON emits full equality predicate")]
+    public void Join_On_EqualityPredicate()
+    {
+        var node = new JoinNode(
+            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("DeviceProcessEvents"),
+            JoinKind.Inner,
+            new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "INNER JOIN");
+        AssertSqlContains(sql, "ON (DeviceName = DeviceName)");
+    }
+
+    [TestMethod]
+    [Description("Join output still gets default safety limit")]
+    public void Join_StillGetsSafetyCap()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 100);
+        var node = new JoinNode(
+            new ScanNode("DeviceProcessEvents"),
+            new LimitNode(new ScanNode("DeviceProcessEvents"), 5),
+            JoinKind.Inner,
+            new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
+
+        var sql = emitter.Emit(node);
+        AssertSqlContains(sql, "LIMIT 100");
+    }
+
+
+
+    [TestMethod]
+    [Description("has_cs uses case-sensitive regex without lower()")]
+    public void Op_HasCs_CaseSensitiveRegex()
+    {
+        var node = new FilterNode(
+            new ScanNode("DeviceProcessEvents"),
+            new BinaryScalar(new ColumnRef("ProcessCommandLine"), ScalarBinaryOp.HasCs,
+                new LiteralScalar("Mimikatz", LiteralKind.String)));
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "regexp_matches(ProcessCommandLine");
+        AssertSqlContains(sql, "'c'");
+        Assert.DoesNotContain("lower(ProcessCommandLine)", NormSql(sql));
+    }
+
+    [TestMethod]
+    [Description("matches regex uses regexp_matches with case-sensitive flag")]
+    public void Op_MatchesRegex_UsesCaseSensitiveFlag()
+    {
+        var node = new FilterNode(
+            new ScanNode("DeviceProcessEvents"),
+            new BinaryScalar(new ColumnRef("ProcessCommandLine"), ScalarBinaryOp.MatchesRegex,
+                new LiteralScalar("(?i)pass(word|wd)", LiteralKind.String)));
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "regexp_matches(ProcessCommandLine");
+        AssertSqlContains(sql, "'c'");
+    }
+
+
+
+    [TestMethod]
+    [Description("not has emits NOT regexp_matches with word boundary")]
+    public void Op_NotHas_NegatesRegexMatch()
+    {
+        var node = new FilterNode(
+            new ScanNode("DeviceProcessEvents"),
+            new BinaryScalar(new ColumnRef("ProcessCommandLine"), ScalarBinaryOp.NotHas,
+                new LiteralScalar("mimikatz", LiteralKind.String)));
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "NOT regexp_matches(lower(");
+        AssertSqlContains(sql, "[^[:alnum:]]");
+    }
+
+    [TestMethod]
+    [Description("hasprefix uses leading boundary only")]
+    public void Op_HasPrefix_UsesLeadingBoundaryOnly()
+    {
+        var node = new FilterNode(
+            new ScanNode("DeviceProcessEvents"),
+            new BinaryScalar(new ColumnRef("FileName"), ScalarBinaryOp.HasPrefix,
+                new LiteralScalar("power", LiteralKind.String)));
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "regexp_matches(lower(FileName)");
+        AssertSqlContains(sql, "(^|[^[:alnum:]])");
+        Assert.DoesNotContain("([^[:alnum:]]|$)", sql);
+    }
+
+    [TestMethod]
+    [Description("not hasprefix negates leading-boundary regex")]
+    public void Op_NotHasPrefix_NegatesLeadingBoundaryRegex()
+    {
+        var node = new FilterNode(
+            new ScanNode("DeviceProcessEvents"),
+            new BinaryScalar(new ColumnRef("FileName"), ScalarBinaryOp.NotHasPrefix,
+                new LiteralScalar("power", LiteralKind.String)));
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "NOT regexp_matches(lower(FileName)");
+        AssertSqlContains(sql, "(^|[^[:alnum:]])");
+    }
+
+    [TestMethod]
+    [Description("hassuffix uses trailing boundary only")]
+    public void Op_HasSuffix_UsesTrailingBoundaryOnly()
+    {
+        var node = new FilterNode(
+            new ScanNode("DeviceProcessEvents"),
+            new BinaryScalar(new ColumnRef("FileName"), ScalarBinaryOp.HasSuffix,
+                new LiteralScalar("shell", LiteralKind.String)));
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "regexp_matches(lower(FileName)");
+        AssertSqlContains(sql, "([^[:alnum:]]|$)");
+        Assert.DoesNotContain("(^|[^[:alnum:]])", sql);
+    }
+
+    [TestMethod]
+    [Description("hasprefix_cs uses case-sensitive flag and no lower()")]
+    public void Op_HasPrefixCs_CaseSensitiveNoLowering()
+    {
+        var node = new FilterNode(
+            new ScanNode("DeviceProcessEvents"),
+            new BinaryScalar(new ColumnRef("FileName"), ScalarBinaryOp.HasPrefixCs,
+                new LiteralScalar("Power", LiteralKind.String)));
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "regexp_matches(FileName");
+        AssertSqlContains(sql, "'c'");
+        Assert.DoesNotContain("lower(FileName)", sql);
+    }
+
+    [TestMethod]
+    [Description("hassuffix_cs uses case-sensitive flag and no lower()")]
+    public void Op_HasSuffixCs_CaseSensitiveNoLowering()
+    {
+        var node = new FilterNode(
+            new ScanNode("DeviceProcessEvents"),
+            new BinaryScalar(new ColumnRef("FileName"), ScalarBinaryOp.HasSuffixCs,
+                new LiteralScalar("Shell", LiteralKind.String)));
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "regexp_matches(FileName");
+        AssertSqlContains(sql, "'c'");
+        Assert.DoesNotContain("lower(FileName)", sql);
+    }
+
+    [TestMethod]
+    [Description("DistinctNode emits SELECT DISTINCT")]
+    public void Tabular_Distinct_EmitsDistinctKeyword()
+    {
+        var node = new DistinctNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("FileName", new ColumnRef("FileName")),
+             new ProjectionExpr("DeviceName", new ColumnRef("DeviceName"))]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "SELECT DISTINCT FileName, DeviceName FROM");
+    }
+
+
     // ─── Helpers ────────────────────────────────────────────────────
 
     private static string NormSql(string s) =>
