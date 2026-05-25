@@ -777,6 +777,8 @@ public sealed partial class DuckDbQueryEmitter
             JoinKind.FullOuter => "FULL OUTER JOIN",
             JoinKind.LeftSemi => "SEMI JOIN",
             JoinKind.LeftAnti => "ANTI JOIN",
+            JoinKind.RightSemi => "RIGHT SEMI JOIN",
+            JoinKind.RightAnti => "RIGHT ANTI JOIN",
             _ => throw new NotSupportedException($"Unsupported join kind: {join.Kind}")
         };
 
@@ -1020,6 +1022,7 @@ public sealed partial class DuckDbQueryEmitter
             "toguid" => $"CAST({args[0]} AS VARCHAR)",
             "guid" => $"TRY_CAST({args[0]} AS UUID)",
             "countof" => $"((length({args[0]}) - length(replace({args[0]}, {args[1]}, ''))) / nullif(length({args[1]}), 0))",
+            "parse_ipv4" => $"CASE WHEN regexp_full_match({args[0]}, '^((25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])\\.){{3}}(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])$') THEN (CAST(split_part({args[0]}, '.', 1) AS BIGINT) * 16777216 + CAST(split_part({args[0]}, '.', 2) AS BIGINT) * 65536 + CAST(split_part({args[0]}, '.', 3) AS BIGINT) * 256 + CAST(split_part({args[0]}, '.', 4) AS BIGINT)) ELSE NULL END",
 
             // Conditional
             "iff" or "iif" => $"CASE WHEN {args[0]} THEN {args[1]} ELSE {args[2]} END",

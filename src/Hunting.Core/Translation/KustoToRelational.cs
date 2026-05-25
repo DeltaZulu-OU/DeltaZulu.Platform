@@ -394,6 +394,8 @@ public sealed class KustoToRelational
             case "fullouter": kind = JoinKind.FullOuter; break;
             case "leftsemi" or "semi": kind = JoinKind.LeftSemi; break;
             case "leftanti" or "anti": kind = JoinKind.LeftAnti; break;
+            case "rightsemi": kind = JoinKind.RightSemi; break;
+            case "rightanti": kind = JoinKind.RightAnti; break;
             default:
                 _diagnostics.AddError(DiagnosticPhase.Policy,
                     $"Join kind '{kindStr}' is not supported in MVP.",

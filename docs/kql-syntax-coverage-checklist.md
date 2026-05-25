@@ -60,8 +60,8 @@ approximation diagnostic, or reject.
 - [x] `join kind=leftanti` / `kind=anti` — anti join → `WHERE NOT EXISTS (...)` or DuckDB `ANTI JOIN`
 - [x] `join kind=rightouter` — right outer join → `RIGHT JOIN`
 - [x] `join kind=fullouter` — full outer join → `FULL OUTER JOIN`
-- [ ] `join kind=rightanti` — right anti join — *frequency*
-- [ ] `join kind=rightsemi` — right semi join — *frequency*
+- [x] `join kind=rightanti` — right anti join — `RIGHT ANTI JOIN`
+- [x] `join kind=rightsemi` — right semi join — `RIGHT SEMI JOIN`
 - [B] `join` (bare, no kind) — Kusto default is `innerunique` (deduplicates left side before joining); must reject until innerunique semantics are implemented. Do not silently emit SQL `INNER JOIN`.
 - [B] `join kind=innerunique` — dedup-left join; blocked until deterministic row selection is implemented
 - [ ] `lookup` — optimized dimension join → `LEFT JOIN` with binding validation — *frequency*
@@ -257,7 +257,7 @@ approximation diagnostic, or reject.
 - [ ] `parse_url(url)` — URL component extraction — *complexity: returns dynamic object*
 - [ ] `parse_urlquery(query)` — query parameter extraction — *dependency: depends on parse_url*
 - [ ] `parse_path(path)` — file path parsing — *frequency*
-- [ ] `parse_ipv4(ip)` — IP address parsing — *frequency*
+- [x] `parse_ipv4(ip)` — IP address parsing — dotted-quad to bigint with validation
 - [ ] `parse_ipv6(ip)` — IPv6 parsing — *frequency*
 - [ ] `ipv4_compare(a, b)` — IP comparison — *complexity: requires integer conversion*
 - [ ] `ipv4_is_in_range(ip, cidr)` — CIDR membership — *complexity: requires CIDR parsing + masking*
@@ -489,20 +489,20 @@ approximation diagnostic, or reject.
 
 | Status | Count | Meaning |
 |--------|------:|---------|
-| `[x]` MVP | 151 | Direct translation to DuckDB SQL |
+| `[x]` MVP | 154 | Direct translation to DuckDB SQL |
 | `[m]` Metadata | 2 | Side-channel only, no SQL emitted |
 | `[B]` Blocked | 3 | Deliberately rejected to prevent silent semantic change |
-| `[ ]` Deferred | 163 | Post-MVP, reason annotated |
+| `[ ]` Deferred | 160 | Post-MVP, reason annotated |
 | **In scope** | **319** | |
 | N/A (out of scope) | 26 | See Section 10 |
 
-MVP-ready = `[x]` + `[m]` = **153 / 319 (48%)**
+MVP-ready = `[x]` + `[m]` = **156 / 319 (48.9%)**
 
 ### Deferred by reason
 
 | Reason | Count | Meaning |
 |--------|------:|---------|
-| *frequency* | 87 | Valid translation exists but rare in hunting queries |
+| *frequency* | 84 | Valid translation exists but rare in hunting queries |
 | *complexity* | 45 | Significant implementation effort or no DuckDB equivalent |
 | *dependency* | 8 | Depends on another deferred item being implemented first |
 | *format* | 4 | Requires a format/syntax translation table |
@@ -600,4 +600,4 @@ commands. These operate on Kusto cluster state, not on data.
 
 ---
 
-*Last updated: 2026-05-25 — Planner implementation complete; checklist references simplified*
+*Last updated: 2026-05-25 — Added rightsemi/rightanti joins and parse_ipv4() support*

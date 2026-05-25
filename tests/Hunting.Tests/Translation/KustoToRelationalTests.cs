@@ -399,6 +399,34 @@ public sealed class KustoToRelationalTests
     }
 
     [TestMethod]
+    [Description("join kind=rightsemi → JoinNode with RightSemi")]
+    public void Join_RightSemi()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | join kind=rightsemi (DeviceProcessEvents | take 5) on DeviceName
+            """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var join = AssertIs<JoinNode>(result);
+        Assert.AreEqual(JoinKind.RightSemi, join.Kind);
+    }
+
+    [TestMethod]
+    [Description("join kind=rightanti → JoinNode with RightAnti")]
+    public void Join_RightAnti()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | join kind=rightanti (DeviceProcessEvents | take 5) on DeviceName
+            """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var join = AssertIs<JoinNode>(result);
+        Assert.AreEqual(JoinKind.RightAnti, join.Kind);
+    }
+
+    [TestMethod]
     [Description("sample n translates to SampleNode")]
     public void Sample_TranslatesToSampleNode()
     {

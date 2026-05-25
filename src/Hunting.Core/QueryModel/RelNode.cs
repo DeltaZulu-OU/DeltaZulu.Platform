@@ -135,7 +135,7 @@ public sealed record ProjectionExpr(string Alias, ScalarExpr Expression);
 public sealed record SortExpr(ScalarExpr Expression, SortDirection Direction, NullOrder Nulls = NullOrder.Default);
 
 public enum JoinKind
-{ Inner, LeftOuter, RightOuter, FullOuter, LeftSemi, LeftAnti }
+{ Inner, LeftOuter, RightOuter, FullOuter, LeftSemi, LeftAnti, RightSemi, RightAnti }
 
 public enum SortDirection
 { Asc, Desc }

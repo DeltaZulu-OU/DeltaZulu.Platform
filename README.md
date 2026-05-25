@@ -15,13 +15,13 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 
 | Feature parity status (in scope only) | Count | Percent of in-scope total |
 |---|---:|---:|
-| MVP translated (`[x]`) | 151 | 47.3% |
+| MVP translated (`[x]`) | 154 | 48.3% |
 | Metadata-only (`[m]`) | 2 | 0.6% |
 | Blocked for semantic safety (`[B]`) | 3 | 0.9% |
-| Deferred (`[ ]`) | 163 | 51.1% |
+| Deferred (`[ ]`) | 160 | 50.2% |
 | **Total in-scope constructs** | **319** | **100%** |
 
-MVP-ready parity = `[x] + [m]` = **153 / 319 (48.0%)**.
+MVP-ready parity = `[x] + [m]` = **156 / 319 (48.9%)**.
 
 - The repository currently includes:
   - `Hunting.Core`: translation, relational model, planner, catalog/policy, and DuckDB SQL emitter.

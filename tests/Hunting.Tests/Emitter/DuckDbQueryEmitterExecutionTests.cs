@@ -262,6 +262,18 @@ public sealed class DuckDbQueryEmitterExecutionTests
         AssertExecutes(node, expectedMinRows: 1);
     }
 
+    [TestMethod]
+    [Description("parse_ipv4() executes and returns numeric value for valid IPv4 literal")]
+    public void Execute_ParseIpv4()
+    {
+        var node = new ExtendNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("ip_num",
+                new FunctionCall("parse_ipv4", [new LiteralScalar("10.1.2.3", LiteralKind.String)]))]);
+
+        AssertExecutes(node, expectedMinRows: 1);
+    }
+
     // ─── Window functions execute ───────────────────────────────────
 
     [TestMethod]

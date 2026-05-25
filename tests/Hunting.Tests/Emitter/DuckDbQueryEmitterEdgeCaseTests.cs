@@ -676,6 +676,34 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     }
 
     [TestMethod]
+    [Description("RIGHT SEMI JOIN emitted for RightSemi")]
+    public void Join_RightSemiJoin()
+    {
+        var node = new JoinNode(
+            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("DeviceProcessEvents"),
+            JoinKind.RightSemi,
+            new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "RIGHT SEMI JOIN");
+    }
+
+    [TestMethod]
+    [Description("RIGHT ANTI JOIN emitted for RightAnti")]
+    public void Join_RightAntiJoin()
+    {
+        var node = new JoinNode(
+            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("DeviceProcessEvents"),
+            JoinKind.RightAnti,
+            new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "RIGHT ANTI JOIN");
+    }
+
+    [TestMethod]
     [Description("SampleNode emits USING SAMPLE reservoir(n ROWS)")]
     public void Tabular_Sample_EmitsReservoir()
     {
