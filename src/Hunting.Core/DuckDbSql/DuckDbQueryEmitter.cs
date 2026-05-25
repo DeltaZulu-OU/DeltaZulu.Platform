@@ -59,6 +59,16 @@ public sealed partial class DuckDbQueryEmitter
     [GeneratedRegex(@"__kql_stage_\d+")]
     private static partial Regex StageRefRegex();
 
+    [GeneratedRegex(
+        @"^SELECT (?<projection>.+) FROM (?<joinStage>__kql_stage_\d+)$",
+        RegexOptions.IgnoreCase)]
+    private static partial Regex JoinProjectionStageRegex();
+
+    [GeneratedRegex(
+        @"^SELECT \* FROM (?<left>[A-Za-z0-9_.]+) AS __join_left LEFT JOIN (?<right>[A-Za-z0-9_.]+) AS __join_right ON \((?<pred>.+)\)$",
+        RegexOptions.IgnoreCase)]
+    private static partial Regex LeftLookupJoinStageRegex();
+
     private int _stageCounter;
     private readonly List<(string Name, string Sql)> _ctes = [];
     private readonly HashSet<string> _stageNames = new(StringComparer.Ordinal);
@@ -144,6 +154,7 @@ public sealed partial class DuckDbQueryEmitter
             // reference it in final FROM (dangling __kql_stage_N).
             terminalLimit = terminalLimit with { Source = finalSource };
         }
+        TryCollapseProjectedLookupJoin(ref finalSource, ref columns, ref terminalTopK, ref terminalOrder, ref terminalLimit);
 
         var sb = new StringBuilder();
 
@@ -206,6 +217,77 @@ public sealed partial class DuckDbQueryEmitter
         LetBindingNode let_ => EmitLet(let_),
         _ => throw new NotSupportedException($"Unsupported RelNode type: {node.GetType().Name}")
     };
+
+    private void TryCollapseProjectedLookupJoin(
+        ref string finalSource,
+        ref string? columns,
+        ref TerminalTopK? terminalTopK,
+        ref TerminalOrder? terminalOrder,
+        ref TerminalLimit? terminalLimit)
+    {
+        var terminalSource = terminalTopK?.Source ?? terminalOrder?.Source ?? terminalLimit?.Source ?? finalSource;
+        var projectionIndex = _ctes.FindIndex(c => c.Name == terminalSource);
+        if (projectionIndex < 0)
+        {
+            return;
+        }
+
+        var projectionMatch = JoinProjectionStageRegex().Match(_ctes[projectionIndex].Sql);
+        if (!projectionMatch.Success)
+        {
+            return;
+        }
+
+        var joinStageName = projectionMatch.Groups["joinStage"].Value;
+        var joinIndex = _ctes.FindIndex(c => c.Name == joinStageName);
+        if (joinIndex < 0)
+        {
+            return;
+        }
+
+        var joinMatch = LeftLookupJoinStageRegex().Match(_ctes[joinIndex].Sql);
+        if (!joinMatch.Success)
+        {
+            return;
+        }
+
+        static string RenameJoinAliases(string text) =>
+            text.Replace("__join_left.", "left_agg.", StringComparison.Ordinal)
+                .Replace("__join_right.", "right_agg.", StringComparison.Ordinal);
+
+        var projected = RenameJoinAliases(projectionMatch.Groups["projection"].Value);
+        var joinSql =
+            $"SELECT {projected} FROM {joinMatch.Groups["left"].Value} AS left_agg LEFT JOIN {joinMatch.Groups["right"].Value} AS right_agg ON {RenameJoinAliases(joinMatch.Groups["pred"].Value)}";
+
+        _ctes[joinIndex] = (joinStageName, joinSql);
+        _ctes.RemoveAt(projectionIndex);
+        _stageNames.Remove(terminalSource);
+
+        finalSource = joinStageName;
+        columns = null;
+        if (terminalTopK is not null)
+        {
+            terminalTopK = terminalTopK with
+            {
+                Source = joinStageName,
+                OrderBy = RenameJoinAliases(terminalTopK.OrderBy)
+            };
+        }
+
+        if (terminalOrder is not null)
+        {
+            terminalOrder = terminalOrder with
+            {
+                Source = joinStageName,
+                OrderBy = RenameJoinAliases(terminalOrder.OrderBy)
+            };
+        }
+
+        if (terminalLimit is not null)
+        {
+            terminalLimit = terminalLimit with { Source = joinStageName };
+        }
+    }
 
     private string NextStage() => $"__kql_stage_{_stageCounter++}";
 

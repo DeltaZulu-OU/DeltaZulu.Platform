@@ -582,6 +582,54 @@ public sealed partial class DuckDbQueryEmitterTests
     }
 
     [TestMethod]
+    [Description("Lookup-shaped aggregate join emits explicit projection without SELECT * join wrappers")]
+    public void Lookup_AggregateProjectSortTake_UsesExplicitJoinProjection()
+    {
+        var leftAgg = new AggregateNode(
+            new ScanNode("DeviceProcessEvents"),
+            Aggregates: [new ProjectionExpr("LaunchCount", new FunctionCall("count", []))],
+            GroupBy: [new ColumnRef("AccountName")]);
+
+        var rightAgg = new AggregateNode(
+            new ScanNode("DeviceProcessEvents"),
+            Aggregates: [new ProjectionExpr("DeviceCount", new FunctionCall("dcount", [new ColumnRef("DeviceName")]))],
+            GroupBy: [new ColumnRef("AccountName")]);
+
+        var lookupJoin = new JoinNode(
+            leftAgg,
+            rightAgg,
+            JoinKind.LeftOuter,
+            new BinaryScalar(
+                new ColumnRef("AccountName", JoinSide.Left),
+                ScalarBinaryOp.Eq,
+                new ColumnRef("AccountName", JoinSide.Right)));
+
+        var project = new ProjectNode(
+            lookupJoin,
+            [
+                new ProjectionExpr("AccountName", new ColumnRef("AccountName", JoinSide.Left)),
+                new ProjectionExpr("LaunchCount", new ColumnRef("LaunchCount", JoinSide.Left)),
+                new ProjectionExpr("DeviceCount", new ColumnRef("DeviceCount", JoinSide.Right)),
+            ]);
+
+        var top = new LimitNode(
+            new SortNode(project, [new SortExpr(new ColumnRef("LaunchCount", JoinSide.Left), SortDirection.Desc)]),
+            25);
+
+        var sql = _emitter.Emit(top);
+        var normalizedSql = NormSql(sql);
+
+        AssertSqlContains(normalizedSql, "LEFT JOIN");
+        AssertSqlContains(normalizedSql, "count(*) AS LaunchCount");
+        AssertSqlContains(normalizedSql, "count(DISTINCT DeviceName) AS DeviceCount");
+        AssertSqlContains(normalizedSql, "ON left_agg.AccountName = right_agg.AccountName");
+        AssertSqlContains(normalizedSql, "SELECT AccountName, LaunchCount, DeviceCount FROM");
+        AssertSqlContains(normalizedSql, "ORDER BY LaunchCount DESC");
+        AssertSqlContains(normalizedSql, "LIMIT 25");
+        Assert.DoesNotMatchRegex(@"SELECT\s+\*\s+FROM\s+.*LEFT\s+JOIN", normalizedSql);
+    }
+
+    [TestMethod]
     [Description("has_cs uses case-sensitive regex without lower()")]
     public void Op_HasCs_CaseSensitiveRegex()
     {
