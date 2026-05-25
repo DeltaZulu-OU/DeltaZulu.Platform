@@ -1,5 +1,6 @@
 namespace Hunting.Tests.Emitter;
 
+using System.Text.RegularExpressions;
 using Hunting.Core.DuckDbSql;
 using Hunting.Core.QueryModel;
 
@@ -438,14 +439,11 @@ public sealed partial class DuckDbQueryEmitterTests
 
     [TestMethod]
     [Description("Unknown function names are rejected")]
-    public void Func_Unknown_ThrowsNotSupported()
-    {
-        Assert.ThrowsExactly<NotSupportedException>(() =>
-            _emitter.Emit(new ExtendNode(
-                new ScanNode("DeviceProcessEvents"),
-                [new ProjectionExpr("r", new FunctionCall("custom_function_xyz",
+    public void Func_Unknown_ThrowsNotSupported() => Assert.ThrowsExactly<NotSupportedException>(() =>
+                                                              _emitter.Emit(new ExtendNode(
+                                                                  new ScanNode("DeviceProcessEvents"),
+                                                                  [new ProjectionExpr("r", new FunctionCall("custom_function_xyz",
                     [new ColumnRef("FileName"), new LiteralScalar(42, LiteralKind.Int)]))])));
-    }
 
     [TestMethod]
     [Description("Join ON emits full equality predicate")]
@@ -627,7 +625,7 @@ public sealed partial class DuckDbQueryEmitterTests
             20);
         var sql = _emitter.Emit(node);
         var norm = NormSql(sql);
-        var passThrough = System.Text.RegularExpressions.Regex.Matches(norm, @"AS \(SELECT \* FROM __kql_stage_\d+\)").Count;
+        var passThrough = Regex.Count(norm, @"AS \(SELECT \* FROM __kql_stage_\d+\)");
         Assert.AreEqual(0, passThrough);
         Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("__kql_stage_", norm, StringComparison.OrdinalIgnoreCase);
@@ -791,6 +789,28 @@ public sealed partial class DuckDbQueryEmitterTests
         Assert.DoesNotMatchRegex(@"\bLIMIT\b", norm);
     }
 
+    [TestMethod]
+    [Description("summarize|sort: semantic assertions allow either canonical SELECT-first SQL or DuckDB FROM-first SQL")]
+    public void SummarizeSort_DuckDbNativeMode_AllowsFromFirstSyntax()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: false);
+        var node = new SortNode(
+            new AggregateNode(
+                new ScanNode("DeviceProcessEvents"),
+                Aggregates: [new ProjectionExpr("count_", new FunctionCall("count", []))],
+                GroupBy: [new ColumnRef("DeviceName")]),
+            [new SortExpr(new ColumnRef("count_"), SortDirection.Desc)]);
+
+        var sql = emitter.Emit(node);
+        var normalizedSql = NormSql(sql);
+
+        Assert.Contains("main.DeviceProcessEvents", normalizedSql);
+        Assert.Contains("DeviceName", normalizedSql);
+        Assert.Contains("count(*) AS count_", normalizedSql);
+        Assert.Contains("GROUP BY DeviceName", normalizedSql);
+        Assert.Contains("ORDER BY count_ DESC", normalizedSql);
+        Assert.DoesNotMatchRegex(@"SELECT\s+\*\s+FROM\s+__kql_stage_\d+", normalizedSql);
+    }
 
     // ─── Helpers ────────────────────────────────────────────────────
 
@@ -805,6 +825,6 @@ public sealed partial class DuckDbQueryEmitterTests
             $"Expected SQL to contain '{normFrag}'\nActual: {norm}");
     }
 
-    [System.Text.RegularExpressions.GeneratedRegex(@"\s+")]
-    private static partial System.Text.RegularExpressions.Regex MyRegex();
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex MyRegex();
 }
