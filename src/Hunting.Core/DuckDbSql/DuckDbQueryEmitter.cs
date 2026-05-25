@@ -105,6 +105,7 @@ public sealed partial class DuckDbQueryEmitter
         TerminalLimit? terminalLimit = null;
         TryInlineSingleUseAggregateStageIntoTerminalTopK(ref terminalTopK, ref columns);
         TryInlineSingleUseAggregateStageIntoTerminalOrder(ref terminalOrder, ref columns);
+        TryInlineSingleUseAggregateFilterStageIntoTerminalOrder(ref terminalOrder, ref columns);
         if (terminalOrder is not null)
         {
             // Aggregate inlining into terminal ORDER may rewrite its source.
@@ -620,6 +621,125 @@ public sealed partial class DuckDbQueryEmitter
 
         _ctes.RemoveAt(idx);
         _stageNames.Remove(cte.Name);
+    }
+
+    private void TryInlineSingleUseAggregateFilterStageIntoTerminalOrder(
+        ref TerminalOrder? terminalOrder,
+        ref string? columns)
+    {
+        if (terminalOrder is null || (columns is not null && !string.Equals(columns, "*", StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        var terminalOrderSource = terminalOrder.Source;
+        var filterIdx = _ctes.FindIndex(c => string.Equals(c.Name, terminalOrderSource, StringComparison.Ordinal));
+        if (filterIdx < 0)
+        {
+            return;
+        }
+
+        var filterCte = _ctes[filterIdx];
+        var filterMatch = FilterStageInlineRegex().Match(filterCte.Sql);
+        if (!filterMatch.Success)
+        {
+            return;
+        }
+
+        var aggregateStageName = filterMatch.Groups["source"].Value;
+        var aggregateIdx = _ctes.FindIndex(c => string.Equals(c.Name, aggregateStageName, StringComparison.Ordinal));
+        if (aggregateIdx < 0)
+        {
+            return;
+        }
+
+        var aggregateCte = _ctes[aggregateIdx];
+        var aggregateMatch = FinalStageInlineRegex().Match(aggregateCte.Sql);
+        if (!aggregateMatch.Success || string.IsNullOrWhiteSpace(aggregateMatch.Groups["group"].Value))
+        {
+            return;
+        }
+
+        if (CountStageReferences(filterCte.Name) != 0 || CountStageReferences(aggregateCte.Name) != 1)
+        {
+            return;
+        }
+
+        var projection = aggregateMatch.Groups["proj"].Value;
+        var predicate = RewriteAggregateAliasPredicate(
+            filterMatch.Groups["pred"].Value,
+            projection);
+        var aggregateSource = aggregateMatch.Groups["source"].Value;
+        var aggregateGroupBy = aggregateMatch.Groups["group"].Value;
+
+        // Fold a single-use pre-aggregate filter stage into the aggregate source
+        // so optimized output becomes FROM base WHERE ... GROUP BY ... HAVING ...
+        // instead of retaining a leading WITH filter CTE.
+        var preFilterIdx = _ctes.FindIndex(c => string.Equals(c.Name, aggregateSource, StringComparison.Ordinal));
+        if (preFilterIdx >= 0)
+        {
+            var preFilterCte = _ctes[preFilterIdx];
+            var preFilterMatch = FilterStageInlineRegex().Match(preFilterCte.Sql);
+            if (preFilterMatch.Success && CountStageReferences(preFilterCte.Name) == 1)
+            {
+                aggregateSource = $"{preFilterMatch.Groups["source"].Value} WHERE {preFilterMatch.Groups["pred"].Value}";
+                _ctes.RemoveAt(preFilterIdx);
+                _stageNames.Remove(preFilterCte.Name);
+
+                if (preFilterIdx < filterIdx)
+                {
+                    filterIdx--;
+                }
+                if (preFilterIdx < aggregateIdx)
+                {
+                    aggregateIdx--;
+                }
+            }
+        }
+
+        columns = projection;
+        terminalOrder = terminalOrder with
+        {
+            Source = $"{aggregateSource}{aggregateGroupBy} HAVING {predicate}"
+        };
+
+        // remove higher index first
+        if (filterIdx > aggregateIdx)
+        {
+            _ctes.RemoveAt(filterIdx);
+            _ctes.RemoveAt(aggregateIdx);
+        }
+        else
+        {
+            _ctes.RemoveAt(aggregateIdx);
+            _ctes.RemoveAt(filterIdx);
+        }
+        _stageNames.Remove(filterCte.Name);
+        _stageNames.Remove(aggregateCte.Name);
+    }
+
+    private static string RewriteAggregateAliasPredicate(string predicate, string projection)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (Match match in Regex.Matches(
+            projection,
+            @"(?<expr>[^,]+?)\s+AS\s+(?<alias>[A-Za-z_][A-Za-z0-9_]*)",
+            RegexOptions.IgnoreCase))
+        {
+            map[match.Groups["alias"].Value] = match.Groups["expr"].Value.Trim();
+        }
+
+        var rewritten = predicate;
+        foreach (var (alias, expr) in map)
+        {
+            rewritten = Regex.Replace(
+                rewritten,
+                $@"\b{Regex.Escape(alias)}\b",
+                expr,
+                RegexOptions.IgnoreCase);
+        }
+
+        return rewritten;
     }
 
     // ─── Scan ───────────────────────────────────────────────────────

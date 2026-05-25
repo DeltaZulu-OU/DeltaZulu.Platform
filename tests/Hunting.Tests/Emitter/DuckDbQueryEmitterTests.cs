@@ -928,6 +928,44 @@ public sealed partial class DuckDbQueryEmitterTests
         Assert.DoesNotMatchRegex(@"SELECT\s+\*\s+FROM\s+__kql_stage_\d+", normalizedSql);
     }
 
+    [TestMethod]
+    [Description("where|summarize|where|sort in semantic mode collapses into WHERE/GROUP BY/HAVING/ORDER BY")]
+    public void WhereSummarizeWhereSort_OptimizedMode_CollapsesIntoAggregateSelect()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: false);
+        var node = new SortNode(
+            new FilterNode(
+                new AggregateNode(
+                    new FilterNode(
+                        new ScanNode("DeviceNetworkEvents"),
+                        new FunctionCall("isempty", [new ColumnRef("RemoteUrl")])),
+                    Aggregates:
+                    [
+                        new ProjectionExpr("count_", new FunctionCall("count", [])),
+                        new ProjectionExpr("dcount_", new FunctionCall("dcount", [new ColumnRef("RemotePort")]))
+                    ],
+                    GroupBy:
+                    [
+                        new ColumnRef("DeviceName"),
+                        new ColumnRef("RemoteIP"),
+                        new ColumnRef("InitiatingProcessFileName")
+                    ]),
+                new BinaryScalar(new ColumnRef("count_"), ScalarBinaryOp.Gt, new LiteralScalar(3, LiteralKind.Int))),
+            [new SortExpr(new ColumnRef("count_"), SortDirection.Desc)]);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
+        Assert.Contains("FROM main.DeviceNetworkEvents", norm);
+        Assert.Contains("WHERE (RemoteUrl IS NULL OR RemoteUrl = '')", norm);
+        Assert.Contains("GROUP BY DeviceName, RemoteIP, InitiatingProcessFileName", norm);
+        Assert.Contains("HAVING (count(*) > 3)", norm);
+        Assert.Contains("ORDER BY count_ DESC", norm);
+        Assert.DoesNotMatchRegex(@"WHERE\s+.*count_\s*>\s*3", norm);
+    }
+
     // ─── Timespan / datetime function emission ───────────────────────
 
     [TestMethod]
