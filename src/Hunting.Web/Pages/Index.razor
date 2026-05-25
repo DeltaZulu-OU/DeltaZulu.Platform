@@ -7,27 +7,7 @@
 @inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
-<MudDrawerContainer Class="hunt-page">
-    <MudDrawer Anchor="Anchor.End" Variant="DrawerVariant.Temporary" Width="540px" Elevation="1" @bind-Open="_showDrawer">
-        <div class="hunt-drawer-header">
-            <div>
-                <div class="hunt-drawer-title">@_drawerTitle</div>
-                <div class="hunt-drawer-subtitle">@_drawerTypeLabel</div>
-            </div>
-            <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default" Size="Size.Small" OnClick="CloseDrawer" />
-        </div>
-        <div class="hunt-drawer-body">
-            @if (_drawerMode == DrawerMode.Sql)
-            {
-                <pre class="hunt-sql-highlight">@((MarkupString)_drawerSqlHtml)</pre>
-            }
-            else
-            {
-                <pre class="hunt-drawer-content">@_drawerContent</pre>
-            }
-        </div>
-    </MudDrawer>
-<MudDrawerContent>
+<div class="hunt-page">
 <div class="hunt-page-content">
     <!-- ─── Editor panel ──────────────────────────────────────────────────────── -->
     <section class="hunt-editor-panel">
@@ -178,8 +158,31 @@
         }
     </section>
 </div>
-</MudDrawerContent>
-</MudDrawerContainer>
+</div>
+
+@if (_showDrawer)
+{
+    <button class="hunt-drawer-backdrop" @onclick="CloseDrawer" aria-label="Close details drawer"></button>
+    <aside class="hunt-drawer" role="dialog" aria-modal="true" aria-label="@_drawerTitle">
+        <div class="hunt-drawer-header">
+            <div>
+                <div class="hunt-drawer-title">@_drawerTitle</div>
+                <div class="hunt-drawer-subtitle">@_drawerTypeLabel</div>
+            </div>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default" Size="Size.Small" OnClick="CloseDrawer" />
+        </div>
+        <div class="hunt-drawer-body">
+            @if (_drawerMode == DrawerMode.Sql)
+            {
+                <pre class="hunt-sql-highlight">@((MarkupString)_drawerSqlHtml)</pre>
+            }
+            else
+            {
+                <pre class="hunt-drawer-content">@_drawerContent</pre>
+            }
+        </div>
+    </aside>
+}
 @code {
     private string _kql = string.Empty;
     private readonly Hunting.Web.Services.QueryToolbarState _toolbar = new();

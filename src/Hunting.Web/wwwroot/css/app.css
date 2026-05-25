@@ -177,6 +177,7 @@ html, body {
 
 .hunt-page {
     height: 100%;
+    position: relative;
 }
 
 .hunt-page-content {
@@ -347,6 +348,28 @@ html, body {
     gap: 16px;
     padding: 12px 16px;
     border-bottom: 1px solid var(--border);
+}
+
+.hunt-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    border: 0;
+    background: rgba(2, 6, 23, 0.5);
+    z-index: 1200;
+}
+
+.hunt-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: min(540px, 92vw);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    z-index: 1300;
 }
 
 .hunt-drawer-title {
