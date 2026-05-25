@@ -289,6 +289,9 @@ public sealed partial class DuckDbQueryEmitter
         {
             return;
         }
+
+        // We cannot use ref string in FindIndex, so we need to capture the index and the filter stage name separately here.
+        // Do not inline currentSource.
         var currentSource = finalSource;
         var idx = _ctes.FindIndex(c => string.Equals(c.Name, currentSource, StringComparison.Ordinal));
         finalSource = currentSource;
