@@ -220,8 +220,8 @@ approximation diagnostic, or reject.
 - [x] `case(c1, v1, c2, v2, ..., default)` — multi-branch conditional → SQL `CASE`
 - [x] `iif(condition, ifTrue, ifFalse)` — alias for `iff`
 - [x] `coalesce(a, b, ...)` — first non-null → `COALESCE(a, b, ...)` (DuckDB native)
-- [ ] `max_of(a, b, ...)` — scalar max → `greatest(a, b, ...)` — *frequency*
-- [ ] `min_of(a, b, ...)` — scalar min → `least(a, b, ...)` — *frequency*
+- [x] `max_of(a, b, ...)` — scalar max → `greatest(a, b, ...)`
+- [x] `min_of(a, b, ...)` — scalar min → `least(a, b, ...)`
 
 ### 3.8 Type Test Expressions
 
@@ -229,8 +229,8 @@ approximation diagnostic, or reject.
 - [x] `isnotempty(x)` — not null and not empty → `(x IS NOT NULL AND x <> '')`
 - [x] `isnull(x)` — null test → `x IS NULL`
 - [x] `isnotnull(x)` — not null test → `x IS NOT NULL`
-- [ ] `isnan(x)` — NaN test → `isnan(x)` — *frequency*
-- [ ] `isinf(x)` — infinity test → `isinf(x)` — *frequency*
+- [x] `isnan(x)` — NaN test → `isnan(x)`
+- [x] `isinf(x)` — infinity test → `isinf(x)`
 - [ ] `gettype(x)` — runtime type name — *complexity: Kusto type names differ from DuckDB*
 
 ---
@@ -251,9 +251,9 @@ approximation diagnostic, or reject.
 - [x] `strcat_delim(delimiter, a, b, ...)` → `concat_ws(delimiter, a, b, ...)`
 - [x] `extract(regex, group, s)` → `regexp_extract(s, regex, group)` (**caveat**: KQL returns empty string on no match; DuckDB returns NULL. Emitter must wrap: `COALESCE(regexp_extract(...), '')`)
 - [ ] `extract_all(regex, s)` → needs list result handling — *complexity: returns list of matches*
-- [ ] `indexof(s, lookup)` → `strpos(s, lookup) - 1` — *frequency*
+- [x] `indexof(s, lookup)` → `strpos(s, lookup) - 1`
 - [ ] `countof(s, search)` — occurrence count — *frequency*
-- [ ] `reverse(s)` → `reverse(s)` — *frequency*
+- [x] `reverse(s)` → `reverse(s)`
 - [ ] `parse_url(url)` — URL component extraction — *complexity: returns dynamic object*
 - [ ] `parse_urlquery(query)` — query parameter extraction — *dependency: depends on parse_url*
 - [ ] `parse_path(path)` — file path parsing — *frequency*
@@ -322,16 +322,16 @@ approximation diagnostic, or reject.
 - [x] `make_set(x, n)` → `list_slice(list(DISTINCT x), 1, n)`
 - [x] `make_list(x)` → `list(x)`
 - [x] `make_list(x, n)` → `list_slice(list(x), 1, n)`
-- [ ] `any(x)` → `first(x)` or `any_value(x)` — *frequency*
-- [ ] `stdev(x)` → `stddev_samp(x)` — *frequency*
-- [ ] `stdevif(x, p)` → `stddev_samp(x) FILTER (WHERE p)` — *frequency*
-- [ ] `variance(x)` → `var_samp(x)` — *frequency*
-- [ ] `varianceif(x, p)` → `var_samp(x) FILTER (WHERE p)` — *frequency*
+- [x] `any(x)` → `first(x)` or `any_value(x)`
+- [x] `stdev(x)` → `stddev_samp(x)`
+- [x] `stdevif(x, p)` → `stddev_samp(x) FILTER (WHERE p)`
+- [x] `variance(x)` → `var_samp(x)`
+- [x] `varianceif(x, p)` → `var_samp(x) FILTER (WHERE p)`
 - [ ] `percentile(x, n)` → `percentile_cont(n) WITHIN GROUP (ORDER BY x)` — *frequency*
 - [ ] `percentiles(x, n1, n2, ...)` → multiple percentile calls — *complexity: returns dynamic array*
-- [ ] `binary_all_and(x)` → `bit_and(x)` — *frequency*
-- [ ] `binary_all_or(x)` → `bit_or(x)` — *frequency*
-- [ ] `binary_all_xor(x)` → `bit_xor(x)` — *frequency*
+- [x] `binary_all_and(x)` → `bit_and(x)`
+- [x] `binary_all_or(x)` → `bit_or(x)`
+- [x] `binary_all_xor(x)` → `bit_xor(x)`
 - [ ] `hll(x)` / `hll_merge(x)` — HyperLogLog sketches — *complexity: no DuckDB equivalent*
 - [ ] `tdigest(x)` / `tdigest_merge(x)` — t-digest sketches — *complexity: no DuckDB equivalent*
 - [ ] `make_bag(x)` → JSON object aggregation — *complexity: dynamic key aggregation*
@@ -344,8 +344,8 @@ approximation diagnostic, or reject.
 - [x] `toint(x)` → `CAST(x AS INTEGER)`
 - [x] `todouble(x)` / `toreal(x)` → `CAST(x AS DOUBLE)`
 - [x] `tobool(x)` → `CAST(x AS BOOLEAN)`
-- [ ] `todecimal(x)` → `CAST(x AS DECIMAL)` — *frequency*
-- [ ] `toguid(x)` → `CAST(x AS VARCHAR)` (no native GUID) — *frequency*
+- [x] `todecimal(x)` → `CAST(x AS DECIMAL)`
+- [x] `toguid(x)` → `CAST(x AS VARCHAR)` (no native GUID)
 - [ ] `todatetime(x)` → `CAST(x AS TIMESTAMP)` — *frequency*
 - [ ] `totimespan(x)` → interval parsing — *format: Kusto timespan syntax differs from SQL INTERVAL*
 
@@ -377,24 +377,24 @@ approximation diagnostic, or reject.
 ### 4.6 Math Functions
 
 - [x] `abs(x)` → `abs(x)`
-- [ ] `ceiling(x)` → `ceil(x)` — *frequency*
-- [ ] `floor(x)` → `floor(x)` — *frequency*
-- [ ] `round(x, n)` → `round(x, n)` — *frequency*
-- [ ] `log(x)` → `ln(x)` — *frequency*
-- [ ] `log2(x)` → `log2(x)` — *frequency*
-- [ ] `log10(x)` → `log10(x)` — *frequency*
-- [ ] `pow(x, y)` → `power(x, y)` — *frequency*
-- [ ] `sqrt(x)` → `sqrt(x)` — *frequency*
-- [ ] `exp(x)` → `exp(x)` — *frequency*
+- [x] `ceiling(x)` → `ceil(x)`
+- [x] `floor(x)` → `floor(x)`
+- [x] `round(x, n)` → `round(x, n)`
+- [x] `log(x)` → `ln(x)`
+- [x] `log2(x)` → `log2(x)`
+- [x] `log10(x)` → `log10(x)`
+- [x] `pow(x, y)` → `power(x, y)`
+- [x] `sqrt(x)` → `sqrt(x)`
+- [x] `exp(x)` → `exp(x)`
 - [ ] `exp2(x)` → `power(2, x)` — *frequency*
 - [ ] `exp10(x)` → `power(10, x)` — *frequency*
-- [ ] `sign(x)` → `sign(x)` — *frequency*
-- [ ] `pi()` → `pi()` — *frequency*
+- [x] `sign(x)` → `sign(x)`
+- [x] `pi()` → `pi()`
 - [ ] `rand()` → `random()` — *frequency*
 - [ ] `rand(n)` → `setseed(n); random()` — *frequency*
 - [ ] `cos(x)` / `sin(x)` / `tan(x)` / `acos(x)` / `asin(x)` / `atan(x)` / `atan2(y, x)` — *frequency*
-- [ ] `isnan(x)` → `isnan(x)` — *frequency*
-- [ ] `isinf(x)` → `isinf(x)` — *frequency*
+- [x] `isnan(x)` → `isnan(x)`
+- [x] `isinf(x)` → `isinf(x)`
 - [ ] `beta_cdf(x, a, b)` — statistical CDF — *complexity: no DuckDB equivalent*
 - [ ] `welch_test(...)` — statistical test — *complexity: no DuckDB equivalent*
 

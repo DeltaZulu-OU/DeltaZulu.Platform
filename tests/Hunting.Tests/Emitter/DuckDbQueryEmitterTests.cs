@@ -172,6 +172,46 @@ public sealed partial class DuckDbQueryEmitterTests
         AssertSqlContains(sql, "length(FileName) AS b");
     }
 
+    [TestMethod]
+    [Description("Additional trivial function mappings emit expected DuckDB SQL")]
+    public void Emit_Func_TrivialMappings()
+    {
+        var node = new ExtendNode(
+            new ScanNode("DeviceProcessEvents"),
+            [
+                new ProjectionExpr("idx", new FunctionCall("indexof", [new ColumnRef("FileName"), new LiteralScalar("a", LiteralKind.String)])),
+                new ProjectionExpr("rev", new FunctionCall("reverse", [new ColumnRef("FileName")])),
+                new ProjectionExpr("mx", new FunctionCall("max_of", [new ColumnRef("A"), new ColumnRef("B")])),
+                new ProjectionExpr("mn", new FunctionCall("min_of", [new ColumnRef("A"), new ColumnRef("B")])),
+                new ProjectionExpr("dec", new FunctionCall("todecimal", [new ColumnRef("A")])),
+                new ProjectionExpr("gid", new FunctionCall("toguid", [new ColumnRef("FileName")])),
+                new ProjectionExpr("nan", new FunctionCall("isnan", [new ColumnRef("A")])),
+                new ProjectionExpr("inf", new FunctionCall("isinf", [new ColumnRef("A")])),
+                new ProjectionExpr("ceilv", new FunctionCall("ceiling", [new ColumnRef("A")])),
+                new ProjectionExpr("floorv", new FunctionCall("floor", [new ColumnRef("A")])),
+                new ProjectionExpr("roundv", new FunctionCall("round", [new ColumnRef("A"), new LiteralScalar(2, LiteralKind.Int)])),
+                new ProjectionExpr("logv", new FunctionCall("log", [new ColumnRef("A")])),
+                new ProjectionExpr("powv", new FunctionCall("pow", [new ColumnRef("A"), new LiteralScalar(2, LiteralKind.Int)])),
+                new ProjectionExpr("piv", new FunctionCall("pi", [])),
+            ]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "(strpos(FileName, 'a') - 1) AS idx");
+        AssertSqlContains(sql, "reverse(FileName) AS rev");
+        AssertSqlContains(sql, "greatest(A, B) AS mx");
+        AssertSqlContains(sql, "least(A, B) AS mn");
+        AssertSqlContains(sql, "CAST(A AS DECIMAL) AS dec");
+        AssertSqlContains(sql, "CAST(FileName AS VARCHAR) AS gid");
+        AssertSqlContains(sql, "isnan(A) AS nan");
+        AssertSqlContains(sql, "isinf(A) AS inf");
+        AssertSqlContains(sql, "ceil(A) AS ceilv");
+        AssertSqlContains(sql, "floor(A) AS floorv");
+        AssertSqlContains(sql, "round(A, 2) AS roundv");
+        AssertSqlContains(sql, "ln(A) AS logv");
+        AssertSqlContains(sql, "power(A, 2) AS powv");
+        AssertSqlContains(sql, "pi() AS piv");
+    }
+
     // ─── Window functions ────────────────────────────────────────
 
     [TestMethod]

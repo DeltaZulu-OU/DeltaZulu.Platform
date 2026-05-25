@@ -929,6 +929,8 @@ public sealed partial class DuckDbQueryEmitter
             "replace_string" => $"replace({args[0]}, {args[1]}, {args[2]})",
             "replace_regex" => $"regexp_replace({args[0]}, {args[1]}, {args[2]}, 'g')",
             "split" => $"string_split({args[0]}, {args[1]})",
+            "indexof" => $"(strpos({args[0]}, {args[1]}) - 1)",
+            "reverse" => $"reverse({args[0]})",
             "trim" => $"regexp_replace(regexp_replace({args[1]}, concat('^(', {args[0]}, ')'), ''), concat('(', {args[0]}, ')$'), '')",
             "extract" => $"COALESCE(regexp_extract({args[2]}, {args[0]}, CAST({args[1]} AS INTEGER)), '')",
 
@@ -970,22 +972,39 @@ public sealed partial class DuckDbQueryEmitter
             "toint" => $"CAST({args[0]} AS INTEGER)",
             "todouble" or "toreal" => $"CAST({args[0]} AS DOUBLE)",
             "tobool" => $"CAST({args[0]} AS BOOLEAN)",
+            "todecimal" => $"CAST({args[0]} AS DECIMAL)",
+            "toguid" => $"CAST({args[0]} AS VARCHAR)",
 
             // Conditional
             "iff" or "iif" => $"CASE WHEN {args[0]} THEN {args[1]} ELSE {args[2]} END",
             "coalesce" => $"COALESCE({string.Join(", ", args)})",
+            "max_of" => $"greatest({string.Join(", ", args)})",
+            "min_of" => $"least({string.Join(", ", args)})",
 
             // Null tests
             "isnull" => $"({args[0]} IS NULL)",
             "isnotnull" => $"({args[0]} IS NOT NULL)",
             "isempty" => $"({args[0]} IS NULL OR {args[0]} = '')",
             "isnotempty" => $"({args[0]} IS NOT NULL AND {args[0]} != '')",
+            "isnan" => $"isnan({args[0]})",
+            "isinf" => $"isinf({args[0]})",
 
             // JSON
             "parse_json" => $"CAST({args[0]} AS JSON)",
 
             // Math
             "abs" => $"abs({args[0]})",
+            "ceiling" => $"ceil({args[0]})",
+            "floor" => $"floor({args[0]})",
+            "round" => $"round({args[0]}, {args[1]})",
+            "log" => $"ln({args[0]})",
+            "log2" => $"log2({args[0]})",
+            "log10" => $"log10({args[0]})",
+            "pow" => $"power({args[0]}, {args[1]})",
+            "sqrt" => $"sqrt({args[0]})",
+            "exp" => $"exp({args[0]})",
+            "sign" => $"sign({args[0]})",
+            "pi" => "pi()",
 
             // Aggregation (when used inside AggregateNode projections)
             "count" => args.Count == 0 ? "count(*)" : $"count({args[0]})",
@@ -1004,6 +1023,14 @@ public sealed partial class DuckDbQueryEmitter
             "make_set" => $"list_slice(list(DISTINCT {args[0]}), 1, {args[1]})",
             "make_list" when args.Count == 1 => $"list({args[0]})",
             "make_list" => $"list_slice(list({args[0]}), 1, {args[1]})",
+            "any" => $"any_value({args[0]})",
+            "stdev" => $"stddev_samp({args[0]})",
+            "stdevif" => $"stddev_samp({args[0]}) FILTER (WHERE {args[1]})",
+            "variance" => $"var_samp({args[0]})",
+            "varianceif" => $"var_samp({args[0]}) FILTER (WHERE {args[1]})",
+            "binary_all_and" => $"bit_and({args[0]})",
+            "binary_all_or" => $"bit_or({args[0]})",
+            "binary_all_xor" => $"bit_xor({args[0]})",
 
             // Unknown function: reject rather than emit raw SQL.
             // Emitting an unknown name violates the project safety rule.
