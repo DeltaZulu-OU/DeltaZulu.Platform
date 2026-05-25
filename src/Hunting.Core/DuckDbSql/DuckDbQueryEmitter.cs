@@ -1,6 +1,7 @@
 namespace Hunting.Core.DuckDbSql;
 
 using System.Text;
+using System.Text.RegularExpressions;
 using QueryModel;
 
 /// <summary>
@@ -18,38 +19,38 @@ public sealed partial class DuckDbQueryEmitter
     private sealed record TerminalOrder(string Source, string OrderBy);
     private sealed record TerminalLimit(string Source, int Limit);
 
-    [System.Text.RegularExpressions.GeneratedRegex(
+    [GeneratedRegex(
         @"^SELECT \* FROM (main\.[A-Za-z_][A-Za-z0-9_]*)$",
-        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
-    private static partial System.Text.RegularExpressions.Regex TrivialSourceStageRegex();
+        RegexOptions.IgnoreCase)]
+    private static partial Regex TrivialSourceStageRegex();
 
-    [System.Text.RegularExpressions.GeneratedRegex(
+    [GeneratedRegex(
         @"^SELECT \* FROM (?<source>[A-Za-z0-9_.]+) ORDER BY (?<order>.+) LIMIT (?<limit>\d+)$",
-        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
-    private static partial System.Text.RegularExpressions.Regex TerminalTopKRegex();
+        RegexOptions.IgnoreCase)]
+    private static partial Regex TerminalTopKRegex();
 
-    [System.Text.RegularExpressions.GeneratedRegex(
+    [GeneratedRegex(
         @"^SELECT \* FROM (?<source>[A-Za-z0-9_.]+) ORDER BY (?<order>.+)$",
-        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
-    private static partial System.Text.RegularExpressions.Regex TerminalOrderRegex();
+        RegexOptions.IgnoreCase)]
+    private static partial Regex TerminalOrderRegex();
 
-    [System.Text.RegularExpressions.GeneratedRegex(
+    [GeneratedRegex(
         @"^SELECT \* FROM (?<source>.+) LIMIT (?<limit>\d+)$",
-        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
-    private static partial System.Text.RegularExpressions.Regex TerminalLimitRegex();
+        RegexOptions.IgnoreCase)]
+    private static partial Regex TerminalLimitRegex();
     
-    [System.Text.RegularExpressions.GeneratedRegex(
+    [GeneratedRegex(
         @"^SELECT (?<proj>.+) FROM (?<source>[A-Za-z0-9_.]+)(?<group>\s+GROUP BY .+)?$",
-        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
-    private static partial System.Text.RegularExpressions.Regex FinalStageInlineRegex();
+        RegexOptions.IgnoreCase)]
+    private static partial Regex FinalStageInlineRegex();
     
-    [System.Text.RegularExpressions.GeneratedRegex(
+    [GeneratedRegex(
         @"^SELECT \* FROM (?<source>[A-Za-z0-9_.]+) WHERE (?<pred>.+)$",
-        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
-    private static partial System.Text.RegularExpressions.Regex FilterStageInlineRegex();
+        RegexOptions.IgnoreCase)]
+    private static partial Regex FilterStageInlineRegex();
 
-    [System.Text.RegularExpressions.GeneratedRegex(@"__kql_stage_\d+")]
-    private static partial System.Text.RegularExpressions.Regex StageRefRegex();
+    [GeneratedRegex(@"__kql_stage_\d+")]
+    private static partial Regex StageRefRegex();
 
     private int _stageCounter;
     private readonly List<(string Name, string Sql)> _ctes = [];
@@ -278,7 +279,7 @@ public sealed partial class DuckDbQueryEmitter
         var counts = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var cte in _ctes)
         {
-            foreach (System.Text.RegularExpressions.Match match in StageRefRegex().Matches(cte.Sql))
+            foreach (Match match in StageRefRegex().Matches(cte.Sql))
             {
                 var stageRef = match.Value;
                 counts[stageRef] = counts.TryGetValue(stageRef, out var count) ? count + 1 : 1;
@@ -286,6 +287,28 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         return counts;
+    }
+
+    private int CountStageReferences(string stageName)
+    {
+        var refs = 0;
+        foreach (var cte in _ctes)
+        {
+            if (string.Equals(cte.Name, stageName, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            foreach (Match match in StageRefRegex().Matches(cte.Sql))
+            {
+                if (string.Equals(match.Value, stageName, StringComparison.Ordinal))
+                {
+                    refs++;
+                }
+            }
+        }
+
+        return refs;
     }
 
     private TerminalTopK? TryExtractTerminalTopK(string finalSource)
@@ -378,8 +401,7 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         // Inline only when this final stage is not referenced by any other CTE.
-        var refs = _ctes.Count(x => !string.Equals(x.Name, cte.Name, StringComparison.Ordinal)
-            && x.Sql.Contains(cte.Name, StringComparison.Ordinal));
+        var refs = CountStageReferences(cte.Name);
         if (refs != 0)
         {
             return;
@@ -418,8 +440,7 @@ public sealed partial class DuckDbQueryEmitter
             return;
         }
 
-        var refs = _ctes.Count(x => !string.Equals(x.Name, cte.Name, StringComparison.Ordinal)
-            && x.Sql.Contains(cte.Name, StringComparison.Ordinal));
+        var refs = CountStageReferences(cte.Name);
         if (refs != 0)
         {
             return;
@@ -435,8 +456,7 @@ public sealed partial class DuckDbQueryEmitter
             var sourceFilter = FilterStageInlineRegex().Match(sourceCte.Sql);
             if (sourceFilter.Success)
             {
-                var sourceRefs = _ctes.Count(x => !string.Equals(x.Name, sourceCte.Name, StringComparison.Ordinal)
-                    && x.Sql.Contains(sourceCte.Name, StringComparison.Ordinal));
+                var sourceRefs = CountStageReferences(sourceCte.Name);
                 if (sourceRefs == 1)
                 {
                     source = sourceFilter.Groups["source"].Value;
@@ -487,8 +507,7 @@ public sealed partial class DuckDbQueryEmitter
             return; // rule is intentionally scoped to aggregate shapes
         }
 
-        var refs = _ctes.Count(x => !string.Equals(x.Name, cte.Name, StringComparison.Ordinal)
-            && x.Sql.Contains(cte.Name, StringComparison.Ordinal));
+        var refs = CountStageReferences(cte.Name);
         if (refs != 0)
         {
             return;
@@ -533,8 +552,7 @@ public sealed partial class DuckDbQueryEmitter
             return;
         }
 
-        var refs = _ctes.Count(x => !string.Equals(x.Name, cte.Name, StringComparison.Ordinal)
-            && x.Sql.Contains(cte.Name, StringComparison.Ordinal));
+        var refs = CountStageReferences(cte.Name);
         if (refs != 0)
         {
             return;
@@ -961,7 +979,7 @@ public sealed partial class DuckDbQueryEmitter
         if (rhs is LiteralScalar { Kind: LiteralKind.String, Value: string s })
         {
             var lower = s.ToLowerInvariant();
-            var escaped = System.Text.RegularExpressions.Regex.Escape(lower);
+            var escaped = Regex.Escape(lower);
             escapedCi = $"'{EscapeString(escaped)}'";
         }
         else
@@ -1341,7 +1359,7 @@ public sealed partial class DuckDbQueryEmitter
         if (operand is LiteralScalar { Kind: LiteralKind.String, Value: string s })
         {
             // Escape regex metacharacters for RE2: . * + ? ^ $ { } [ ] | ( ) \
-            var escaped = System.Text.RegularExpressions.Regex.Escape(s);
+            var escaped = Regex.Escape(s);
             return $"'{EscapeString(escaped)}'";
         }
         // For dynamic operands: use DuckDB's regexp_escape() function
