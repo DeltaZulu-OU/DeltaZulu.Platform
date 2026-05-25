@@ -275,4 +275,112 @@ public sealed class RelationalPlannerTests
         var outer = (ProjectNode)planned;
         Assert.IsInstanceOfType<ProjectNode>(outer.Input);
     }
+
+    [TestMethod]
+    [Description("Identity projection that reorders columns is not collapsed (would change output order)")]
+    public void IdentityProjectThatReorders_IsNotCollapsed()
+    {
+        var planner = new RelationalPlanner();
+
+        RelNode node = new ProjectNode(
+            new ProjectNode(
+                new ScanNode("DeviceProcessEvents"),
+                [
+                    new ProjectionExpr("A", new ColumnRef("DeviceName")),
+                    new ProjectionExpr("B", new ColumnRef("Timestamp")),
+                    new ProjectionExpr("C", new ColumnRef("FileName"))
+                ]),
+            [
+                new ProjectionExpr("C", new ColumnRef("C")),
+                new ProjectionExpr("B", new ColumnRef("B")),
+                new ProjectionExpr("A", new ColumnRef("A"))
+            ]);
+
+        var planned = planner.Plan(node, new PlannerContext(Enabled: true));
+
+        // Collapsing would discard the outer C,B,A ordering and emit A,B,C. The
+        // outer projection must survive as a distinct node preserving its order.
+        var outer = (ProjectNode)planned;
+        Assert.IsInstanceOfType<ProjectNode>(outer.Input);
+        Assert.AreEqual("C", outer.Projections[0].Alias);
+        Assert.AreEqual("B", outer.Projections[1].Alias);
+        Assert.AreEqual("A", outer.Projections[2].Alias);
+    }
+
+    [TestMethod]
+    [Description("Window functions with different partitions are not deduplicated as a common subexpression")]
+    public void CommonScalarHoist_DistinctWindowPartitions_NotMerged()
+    {
+        var planner = new RelationalPlanner();
+
+        var byDevice = new WindowScalarExpr("row_number", [],
+            new WindowSpec(PartitionBy: [new ColumnRef("DeviceName")], OrderBy: []));
+        var byFile = new WindowScalarExpr("row_number", [],
+            new WindowSpec(PartitionBy: [new ColumnRef("FileName")], OrderBy: []));
+
+        RelNode node = new ProjectNode(
+            new ScanNode("DeviceProcessEvents"),
+            [
+                new ProjectionExpr("X", byDevice),
+                new ProjectionExpr("Y", byFile)
+            ]);
+
+        var planned = planner.Plan(node, new PlannerContext(Enabled: true));
+
+        var outer = (ProjectNode)planned;
+        Assert.IsInstanceOfType<WindowScalarExpr>(outer.Projections[1].Expression,
+            "Distinct window partitions must not be merged — their ScalarKey must differ");
+    }
+
+    [TestMethod]
+    [Description("Hoisted first occurrence references the extended column rather than recomputing the expression")]
+    public void CommonScalarHoist_FirstOccurrence_ReferencesHoistedColumn()
+    {
+        var planner = new RelationalPlanner();
+
+        RelNode node = new ProjectNode(
+            new ScanNode("DeviceProcessEvents"),
+            [
+                new ProjectionExpr("X", new FunctionCall("tolower", [new ColumnRef("DeviceName")])),
+                new ProjectionExpr("Y", new FunctionCall("tolower", [new ColumnRef("DeviceName")]))
+            ]);
+
+        var planned = planner.Plan(node, new PlannerContext(Enabled: true));
+
+        var outer = (ProjectNode)planned;
+        var ext = (ExtendNode)outer.Input;
+
+        // The expression is computed once in the ExtendNode...
+        Assert.IsInstanceOfType<FunctionCall>(ext.Extensions[0].Expression);
+        // ...and both outer projections reference the hoisted column, not re-evaluate it.
+        Assert.IsInstanceOfType<ColumnRef>(outer.Projections[0].Expression,
+            "First occurrence must reference the hoisted column rather than recompute the expression");
+        Assert.IsInstanceOfType<ColumnRef>(outer.Projections[1].Expression);
+    }
+
+    [TestMethod]
+    [Description("Projection pruning matches required columns case-insensitively (KQL semantics)")]
+    public void ProjectionPruning_CaseInsensitiveColumnMatch_KeepsReferencedColumn()
+    {
+        var planner = new RelationalPlanner();
+
+        // A downstream sort references 'devicename' (lowercase); the projection
+        // alias is 'DeviceName'. KQL treats them as the same column, so DeviceName
+        // must survive pruning while the unreferenced FileName is dropped.
+        RelNode node = new SortNode(
+            new ProjectNode(
+                new ScanNode("DeviceProcessEvents"),
+                [
+                    new ProjectionExpr("DeviceName", new ColumnRef("DeviceName")),
+                    new ProjectionExpr("FileName", new ColumnRef("FileName"))
+                ]),
+            [new SortExpr(new ColumnRef("devicename"), SortDirection.Desc)]);
+
+        var planned = planner.Plan(node, new PlannerContext(Enabled: true));
+
+        var sort = (SortNode)planned;
+        var proj = (ProjectNode)sort.Input;
+        Assert.Contains(p => p.Alias == "DeviceName", proj.Projections,
+            "The case-insensitively referenced column must not be pruned");
+    }
 }

@@ -23,6 +23,9 @@ public sealed class LanguageService : IAsyncDisposable
         IReadOnlyList<KqlTableSchema> schema)
     {
         _containerId = containerId;
+        // Dispose any reference from a prior initialization before overwriting it,
+        // otherwise the previous DotNetObjectReference leaks for the circuit's life.
+        _callbackRef?.Dispose();
         _callbackBridge = new EditorCallbackBridge(runCommand);
         _callbackRef = DotNetObjectReference.Create(_callbackBridge);
 

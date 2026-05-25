@@ -65,7 +65,7 @@ public sealed class SchemaEmitter
     {
         var sb = new StringBuilder();
         sb.Append("CREATE TABLE IF NOT EXISTS ");
-        sb.Append(table.QualifiedName);
+        sb.Append(DuckDbQueryEmitter.EscapeQualifiedIdent(table.QualifiedName));
         sb.Append(" (\n");
 
         for (var i = 0; i < table.Columns.Count; i++)
@@ -93,7 +93,7 @@ public sealed class SchemaEmitter
     {
         var sb = new StringBuilder();
         sb.Append("CREATE OR REPLACE VIEW ");
-        sb.Append(view.QualifiedName);
+        sb.Append(DuckDbQueryEmitter.EscapeQualifiedIdent(view.QualifiedName));
         sb.Append(" AS\nSELECT\n");
 
         // Build column type lookup for typed NULL emission
@@ -128,7 +128,7 @@ public sealed class SchemaEmitter
         }
 
         sb.Append("FROM ");
-        sb.Append(view.Mapping.SourceObject);
+        sb.Append(DuckDbQueryEmitter.EscapeQualifiedIdent(view.Mapping.SourceObject));
 
         if (view.Mapping.Filter is not null)
         {
@@ -151,7 +151,7 @@ public sealed class SchemaEmitter
 
         var sb = new StringBuilder();
         sb.Append("CREATE OR REPLACE VIEW ");
-        sb.Append(view.QualifiedName);
+        sb.Append(DuckDbQueryEmitter.EscapeQualifiedIdent(view.QualifiedName));
         sb.Append(" AS\n");
 
         for (var i = 0; i < view.ParserViews.Count; i++)
@@ -162,7 +162,7 @@ public sealed class SchemaEmitter
             }
 
             sb.Append("SELECT * FROM ");
-            sb.Append(view.ParserViews[i]);
+            sb.Append(DuckDbQueryEmitter.EscapeQualifiedIdent(view.ParserViews[i]));
         }
 
         return sb.ToString();

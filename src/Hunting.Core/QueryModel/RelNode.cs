@@ -46,7 +46,20 @@ public sealed record LetBindingNode(
 
 public abstract record ScalarExpr;
 
-public sealed record ColumnRef(string Name) : ScalarExpr;
+/// <summary>
+/// Side markers for columns inside a join ON predicate. A bare KQL
+/// <c>join on Col</c> means <c>$left.Col == $right.Col</c>; the qualifier
+/// records which input the reference resolves to so the emitter can prefix it
+/// with the correct table alias instead of producing an ambiguous
+/// <c>Col = Col</c>.
+/// </summary>
+public static class JoinSide
+{
+    public const string Left = "$left";
+    public const string Right = "$right";
+}
+
+public sealed record ColumnRef(string Name, string? Qualifier = null) : ScalarExpr;
 
 public sealed record LiteralScalar(object? Value, LiteralKind Kind) : ScalarExpr;
 

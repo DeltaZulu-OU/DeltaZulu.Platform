@@ -72,6 +72,12 @@ public sealed partial class DuckDbQueryEmitter
     private readonly Dictionary<string, string> _scalarBindings =
         new(StringComparer.OrdinalIgnoreCase);
 
+    // Table aliases for the join currently being emitted. Set only while
+    // emitting a JoinNode's ON predicate so $left/$right qualified ColumnRefs
+    // resolve to the correct side. Null elsewhere.
+    private string? _joinLeftAlias;
+    private string? _joinRightAlias;
+
     public DuckDbQueryEmitter(int defaultLimit = 10_000, bool applyDefaultLimit = true)
     {
         _defaultLimit = defaultLimit;
@@ -256,11 +262,12 @@ public sealed partial class DuckDbQueryEmitter
         {
             for (var i = 0; i < _ctes.Count; i++)
             {
-                var sql = _ctes[i].Sql;
-                foreach (var pair in substitutions)
-                {
-                    sql = sql.Replace(pair.Key, pair.Value, StringComparison.Ordinal);
-                }
+                // Replace whole stage tokens only. A plain string.Replace of
+                // "__kql_stage_1" would also corrupt "__kql_stage_10",
+                // "__kql_stage_11", etc. since it is a prefix of those names.
+                var sql = StageRefRegex().Replace(
+                _ctes[i].Sql,
+                m => substitutions.TryGetValue(m.Value, out var rep) ? rep : m.Value);
 
                 _ctes[i] = (_ctes[i].Name, sql);
             }
@@ -738,9 +745,29 @@ public sealed partial class DuckDbQueryEmitter
 
     private (string Source, string? Columns) EmitJoin(JoinNode join)
     {
+        // Emit both inputs before binding the join-side aliases — a nested join
+        // sets these same fields, so the predicate must be emitted only after all
+        // child emission is complete.
         var leftSource = StageFrom(join.Left);
         var rightSource = StageFrom(join.Right);
-        var pred = EmitScalar(join.OnPredicate);
+
+        // Explicit aliases disambiguate self-joins and survive CTE inlining (which
+        // rewrites the stage names in the FROM clause but leaves the aliases).
+        const string leftAlias = "__join_left";
+        const string rightAlias = "__join_right";
+
+        _joinLeftAlias = leftAlias;
+        _joinRightAlias = rightAlias;
+        string pred;
+        try
+        {
+            pred = EmitScalar(join.OnPredicate);
+        }
+        finally
+        {
+            _joinLeftAlias = null;
+            _joinRightAlias = null;
+        }
 
         var joinKind = join.Kind switch
         {
@@ -754,7 +781,7 @@ public sealed partial class DuckDbQueryEmitter
         };
 
         var stage = NextStage();
-        _ctes.Add((stage, $"SELECT * FROM {leftSource} {joinKind} {rightSource} ON {pred}"));
+        _ctes.Add((stage, $"SELECT * FROM {leftSource} AS {leftAlias} {joinKind} {rightSource} AS {rightAlias} ON {pred}"));
         _stageNames.Add(stage);
         return (stage, null);
     }
@@ -791,6 +818,10 @@ public sealed partial class DuckDbQueryEmitter
         // KQL: let cutoff = ago(7d); T | where Timestamp > cutoff
         // Without substitution: WHERE Timestamp > cutoff (undefined column)
         // With substitution:    WHERE Timestamp > (current_timestamp - INTERVAL '7 days')
+        ColumnRef { Qualifier: JoinSide.Left } col when _joinLeftAlias is not null
+                    => $"{_joinLeftAlias}.{EscapeIdent(col.Name)}",
+        ColumnRef { Qualifier: JoinSide.Right } col when _joinRightAlias is not null
+                    => $"{_joinRightAlias}.{EscapeIdent(col.Name)}",
         ColumnRef col when _scalarBindings.TryGetValue(col.Name, out var bound) => bound,
         ColumnRef col => EscapeIdent(col.Name),
         LiteralScalar lit => EmitLiteral(lit),
@@ -949,7 +980,7 @@ public sealed partial class DuckDbQueryEmitter
             // DateTime functions
             "ago" => EmitAgo(args),
             "now" => "current_timestamp",
-            "bin" when args.Count >= 2 => $"time_bucket({EmitTimespanArg(fn.Args, 1)}, {args[0]})",
+            "bin" when args.Count >= 2 => EmitBin(fn.Args, args),
             "bin_at" => $"time_bucket({EmitTimespanArg(fn.Args, 1)}, {args[0]}, {args[2]})",
             "startofday" => $"date_trunc('day', {args[0]})",
             "startofmonth" => $"date_trunc('month', {args[0]})",
@@ -975,7 +1006,7 @@ public sealed partial class DuckDbQueryEmitter
             "unixtime_milliseconds_todatetime" => $"epoch_ms(CAST({args[0]} AS BIGINT))",
             "unixtime_microseconds_todatetime" => $"make_timestamp({args[0]})",
             "unixtime_nanoseconds_todatetime" => $"make_timestamp_ns({args[0]})",
-            "make_datetime" => $"make_timestamp({string.Join(", ", args)})",
+            "make_datetime" => EmitMakeDatetime(args),
             "todatetime" => $"CAST({args[0]} AS TIMESTAMP)",
 
             // Type conversion
@@ -1154,6 +1185,40 @@ public sealed partial class DuckDbQueryEmitter
     /// EmitScalar which may have already formatted it.
     /// </summary>
     private string EmitTimespanArg(IReadOnlyList<ScalarExpr> args, int index) => EmitScalar(args[index]);
+
+
+    /// <summary>
+    /// KQL bin(value, roundTo) rounds value down to a multiple of roundTo.
+    /// A timespan roundTo buckets a datetime: time_bucket needs an explicit
+    /// origin at the Unix epoch because DuckDB's default origin differs from
+    /// KQL's anchor for multi-day/-week widths. A numeric roundTo bins a number,
+    /// which time_bucket cannot do — emit floor arithmetic instead.
+    /// </summary>
+    private string EmitBin(IReadOnlyList<ScalarExpr> rawArgs, IReadOnlyList<string> args)
+    {
+        if (rawArgs[1] is LiteralScalar { Kind: LiteralKind.Timespan })
+        {
+            return $"time_bucket({args[1]}, {args[0]}, TIMESTAMP '1970-01-01')";
+        }
+
+        return $"(floor(({args[0]}) / ({args[1]})) * ({args[1]}))";
+    }
+
+    /// <summary>
+    /// KQL make_datetime accepts (y,m,d), (y,m,d,h,min) or (y,m,d,h,min,s).
+    /// DuckDB make_timestamp requires exactly six arguments (seconds as DOUBLE),
+    /// so pad any missing trailing components with zeros.
+    /// </summary>
+    private static string EmitMakeDatetime(IReadOnlyList<string> args)
+    {
+        var parts = new string[6];
+        for (var i = 0; i < 6; i++)
+        {
+            parts[i] = i < args.Count ? args[i] : (i == 5 ? "0.0" : "0");
+        }
+
+        return $"make_timestamp({string.Join(", ", parts)})";
+    }
 
     private string EmitCase(CaseScalar cs)
     {
@@ -1351,31 +1416,35 @@ public sealed partial class DuckDbQueryEmitter
         {
             if (TimeSpan.TryParse(ts, out var parsed))
             {
-                // Decompose to DuckDB-compatible parts
+                // Decompose to DuckDB-compatible parts. Each component keeps its own
+                // sign: for a negative TimeSpan the .NET components are individually
+                // negative, and DuckDB parses an INTERVAL string per-unit. A single
+                // leading "-" would negate only the first unit, so e.g. -00:01:30
+                // would become "-1 minutes 30 seconds" = -30s instead of -90s.
                 var parts = new List<string>();
                 if (parsed.Days != 0)
                 {
-                    parts.Add($"{Math.Abs(parsed.Days)} days");
+                    parts.Add($"{parsed.Days} days");
                 }
 
                 if (parsed.Hours != 0)
                 {
-                    parts.Add($"{Math.Abs(parsed.Hours)} hours");
+                    parts.Add($"{parsed.Hours} hours");
                 }
 
                 if (parsed.Minutes != 0)
                 {
-                    parts.Add($"{Math.Abs(parsed.Minutes)} minutes");
+                    parts.Add($"{parsed.Minutes} minutes");
                 }
 
                 if (parsed.Seconds != 0)
                 {
-                    parts.Add($"{Math.Abs(parsed.Seconds)} seconds");
+                    parts.Add($"{parsed.Seconds} seconds");
                 }
 
                 if (parsed.Milliseconds != 0)
                 {
-                    parts.Add($"{Math.Abs(parsed.Milliseconds)} milliseconds");
+                    parts.Add($"{parsed.Milliseconds} milliseconds");
                 }
 
                 if (parts.Count == 0)
@@ -1383,8 +1452,7 @@ public sealed partial class DuckDbQueryEmitter
                     parts.Add("0 seconds");
                 }
 
-                var sign = parsed < TimeSpan.Zero ? "-" : "";
-                return $"INTERVAL '{sign}{string.Join(" ", parts)}'";
+                return $"INTERVAL '{string.Join(" ", parts)}'";
             }
         }
 
@@ -1498,6 +1566,21 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         return $"\"{name.Replace("\"", "\"\"")}\"";
+    }
+
+    /// <summary>
+    /// Escape a possibly schema-qualified name (e.g. <c>internal.v_foo</c>) by
+    /// escaping each dot-separated segment independently. Escaping the whole
+    /// string would quote the dot and treat it as one identifier.
+    /// </summary>
+    internal static string EscapeQualifiedIdent(string qualifiedName)
+    {
+        if (string.IsNullOrEmpty(qualifiedName))
+        {
+            return EscapeIdent(qualifiedName);
+        }
+
+        return string.Join(".", qualifiedName.Split('.').Select(EscapeIdent));
     }
 
     private static string EscapeString(string s) => s.Replace("'", "''");

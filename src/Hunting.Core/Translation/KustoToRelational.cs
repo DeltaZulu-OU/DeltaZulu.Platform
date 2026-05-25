@@ -60,9 +60,21 @@ public sealed class KustoToRelational
             return null;
         }
 
-        if (statements.Count >= 2 && statements[0] is LetStatement)
+        if (statements.Count >= 2)
         {
-            return TranslateLetChain(statements);
+            // Only 'let' bindings may precede the final query expression. If any
+            // earlier statement is something else, translating just the last one
+            // would silently drop the others and hide the user's intent.
+            var leading = statements.Take(statements.Count - 1);
+            if (leading.All(s => s is LetStatement))
+            {
+                return TranslateLetChain(statements);
+            }
+
+            _diagnostics.AddError(DiagnosticPhase.Translate,
+                "Only 'let' bindings may precede the final query expression. " +
+                "Multiple query statements are not supported.");
+            return null;
         }
 
         return TranslateStatement(statements[^1]);
@@ -299,9 +311,16 @@ public sealed class KustoToRelational
         return new SortNode(input, sorts);
     }
 
-    private RelNode TranslateTake(TakeOperator take, RelNode input)
+    private RelNode? TranslateTake(TakeOperator take, RelNode input)
     {
         var count = GetIntLiteral(take.Expression);
+        // GetIntLiteral returns -1 and adds a diagnostic when the count is not a
+        // valid non-negative literal. Do not build a LimitNode(-1): DuckDB treats
+        // LIMIT -1 as "no limit", which silently bypasses the row safety cap.
+        if (count < 0)
+        {
+            return null;
+        }
         return new LimitNode(input, count);
     }
 
@@ -311,10 +330,14 @@ public sealed class KustoToRelational
         return new SampleNode(input, count);
     }
 
-    private RelNode TranslateTop(TopOperator top, RelNode input)
+    private RelNode? TranslateTop(TopOperator top, RelNode input)
     {
         // TopOperator has flat structure: Expression (count) + ByExpression (sort expr)
         var count = GetIntLiteral(top.Expression);
+        if (count < 0)
+        {
+            return null;
+        }
         var sorts = new List<SortExpr> { TranslateSortExpr(top.ByExpression) };
         return new LimitNode(new SortNode(input, sorts), count);
     }
@@ -425,13 +448,19 @@ public sealed class KustoToRelational
     /// KQL: join on DeviceName → left.DeviceName = right.DeviceName
     /// KQL: join on $left.A == $right.B → A = B (already a binary expression)
     /// </summary>
-    private ScalarExpr TranslateJoinCondition(Expression condition)
+    private ScalarExpr TranslateJoinCondition(Expression? condition)
     {
-        // Bare column name: DeviceName → left.DeviceName = right.DeviceName
+        ArgumentNullException.ThrowIfNull(condition);
+
+        // Bare column name: DeviceName → $left.DeviceName == $right.DeviceName.
+        // The two sides must carry distinct join-side qualifiers; emitting the
+        // same unqualified ColumnRef on both sides produces `Col = Col`, which is
+        // either an ambiguous-column error or an always-true Cartesian join.
         if (condition is NameReference name)
         {
-            var col = new ColumnRef(name.SimpleName);
-            return new BinaryScalar(col, ScalarBinaryOp.Eq, col);
+            var left = new ColumnRef(name.SimpleName, JoinSide.Left);
+            var right = new ColumnRef(name.SimpleName, JoinSide.Right);
+            return new BinaryScalar(left, ScalarBinaryOp.Eq, right);
         }
 
         // $left.Col == $right.Col: MemberAccess or qualified name → translate normally
@@ -441,8 +470,10 @@ public sealed class KustoToRelational
 
     // ─── Scalar expressions ─────────────────────────────────────────
 
-    private ScalarExpr TranslateScalar(SyntaxElement elem)
+    private ScalarExpr TranslateScalar(SyntaxElement? elem)
     {
+        ArgumentNullException.ThrowIfNull(elem);
+
         if (elem is Expression expr)
         {
             return TranslateScalarExpr(expr);
@@ -455,8 +486,10 @@ public sealed class KustoToRelational
         return new LiteralScalar(null, LiteralKind.Null);
     }
 
-    private ScalarExpr TranslateScalarExpr(Expression expr)
+    private ScalarExpr TranslateScalarExpr(Expression? expr)
     {
+        ArgumentNullException.ThrowIfNull(expr);
+
         try
         {
             return TranslateScalarCore(expr);
@@ -509,7 +542,11 @@ public sealed class KustoToRelational
             new LiteralScalar(lit.LiteralValue, LiteralKind.DateTime),
         SyntaxKind.TimespanLiteralExpression =>
             new LiteralScalar(lit.LiteralValue, LiteralKind.Timespan),
-        _ => new LiteralScalar(lit.LiteralValue, LiteralKind.String)
+        // Per architecture constraint: unsupported constructs are rejected, not
+        // silently approximated. Promoting an unknown literal kind to String would
+        // mistranslate values (e.g. guid/decimal literals) without warning.
+        _ => throw new NotSupportedException(
+            $"Unsupported literal kind: {lit.Kind}")
     };
 
     private ScalarExpr TranslateBinaryScalar(BinaryExpression bin)
@@ -657,13 +694,14 @@ public sealed class KustoToRelational
         var operand = TranslateScalarExpr(un.Expression);
         // KQL only has unary plus and minus as PrefixUnaryExpression.
         // KQL 'not(expr)' is a FunctionCallExpression handled in TranslateFunctionCall.
-        var op = un.Kind switch
+        return un.Kind switch
         {
-            SyntaxKind.UnaryMinusExpression => ScalarUnaryOp.Negate,
-            SyntaxKind.UnaryPlusExpression => ScalarUnaryOp.Negate, // +x is rarely used, treat as noop via negate(negate)
+            SyntaxKind.UnaryMinusExpression => new UnaryScalar(ScalarUnaryOp.Negate, operand),
+            // Unary plus is the identity operation: +x == x. Returning a Negate
+            // here would flip the sign and silently corrupt the value.
+            SyntaxKind.UnaryPlusExpression => operand,
             _ => throw new NotSupportedException($"Unsupported unary operator: {un.Kind}")
         };
-        return new UnaryScalar(op, operand);
     }
 
     private ScalarExpr TranslateFunctionCall(FunctionCallExpression fn)
@@ -717,8 +755,10 @@ public sealed class KustoToRelational
 
     // ─── Projection helpers ─────────────────────────────────────────
 
-    private ProjectionExpr TranslateProjectionExpr(Expression expr)
+    private ProjectionExpr TranslateProjectionExpr(Expression? expr)
     {
+        ArgumentNullException.ThrowIfNull(expr);
+
         if (expr is SimpleNamedExpression named)
         {
             var alias = named.Name.SimpleName;
@@ -747,8 +787,10 @@ public sealed class KustoToRelational
         return new ProjectionExpr(name, scalar);
     }
 
-    private SortExpr TranslateSortExpr(Expression expr)
+    private SortExpr TranslateSortExpr(Expression? expr)
     {
+        ArgumentNullException.ThrowIfNull(expr);
+
         // KQL default sort direction is DESC
         var direction = SortDirection.Desc;
         var colExpr = expr;

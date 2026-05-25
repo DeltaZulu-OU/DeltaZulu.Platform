@@ -13,6 +13,7 @@ public sealed class ApprovedViewCatalog
 {
     private readonly Dictionary<string, CanonicalViewDef> _views = new(StringComparer.OrdinalIgnoreCase);
     private GlobalState? _cachedGlobalState;
+    private readonly Lock _gate = new();
 
     /// <summary>
     /// All registered canonical views (main.* public hunting views).
@@ -24,8 +25,11 @@ public sealed class ApprovedViewCatalog
     /// </summary>
     public void Register(CanonicalViewDef view)
     {
-        _views[view.Name] = view;
-        _cachedGlobalState = null;
+        lock (_gate)
+        {
+            _views[view.Name] = view;
+            _cachedGlobalState = null;
+        }
     }
 
     /// <summary>
@@ -46,17 +50,23 @@ public sealed class ApprovedViewCatalog
     /// </summary>
     public GlobalState BuildGlobalState()
     {
-        if (_cachedGlobalState is not null)
+        // Serialize cache construction: concurrent Blazor circuits can call this
+        // during query translation, and racing builders could corrupt the shared
+        // Kusto.Language GlobalState or hand out a half-initialized cache.
+        lock (_gate)
         {
+            if (_cachedGlobalState is not null)
+            {
+                return _cachedGlobalState;
+            }
+
+            var tables = _views.Values.Select(ToTableSymbol).ToArray();
+
+            var db = new DatabaseSymbol("hunting", tables);
+            _cachedGlobalState = GlobalState.Default.WithDatabase(db);
+
             return _cachedGlobalState;
         }
-
-        var tables = _views.Values.Select(ToTableSymbol).ToArray();
-
-        var db = new DatabaseSymbol("hunting", tables);
-        _cachedGlobalState = GlobalState.Default.WithDatabase(db);
-
-        return _cachedGlobalState;
     }
 
     /// <summary>

@@ -113,6 +113,8 @@ src/
                                    WindowScalarExpr, WindowSpec, WindowFrame
     Translation/
       KustoToRelational.cs       — KQL AST → RelNode tree
+    Planning/
+      RelationalPlanner.cs       — optional logical RelNode → RelNode rewrites (4 passes)
     DuckDbSql/
       DuckDbQueryEmitter.cs      — RelNode → DuckDB SQL (CTE-staged, 70+ function mappings)
       SchemaEmitter.cs           — C# schema → DDL (with typed NULL emission)
@@ -194,7 +196,14 @@ Non-negotiable for MVP. Violating any requires explicit discussion and documente
 8. **Single DuckDB connection for MVP.** `DuckDbConnectionFactory` provides one shared
    connection. No pooling, no concurrent writes, no Quack protocol until post-MVP.
 
-9. **Ensure the post-translation planner does not break query logic or syntax.**
+9. **Ensure the post-translation planner does not break query logic or syntax.** The pipeline is
+   `KustoToRelational` → `RelNode` → (`RelationalPlanner`) → `DuckDbQueryEmitter`. The
+   `Planning/` namespace and `RelationalPlanner` were added deliberately and are wired into
+   `QueryRuntime` behind the `plannerEnabled` flag (default off). The planner performs only
+   logical `RelNode → RelNode` rewrites (filter pushdown, projection pruning, identity-projection
+   collapse, common-scalar hoist); physical optimization remains DuckDB's responsibility. The
+   planner must be **semantics-preserving**: a rewrite that changes the result set is a bug, not
+   an optimization. Every pass needs coverage at the planner seam (RelNode-in / RelNode-out).
 
 ## Known Kusto.Language API Facts
 
@@ -288,18 +297,25 @@ Confirmed against `microsoft/Kusto-Query-Language` source during code review:
 - DuckDB errors never reach the UI unprocessed. Pattern-match in `QueryRuntime`.
 - Thin wrappers stay thin. If a wrapper is growing complex, acknowledge it, add tests.
 
-## Future Architecture Note: Post-Translation Planner
+## Architecture Note: Post-Translation Planner
 
-Do not introduce a planner before the POC works end-to-end.
+Active path: `KustoToRelational` → `RelNode` → (`RelationalPlanner`) → `DuckDbQueryEmitter` → DuckDB SQL.
 
-Active path: `KustoToRelational` → `RelNode` → `DuckDbQueryEmitter` → DuckDB SQL.
+The `RelationalPlanner` (`src/Hunting.Core/Planning/RelationalPlanner.cs`) performs logical
+rewriting of primitive `RelNode` into planned `RelNode` before SQL emission. It runs only when
+`QueryRuntime` is constructed with `plannerEnabled: true` (default off), so the unplanned path
+remains the baseline. Physical optimization remains DuckDB's responsibility.
 
-A future `RelationalPlanner` may be added after primitive translation and emission are stable,
-triggered by at least three concrete reproducible SQL-quality problems (not aesthetic concerns).
-Its role would be logical rewriting of primitive `RelNode` into planned `RelNode` before SQL
-emission. Physical optimization remains DuckDB's responsibility.
+Passes (each must be semantics-preserving):
+- `FilterPushdownPass` — push filters below identity projections.
+- `ProjectionPruningPass` — drop projection columns no downstream operator needs.
+- `IdentityProjectionCollapsePass` — collapse a projection that is a true pass-through of its child.
+- `CommonScalarHoistPass` — hoist a repeated scalar into a single `ExtendNode` column.
 
-Until that work is explicitly accepted: no `Planning/` namespace, no `Plan` diagnostic phase,
-no planner test seam. The two-seam test model is the active architecture.
+Planner invariants:
+- Column-name comparisons are **case-insensitive** (KQL semantics). Ordinal sets prune live columns.
+- A narrowing projection is not an identity projection — collapsing it leaks columns.
+- A common-subexpression key must capture the full expression identity, including any
+  `WindowSpec` (partition/order/frame); otherwise distinct window functions are wrongly merged.
 
 ---

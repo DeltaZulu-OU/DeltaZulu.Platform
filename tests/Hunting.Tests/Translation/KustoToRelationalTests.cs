@@ -408,6 +408,52 @@ public sealed class KustoToRelationalTests
         Assert.AreEqual(10, sample.Count);
     }
 
+    [TestMethod]
+    [Description("Bare-column join 'on Col' produces $left.Col == $right.Col, not Col == Col")]
+    public void Join_OnCondition_QualifiesEachSide()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | join kind=inner (DeviceProcessEvents | take 5) on DeviceName
+            """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var join = AssertIs<JoinNode>(result);
+        var predicate = AssertIs<BinaryScalar>(join.OnPredicate);
+        var left = AssertIs<ColumnRef>(predicate.Left);
+        var right = AssertIs<ColumnRef>(predicate.Right);
+        Assert.AreEqual(JoinSide.Left, left.Qualifier, "left side must carry the $left qualifier");
+        Assert.AreEqual(JoinSide.Right, right.Qualifier, "right side must carry the $right qualifier");
+    }
+
+    // ─── Unary operators ─────────────────────────────────────────────
+
+    [TestMethod]
+    [Description("Unary plus is identity: +x translates to x, not -x")]
+    public void UnaryPlus_IsIdentity()
+    {
+        var (result, diag) = Translate("DeviceProcessEvents | extend Doubled = +ProcessId");
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var ext = AssertIs<ExtendNode>(result);
+        // +ProcessId must be the bare column reference, never a UnaryScalar(Negate).
+        var col = AssertIs<ColumnRef>(ext.Extensions[0].Expression);
+        Assert.AreEqual("ProcessId", col.Name);
+    }
+
+    // ─── Multi-statement routing ─────────────────────────────────────
+
+    [TestMethod]
+    [Description("Multiple query statements are rejected, not silently dropped")]
+    public void MultipleQueryStatements_Rejected()
+    {
+        var (result, diag) = Translate(
+            "DeviceProcessEvents | take 5; DeviceProcessEvents | take 3");
+        Assert.IsTrue(diag.HasErrors,
+            "Two query expressions should be rejected rather than silently dropping the first");
+        Assert.IsNull(result);
+    }
+
+
     // ─── Spec-derived: sort default direction ────────────────────
 
     [TestMethod]

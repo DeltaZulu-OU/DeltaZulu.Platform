@@ -487,18 +487,23 @@ public sealed partial class DuckDbQueryEmitterTests
                     [new ColumnRef("FileName"), new LiteralScalar(42, LiteralKind.Int)]))])));
 
     [TestMethod]
-    [Description("Join ON emits full equality predicate")]
+    [Description("Join ON qualifies each side with its table alias")]
     public void Join_On_EqualityPredicate()
     {
         var node = new JoinNode(
             new ScanNode("DeviceProcessEvents"),
             new ScanNode("DeviceProcessEvents"),
             JoinKind.Inner,
-            new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
+            new BinaryScalar(
+                new ColumnRef("DeviceName", JoinSide.Left),
+                ScalarBinaryOp.Eq,
+                new ColumnRef("DeviceName", JoinSide.Right)));
 
         var sql = _emitter.Emit(node);
         AssertSqlContains(sql, "INNER JOIN");
-        AssertSqlContains(sql, "ON (DeviceName = DeviceName)");
+        // Both sides must be qualified so a self-join is not ambiguous /
+        // an always-true tautology.
+        AssertSqlContains(sql, "ON (__join_left.DeviceName = __join_right.DeviceName)");
     }
 
     [TestMethod]
@@ -510,7 +515,10 @@ public sealed partial class DuckDbQueryEmitterTests
             new ScanNode("DeviceProcessEvents"),
             new LimitNode(new ScanNode("DeviceProcessEvents"), 5),
             JoinKind.Inner,
-            new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
+            new BinaryScalar(
+                new ColumnRef("DeviceName", JoinSide.Left),
+                ScalarBinaryOp.Eq,
+                new ColumnRef("DeviceName", JoinSide.Right)));
 
         var sql = emitter.Emit(node);
         AssertSqlContains(sql, "LIMIT 100");
@@ -918,6 +926,70 @@ public sealed partial class DuckDbQueryEmitterTests
         Assert.Contains("GROUP BY DeviceName", normalizedSql);
         Assert.Contains("ORDER BY count_ DESC", normalizedSql);
         Assert.DoesNotMatchRegex(@"SELECT\s+\*\s+FROM\s+__kql_stage_\d+", normalizedSql);
+    }
+
+    // ─── Timespan / datetime function emission ───────────────────────
+
+    [TestMethod]
+    [Description("Negative multi-component timespan signs every unit, not just the first")]
+    public void Timespan_NegativeMultiComponent_SignsEachUnit()
+    {
+        var node = new FilterNode(
+            new ScanNode("DeviceProcessEvents"),
+            new BinaryScalar(
+                new ColumnRef("Timestamp"),
+                ScalarBinaryOp.Gt,
+                new LiteralScalar(TimeSpan.Parse("-00:01:30"), LiteralKind.Timespan)));
+
+        var sql = _emitter.Emit(node);
+        // -90s must keep both units negative; "INTERVAL '-1 minutes 30 seconds'"
+        // would be -30s in DuckDB.
+        AssertSqlContains(sql, "INTERVAL '-1 minutes -30 seconds'");
+    }
+
+    [TestMethod]
+    [Description("bin() over a numeric value uses floor arithmetic, not time_bucket")]
+    public void Bin_NumericValue_UsesFloorArithmetic()
+    {
+        var node = new ExtendNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("b", new FunctionCall("bin",
+                [new ColumnRef("ProcessId"), new LiteralScalar(10L, LiteralKind.Long)]))]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "floor((ProcessId) / (10)) * (10)");
+        Assert.DoesNotContain("time_bucket", NormSql(sql),
+            "Numeric bin must not call time_bucket, which requires an INTERVAL argument");
+    }
+
+    [TestMethod]
+    [Description("bin() over a datetime anchors time_bucket at the Unix epoch")]
+    public void Bin_TimespanValue_AnchorsAtEpoch()
+    {
+        var node = new ExtendNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("b", new FunctionCall("bin",
+                [new ColumnRef("Timestamp"), new LiteralScalar(TimeSpan.FromHours(1), LiteralKind.Timespan)]))]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "time_bucket(INTERVAL '1 hours', Timestamp, TIMESTAMP '1970-01-01')");
+    }
+
+    [TestMethod]
+    [Description("make_datetime with fewer than 6 args pads to make_timestamp's six")]
+    public void MakeDatetime_ThreeArgs_PadsToSix()
+    {
+        var node = new ExtendNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("d", new FunctionCall("make_datetime",
+                [
+                    new LiteralScalar(2023L, LiteralKind.Long),
+                    new LiteralScalar(1L, LiteralKind.Long),
+                    new LiteralScalar(15L, LiteralKind.Long)
+                ]))]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "make_timestamp(2023, 1, 15, 0, 0, 0.0)");
     }
 
     // ─── Helpers ────────────────────────────────────────────────────

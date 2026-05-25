@@ -183,7 +183,12 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             if (rewritten.Input is ProjectNode inner)
             {
                 attempted++;
-                if (IsIdentityProjection(rewritten.Projections))
+                // Only collapse when the outer projection is a true pass-through of
+                // the inner one: same columns, same order. A narrowing projection
+                // such as `project A,B,C | project A,B` is NOT identity — collapsing
+                // it to the inner node would leak column C.
+                if (IsIdentityProjection(rewritten.Projections)
+                    && SameColumnSequence(rewritten.Projections, inner.Projections))
                 {
                     applied++;
                     return inner;
@@ -202,7 +207,11 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
         {
             attempted = 0;
             applied = 0;
-            var rewritten = RewriteNode(node, new HashSet<string>(StringComparer.Ordinal), ref attempted, ref applied);
+            // KQL column names are case-insensitive, so the required-column sets
+            // tracked through pruning must compare case-insensitively. Using an
+            // ordinal comparer would treat `ProcessId` and `processid` as different
+            // columns and prune one that is actually still referenced downstream.
+            var rewritten = RewriteNode(node, new HashSet<string>(StringComparer.OrdinalIgnoreCase), ref attempted, ref applied);
             changed = rewritten != node;
             return rewritten;
         }
@@ -213,7 +222,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             {
                 case ProjectNode p:
                     var projRequired = required.Count == 0
-                        ? p.Projections.Select(x => x.Alias).ToHashSet(StringComparer.Ordinal)
+                        ? p.Projections.Select(x => x.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase)
                         : required;
 
                     var kept = new List<ProjectionExpr>();
@@ -230,7 +239,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                         }
                     }
 
-                    var inputReq = new HashSet<string>(StringComparer.Ordinal);
+                    var inputReq = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     foreach (var pr in kept)
                     {
                         CollectColumnRefs(pr.Expression, inputReq);
@@ -241,28 +250,28 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                     return pruned with { Input = inNode };
 
                 case FilterNode f:
-                    var filterReq = new HashSet<string>(required, StringComparer.Ordinal);
+                    var filterReq = new HashSet<string>(required, StringComparer.OrdinalIgnoreCase);
                     CollectColumnRefs(f.Predicate, filterReq);
                     return f with { Input = RewriteNode(f.Input, filterReq, ref attempted, ref applied) };
 
                 case SortNode s:
-                    var sortReq = new HashSet<string>(required, StringComparer.Ordinal);
+                    var sortReq = new HashSet<string>(required, StringComparer.OrdinalIgnoreCase);
                     foreach (var se in s.Sorts) CollectColumnRefs(se.Expression, sortReq);
                     return s with { Input = RewriteNode(s.Input, sortReq, ref attempted, ref applied) };
 
                 case AggregateNode a:
-                    var aggReq = new HashSet<string>(StringComparer.Ordinal);
+                    var aggReq = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     foreach (var g in a.GroupBy) CollectColumnRefs(g, aggReq);
                     foreach (var ag in a.Aggregates) CollectColumnRefs(ag.Expression, aggReq);
                     return a with { Input = RewriteNode(a.Input, aggReq, ref attempted, ref applied) };
 
                 case ExtendNode e:
-                    var extAliases = e.Extensions.Select(x => x.Alias).ToHashSet(StringComparer.Ordinal);
+                    var extAliases = e.Extensions.Select(x => x.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase);
                     var extReq = required.Count == 0
                         ? extAliases
                         : required;
 
-                    var extInReq = new HashSet<string>(StringComparer.Ordinal);
+                    var extInReq = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                     // Pass-through columns from input remain visible after extend via SELECT *.
                     // If downstream requires a column that is not an extension alias, preserve it.
@@ -284,7 +293,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                     return e with { Input = RewriteNode(e.Input, extInReq, ref attempted, ref applied) };
 
                 case DistinctNode d:
-                    var dreq = new HashSet<string>(StringComparer.Ordinal);
+                    var dreq = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     foreach (var pr in d.Projections) CollectColumnRefs(pr.Expression, dreq);
                     return d with { Input = RewriteNode(d.Input, dreq, ref attempted, ref applied) };
 
@@ -293,13 +302,13 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
 
                 case JoinNode j:
                     // conservative: do not prune across join boundaries in v1
-                    return j with { Left = RewriteNode(j.Left, new HashSet<string>(StringComparer.Ordinal), ref attempted, ref applied), Right = RewriteNode(j.Right, new HashSet<string>(StringComparer.Ordinal), ref attempted, ref applied) };
+                    return j with { Left = RewriteNode(j.Left, new HashSet<string>(StringComparer.OrdinalIgnoreCase), ref attempted, ref applied), Right = RewriteNode(j.Right, new HashSet<string>(StringComparer.OrdinalIgnoreCase), ref attempted, ref applied) };
 
                 case LetBindingNode lb:
                     return lb with
                     {
                         Body = RewriteNode(lb.Body, required, ref attempted, ref applied),
-                        TabularValue = lb.TabularValue is null ? null : RewriteNode(lb.TabularValue, new HashSet<string>(StringComparer.Ordinal), ref attempted, ref applied)
+                        TabularValue = lb.TabularValue is null ? null : RewriteNode(lb.TabularValue, new HashSet<string>(StringComparer.OrdinalIgnoreCase), ref attempted, ref applied)
                     };
 
                 default:
@@ -416,8 +425,11 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 else
                 {
                     firstByExpr[key] = p.Alias;
+                    // The ExtendNode computes the expression once as p.Alias; the
+                    // outer projection must reference that hoisted column, not
+                    // re-emit the full expression (which would evaluate it twice).
                     ext.Add(p);
-                    outProj.Add(p);
+                    outProj.Add(new ProjectionExpr(p.Alias, new ColumnRef(p.Alias)));
                 }
             }
 
@@ -435,10 +447,10 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
     {
         rewritten = project;
 
-        var required = new HashSet<string>(StringComparer.Ordinal);
+        var required = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         CollectColumnRefs(predicate, required);
 
-        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var p in project.Projections)
         {
             if (p.Expression is not ColumnRef c)
@@ -481,7 +493,29 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 return false;
             }
 
-            if (!string.Equals(proj.Alias, col.Name, StringComparison.Ordinal))
+            // KQL column names are case-insensitive, so an identity projection may
+            // differ only in casing from its source column.
+            if (!string.Equals(proj.Alias, col.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool SameColumnSequence(
+        IReadOnlyList<ProjectionExpr> outer,
+        IReadOnlyList<ProjectionExpr> inner)
+    {
+        if (outer.Count != inner.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < outer.Count; i++)
+        {
+            if (!string.Equals(outer[i].Alias, inner[i].Alias, StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
@@ -492,17 +526,38 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
 
     private static string ScalarKey(ScalarExpr expr) => expr switch
     {
-        ColumnRef c => $"col:{c.Name}",
+        // Column names are case-insensitive in KQL; qualifier distinguishes join sides.
+        ColumnRef c => $"col:{c.Qualifier}:{c.Name.ToLowerInvariant()}",
         LiteralScalar l => $"lit:{l.Kind}:{l.Value}",
         BinaryScalar b => $"bin:{b.Op}:({ScalarKey(b.Left)}):({ScalarKey(b.Right)})",
         UnaryScalar u => $"un:{u.Op}:({ScalarKey(u.Operand)})",
         FunctionCall f => $"fn:{f.Name}({string.Join(',', f.Args.Select(ScalarKey))})",
         CaseScalar c => $"case:{string.Join('|', c.Branches.Select(b => ScalarKey(b.When) + "=>" + ScalarKey(b.Then)))}:else:{ScalarKey(c.Else)}",
-        WindowScalarExpr w => $"win:{w.FunctionName}({string.Join(',', w.Args.Select(ScalarKey))})",
+        // The window specification (partitioning, ordering, frame) is part of the
+        // expression's identity. Omitting it would treat two window functions with
+        // different partitions as a common subexpression and deduplicate them,
+        // producing wrong analytics.
+        WindowScalarExpr w => $"win:{w.FunctionName}({string.Join(',', w.Args.Select(ScalarKey))}){WindowKey(w.Window)}",
         ListScalar l => $"list:{string.Join(',', l.Items.Select(ScalarKey))}",
         StarExpr => "star",
         _ => expr.ToString() ?? expr.GetType().Name
     };
+
+    private static string WindowKey(WindowSpec spec)
+    {
+        var partition = string.Join(',', spec.PartitionBy.Select(ScalarKey));
+        var order = string.Join(',', spec.OrderBy.Select(SortKey));
+        var frame = spec.Frame is null ? "" : FrameKey(spec.Frame);
+        return $"[part:{partition}|order:{order}|frame:{frame}]";
+    }
+
+    private static string SortKey(SortExpr s) => $"{ScalarKey(s.Expression)}:{s.Direction}:{s.Nulls}";
+
+    private static string FrameKey(WindowFrame f) =>
+        $"{f.Type}:{BoundKey(f.Start)}:{BoundKey(f.End)}";
+
+    private static string BoundKey(WindowBound b) =>
+        $"{b.Kind}:{(b.Offset is null ? "" : ScalarKey(b.Offset))}";
 
     private static ScalarExpr RemapColumns(ScalarExpr expr, IReadOnlyDictionary<string, string> aliasToSource) => expr switch
     {

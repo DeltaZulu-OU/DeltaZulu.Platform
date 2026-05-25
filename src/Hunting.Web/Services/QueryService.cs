@@ -32,17 +32,29 @@ public sealed class QueryService : IDisposable
         string kql,
         CancellationToken ct = default)
     {
-        await _semaphore.WaitAsync(ct);
+        // The cancellation token cancels the wait for the connection only. If the
+        // wait is cancelled we never acquired the semaphore, so there is nothing to
+        // release — return a diagnostic without entering the protected region.
         try
         {
-            return await Task.Run(() => _runtime.Execute(kql), ct);
+            await _semaphore.WaitAsync(ct);
         }
         catch (OperationCanceledException)
         {
             var bag = new DiagnosticBag();
             bag.AddError(DiagnosticPhase.Execute,
-                "Query was cancelled before execution completed.");
+                "Query was cancelled before execution started.");
             return QueryResult.FromDiagnostics(bag);
+        }
+
+        try
+        {
+            // Deliberately NOT passing ct to Task.Run: cancelling it would abandon
+            // the task and release the semaphore while the DuckDB delegate is still
+            // running on the single shared connection, letting a second query in
+            // concurrently. A started query runs to completion (or its own
+            // CommandTimeout); the semaphore is released only once it truly ends.
+            return await Task.Run(() => _runtime.Execute(kql));
         }
         catch (Exception ex)
         {
