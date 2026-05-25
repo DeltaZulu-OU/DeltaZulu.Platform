@@ -8,8 +8,9 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 
 ## Project Status
 
-- Phases 0–2 (schema + translation + runtime) are functionally complete.
-- Phase 3 (Blazor UI experience) is the next major milestone.
+- Phases 0–3 (schema + translation + runtime + Blazor UI vertical slice) are complete.
+- Phase 4 (hardening) is in progress with schema validation automation, generated SQL preview, and second table-family work partially/mostly complete.
+- Phase 5 (Planner v1 + emitter SQL-shape simplification) is complete.
 - Feature parity snapshot (from `docs/kql-syntax-coverage-checklist.md`) now uses an in-scope-only statistics table (out-of-scope constructs excluded):
 
 | Feature parity status (in scope only) | Count | Percent of in-scope total |
@@ -21,11 +22,13 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 | **Total in-scope constructs** | **319** | **100%** |
 
 MVP-ready parity = `[x] + [m]` = **153 / 319 (48.0%)**.
+
 - The repository currently includes:
-  - `Hunting.Core`: translation, relational model, catalog/policy, and DuckDB SQL emitter.
-  - `Hunting.Schema`: dedicated schema-definition project (public view schemas + parser mappings).  - `Hunting.Data`: connection factory, schema application, runtime orchestration, and mock seeding.
-  - `Hunting.Web`: Blazor Server host and early UI scaffolding.
-  - `Hunting.Tests`: MSTest test suite.
+  - `Hunting.Core`: translation, relational model, planner, catalog/policy, and DuckDB SQL emitter.
+  - `Hunting.Schema`: dedicated schema-definition project (public view schemas + parser mappings).
+  - `Hunting.Data`: connection factory, schema application, runtime orchestration, and mock seeding.
+  - `Hunting.Web`: Blazor Server host and analyst UI.
+  - `Hunting.Tests`: MSTest test suite across translation/emitter/runtime/planner seams.
 
 ## Architecture at a Glance
 
@@ -33,6 +36,7 @@ MVP-ready parity = `[x] + [m]` = **153 / 319 (48.0%)**.
 KQL query
   -> Kusto.Language parse + semantic checks
   -> KustoToRelational (KQL AST -> RelNode)
+  -> RelationalPlanner (feature-flagged rewrite passes)
   -> DuckDbQueryEmitter (RelNode -> DuckDB SQL)
   -> DuckDB execution
   -> tabular results + diagnostics
@@ -49,13 +53,13 @@ Key constraints:
 
 ```text
 src/
-  Hunting.Core/        # Query model, translation, SQL emission, schema contracts/types
+  Hunting.Core/        # Query model, translation, planner, SQL emission, schema contracts/types
   Hunting.Schema/      # User-editable schema definitions (Device* schemas)
   Hunting.Data/        # DuckDB runtime and schema application
   Hunting.Web/         # Blazor Server app host + UI components
 
 tests/
-  Hunting.Tests/       # MSTest suite across translation, emitter, runtime seams
+  Hunting.Tests/       # MSTest suite across translation, emitter, runtime, planner seams
 
 docs/
   ARCHITECTURE.md
@@ -79,7 +83,6 @@ From the repository root:
 # Run MSTest suite
  dotnet test
 ```
-
 
 ## Documentation
 
