@@ -129,7 +129,8 @@
                             <tr class="hunt-tr">
                                 @for (int i = 0; i < row.Length; i++)
                                 {
-                                    <td class="hunt-td" @onclick="() => OpenCellDrawer(_result.Columns[i].Name, row[i])">@FormatCell(row[i])</td>
+                                    var cellIndex = i;
+                                    <td class="hunt-td" @onclick="() => OpenCellDrawer(_result.Columns[cellIndex].Name, row[cellIndex])">@FormatCell(row[cellIndex])</td>
                                 }
                             </tr>
                         }
