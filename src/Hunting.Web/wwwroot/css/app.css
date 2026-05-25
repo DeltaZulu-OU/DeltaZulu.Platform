@@ -176,6 +176,10 @@ html, body {
 }
 
 .hunt-page {
+    height: 100%;
+}
+
+.hunt-page-content {
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -336,18 +340,58 @@ html, body {
     font-style: italic;
 }
 
-.hunt-sql-preview {
-    background: var(--bg-input);
-    border-bottom: 1px solid var(--border);
+.hunt-drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 16px;
     padding: 12px 16px;
-    font-family: var(--font-mono);
+    border-bottom: 1px solid var(--border);
+}
+
+.hunt-drawer-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-head);
+}
+
+.hunt-drawer-subtitle {
     font-size: 12px;
     color: var(--text-dim);
+}
+
+.hunt-drawer-body {
+    flex: 1;
+    overflow: auto;
+}
+
+.hunt-drawer-content,
+.hunt-sql-highlight {
+    margin: 0;
+    padding: 14px 16px;
     white-space: pre-wrap;
-    word-break: break-all;
-    max-height: 160px;
-    overflow-y: auto;
-    flex-shrink: 0;
+    word-break: break-word;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.sql-keyword {
+    color: #ff7b72;
+    font-weight: 700;
+}
+
+.sql-string {
+    color: #a5d6ff;
+}
+
+.sql-number {
+    color: #79c0ff;
+}
+
+.sql-comment {
+    color: #8b949e;
+    font-style: italic;
 }
 
 /* ─── Results table ─────────────────────────────────────────────────────── */

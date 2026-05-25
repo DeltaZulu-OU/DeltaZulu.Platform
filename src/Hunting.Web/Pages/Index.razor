@@ -7,8 +7,29 @@
 @inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
-<div class="hunt-page">
-    <!-- ─── Editor panel ─────────────────────────────────────────── -->
+<MudDrawerContainer Class="hunt-page">
+    <MudDrawer Anchor="Anchor.End" Variant="DrawerVariant.Temporary" Width="540px" Elevation="1" @bind-Open="_showDrawer">
+        <div class="hunt-drawer-header">
+            <div>
+                <div class="hunt-drawer-title">@_drawerTitle</div>
+                <div class="hunt-drawer-subtitle">@_drawerTypeLabel</div>
+            </div>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default" Size="Size.Small" OnClick="CloseDrawer" />
+        </div>
+        <div class="hunt-drawer-body">
+            @if (_drawerMode == DrawerMode.Sql)
+            {
+                <pre class="hunt-sql-highlight">@((MarkupString)_drawerSqlHtml)</pre>
+            }
+            else
+            {
+                <pre class="hunt-drawer-content">@_drawerContent</pre>
+            }
+        </div>
+    </MudDrawer>
+<MudDrawerContent>
+<div class="hunt-page-content">
+    <!-- ─── Editor panel ──────────────────────────────────────────────────────── -->
     <section class="hunt-editor-panel">
         <div class="hunt-editor-toolbar">
             <span class="hunt-editor-label">KQL Query</span>
@@ -25,6 +46,7 @@
             </div>
         </div>
 
+        
         <div class="hunt-timefilter-toolbar">
             <label class="hunt-timefilter-label" for="time-range">Time filter</label>
             <select id="time-range" class="hunt-timefilter-select" @bind="_toolbar.SelectedTimeFilter">
@@ -36,9 +58,9 @@
 
             @if (_toolbar.SelectedTimeFilter == "custom")
             {
-                <input type="date" class="hunt-timefilter-date" @bind="_toolbar.CustomFromText" />
+                <input type="date" class="hunt-timefilter-date" @bind="_toolbar.CustomFrom" />
                 <span class="hunt-timefilter-sep">→</span>
-                <input type="date" class="hunt-timefilter-date" @bind="_toolbar.CustomToText" />
+                <input type="date" class="hunt-timefilter-date" @bind="_toolbar.CustomTo" />
             }
 
             <span class="hunt-timefilter-status">@_toolbar.TimeFilterCaption</span>
@@ -51,6 +73,7 @@
                 }
             </select>
         </div>
+
 
         <!-- Monaco editor placeholder — wired via JS interop -->
         <div class="hunt-editor-container">
@@ -88,13 +111,13 @@
                     <span class="hunt-idle-label">No results yet</span>
                 }
             </span>
-            @if (_result?.GeneratedSql is string genSql)
-            {
-                <button class="hunt-btn hunt-btn-sql"
-                        @onclick="() => _showSql = !_showSql">
-                    @(_showSql ? "Hide SQL" : "Show SQL")
-                </button>
-            }
+                @if (_result?.GeneratedSql is string)
+                {
+                    <button class="hunt-btn hunt-btn-sql"
+                            @onclick="OpenSqlDrawer">
+                        Show SQL
+                    </button>
+                }
         </div>
 
         @if (_showSql && _result?.GeneratedSql is string sql)
@@ -126,7 +149,7 @@
                             <tr class="hunt-tr">
                                 @for (int i = 0; i < row.Length; i++)
                                 {
-                                    <td class="hunt-td">@FormatCell(row[i])</td>
+                                    <td class="hunt-td" @onclick="() => OpenCellDrawer(_result.Columns[i].Name, row[i])">@FormatCell(row[i])</td>
                                 }
                             </tr>
                         }
@@ -155,7 +178,8 @@
         }
     </section>
 </div>
-
+</MudDrawerContent>
+</MudDrawerContainer>
 @code {
     private string _kql = string.Empty;
     private readonly Hunting.Web.Services.QueryToolbarState _toolbar = new();
@@ -164,6 +188,12 @@
     private Hunting.Data.QueryResult? _result;
     private TimeSpan _elapsed;
     private List<Hunting.Core.Policy.QueryDiagnostic> _diagnostics = [];
+    private bool _showDrawer;
+    private DrawerMode _drawerMode = DrawerMode.None;
+    private string _drawerTitle = "Details";
+    private string _drawerTypeLabel = "";
+    private string _drawerContent = "";
+    private string _drawerSqlHtml = "";
     private bool _showSql;
     private string? _sortColumn;
     private bool _sortAsc = true;
@@ -184,6 +214,8 @@
         _running = true;
         _result = null;
         _diagnostics = [];
+        _showDrawer = false;
+        _drawerMode = DrawerMode.None;
         _showSql = false;
         _page = 0;
         _sortColumn = null;
@@ -202,9 +234,9 @@
                 _diagnostics =
                 [
                     new Hunting.Core.Policy.QueryDiagnostic(
-                        Hunting.Core.Policy.DiagnosticSeverity.Warning,
-                        Hunting.Core.Policy.DiagnosticPhase.Policy,
-                        warning)
+                    Hunting.Core.Policy.DiagnosticSeverity.Warning,
+                    Hunting.Core.Policy.DiagnosticPhase.Policy,
+                    warning)
                 ];
             }
         }
@@ -216,6 +248,30 @@
             _running = false;
         }
     }
+
+    private void OpenSqlDrawer()
+    {
+        if (_result?.GeneratedSql is not string sql) return;
+        _drawerMode = DrawerMode.Sql;
+        _drawerTitle = "Generated SQL";
+        _drawerTypeLabel = "Beautified and syntax-highlighted";
+        _drawerSqlHtml = HighlightSql(BeautifySql(sql));
+        _showDrawer = true;
+    }
+
+    private void OpenCellDrawer(string columnName, object? value)
+    {
+        var text = value?.ToString() ?? "";
+        if (string.IsNullOrWhiteSpace(text) || text.Length <= 200) return;
+
+        _drawerMode = DrawerMode.Content;
+        _drawerTitle = $"{columnName} details";
+        _drawerTypeLabel = DetectDataTypeLabel(text);
+        _drawerContent = text;
+        _showDrawer = true;
+    }
+
+    private void CloseDrawer() => _showDrawer = false;
 
     private void ShowQueryDurationSnackbar(TimeSpan elapsed)
     {
@@ -297,8 +353,62 @@
         _kql = string.Empty;
         _result = null;
         _diagnostics = [];
-        _showSql = false;
+        _showDrawer = false;
         await LanguageService.SetEditorValueAsync(_kql);
+    }
+
+    private static string BeautifySql(string sql)
+    {
+        string[] keywords = ["select", "from", "where", "group by", "order by", "having", "limit", "join", "left join", "right join", "inner join", "outer join", "on", "and", "or", "union", "with", "as"];
+        var normalized = sql.Replace("\r\n", "\n");
+        foreach (var keyword in keywords.OrderByDescending(x => x.Length))
+        {
+            normalized = System.Text.RegularExpressions.Regex.Replace(
+                normalized,
+                $@"\b{System.Text.RegularExpressions.Regex.Escape(keyword)}\b",
+                m => m.Value.ToUpperInvariant(),
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+
+        var lineBroken = normalized
+            .Replace(" FROM ", "\nFROM ")
+            .Replace(" WHERE ", "\nWHERE ")
+            .Replace(" GROUP BY ", "\nGROUP BY ")
+            .Replace(" ORDER BY ", "\nORDER BY ")
+            .Replace(" HAVING ", "\nHAVING ")
+            .Replace(" LIMIT ", "\nLIMIT ")
+            .Replace(" JOIN ", "\nJOIN ")
+            .Replace(" LEFT JOIN ", "\nLEFT JOIN ")
+            .Replace(" RIGHT JOIN ", "\nRIGHT JOIN ")
+            .Replace(" INNER JOIN ", "\nINNER JOIN ")
+            .Replace(" ON ", "\n  ON ")
+            .Replace(",", ",\n  ");
+
+        return lineBroken.Trim();
+    }
+
+    private static string HighlightSql(string sql)
+    {
+        var encoded = System.Net.WebUtility.HtmlEncode(sql);
+        encoded = System.Text.RegularExpressions.Regex.Replace(encoded, "(--.*)$", "<span class=\"sql-comment\">$1</span>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        encoded = System.Text.RegularExpressions.Regex.Replace(encoded, "('([^']|'')*')", "<span class=\"sql-string\">$1</span>");
+        encoded = System.Text.RegularExpressions.Regex.Replace(encoded, "\\b(SELECT|FROM|WHERE|GROUP BY|ORDER BY|HAVING|LIMIT|JOIN|LEFT JOIN|RIGHT JOIN|INNER JOIN|OUTER JOIN|ON|AND|OR|AS|UNION|WITH)\\b", "<span class=\"sql-keyword\">$1</span>");
+        encoded = System.Text.RegularExpressions.Regex.Replace(encoded, "\\b([0-9]+)\\b", "<span class=\"sql-number\">$1</span>");
+        return encoded;
+    }
+
+    private static string DetectDataTypeLabel(string text)
+    {
+        var trimmed = text.TrimStart();
+        if (trimmed.StartsWith("{") || trimmed.StartsWith("[")) return "JSON / structured content";
+        return "Long text";
+    }
+
+    private enum DrawerMode
+    {
+        None,
+        Sql,
+        Content
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
