@@ -314,7 +314,35 @@ public sealed partial class DuckDbQueryEmitter
             return;
         }
 
-        finalSource = $"{m.Groups["source"].Value} WHERE {m.Groups["pred"].Value}";
+        var source = m.Groups["source"].Value;
+        var predicate = m.Groups["pred"].Value;
+
+        var sourceIdx = _ctes.FindIndex(c => string.Equals(c.Name, source, StringComparison.Ordinal));
+        if (sourceIdx >= 0)
+        {
+            var sourceCte = _ctes[sourceIdx];
+            var sourceFilter = FilterStageInlineRegex().Match(sourceCte.Sql);
+            if (sourceFilter.Success)
+            {
+                var sourceRefs = _ctes.Count(x => !string.Equals(x.Name, sourceCte.Name, StringComparison.Ordinal)
+                    && x.Sql.Contains(sourceCte.Name, StringComparison.Ordinal));
+                if (sourceRefs == 1)
+                {
+                    source = sourceFilter.Groups["source"].Value;
+                    var sourcePredicate = sourceFilter.Groups["pred"].Value;
+                    predicate = $"({sourcePredicate}) AND ({predicate})";
+                    _ctes.RemoveAt(sourceIdx);
+                    _stageNames.Remove(sourceCte.Name);
+
+                    if (sourceIdx < idx)
+                    {
+                        idx--;
+                    }
+                }
+            }
+        }
+
+        finalSource = $"{source} WHERE {predicate}";
         _ctes.RemoveAt(idx);
         _stageNames.Remove(cte.Name);
     }

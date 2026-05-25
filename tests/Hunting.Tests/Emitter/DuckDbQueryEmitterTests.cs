@@ -702,6 +702,51 @@ public sealed partial class DuckDbQueryEmitterTests
     }
 
     [TestMethod]
+    [Description("where|where|project over base scan merges filters with AND and preserves OR predicate grouping")]
+    public void WhereWhereProject_OptimizedMode_CollapsesAndPreservesGrouping()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: false);
+        var node = new ProjectNode(
+            new FilterNode(
+                new FilterNode(
+                    new ScanNode("DeviceNetworkEvents"),
+                    new BinaryScalar(
+                        new ColumnRef("RemotePort"),
+                        ScalarBinaryOp.Eq,
+                        new LiteralScalar(53, LiteralKind.Int))),
+                new BinaryScalar(
+                    new BinaryScalar(
+                        new ColumnRef("InitiatingProcessFileName"),
+                        ScalarBinaryOp.Has,
+                        new LiteralScalar("powershell", LiteralKind.String)),
+                    ScalarBinaryOp.Or,
+                    new BinaryScalar(
+                        new ColumnRef("InitiatingProcessFileName"),
+                        ScalarBinaryOp.Has,
+                        new LiteralScalar("cmd", LiteralKind.String)))),
+            [
+                new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
+                new ProjectionExpr("DeviceName", new ColumnRef("DeviceName")),
+                new ProjectionExpr("RemoteUrl", new ColumnRef("RemoteUrl")),
+                new ProjectionExpr("InitiatingProcessFileName", new ColumnRef("InitiatingProcessFileName")),
+                new ProjectionExpr("InitiatingProcessCommandLine", new ColumnRef("InitiatingProcessCommandLine"))
+            ]);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
+        Assert.DoesNotMatchRegex(@"SELECT\s+\*", norm);
+        Assert.DoesNotContain("LIMIT 10000", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.MatchesRegex(
+            @"SELECT\s+Timestamp\s*,\s*DeviceName\s*,\s*RemoteUrl\s*,\s*InitiatingProcessFileName\s*,\s*InitiatingProcessCommandLine\s+FROM\s+main\.DeviceNetworkEvents",
+            norm);
+        Assert.MatchesRegex(@"WHERE\s+\(+\s*RemotePort\s*=\s*53\s*\)+\s+AND\s+\(", norm);
+        Assert.MatchesRegex(@"WHERE\s+\(+\s*RemotePort\s*=\s*53\s*\)+\s+AND\s+\(+.*powershell.*\s+OR\s+.*cmd.*\)+", norm);
+    }
+
+    [TestMethod]
     [Description("Default LIMIT is opt-in; semantic mode can emit no implicit limit")]
     public void WhereInProject_SemanticMode_DoesNotAddImplicitLimit()
     {
