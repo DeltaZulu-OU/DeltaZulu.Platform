@@ -1089,6 +1089,7 @@ public sealed partial class DuckDbQueryEmitter
             "toupper" => $"upper({args[0]})",
             "strlen" => $"length({args[0]})",
             "strcat" => $"concat({string.Join(", ", args)})",
+            "strcat_array" => $"array_to_string({args[0]}, {args[1]})",
             "strcat_delim" => $"concat_ws({string.Join(", ", args)})",
             "substring" => $"substring({args[0]}, ({args[1]}) + 1, {args[2]})",
             "replace_string" => $"replace({args[0]}, {args[1]}, {args[2]})",
@@ -1143,6 +1144,10 @@ public sealed partial class DuckDbQueryEmitter
             "guid" => $"TRY_CAST({args[0]} AS UUID)",
             "countof" => $"((length({args[0]}) - length(replace({args[0]}, {args[1]}, ''))) / nullif(length({args[1]}), 0))",
             "parse_ipv4" => $"CASE WHEN regexp_full_match({args[0]}, '^((25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])\\.){{3}}(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])$') THEN (CAST(split_part({args[0]}, '.', 1) AS BIGINT) * 16777216 + CAST(split_part({args[0]}, '.', 2) AS BIGINT) * 65536 + CAST(split_part({args[0]}, '.', 3) AS BIGINT) * 256 + CAST(split_part({args[0]}, '.', 4) AS BIGINT)) ELSE NULL END",
+            "base64_encode_tostring" => $"to_base64(CAST({args[0]} AS BLOB))",
+            "base64_decode_tostring" => $"CAST(from_base64({args[0]}) AS VARCHAR)",
+            "url_encode" => $"url_encode({args[0]})",
+            "url_decode" => $"url_decode({args[0]})",
 
             // Conditional
             "iff" or "iif" => $"CASE WHEN {args[0]} THEN {args[1]} ELSE {args[2]} END",
@@ -1160,6 +1165,12 @@ public sealed partial class DuckDbQueryEmitter
 
             // JSON
             "parse_json" => $"CAST({args[0]} AS JSON)",
+            "bag_keys" => $"json_keys({args[0]})",
+            "bag_has_key" => $"(json_extract({args[0]}, concat('$.', {args[1]})) IS NOT NULL)",
+            "bag_merge" => $"json_merge_patch({args[0]}, {args[1]})",
+            "array_length" => $"CASE WHEN json_valid(CAST({args[0]} AS VARCHAR)) THEN json_array_length({args[0]}) ELSE length({args[0]}) END",
+            "array_concat" => $"list_concat({args[0]}, {args[1]})",
+            "array_slice" => $"list_slice({args[0]}, ({args[1]}) + 1, ({args[2]}) - ({args[1]}))",
 
             // Math
             "abs" => $"abs({args[0]})",
@@ -1172,6 +1183,8 @@ public sealed partial class DuckDbQueryEmitter
             "pow" => $"power({args[0]}, {args[1]})",
             "sqrt" => $"sqrt({args[0]})",
             "exp" => $"exp({args[0]})",
+            "exp2" => $"power(2, {args[0]})",
+            "exp10" => $"power(10, {args[0]})",
             "sign" => $"sign({args[0]})",
             "pi" => "pi()",
 

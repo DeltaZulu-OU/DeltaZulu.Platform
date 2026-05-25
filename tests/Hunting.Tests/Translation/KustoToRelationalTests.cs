@@ -427,6 +427,54 @@ public sealed class KustoToRelationalTests
     }
 
     [TestMethod]
+    [Description("lookup on Col translates to leftouter JoinNode")]
+    public void Lookup_TranslatesToLeftOuterJoin()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | lookup (DeviceProcessEvents | take 5) on DeviceName
+            """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var join = AssertIs<JoinNode>(result);
+        Assert.AreEqual(JoinKind.LeftOuter, join.Kind);
+    }
+
+
+
+    [TestMethod]
+    [Description("lookup without on clause is rejected with diagnostic")]
+    public void Lookup_WithoutOnClause_IsRejected()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | lookup (DeviceProcessEvents | take 5)
+            """);
+        Assert.IsNull(result);
+        Assert.IsTrue(diag.HasErrors, "lookup without on clause should fail");
+        Assert.IsTrue(diag.All.Any(d =>
+                string.Equals(d.DeveloperDetail, "KQL_LOOKUP_NO_CONDITION", StringComparison.OrdinalIgnoreCase) ||
+                d.Message.Contains("lookup has no 'on' clause", StringComparison.OrdinalIgnoreCase)),
+            string.Join("\n", diag.All));
+    }
+
+    [TestMethod]
+    [Description("lookup on multiple columns combines predicates with AND")]
+    public void Lookup_OnMultipleColumns_CombinesWithAnd()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | lookup (DeviceProcessEvents | take 5) on DeviceName, AccountName
+            """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var join = AssertIs<JoinNode>(result);
+        var and = AssertIs<BinaryScalar>(join.OnPredicate);
+        Assert.AreEqual(ScalarBinaryOp.And, and.Op);
+    }
+
+    [TestMethod]
     [Description("sample n translates to SampleNode")]
     public void Sample_TranslatesToSampleNode()
     {

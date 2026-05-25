@@ -212,6 +212,63 @@ public sealed partial class DuckDbQueryEmitterTests
         AssertSqlContains(sql, "pi() AS piv");
     }
 
+    [TestMethod]
+    [Description("Shortlist function mappings emit DuckDB-native SQL")]
+    public void Emit_Func_ShortlistMappings()
+    {
+        var node = new ExtendNode(
+            new ScanNode("DeviceProcessEvents"),
+            [
+                new ProjectionExpr("arr", new FunctionCall("strcat_array", [new ColumnRef("Tags"), new LiteralScalar(",", LiteralKind.String)])),
+                new ProjectionExpr("b64e", new FunctionCall("base64_encode_tostring", [new ColumnRef("FileName")])),
+                new ProjectionExpr("b64d", new FunctionCall("base64_decode_tostring", [new LiteralScalar("YQ==", LiteralKind.String)])),
+                new ProjectionExpr("ue", new FunctionCall("url_encode", [new ColumnRef("FileName")])),
+                new ProjectionExpr("ud", new FunctionCall("url_decode", [new ColumnRef("FileName")])),
+                new ProjectionExpr("bk", new FunctionCall("bag_keys", [new ColumnRef("AdditionalFields")])),
+                new ProjectionExpr("bhk", new FunctionCall("bag_has_key", [new ColumnRef("AdditionalFields"), new LiteralScalar("k", LiteralKind.String)])),
+                new ProjectionExpr("bm", new FunctionCall("bag_merge", [new ColumnRef("A"), new ColumnRef("B")])),
+                new ProjectionExpr("alen", new FunctionCall("array_length", [new ColumnRef("Tags")])),
+                new ProjectionExpr("acon", new FunctionCall("array_concat", [new ColumnRef("Tags"), new ColumnRef("MoreTags")])),
+                new ProjectionExpr("aslice", new FunctionCall("array_slice", [new ColumnRef("Tags"), new LiteralScalar(1, LiteralKind.Int), new LiteralScalar(3, LiteralKind.Int)])),
+                new ProjectionExpr("e2", new FunctionCall("exp2", [new LiteralScalar(3, LiteralKind.Int)])),
+                new ProjectionExpr("e10", new FunctionCall("exp10", [new LiteralScalar(2, LiteralKind.Int)]))
+            ]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "array_to_string(Tags, ',') AS arr");
+        AssertSqlContains(sql, "to_base64(CAST(FileName AS BLOB)) AS b64e");
+        AssertSqlContains(sql, "CAST(from_base64('YQ==') AS VARCHAR) AS b64d");
+        AssertSqlContains(sql, "url_encode(FileName) AS ue");
+        AssertSqlContains(sql, "url_decode(FileName) AS ud");
+        AssertSqlContains(sql, "json_keys(AdditionalFields) AS bk");
+        AssertSqlContains(sql, "(json_extract(AdditionalFields, concat('$.', 'k')) IS NOT NULL) AS bhk");
+        AssertSqlContains(sql, "json_merge_patch(A, B) AS bm");
+        AssertSqlContains(sql, "CASE WHEN json_valid(CAST(Tags AS VARCHAR)) THEN json_array_length(Tags) ELSE length(Tags) END AS alen");
+        AssertSqlContains(sql, "list_concat(Tags, MoreTags) AS acon");
+        AssertSqlContains(sql, "list_slice(Tags, (1) + 1, (3) - (1)) AS aslice");
+        AssertSqlContains(sql, "power(2, 3) AS e2");
+        AssertSqlContains(sql, "power(10, 2) AS e10");
+    }
+
+
+
+    [TestMethod]
+    [Description("bag_has_key and array_slice mappings emit exact SQL shape")]
+    public void Emit_Func_BagAndArrayMappings()
+    {
+        var node = new ExtendNode(
+            new ScanNode("DeviceProcessEvents"),
+            [
+                new ProjectionExpr("hask", new FunctionCall("bag_has_key", [new ColumnRef("AdditionalFields"), new LiteralScalar("User", LiteralKind.String)])),
+                new ProjectionExpr("slice", new FunctionCall("array_slice", [new ColumnRef("Tags"), new LiteralScalar(0, LiteralKind.Int), new LiteralScalar(2, LiteralKind.Int)]))
+            ]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "(json_extract(AdditionalFields, concat('$.', 'User')) IS NOT NULL) AS hask");
+        AssertSqlContains(sql, "list_slice(Tags, (0) + 1, (2) - (0)) AS slice");
+    }
+
+
     // ─── Window functions ────────────────────────────────────────
 
     [TestMethod]

@@ -56,6 +56,12 @@
             "DeviceProcessEvents\n| where FileName =~ \"powershell.exe\"\n| where ProcessCommandLine contains \"-enc\" or ProcessCommandLine contains \"-EncodedCommand\"\n| project Timestamp, DeviceName, AccountName, ProcessCommandLine"),
         new("Process: persistence mechanisms",
             "DeviceProcessEvents\n| where FileName in (\"schtasks.exe\", \"reg.exe\", \"sc.exe\", \"at.exe\")\n| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine\n| sort by Timestamp desc"),
+        new("Process: decode encoded command",
+            "DeviceProcessEvents\n| where FileName =~ \"powershell.exe\"\n| extend EncodedPayload = extract(\"-enc\\s+([^\\s]+)\", 1, ProcessCommandLine)\n| where isnotempty(EncodedPayload)\n| extend DecodedPayload = base64_decode_tostring(EncodedPayload)\n| project Timestamp, DeviceName, AccountName, ProcessCommandLine, DecodedPayload\n| take 25"),
+        new("Process: lookup enrichment by account",
+            "DeviceProcessEvents\n| summarize LaunchCount = count() by AccountName\n| lookup (DeviceProcessEvents | summarize DeviceCount = dcount(DeviceName) by AccountName) on AccountName\n| project AccountName, LaunchCount, DeviceCount\n| sort by LaunchCount desc\n| take 25"),
+        new("Process: command line URL indicators",
+            "DeviceProcessEvents\n| extend CommandUrlEncoded = url_encode(ProcessCommandLine)\n| extend HasEncodedCmd = indexof(CommandUrlEncoded, \"%2Denc\") >= 0\n| where HasEncodedCmd\n| project Timestamp, DeviceName, AccountName, FileName, CommandUrlEncoded\n| take 25"),
         // ─── DeviceNetworkEvents ──────────────────────────────────────────
         new("Network: all connections (last 1h)",
             "DeviceNetworkEvents\n| where Timestamp > ago(1h)\n| take 100"),

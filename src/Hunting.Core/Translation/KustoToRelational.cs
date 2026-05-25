@@ -240,6 +240,7 @@ public sealed class KustoToRelational
         DistinctOperator dist => TranslateDistinct(dist, input),
         CountOperator => TranslateCount(input),
         JoinOperator join => TranslateJoin(join, input),
+        LookupOperator lookup => TranslateLookup(lookup, input),
         SerializeOperator => input,
         _ => Reject(op, $"Unsupported operator: {op.Kind}")
     };
@@ -443,6 +444,48 @@ public sealed class KustoToRelational
         }
 
         return new JoinNode(input, right, kind, predicate);
+    }
+
+
+    private RelNode? TranslateLookup(LookupOperator lookup, RelNode input)
+    {
+        var right = TranslateExpression(lookup.Expression);
+        if (right is null)
+        {
+            return null;
+        }
+
+        var onClause = lookup.GetDescendants<JoinOnClause>().FirstOrDefault();
+        if (onClause is null)
+        {
+            _diagnostics.AddError(DiagnosticPhase.Translate,
+                "lookup has no 'on' clause. An explicit on condition is required.",
+                "KQL_LOOKUP_NO_CONDITION");
+            return null;
+        }
+
+        var parts = new List<ScalarExpr>();
+        foreach (var elem in onClause.Expressions)
+        {
+            parts.Add(TranslateJoinCondition(UnwrapSeparated(elem)));
+        }
+
+        if (parts.Count == 0)
+        {
+            _diagnostics.AddError(DiagnosticPhase.Translate,
+                "lookup has no 'on' clause. An explicit on condition is required.",
+                "KQL_LOOKUP_NO_CONDITION");
+            return null;
+        }
+
+        var predicate = parts.Count switch
+        {
+            1 => parts[0],
+            _ => parts.Skip(1).Aggregate(parts[0],
+                (acc, p) => new BinaryScalar(acc, ScalarBinaryOp.And, p))
+        };
+
+        return new JoinNode(input, right, JoinKind.LeftOuter, predicate);
     }
 
     /// <summary>
