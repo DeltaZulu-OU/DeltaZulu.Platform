@@ -766,6 +766,31 @@ public sealed partial class DuckDbQueryEmitterTests
         Assert.DoesNotMatchRegex(@"\bLIMIT\b", norm);
     }
 
+    [TestMethod]
+    [Description("summarize|sort in semantic mode collapses to terminal ordered aggregate without implicit limit")]
+    public void SummarizeSort_OptimizedMode_CollapsesIntoOrderedAggregateSelect()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: false);
+        var node = new SortNode(
+            new AggregateNode(
+                new ScanNode("DeviceProcessEvents"),
+                Aggregates: [new ProjectionExpr("count_", new FunctionCall("count", []))],
+                GroupBy: [new ColumnRef("DeviceName")]),
+            [new SortExpr(new ColumnRef("count_"), SortDirection.Desc)]);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
+        Assert.DoesNotMatchRegex(@"SELECT\s+\*", norm);
+        Assert.MatchesRegex(
+            @"SELECT\s+DeviceName\s*,\s*count\(\*\)\s+AS\s+count_\s+FROM\s+main\.DeviceProcessEvents\s+GROUP\s+BY\s+DeviceName\s+ORDER\s+BY\s+count_\s+DESC\s*;?\s*$",
+            norm);
+        Assert.DoesNotContain("LIMIT 10000", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"\bLIMIT\b", norm);
+    }
+
 
     // ─── Helpers ────────────────────────────────────────────────────
 

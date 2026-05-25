@@ -15,6 +15,7 @@ using QueryModel;
 public sealed partial class DuckDbQueryEmitter
 {
     private sealed record TerminalTopK(string Source, string OrderBy, int Limit);
+    private sealed record TerminalOrder(string Source, string OrderBy);
 
     [System.Text.RegularExpressions.GeneratedRegex(
         @"^SELECT \* FROM (main\.[A-Za-z_][A-Za-z0-9_]*)$",
@@ -25,6 +26,11 @@ public sealed partial class DuckDbQueryEmitter
         @"^SELECT \* FROM (?<source>[A-Za-z0-9_.]+) ORDER BY (?<order>.+) LIMIT (?<limit>\d+)$",
         System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex TerminalTopKRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"^SELECT \* FROM (?<source>[A-Za-z0-9_.]+) ORDER BY (?<order>.+)$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex TerminalOrderRegex();
     
     [System.Text.RegularExpressions.GeneratedRegex(
         @"^SELECT (?<proj>.+) FROM (?<source>[A-Za-z0-9_.]+)(?<group>\s+GROUP BY .+)?$",
@@ -70,9 +76,28 @@ public sealed partial class DuckDbQueryEmitter
         var (finalSource, columns) = EmitNode(node);
         var hasUserLimit = HasLimit(node);
         var terminalTopK = ShapeSql(ref finalSource);
+        var terminalOrder = TryExtractTerminalOrder(finalSource);
+        if (terminalOrder is not null)
+        {
+            finalSource = terminalOrder.Source;
+        }
         TryInlineSingleUseAggregateStageIntoTerminalTopK(ref terminalTopK, ref columns);
+        TryInlineSingleUseAggregateStageIntoTerminalOrder(ref terminalOrder, ref columns);
+        if (terminalOrder is not null)
+        {
+            // Aggregate inlining into terminal ORDER may rewrite its source.
+            // Keep finalSource in sync before subsequent inlining passes run.
+            finalSource = terminalOrder.Source;
+        }
         TryInlineSingleUseFilterStageIntoProjection(ref finalSource, ref columns);
         TryInlineFinalStage(ref finalSource, ref columns);
+        if (terminalOrder is not null)
+        {
+            // Keep terminal ORDER source aligned with later projection/filter inlining.
+            // Without this, we can remove an intermediate stage from _ctes and still
+            // reference it in final FROM (dangling __kql_stage_N).
+            terminalOrder = terminalOrder with { Source = finalSource };
+        }
 
         var sb = new StringBuilder();
 
@@ -93,12 +118,20 @@ public sealed partial class DuckDbQueryEmitter
 
         sb.Append("SELECT ");
         sb.Append(columns ?? "*");
-        sb.Append(" FROM ").Append(terminalTopK?.Source ?? finalSource);
+        sb.Append(" FROM ").Append(terminalTopK?.Source ?? terminalOrder?.Source ?? finalSource);
 
         if (terminalTopK is not null)
         {
             sb.Append(" ORDER BY ").Append(terminalTopK.OrderBy);
             sb.Append(" LIMIT ").Append(terminalTopK.Limit);
+        }
+        else if (terminalOrder is not null)
+        {
+            sb.Append(" ORDER BY ").Append(terminalOrder.OrderBy);
+            if (!hasUserLimit && _applyDefaultLimit)
+            {
+                sb.Append(" LIMIT ").Append(_defaultLimit);
+            }
         }
         else if (!hasUserLimit && _applyDefaultLimit)
         {
@@ -244,6 +277,28 @@ public sealed partial class DuckDbQueryEmitter
             int.Parse(match.Groups["limit"].Value));
     }
 
+    private TerminalOrder? TryExtractTerminalOrder(string finalSource)
+    {
+        var idx = _ctes.FindIndex(c => string.Equals(c.Name, finalSource, StringComparison.Ordinal));
+        if (idx < 0)
+        {
+            return null;
+        }
+
+        var terminal = _ctes[idx];
+        var match = TerminalOrderRegex().Match(terminal.Sql);
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        _ctes.RemoveAt(idx);
+        _stageNames.Remove(terminal.Name);
+        return new TerminalOrder(
+            match.Groups["source"].Value,
+            match.Groups["order"].Value);
+    }
+
     private void TryInlineFinalStage(ref string finalSource, ref string? columns)
     {
         if (columns is not null && !string.Equals(columns, "*", StringComparison.Ordinal))
@@ -385,6 +440,52 @@ public sealed partial class DuckDbQueryEmitter
 
         columns = m.Groups["proj"].Value;
         terminalTopK = terminalTopK with
+        {
+            Source = $"{m.Groups["source"].Value}{groupBy}"
+        };
+
+        _ctes.RemoveAt(idx);
+        _stageNames.Remove(cte.Name);
+    }
+
+    private void TryInlineSingleUseAggregateStageIntoTerminalOrder(
+        ref TerminalOrder? terminalOrder,
+        ref string? columns)
+    {
+        if (terminalOrder is null || (columns is not null && !string.Equals(columns, "*", StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        var sourceStage = terminalOrder.Source;
+        var idx = _ctes.FindIndex(c => string.Equals(c.Name, sourceStage, StringComparison.Ordinal));
+        if (idx < 0)
+        {
+            return;
+        }
+
+        var cte = _ctes[idx];
+        var m = FinalStageInlineRegex().Match(cte.Sql);
+        if (!m.Success)
+        {
+            return;
+        }
+
+        var groupBy = m.Groups["group"].Value;
+        if (string.IsNullOrWhiteSpace(groupBy))
+        {
+            return;
+        }
+
+        var refs = _ctes.Count(x => !string.Equals(x.Name, cte.Name, StringComparison.Ordinal)
+            && x.Sql.Contains(cte.Name, StringComparison.Ordinal));
+        if (refs != 0)
+        {
+            return;
+        }
+
+        columns = m.Groups["proj"].Value;
+        terminalOrder = terminalOrder with
         {
             Source = $"{m.Groups["source"].Value}{groupBy}"
         };
