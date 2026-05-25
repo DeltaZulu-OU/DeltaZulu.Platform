@@ -192,7 +192,7 @@ infer `INTEGER` and break DESCRIBE validation.
 src/
   Hunting.Core/     Schema, Mapping, Catalog, Policy, QueryModel, Translation, DuckDbSql
   Hunting.Data/     DuckDbConnectionFactory, SchemaApplier, QueryRuntime, MockDataSeeder
-  Hunting.Web/      Blazor Server UI, Monaco, schema browser, result grid (Phase 3)
+  Hunting.Web/      Blazor Server UI, query editor MVP, schema browser, result grid (Phase 3 complete; Monaco integration in Phase 4)
 
 tests/
   Hunting.Tests/    Spike/, Translation/, Emitter/
@@ -308,4 +308,4 @@ before the POC works end-to-end.
 
 ---
 
-*Last updated: 2026-05-24 — Phases 0–2 complete; Phase 3 (Blazor UI) pending*
+*Last updated: 2026-05-25 — Phases 0–3 complete; Phase 4 hardening in progress*

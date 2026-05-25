@@ -180,8 +180,8 @@ mode shows generated SQL.
 | Phase 1 | ✅ Complete | 7 days | |
 | Phase 2 | ✅ Complete | 12 days | |
 | Phase 3 | ✅ Complete | 5–7 days | Gate satisfied; UI vertical slice working |
-| Phase 4 | ⏳ Partial | 3–5 days | 4a partial; 4b/c/d not started |
-| **Remaining** | | **3–5 days (Phase 4)** | |
+| Phase 4 | ⏳ In progress | 3–5 days | 4a partial complete; 4c/4d complete; 4b pending |
+| **Remaining** | | **2–4 days** | Monaco-Kusto integration + polish |
 
 ---
 
@@ -233,8 +233,7 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 | `SyntaxKind.NotMatchesRegexExpression` doesn't exist | Removed; uses `UnaryNotExpression` | ✅ Fixed |
 | Single DuckDB connection | MVP constraint; Quack protocol post-MVP | ✅ Documented |
 | `innerunique` join semantics | Blocked with policy error | ✅ Implemented |
-| DuckDB connection in Blazor Server | `DuckDbConnectionFactory` single-instance pattern | ✅ Implemented in Phase 3 |
-
+| DuckDB connection in Blazor Server | `DuckDbConnectionFactory` + `QueryService` serialization | ✅ Implemented |
 ---
 
 *Last updated: 2026-05-25 — Phase 5 planner completed; standalone planning docs removed*

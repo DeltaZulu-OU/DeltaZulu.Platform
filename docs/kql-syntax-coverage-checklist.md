@@ -42,7 +42,7 @@ approximation diagnostic, or reject.
 - [ ] `project-reorder` — *deferred: requires schema-aware binder for remainder ordering*
 - [ ] `project-keep` — *deferred: requires schema-aware binder for input-order preservation*
 - [x] `count` — shorthand for `summarize count()` → `SELECT count(*) AS Count`
-- [ ] `distinct` — *deferred: currently translates to projection only, not DISTINCT*
+- [x] `distinct` — emits `SELECT DISTINCT` over explicit projected columns
 - [x] `top` — sort + take combined → `ORDER BY ... LIMIT`
 - [ ] `print` — *deferred: not yet implemented in translator*
 - [ ] `datatable` — *deferred: not yet implemented in translator*
