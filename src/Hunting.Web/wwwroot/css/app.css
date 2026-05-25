@@ -399,6 +399,24 @@ html, body {
     line-height: 1.6;
 }
 
+
+.hunt-sql-snippet {
+    position: relative;
+}
+
+.hunt-btn-copy {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    z-index: 2;
+    font-size: 11px;
+    padding: 4px 8px;
+}
+
+.hunt-sql-highlight {
+    padding-top: 38px;
+}
+
 .sql-keyword {
     color: #ff7b72;
     font-weight: 700;

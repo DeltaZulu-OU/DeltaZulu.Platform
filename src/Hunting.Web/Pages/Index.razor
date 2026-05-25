@@ -4,6 +4,7 @@
 @inject Hunting.Core.Catalog.ApprovedViewCatalog Catalog
 @inject Hunting.Web.Services.EditorBus EditorBus
 @inject Hunting.Web.Services.LanguageService LanguageService
+@inject IJSRuntime JS
 @inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
@@ -175,7 +176,10 @@
         <div class="hunt-drawer-body">
             @if (_drawerMode == DrawerMode.Sql)
             {
-                <pre class="hunt-sql-highlight">@((MarkupString)_drawerSqlHtml)</pre>
+                <div class="hunt-sql-snippet">
+                    <button class="hunt-btn hunt-btn-copy" @onclick="CopySqlToClipboard">Copy</button>
+                    <pre class="hunt-sql-highlight">@((MarkupString)_drawerSqlHtml)</pre>
+                </div>
             }
             else
             {
@@ -266,8 +270,17 @@
         _drawerMode = DrawerMode.Sql;
         _drawerTitle = "Generated SQL";
         _drawerTypeLabel = "Beautified and syntax-highlighted";
-        _drawerSqlHtml = HighlightSql(BeautifySql(sql));
+        var decodedSql = System.Net.WebUtility.HtmlDecode(sql);
+        _drawerSqlHtml = HighlightSql(BeautifySql(decodedSql));
         _showDrawer = true;
+    }
+
+    private async Task CopySqlToClipboard()
+    {
+        if (_result?.GeneratedSql is not string sql) return;
+        var decodedSql = System.Net.WebUtility.HtmlDecode(sql);
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", decodedSql);
+        Snackbar.Add("SQL copied to clipboard.", Severity.Success);
     }
 
     private void OpenCellDrawer(string columnName, object? value)
