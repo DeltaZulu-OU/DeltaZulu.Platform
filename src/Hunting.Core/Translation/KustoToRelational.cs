@@ -5,6 +5,7 @@ using Kusto.Language;
 using Kusto.Language.Syntax;
 using Policy;
 using QueryModel;
+using System.Text.RegularExpressions;
 
 /// <summary>
 /// Translates analyzed Kusto AST into a RelNode intermediate query model.
@@ -32,6 +33,19 @@ public sealed class KustoToRelational
         if (string.IsNullOrWhiteSpace(kql))
         {
             _diagnostics.AddError(DiagnosticPhase.Parse, "KQL input is empty.");
+            return null;
+        }
+
+        // Defense-in-depth: explicitly reject mixed statement chains that append
+        // management dot-commands after a query (e.g. "...; .drop table ...").
+        // This prevents ambiguous execution intent and blocks command-chaining
+        // payloads before translation/SQL emission.
+        if (HasMixedQueryAndManagementCommand(kql))
+        {
+            _diagnostics.AddError(
+                DiagnosticPhase.Policy,
+                "Mixed query and management command input is not allowed. " +
+                "Submit only a single query expression (optionally preceded by let bindings).");
             return null;
         }
 
@@ -78,6 +92,13 @@ public sealed class KustoToRelational
         }
 
         return TranslateStatement(statements[^1]);
+    }
+
+    private static bool HasMixedQueryAndManagementCommand(string kql)
+    {
+        // Detect a semicolon-delimited statement where a management command starts
+        // a subsequent statement. Example: "... ; .drop table X"
+        return Regex.IsMatch(kql, @";\s*\.[A-Za-z_]", RegexOptions.CultureInvariant);
     }
 
     private static bool IsTopLevel(SyntaxNode node, SyntaxNode root)

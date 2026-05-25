@@ -277,6 +277,36 @@ public sealed class KustoToRelationalEdgeCaseTests
             ".set command should be rejected");
     }
 
+    [TestMethod]
+    [Description("Query followed by management command is rejected as multi-statement input")]
+    public void Policy_QueryThenDotCommandRejected()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents | where FileName == "cmd.exe";
+            .drop table DeviceProcessEvents
+            """);
+
+        Assert.IsNull(result, "Translator must reject multi-statement input that chains commands.");
+        Assert.IsTrue(diag.HasErrors, "A diagnostic should be raised for mixed query/command input.");
+        Assert.IsTrue(
+            diag.All.Any(d =>
+                d.Message.Contains("Mixed query and management command input is not allowed") ||
+                d.Message.Contains("Multiple query statements are not supported")),
+            "Expected rejection diagnostic for mixed query/command input was not emitted.");
+    }
+
+    [TestMethod]
+    [Description("SQL-like payload inside KQL string literal does not become a second statement")]
+    public void Parse_StringLiteralSqlPayload_RemainsSingleStatement()
+    {
+        var (result, diag) = Translate(
+            """DeviceProcessEvents | where FileName == "'; DROP TABLE main.DeviceProcessEvents;--" | take 1""");
+
+        Assert.IsNotNull(result, "Payload embedded in a KQL string should remain data, not a statement separator.");
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All.Select(d => d.Message)));
+    }
+
     // ─── Type and column errors ─────────────────────────────────────
 
     [TestMethod]
