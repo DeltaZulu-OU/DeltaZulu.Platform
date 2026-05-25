@@ -7,9 +7,9 @@ public sealed class QueryToolbarState
     public string SelectedTimeFilter { get; set; } = "none";
     public DateTime? CustomFrom { get; set; }
     public DateTime? CustomTo { get; set; }
-    public int? SelectedResultLimit { get; set; } = 100;
+    public int? SelectedResultLimit { get; set; } = null;
 
-    public static IReadOnlyList<int?> ResultLimitOptions { get; } = [10, 20, 50, 100, 500, 1000, null];
+    public static IReadOnlyList<int?> ResultLimitOptions { get; } = [null, 10, 20, 50, 100, 500, 1000];
 
     public static IReadOnlyList<TimeFilterPreset> TimeFilterPresets { get; } =
     [
