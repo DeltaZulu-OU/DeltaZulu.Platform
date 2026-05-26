@@ -34,7 +34,8 @@ public sealed record JoinNode(
     RelNode Left,
     RelNode Right,
     JoinKind Kind,
-    ScalarExpr OnPredicate) : RelNode;
+    ScalarExpr OnPredicate,
+    JoinFlavor Flavor = JoinFlavor.GenericJoin) : RelNode;
 
 public sealed record LetBindingNode(
     string Name,
@@ -139,6 +140,9 @@ public sealed record SortExpr(ScalarExpr Expression, SortDirection Direction, Nu
 
 public enum JoinKind
 { Inner, LeftOuter, RightOuter, FullOuter, LeftSemi, LeftAnti, RightSemi, RightAnti }
+
+public enum JoinFlavor
+{ GenericJoin, Lookup }
 
 public enum SortDirection
 { Asc, Desc }

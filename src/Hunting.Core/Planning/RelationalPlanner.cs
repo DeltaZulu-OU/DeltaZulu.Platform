@@ -37,6 +37,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
     public RelationalPlanner()
     {
         _passes = [
+            new LookupOutputBindingPass(),
             new FilterPushdownPass(),
             new ProjectionPruningPass(),
             new IdentityProjectionCollapsePass(),
@@ -153,6 +154,241 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             }
 
             return rewritten;
+        }
+    }
+
+    private sealed class LookupOutputBindingPass : IPlannerPass
+    {
+        public string Name => "LookupOutputBindingPass";
+
+        public RelNode Apply(RelNode node, out bool changed, out int attempted, out int applied)
+        {
+            attempted = 1;
+            applied = 0;
+            var rewritten = Rewrite(node, ref applied);
+            changed = !ReferenceEquals(rewritten, node) && rewritten != node;
+            return rewritten;
+        }
+
+        private static RelNode Rewrite(RelNode node, ref int applied) => node switch
+        {
+            ProjectNode p => RewriteProject(p, ref applied),
+            FilterNode f => RewriteFilter(f, ref applied),
+            SortNode s => RewriteSort(s, ref applied),
+            ExtendNode e => RewriteExtend(e, ref applied),
+            AggregateNode a => RewriteAggregate(a, ref applied),
+            LimitNode l => l with { Input = Rewrite(l.Input, ref applied) },
+            SampleNode s => s with { Input = Rewrite(s.Input, ref applied) },
+            DistinctNode d => d with { Input = Rewrite(d.Input, ref applied) },
+            JoinNode j => j with { Left = Rewrite(j.Left, ref applied), Right = Rewrite(j.Right, ref applied) },
+            LetBindingNode lb => lb with
+            {
+                Body = Rewrite(lb.Body, ref applied),
+                TabularValue = lb.TabularValue is null ? null : Rewrite(lb.TabularValue, ref applied)
+            },
+            _ => node
+        };
+
+        private static ProjectNode RewriteProject(ProjectNode p, ref int applied)
+        {
+            var input = Rewrite(p.Input, ref applied);
+            var owner = LookupOwners(input);
+            ProjectionExpr[]? projections = null;
+            for (var i = 0; i < p.Projections.Count; i++)
+            {
+                var proj = p.Projections[i];
+                var rewrittenExpr = RewriteScalar(proj.Expression, owner, ref applied);
+                if (!Equals(rewrittenExpr, proj.Expression))
+                {
+                    projections ??= p.Projections.ToArray();
+                    projections[i] = proj with { Expression = rewrittenExpr };
+                }
+            }
+            if (ReferenceEquals(input, p.Input) && projections is null) return p;
+            return p with { Input = input, Projections = projections ?? p.Projections };
+        }
+
+        private static FilterNode RewriteFilter(FilterNode f, ref int applied)
+        {
+            var input = Rewrite(f.Input, ref applied);
+            var owner = LookupOwners(input);
+            return f with { Input = input, Predicate = RewriteScalar(f.Predicate, owner, ref applied) };
+        }
+
+        private static SortNode RewriteSort(SortNode s, ref int applied)
+        {
+            var input = Rewrite(s.Input, ref applied);
+            var owner = LookupOwners(input);
+            SortExpr[]? sorts = null;
+            for (var i = 0; i < s.Sorts.Count; i++)
+            {
+                var sort = s.Sorts[i];
+                var rewrittenExpr = RewriteScalar(sort.Expression, owner, ref applied);
+                if (!Equals(rewrittenExpr, sort.Expression))
+                {
+                    sorts ??= s.Sorts.ToArray();
+                    sorts[i] = sort with { Expression = rewrittenExpr };
+                }
+            }
+            if (ReferenceEquals(input, s.Input) && sorts is null) return s;
+            return s with { Input = input, Sorts = sorts ?? s.Sorts };
+        }
+
+        private static ExtendNode RewriteExtend(ExtendNode e, ref int applied)
+        {
+            var input = Rewrite(e.Input, ref applied);
+            var owner = LookupOwners(input);
+            ProjectionExpr[]? ext = null;
+            for (var i = 0; i < e.Extensions.Count; i++)
+            {
+                var expr = e.Extensions[i];
+                var rewrittenExpr = RewriteScalar(expr.Expression, owner, ref applied);
+                if (!Equals(rewrittenExpr, expr.Expression))
+                {
+                    ext ??= e.Extensions.ToArray();
+                    ext[i] = expr with { Expression = rewrittenExpr };
+                }
+            }
+            if (ReferenceEquals(input, e.Input) && ext is null) return e;
+            return e with { Input = input, Extensions = ext ?? e.Extensions };
+        }
+
+        private static AggregateNode RewriteAggregate(AggregateNode a, ref int applied)
+        {
+            var input = Rewrite(a.Input, ref applied);
+            var owner = LookupOwners(input);
+            ScalarExpr[]? groupBy = null;
+            for (var i = 0; i < a.GroupBy.Count; i++)
+            {
+                var rewritten = RewriteScalar(a.GroupBy[i], owner, ref applied);
+                if (!Equals(rewritten, a.GroupBy[i]))
+                {
+                    groupBy ??= a.GroupBy.ToArray();
+                    groupBy[i] = rewritten;
+                }
+            }
+
+            ProjectionExpr[]? aggregates = null;
+            for (var i = 0; i < a.Aggregates.Count; i++)
+            {
+                var agg = a.Aggregates[i];
+                var rewrittenExpr = RewriteScalar(agg.Expression, owner, ref applied);
+                if (!Equals(rewrittenExpr, agg.Expression))
+                {
+                    aggregates ??= a.Aggregates.ToArray();
+                    aggregates[i] = agg with { Expression = rewrittenExpr };
+                }
+            }
+
+            if (ReferenceEquals(input, a.Input) && groupBy is null && aggregates is null) return a;
+            return a with
+            {
+                Input = input,
+                GroupBy = groupBy ?? a.GroupBy,
+                Aggregates = aggregates ?? a.Aggregates
+            };
+        }
+
+        private static ScalarExpr RewriteScalar(ScalarExpr expr, IReadOnlyDictionary<string, string> owner, ref int applied)
+        {
+            switch (expr)
+            {
+                case ColumnRef { Qualifier: null } c when owner.TryGetValue(c.Name, out var q):
+                    applied++;
+                    return new ColumnRef(c.Name, q);
+                case BinaryScalar b:
+                    return b with
+                    {
+                        Left = RewriteScalar(b.Left, owner, ref applied),
+                        Right = RewriteScalar(b.Right, owner, ref applied)
+                    };
+                case UnaryScalar u:
+                    return u with { Operand = RewriteScalar(u.Operand, owner, ref applied) };
+                case FunctionCall f:
+                {
+                    var args = new ScalarExpr[f.Args.Count];
+                    for (var i = 0; i < f.Args.Count; i++) args[i] = RewriteScalar(f.Args[i], owner, ref applied);
+                    return f with { Args = args };
+                }
+                case CaseScalar c:
+                {
+                    var branches = new (ScalarExpr When, ScalarExpr Then)[c.Branches.Count];
+                    for (var i = 0; i < c.Branches.Count; i++)
+                    {
+                        var b = c.Branches[i];
+                        branches[i] = (RewriteScalar(b.When, owner, ref applied), RewriteScalar(b.Then, owner, ref applied));
+                    }
+                    return c with { Branches = branches, Else = RewriteScalar(c.Else, owner, ref applied) };
+                }
+                case WindowScalarExpr w:
+                {
+                    var args = new ScalarExpr[w.Args.Count];
+                    for (var i = 0; i < w.Args.Count; i++) args[i] = RewriteScalar(w.Args[i], owner, ref applied);
+                    var part = new ScalarExpr[w.Window.PartitionBy.Count];
+                    for (var i = 0; i < part.Length; i++) part[i] = RewriteScalar(w.Window.PartitionBy[i], owner, ref applied);
+                    var order = new SortExpr[w.Window.OrderBy.Count];
+                    for (var i = 0; i < order.Length; i++)
+                    {
+                        var o = w.Window.OrderBy[i];
+                        order[i] = o with { Expression = RewriteScalar(o.Expression, owner, ref applied) };
+                    }
+                    return w with { Args = args, Window = w.Window with { PartitionBy = part, OrderBy = order } };
+                }
+                case ListScalar l:
+                {
+                    var items = new ScalarExpr[l.Items.Count];
+                    for (var i = 0; i < l.Items.Count; i++) items[i] = RewriteScalar(l.Items[i], owner, ref applied);
+                    return l with { Items = items };
+                }
+                default:
+                    return expr;
+            }
+        }
+
+        private static IReadOnlyDictionary<string, string> LookupOwners(RelNode node)
+        {
+            if (node is not JoinNode { Flavor: JoinFlavor.Lookup } join)
+            {
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var left = OutputNames(join.Left);
+            var right = OutputNames(join.Right);
+            var keyCols = JoinKeyRightNames(join.OnPredicate);
+            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var c in left) map[c] = JoinSide.Left;
+            foreach (var c in right)
+            {
+                if (keyCols.Contains(c)) continue;
+                if (!map.ContainsKey(c)) map[c] = JoinSide.Right;
+            }
+            return map;
+        }
+
+        private static HashSet<string> OutputNames(RelNode node) => node switch
+        {
+            ProjectNode p => p.Projections.Select(x => x.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase),
+            ExtendNode e => OutputNames(e.Input).Concat(e.Extensions.Select(x => x.Alias)).ToHashSet(StringComparer.OrdinalIgnoreCase),
+            AggregateNode a => a.Aggregates.Select(x => x.Alias).Concat(a.GroupBy.OfType<ColumnRef>().Select(c => c.Name)).ToHashSet(StringComparer.OrdinalIgnoreCase),
+            DistinctNode d => d.Projections.Select(x => x.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase),
+            FilterNode f => OutputNames(f.Input),
+            SortNode s => OutputNames(s.Input),
+            LimitNode l => OutputNames(l.Input),
+            SampleNode s => OutputNames(s.Input),
+            JoinNode j => OutputNames(j.Left).Concat(OutputNames(j.Right)).ToHashSet(StringComparer.OrdinalIgnoreCase),
+            _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        };
+
+        private static HashSet<string> JoinKeyRightNames(ScalarExpr pred)
+        {
+            var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            void Visit(ScalarExpr e)
+            {
+                if (e is BinaryScalar b && b.Op == ScalarBinaryOp.And) { Visit(b.Left); Visit(b.Right); return; }
+                if (e is BinaryScalar eq && eq.Op == ScalarBinaryOp.Eq && eq.Right is ColumnRef { Qualifier: JoinSide.Right } rc) keys.Add(rc.Name);
+            }
+            Visit(pred);
+            return keys;
         }
     }
 

@@ -1088,10 +1088,76 @@ public sealed partial class DuckDbQueryEmitter
             _ => throw new NotSupportedException($"Unsupported join kind: {join.Kind}")
         };
 
+        var selectList = "*";
+        if (join is { Flavor: JoinFlavor.Lookup, Kind: JoinKind.LeftOuter }
+            && TryBuildLookupJoinProjection(join.Right, join.OnPredicate, out var rightPayloadCols))
+        {
+            selectList = $"{leftAlias}.*";
+            if (rightPayloadCols.Count > 0)
+            {
+                selectList += ", " + string.Join(", ", rightPayloadCols.Select(c => $"{rightAlias}.{EscapeIdent(c)}"));
+            }
+        }
+
         var stage = NextStage();
-        _ctes.Add((stage, $"SELECT * FROM {leftSource} AS {leftAlias} {joinKind} {rightSource} AS {rightAlias} ON {pred}"));
+        _ctes.Add((stage, $"SELECT {selectList} FROM {leftSource} AS {leftAlias} {joinKind} {rightSource} AS {rightAlias} ON {pred}"));
         _stageNames.Add(stage);
         return (stage, null);
+    }
+
+    private static bool TryBuildLookupJoinProjection(
+        RelNode right,
+        ScalarExpr predicate,
+        out IReadOnlyList<string> rightPayloadColumns)
+    {
+        var rightCols = TryGetOutputColumns(right);
+        if (rightCols is null)
+        {
+            rightPayloadColumns = [];
+            return false;
+        }
+
+        var rightKeys = CollectRightJoinKeys(predicate);
+        rightPayloadColumns = rightCols
+            .Where(c => !rightKeys.Contains(c))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return true;
+    }
+
+    private static IReadOnlyList<string>? TryGetOutputColumns(RelNode node) => node switch
+    {
+        ProjectNode p => p.Projections.Select(x => x.Alias).ToArray(),
+        AggregateNode a => a.GroupBy.OfType<ColumnRef>().Select(c => c.Name).Concat(a.Aggregates.Select(x => x.Alias)).ToArray(),
+        ExtendNode e => (TryGetOutputColumns(e.Input) ?? []).Concat(e.Extensions.Select(x => x.Alias)).ToArray(),
+        DistinctNode d => d.Projections.Select(x => x.Alias).ToArray(),
+        FilterNode f => TryGetOutputColumns(f.Input),
+        SortNode s => TryGetOutputColumns(s.Input),
+        LimitNode l => TryGetOutputColumns(l.Input),
+        SampleNode s => TryGetOutputColumns(s.Input),
+        _ => null
+    };
+
+    private static HashSet<string> CollectRightJoinKeys(ScalarExpr expr)
+    {
+        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        void Walk(ScalarExpr e)
+        {
+            if (e is BinaryScalar b && b.Op == ScalarBinaryOp.And)
+            {
+                Walk(b.Left);
+                Walk(b.Right);
+                return;
+            }
+
+            if (e is BinaryScalar { Op: ScalarBinaryOp.Eq, Right: ColumnRef { Qualifier: JoinSide.Right } rc })
+            {
+                keys.Add(rc.Name);
+            }
+        }
+
+        Walk(expr);
+        return keys;
     }
 
     #endregion Join

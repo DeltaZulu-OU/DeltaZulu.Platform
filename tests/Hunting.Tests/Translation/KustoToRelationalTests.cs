@@ -490,6 +490,7 @@ public sealed class KustoToRelationalTests
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var join = AssertIs<JoinNode>(result);
         Assert.AreEqual(JoinKind.LeftOuter, join.Kind);
+        Assert.AreEqual(JoinFlavor.Lookup, join.Flavor);
     }
 
     [TestMethod]

@@ -740,7 +740,7 @@ public sealed class KustoToRelational
             return null;
         }
 
-        return new JoinNode(input, right, kind, predicate);
+        return new JoinNode(input, right, kind, predicate, JoinFlavor.GenericJoin);
     }
 
 
@@ -782,7 +782,7 @@ public sealed class KustoToRelational
                 (acc, p) => new BinaryScalar(acc, ScalarBinaryOp.And, p))
         };
 
-        return new JoinNode(input, right, JoinKind.LeftOuter, predicate);
+        return new JoinNode(input, right, JoinKind.LeftOuter, predicate, JoinFlavor.Lookup);
     }
 
     /// <summary>

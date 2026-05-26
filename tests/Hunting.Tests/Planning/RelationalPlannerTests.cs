@@ -169,7 +169,7 @@ public sealed class RelationalPlannerTests
         Assert.IsGreaterThanOrEqualTo(1, planner.LastRunStats!.Iterations);
         Assert.IsGreaterThanOrEqualTo(1, planner.LastRunStats.TotalRulesAttempted);
         Assert.IsFalse(planner.LastRunStats.HitRuleApplicationBudget);
-        Assert.HasCount(4, planner.LastRunStats.PassStats, "Expected four registered planner passes");
+        Assert.HasCount(5, planner.LastRunStats.PassStats, "Expected five registered planner passes");
     }
 
     [TestMethod]
@@ -216,6 +216,41 @@ public sealed class RelationalPlannerTests
         var innerProj = (ProjectNode)ext.Input;
 
         Assert.Contains(p => p.Alias == "A", innerProj.Projections, "Required passthrough column A must be preserved");
+    }
+
+    [TestMethod]
+    public void LookupJoin_ProjectColumns_AreBoundToJoinSides()
+    {
+        var planner = new RelationalPlanner();
+
+        var leftAgg = new AggregateNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("LaunchCount", new FunctionCall("count", []))],
+            [new ColumnRef("AccountName")]);
+        var rightAgg = new AggregateNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("DeviceCount", new FunctionCall("dcount", [new ColumnRef("DeviceName")]))],
+            [new ColumnRef("AccountName")]);
+        var join = new JoinNode(
+            leftAgg,
+            rightAgg,
+            JoinKind.LeftOuter,
+            new BinaryScalar(new ColumnRef("AccountName", JoinSide.Left), ScalarBinaryOp.Eq, new ColumnRef("AccountName", JoinSide.Right)),
+            JoinFlavor.Lookup);
+        RelNode node = new ProjectNode(
+            join,
+            [
+                new ProjectionExpr("AccountName", new ColumnRef("AccountName")),
+                new ProjectionExpr("LaunchCount", new ColumnRef("LaunchCount")),
+                new ProjectionExpr("DeviceCount", new ColumnRef("DeviceCount"))
+            ]);
+
+        var planned = planner.Plan(node, new PlannerContext(Enabled: true));
+
+        var project = (ProjectNode)planned;
+        Assert.AreEqual(JoinSide.Left, ((ColumnRef)project.Projections[0].Expression).Qualifier);
+        Assert.AreEqual(JoinSide.Left, ((ColumnRef)project.Projections[1].Expression).Qualifier);
+        Assert.AreEqual(JoinSide.Right, ((ColumnRef)project.Projections[2].Expression).Qualifier);
     }
 
     [TestMethod]
