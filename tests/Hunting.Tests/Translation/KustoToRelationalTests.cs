@@ -164,6 +164,57 @@ public sealed class KustoToRelationalTests
         AssertIs<ExtendNode>(ext2.Input);
     }
 
+
+    [TestMethod]
+    [Description("extract() with 3 args translates as scalar function call")]
+    public void Extend_Extract_WithOptionalTypeLiteralOmitted()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | extend EncodedPayload = extract("-enc\\s+([^\\s]+)", 1, ProcessCommandLine)
+            """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var ext = AssertIs<ExtendNode>(result);
+        Assert.AreEqual("EncodedPayload", ext.Extensions[0].Alias);
+        var fn = AssertIs<FunctionCall>(ext.Extensions[0].Expression);
+        Assert.AreEqual("extract", fn.Name, true);
+        Assert.HasCount(3, fn.Args);
+    }
+
+
+
+    [TestMethod]
+    [Description("extract() with verbatim regex string parses and translates")]
+    public void Extend_Extract_WithVerbatimRegexString()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | extend EncodedPayload = extract(@"-enc\s+([^\s]+)", 1, ProcessCommandLine)
+            """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var ext = AssertIs<ExtendNode>(result);
+        var fn = AssertIs<FunctionCall>(ext.Extensions[0].Expression);
+        Assert.AreEqual("extract", fn.Name, true);
+        Assert.HasCount(3, fn.Args);
+    }
+    [TestMethod]
+    [Description("extract() with 4 args translates as scalar function call")]
+    public void Extend_Extract_WithTypeLiteralProvided()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | extend EncodedPayload = extract("-enc\\s+([^\\s]+)", 1, ProcessCommandLine, typeof(string))
+            """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var ext = AssertIs<ExtendNode>(result);
+        var fn = AssertIs<FunctionCall>(ext.Extensions[0].Expression);
+        Assert.AreEqual("extract", fn.Name, true);
+        Assert.HasCount(4, fn.Args);
+    }
+
     // ─── Day 5: AggregateNode ───────────────────────────────────────
 
     [TestMethod]
@@ -910,7 +961,7 @@ public sealed class KustoToRelationalTests
     {
         var normalized = sql.Trim();
 
-        if (normalized.EndsWith(";", StringComparison.Ordinal))
+        if (normalized.EndsWith(';'))
         {
             normalized = normalized[..^1];
         }

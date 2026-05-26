@@ -5,6 +5,7 @@ using Kusto.Language;
 using Kusto.Language.Syntax;
 using Policy;
 using QueryModel;
+using System.Text;
 using System.Text.RegularExpressions;
 
 /// <summary>
@@ -62,8 +63,10 @@ public sealed class KustoToRelational
             return null;
         }
 
+        var normalizedKql = NormalizeUnsupportedStringEscapes(kql);
+
         var globals = _catalog.BuildGlobalState();
-        var code = KustoCode.ParseAndAnalyze(kql, globals);
+        var code = KustoCode.ParseAndAnalyze(normalizedKql, globals);
 
         var hasParseErrors = false;
 
@@ -71,6 +74,15 @@ public sealed class KustoToRelational
         {
             if (diag.Severity == Kusto.Language.DiagnosticSeverity.Error)
             {
+                // Kusto.Language version mismatch: some builds report extract() as
+                // requiring 4 args even though the 4th type literal is optional.
+                // We suppress only this known false-positive and validate extract()
+                // argument rules explicitly in TranslateFunctionCall.
+                if (IsKnownOptionalExtractArgDiagnostic(diag.Message))
+                {
+                    continue;
+                }
+
                 var category = diag.Category;
                 hasParseErrors = true;
 
@@ -163,6 +175,17 @@ public sealed class KustoToRelational
         }
 
         return TranslateStatement(statements[0]);
+    }
+
+
+    private static bool IsKnownOptionalExtractArgDiagnostic(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        return message.Contains("function 'extract' expects 4 arguments", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool ContainsExecutableManagementCommandText(string kql)
@@ -831,6 +854,7 @@ public sealed class KustoToRelational
         BinaryExpression bin => TranslateBinaryScalar(bin),
         PrefixUnaryExpression un => TranslateUnaryScalar(un),
         FunctionCallExpression fn => TranslateFunctionCall(fn),
+        TypeOfLiteralExpression typeOf => TranslateTypeOfLiteral(typeOf),
         ParenthesizedExpression paren => TranslateScalarExpr(paren.Expression),
         SimpleNamedExpression named => TranslateScalarExpr(named.Expression),
         _ => throw new NotSupportedException(
@@ -868,6 +892,13 @@ public sealed class KustoToRelational
         _ => throw new NotSupportedException(
             $"Unsupported literal kind: {lit.Kind}")
     };
+
+
+    private static ScalarExpr TranslateTypeOfLiteral(TypeOfLiteralExpression typeOf) =>
+        // Keep typeof(T) as a scalar literal so functions that accept an optional
+        // type-literal argument (for example extract(..., typeof(string))) can be
+        // represented in RelNode without producing a translator error.
+        new LiteralScalar(typeOf.ToString(), LiteralKind.String);
 
     private ScalarExpr TranslateBinaryScalar(BinaryExpression bin)
     {
@@ -1033,6 +1064,8 @@ public sealed class KustoToRelational
             args.Add(TranslateScalarExpr(UnwrapSeparated(elem)));
         }
 
+        ValidateFunctionArguments(name, args);
+
         // KQL 'not(expr)' is a FunctionCallExpression, not a PrefixUnaryExpression.
         // SyntaxKind.UnaryNotExpression does not exist — this is the correct path for NOT.
         if (name == "not" && args.Count == 1)
@@ -1071,6 +1104,24 @@ public sealed class KustoToRelational
         }
 
         return new FunctionCall(name, args);
+    }
+
+    private static void ValidateFunctionArguments(string name, IReadOnlyList<ScalarExpr> args)
+    {
+        if (!name.Equals("extract", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (args.Count is < 3 or > 4)
+        {
+            throw new NotSupportedException("extract() expects 3 or 4 arguments: regex, captureGroup, source [, typeof(type)].");
+        }
+
+        if (args[1] is not LiteralScalar { Kind: LiteralKind.Int or LiteralKind.Long })
+        {
+            throw new NotSupportedException("extract() captureGroup argument must be an integer literal.");
+        }
     }
 
     #endregion Scalar expressions
@@ -1197,5 +1248,53 @@ public sealed class KustoToRelational
             node.TextStart, node.Width);
         return null;
     }
+
+    #endregion Utilities
+    private static string NormalizeUnsupportedStringEscapes(string kql)
+    {
+        if (string.IsNullOrEmpty(kql))
+        {
+            return kql;
+        }
+
+        var sb = new StringBuilder(kql.Length);
+        var inString = false;
+
+        for (var i = 0; i < kql.Length; i++)
+        {
+            var ch = kql[i];
+
+            if (ch == '"')
+            {
+                inString = !inString;
+                sb.Append(ch);
+                continue;
+            }
+
+            if (!inString || ch != '\\' || i + 1 >= kql.Length)
+            {
+                sb.Append(ch);
+                continue;
+            }
+
+            var next = kql[i + 1];
+            if (IsRecognizedEscape(next))
+            {
+                sb.Append(ch);
+                continue;
+            }
+
+            // Compatibility shim: KQL regex patterns commonly use escapes like \s
+            // inside normal string literals. Double unknown escapes to preserve the
+            // intended literal sequence for the parser.
+            sb.Append("\\");
+        }
+
+        return sb.ToString();
+    }
+
+    private static bool IsRecognizedEscape(char ch)
+        => ch is '\\' or '"' or '\'' or 'n' or 'r' or 't' or 'b' or 'f' or 'u' or 'x' or '0' or '/';
+
+
 }
-#endregion Utilities

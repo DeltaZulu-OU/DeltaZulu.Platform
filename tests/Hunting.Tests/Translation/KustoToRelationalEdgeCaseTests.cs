@@ -127,6 +127,45 @@ public sealed class KustoToRelationalEdgeCaseTests
         Assert.IsTrue(diag.HasErrors, "take with negative should produce error");
     }
 
+
+    [TestMethod]
+    [Description("extract() with too few args produces diagnostic")]
+    public void Syntax_Extract_TooFewArguments()
+    {
+        var (_, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | extend bad = extract("-enc\\s+([^\\s]+)", 1)
+            """);
+        Assert.IsTrue(diag.HasErrors, "extract with 2 args should fail");
+        Assert.Contains(d => d.Message.Contains("extract", StringComparison.OrdinalIgnoreCase), diag.All,
+            "Diagnostic should reference extract");
+    }
+
+    [TestMethod]
+    [Description("extract() with too many args produces diagnostic")]
+    public void Syntax_Extract_TooManyArguments()
+    {
+        var (_, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | extend bad = extract("-enc\\s+([^\\s]+)", 1, ProcessCommandLine, typeof(string), "extra")
+            """);
+        Assert.IsTrue(diag.HasErrors, "extract with 5 args should fail");
+    }
+
+    [TestMethod]
+    [Description("extract() with non-integer capture group produces semantic diagnostic")]
+    public void Syntax_Extract_NonIntegerCaptureGroup()
+    {
+        var (_, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | extend bad = extract("-enc\\s+([^\\s]+)", "one", ProcessCommandLine)
+            """);
+        Assert.IsTrue(diag.HasErrors, "extract requires integer capture group index");
+    }
+
     // ─── Comments ───────────────────────────────────────────────────
 
     [TestMethod]
