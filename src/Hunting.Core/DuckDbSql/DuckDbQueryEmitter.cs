@@ -824,11 +824,12 @@ public sealed partial class DuckDbQueryEmitter
         return rewritten;
     }
 
-    // ─── Scan ───────────────────────────────────────────────────────
+    #region Scan
 
     private (string Source, string? Columns) EmitScan(ScanNode scan) => ($"main.{EscapeIdent(scan.ViewName)}", null);
 
-    // ─── Filter ─────────────────────────────────────────────────────
+    #endregion Scan
+    #region Filter
 
     private (string Source, string? Columns) EmitFilter(FilterNode filter)
     {
@@ -840,7 +841,8 @@ public sealed partial class DuckDbQueryEmitter
         return (stage, null);
     }
 
-    // ─── Project ────────────────────────────────────────────────────
+    #endregion Filter
+    #region Project
 
     private (string Source, string? Columns) EmitProject(ProjectNode project)
     {
@@ -849,7 +851,8 @@ public sealed partial class DuckDbQueryEmitter
         return (source, cols);
     }
 
-    // ─── Extend ─────────────────────────────────────────────────────
+    #endregion Project
+    #region Extend
 
     private (string Source, string? Columns) EmitExtend(ExtendNode extend)
     {
@@ -861,7 +864,8 @@ public sealed partial class DuckDbQueryEmitter
         return (stage, null);
     }
 
-    // ─── Aggregate ──────────────────────────────────────────────────
+    #endregion Extend
+    #region Aggregate
 
     private (string Source, string? Columns) EmitAggregate(AggregateNode agg)
     {
@@ -885,7 +889,8 @@ public sealed partial class DuckDbQueryEmitter
         return (stage, null);
     }
 
-    // ─── Sort ───────────────────────────────────────────────────────
+    #endregion Aggregate
+    #region Sort
 
     private (string Source, string? Columns) EmitSort(SortNode sort)
     {
@@ -897,7 +902,8 @@ public sealed partial class DuckDbQueryEmitter
         return (stage, null);
     }
 
-    // ─── Distinct ───────────────────────────────────────────────────
+    #endregion Sort
+    #region Distinct
 
     private (string Source, string? Columns) EmitDistinct(DistinctNode dist)
     {
@@ -909,7 +915,8 @@ public sealed partial class DuckDbQueryEmitter
         return (stage, null);
     }
 
-    // ─── Limit ──────────────────────────────────────────────────────
+    #endregion Distinct
+    #region Limit
 
     private (string Source, string? Columns) EmitLimit(LimitNode limit)
     {
@@ -943,7 +950,8 @@ public sealed partial class DuckDbQueryEmitter
         return (stage, null);
     }
 
-    // ─── Join ───────────────────────────────────────────────────────
+    #endregion Limit
+    #region Join
 
     private (string Source, string? Columns) EmitJoin(JoinNode join)
     {
@@ -990,7 +998,8 @@ public sealed partial class DuckDbQueryEmitter
         return (stage, null);
     }
 
-    // ─── Let ────────────────────────────────────────────────────────
+    #endregion Join
+    #region Let
 
     private (string Source, string? Columns) EmitLet(LetBindingNode let_)
     {
@@ -1014,7 +1023,8 @@ public sealed partial class DuckDbQueryEmitter
         return EmitNode(let_.Body);
     }
 
-    // ─── Scalar expressions ─────────────────────────────────────────
+    #endregion Let
+    #region Scalar expressions
 
     private string EmitScalar(ScalarExpr expr) => expr switch
     {
@@ -1449,7 +1459,8 @@ public sealed partial class DuckDbQueryEmitter
         return sb.ToString();
     }
 
-    // ─── Window expressions ─────────────────────────────────────────
+    #endregion Scalar expressions
+    #region Window expressions
 
     private string EmitWindow(WindowScalarExpr win)
     {
@@ -1523,7 +1534,8 @@ public sealed partial class DuckDbQueryEmitter
         _ => throw new NotSupportedException($"Invalid window bound: {bound.Kind}")
     };
 
-    // ─── Sort expression ────────────────────────────────────────────
+    #endregion Window expressions
+    #region Sort expression
 
     /// <summary>
     /// Tabular ORDER BY term. Mirrors <see cref="EmitSortExpr"/> but drops the
@@ -1606,7 +1618,8 @@ public sealed partial class DuckDbQueryEmitter
         return $"{col}{dir}{nulls}";
     }
 
-    // ─── Projection ─────────────────────────────────────────────────
+    #endregion Sort expression
+    #region Projection
 
     private string EmitProjection(ProjectionExpr proj)
     {
@@ -1619,7 +1632,8 @@ public sealed partial class DuckDbQueryEmitter
         return $"{expr} AS {EscapeIdent(proj.Alias)}";
     }
 
-    // ─── Timespan ───────────────────────────────────────────────────
+    #endregion Projection
+    #region Timespan
 
     /// <summary>
     /// Convert a timespan value to DuckDB INTERVAL literal.
@@ -1708,7 +1722,8 @@ public sealed partial class DuckDbQueryEmitter
         return $"INTERVAL '{ts}'";
     }
 
-    // ─── Helpers ────────────────────────────────────────────────────
+    #endregion Timespan
+    #region Helpers
 
     /// <summary>
     /// Wraps a LIKE pattern operand so that %, _, and \ in the search term
@@ -1803,3 +1818,4 @@ public sealed partial class DuckDbQueryEmitter
 
     private static string EscapeString(string s) => s.Replace("'", "''");
 }
+#endregion Helpers

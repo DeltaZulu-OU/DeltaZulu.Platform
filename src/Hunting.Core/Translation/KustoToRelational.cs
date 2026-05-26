@@ -116,7 +116,7 @@ public sealed class KustoToRelational
         return true;
     }
 
-    // ─── Statement level ────────────────────────────────────────────
+    #region Statement level
 
     private RelNode? TranslateStatement(SyntaxNode node) => node switch
     {
@@ -171,7 +171,8 @@ public sealed class KustoToRelational
         return body;
     }
 
-    // ─── Expression level ───────────────────────────────────────────
+    #endregion Statement level
+    #region Expression level
 
     private RelNode? TranslateExpression(Expression expr) => expr switch
     {
@@ -245,7 +246,8 @@ public sealed class KustoToRelational
         return null;
     }
 
-    // ─── Tabular operators ──────────────────────────────────────────
+    #endregion Expression level
+    #region Tabular operators
     // NOTE: Kusto.Language class name is FilterOperator, not WhereOperator.
 
     private RelNode? TranslateOperator(QueryOperator op, RelNode input) => op switch
@@ -534,7 +536,8 @@ public sealed class KustoToRelational
         return TranslateScalarExpr(condition);
     }
 
-    // ─── Scalar expressions ─────────────────────────────────────────
+    #endregion Tabular operators
+    #region Scalar expressions
 
     private ScalarExpr TranslateScalar(SyntaxElement? elem)
     {
@@ -819,7 +822,8 @@ public sealed class KustoToRelational
         return new FunctionCall(name, args);
     }
 
-    // ─── Projection helpers ─────────────────────────────────────────
+    #endregion Scalar expressions
+    #region Projection helpers
 
     private ProjectionExpr TranslateProjectionExpr(Expression? expr)
     {
@@ -885,7 +889,8 @@ public sealed class KustoToRelational
         return new SortExpr(scalar, direction);
     }
 
-    // ─── Utilities ──────────────────────────────────────────────────
+    #endregion Projection helpers
+    #region Utilities
     private static Expression? UnwrapSeparated(SyntaxNode node)
     {
         // Kusto.Language wraps list members in SeparatedElement<T>.
@@ -942,3 +947,4 @@ public sealed class KustoToRelational
         return null;
     }
 }
+#endregion Utilities

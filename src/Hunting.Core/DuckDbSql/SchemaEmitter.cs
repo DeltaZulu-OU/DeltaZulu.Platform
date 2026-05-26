@@ -14,7 +14,7 @@ using Schema;
 /// </summary>
 public sealed class SchemaEmitter
 {
-    // ─── Top-level orchestration ─────────────────────────────────────
+    #region Top-level orchestration
 
     /// <summary>
     /// Emit all DDL statements needed to build the database from scratch,
@@ -59,7 +59,8 @@ public sealed class SchemaEmitter
         return statements;
     }
 
-    // ─── CREATE TABLE ───────────────────────────────────────────────
+    #endregion Top-level orchestration
+    #region CREATE TABLE
 
     public string EmitCreateTable(SchemaObjectDef table)
     {
@@ -87,7 +88,8 @@ public sealed class SchemaEmitter
         return sb.ToString();
     }
 
-    // ─── Parser view (internal.v_*) ─────────────────────────────────
+    #endregion CREATE TABLE
+    #region Parser view (internal.v_*)
 
     public string EmitParserView(ParserViewDef view)
     {
@@ -139,7 +141,8 @@ public sealed class SchemaEmitter
         return sb.ToString();
     }
 
-    // ─── Canonical view (main.*) ────────────────────────────────────
+    #endregion Parser view (internal.v_*)
+    #region Canonical view (main.*)
 
     public string EmitCanonicalView(CanonicalViewDef view)
     {
@@ -168,7 +171,8 @@ public sealed class SchemaEmitter
         return sb.ToString();
     }
 
-    // ─── Mapping expression → SQL ───────────────────────────────────
+    #endregion Canonical view (main.*)
+    #region Mapping expression → SQL
 
     private string EmitMappingExpr(ExprDef expr) => expr switch
     {
@@ -235,3 +239,4 @@ public sealed class SchemaEmitter
 
     private static string EscapeSql(string s) => s.Replace("'", "''");
 }
+#endregion Mapping expression → SQL

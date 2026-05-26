@@ -1,6 +1,6 @@
 namespace Hunting.Core.QueryModel;
 
-// ─── Relational nodes (query plan) ─────────────────────────────────────
+#region Relational nodes (query plan)
 
 public abstract record RelNode;
 
@@ -42,7 +42,8 @@ public sealed record LetBindingNode(
     ScalarExpr? ScalarValue,
     RelNode Body) : RelNode;
 
-// ─── Scalar expressions ─────────────────────────────────────────────────
+#endregion Relational nodes (query plan)
+#region Scalar expressions
 
 public abstract record ScalarExpr;
 
@@ -90,7 +91,8 @@ public sealed record WindowScalarExpr(
 /// </summary>
 public sealed record ListScalar(IReadOnlyList<ScalarExpr> Items) : ScalarExpr;
 
-// ─── Window specification ───────────────────────────────────────────────
+#endregion Scalar expressions
+#region Window specification
 
 /// <summary>
 /// SQL window specification: OVER (PARTITION BY ... ORDER BY ... frame).
@@ -128,7 +130,8 @@ public enum WindowBoundKind
     UnboundedFollowing
 }
 
-// ─── Supporting types ───────────────────────────────────────────────────
+#endregion Window specification
+#region Supporting types
 
 public sealed record ProjectionExpr(string Alias, ScalarExpr Expression);
 
@@ -171,3 +174,4 @@ public enum ScalarUnaryOp
 {
     Not, Negate
 }
+#endregion Supporting types

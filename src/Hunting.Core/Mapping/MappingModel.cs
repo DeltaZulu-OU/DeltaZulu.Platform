@@ -2,7 +2,7 @@ namespace Hunting.Core.Mapping;
 
 using Schema;
 
-// ─── Expression tree for parser view mappings ───────────────────────────
+#region Expression tree for parser view mappings
 
 public abstract record ExprDef;
 
@@ -22,7 +22,8 @@ public enum BinaryOp
     Eq, Neq, Lt, Lte, Gt, Gte, And, Or
 }
 
-// ─── Projection and query model ─────────────────────────────────────────
+#endregion Expression tree for parser view mappings
+#region Projection and query model
 
 public sealed record ProjectionDef(string TargetColumn, ExprDef Expression);
 
@@ -31,7 +32,8 @@ public sealed record MappingQueryDef(
     ExprDef? Filter,
     IReadOnlyList<ProjectionDef> Projections);
 
-// ─── Builder helpers for concise mapping authoring ──────────────────────
+#endregion Projection and query model
+#region Builder helpers for concise mapping authoring
 
 public static class MapDsl
 {
@@ -55,3 +57,4 @@ public static class MapDsl
 
     public static BinaryExpr Or(ExprDef left, ExprDef right) => new(left, BinaryOp.Or, right);
 }
+#endregion Builder helpers for concise mapping authoring
