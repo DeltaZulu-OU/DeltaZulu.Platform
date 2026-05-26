@@ -20,8 +20,8 @@ Kusto service functions, external code plugins, cross-cluster references) are li
 **Section 10: Out of Scope** and are not counted in coverage stats.
 
 For the POC, canonical SQL emission uses CTE staging (`__kql_stage_N`) to preserve
-KQL pipe semantics clearly. A future post-translation planner may later collapse,
-inline, retain, or reshape these stages. Planner rewrites are implemented as an optional optimization layer and must preserve semantics. Safety rule: when KQL and DuckDB
+KQL pipe semantics clearly. A post-translation planner can collapse,
+inline, retain, or reshape these stages when enabled. Planner rewrites are implemented as an optional optimization layer and must preserve semantics. Safety rule: when KQL and DuckDB
 differ, the converter must preserve KQL semantics, use a documented helper, emit a visible
 approximation diagnostic, or reject.
 

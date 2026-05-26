@@ -9,7 +9,7 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 ## Project Status
 
 - Phases 0–3 (schema + translation + runtime + Blazor UI vertical slice) are complete.
-- Phase 4 (hardening) is in progress with schema validation automation, generated SQL preview, and second table-family work partially/mostly complete.
+- Phase 4 (hardening) is in progress: schema validation automation, generated SQL preview, and the second table family are complete; monaco-kusto language-service integration remains pending.
 - Phase 5 (Planner v1 + emitter SQL-shape simplification) is complete.
 - Feature parity snapshot (from `docs/kql-syntax-coverage-checklist.md`) now uses an in-scope-only statistics table (out-of-scope constructs excluded):
 
@@ -22,6 +22,8 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 | **Total in-scope constructs** | **319** | **100%** |
 
 MVP-ready parity = `[x] + [m]` = **192 / 319 (60.2%)**.
+
+Current public schema families in code: `main.DeviceProcessEvents` and `main.DeviceNetworkEvents`.
 
 - The repository currently includes:
   - `Hunting.Core`: translation, relational model, planner, catalog/policy, and DuckDB SQL emitter.

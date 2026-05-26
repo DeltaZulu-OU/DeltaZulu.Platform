@@ -250,4 +250,4 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 | DuckDB connection in Blazor Server | `DuckDbConnectionFactory` + `QueryService` serialization | ✅ Implemented |
 ---
 
-*Last updated: 2026-05-25 — Phase 4 now reflects completed 4c/4d; Phase 5 planner and 5a SQL-shape simplification complete*
+*Last updated: 2026-05-26 — documentation aligned to current implementation state (Phase 4: 4a/4c/4d complete, 4b pending; Phase 5 complete).*

@@ -9,8 +9,7 @@ it, and returns bounded results. Users never write SQL, never see internal table
 access raw schemas.
 
 The system provides a Microsoft Sentinel / Defender Advanced Hunting-like experience over local
-or embedded security data. Analysts query logical tables such as `DeviceProcessEvents`,
-`SigninLogs`, or `DeviceNetworkEvents` — not files, staging tables, or DuckDB internals.
+or embedded security data. Analysts query logical tables such as `DeviceProcessEvents` and `DeviceNetworkEvents` — not files, staging tables, or DuckDB internals.
 
 ## Structural Pattern
 
@@ -30,7 +29,7 @@ The two pipelines share only the `ColumnDef`/`CanonicalViewDef` type definitions
 contract surface. The `ApprovedViewCatalog` bridges them by projecting write-side schema
 models into read-side Kusto.Language symbols. Everything else is separate.
 
-This separation means the read path can be optimized independently (future planner), and
+This separation means the read path can be optimized independently (feature-flagged planner now implemented), and
 adding a new parser family only changes the write side.
 
 ## Core Architectural Bets
@@ -190,7 +189,7 @@ src/
   Hunting.Core/     Schema contracts/types, Mapping model, Catalog, Policy, QueryModel, Translation, DuckDbSql
   Hunting.Schema/   DeviceProcessEventsSchema, DeviceNetworkEventsSchema (dedicated schema authoring surface)
   Hunting.Data/     DuckDbConnectionFactory, SchemaApplier, QueryRuntime, MockDataSeeder
-  Hunting.Web/      Blazor Server UI, query editor MVP, schema browser, result grid (Phase 3 complete; Monaco integration in Phase 4)
+  Hunting.Web/      Blazor Server UI, Monaco editor integration, schema browser, result grid, and developer SQL preview
 
 tests/
   Hunting.Tests/    Spike/, Translation/, Emitter/
