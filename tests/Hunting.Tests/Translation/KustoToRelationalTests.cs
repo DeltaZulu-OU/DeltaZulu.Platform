@@ -164,7 +164,6 @@ public sealed class KustoToRelationalTests
         AssertIs<ExtendNode>(ext2.Input);
     }
 
-
     [TestMethod]
     [Description("extract() with 3 args translates as scalar function call")]
     public void Extend_Extract_WithOptionalTypeLiteralOmitted()
@@ -182,8 +181,6 @@ public sealed class KustoToRelationalTests
         Assert.HasCount(3, fn.Args);
     }
 
-
-
     [TestMethod]
     [Description("extract() with verbatim regex string parses and translates")]
     public void Extend_Extract_WithVerbatimRegexString()
@@ -199,6 +196,7 @@ public sealed class KustoToRelationalTests
         Assert.AreEqual("extract", fn.Name, true);
         Assert.HasCount(3, fn.Args);
     }
+
     [TestMethod]
     [Description("extract() with 4 args translates as scalar function call")]
     public void Extend_Extract_WithTypeLiteralProvided()

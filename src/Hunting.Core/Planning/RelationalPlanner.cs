@@ -296,50 +296,53 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 case ColumnRef { Qualifier: null } c when owner.TryGetValue(c.Name, out var q):
                     applied++;
                     return new ColumnRef(c.Name, q);
+
                 case BinaryScalar b:
                     return b with
                     {
                         Left = RewriteScalar(b.Left, owner, ref applied),
                         Right = RewriteScalar(b.Right, owner, ref applied)
                     };
+
                 case UnaryScalar u:
                     return u with { Operand = RewriteScalar(u.Operand, owner, ref applied) };
+
                 case FunctionCall f:
-                {
-                    var args = new ScalarExpr[f.Args.Count];
-                    for (var i = 0; i < f.Args.Count; i++) args[i] = RewriteScalar(f.Args[i], owner, ref applied);
-                    return f with { Args = args };
-                }
+                    {
+                        var args = new ScalarExpr[f.Args.Count];
+                        for (var i = 0; i < f.Args.Count; i++) args[i] = RewriteScalar(f.Args[i], owner, ref applied);
+                        return f with { Args = args };
+                    }
                 case CaseScalar c:
-                {
-                    var branches = new (ScalarExpr When, ScalarExpr Then)[c.Branches.Count];
-                    for (var i = 0; i < c.Branches.Count; i++)
                     {
-                        var b = c.Branches[i];
-                        branches[i] = (RewriteScalar(b.When, owner, ref applied), RewriteScalar(b.Then, owner, ref applied));
+                        var branches = new (ScalarExpr When, ScalarExpr Then)[c.Branches.Count];
+                        for (var i = 0; i < c.Branches.Count; i++)
+                        {
+                            var b = c.Branches[i];
+                            branches[i] = (RewriteScalar(b.When, owner, ref applied), RewriteScalar(b.Then, owner, ref applied));
+                        }
+                        return c with { Branches = branches, Else = RewriteScalar(c.Else, owner, ref applied) };
                     }
-                    return c with { Branches = branches, Else = RewriteScalar(c.Else, owner, ref applied) };
-                }
                 case WindowScalarExpr w:
-                {
-                    var args = new ScalarExpr[w.Args.Count];
-                    for (var i = 0; i < w.Args.Count; i++) args[i] = RewriteScalar(w.Args[i], owner, ref applied);
-                    var part = new ScalarExpr[w.Window.PartitionBy.Count];
-                    for (var i = 0; i < part.Length; i++) part[i] = RewriteScalar(w.Window.PartitionBy[i], owner, ref applied);
-                    var order = new SortExpr[w.Window.OrderBy.Count];
-                    for (var i = 0; i < order.Length; i++)
                     {
-                        var o = w.Window.OrderBy[i];
-                        order[i] = o with { Expression = RewriteScalar(o.Expression, owner, ref applied) };
+                        var args = new ScalarExpr[w.Args.Count];
+                        for (var i = 0; i < w.Args.Count; i++) args[i] = RewriteScalar(w.Args[i], owner, ref applied);
+                        var part = new ScalarExpr[w.Window.PartitionBy.Count];
+                        for (var i = 0; i < part.Length; i++) part[i] = RewriteScalar(w.Window.PartitionBy[i], owner, ref applied);
+                        var order = new SortExpr[w.Window.OrderBy.Count];
+                        for (var i = 0; i < order.Length; i++)
+                        {
+                            var o = w.Window.OrderBy[i];
+                            order[i] = o with { Expression = RewriteScalar(o.Expression, owner, ref applied) };
+                        }
+                        return w with { Args = args, Window = w.Window with { PartitionBy = part, OrderBy = order } };
                     }
-                    return w with { Args = args, Window = w.Window with { PartitionBy = part, OrderBy = order } };
-                }
                 case ListScalar l:
-                {
-                    var items = new ScalarExpr[l.Items.Count];
-                    for (var i = 0; i < l.Items.Count; i++) items[i] = RewriteScalar(l.Items[i], owner, ref applied);
-                    return l with { Items = items };
-                }
+                    {
+                        var items = new ScalarExpr[l.Items.Count];
+                        for (var i = 0; i < l.Items.Count; i++) items[i] = RewriteScalar(l.Items[i], owner, ref applied);
+                        return l with { Items = items };
+                    }
                 default:
                     return expr;
             }

@@ -127,7 +127,6 @@ public sealed class KustoToRelationalEdgeCaseTests
         Assert.IsTrue(diag.HasErrors, "take with negative should produce error");
     }
 
-
     [TestMethod]
     [Description("extract() with too few args produces diagnostic")]
     public void Syntax_Extract_TooFewArguments()

@@ -399,7 +399,6 @@ html, body {
     line-height: 1.6;
 }
 
-
 .hunt-sql-snippet {
     position: relative;
 }
@@ -528,6 +527,7 @@ html, body {
         display: flex;
         justify-content: space-between;
     }
+
 .hunt-timefilter-toolbar {
     display: flex;
     align-items: center;

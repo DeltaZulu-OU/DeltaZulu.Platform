@@ -173,7 +173,6 @@ public sealed class KustoToRelational
         return TranslateStatement(statements[0]);
     }
 
-
     private static bool IsKnownOptionalExtractArgDiagnostic(string? message)
     {
         if (string.IsNullOrWhiteSpace(message))
@@ -436,6 +435,7 @@ public sealed class KustoToRelational
     }
 
     #endregion Statement level
+
     #region Expression level
 
     private RelNode? TranslateExpression(Expression expr) => expr switch
@@ -513,7 +513,9 @@ public sealed class KustoToRelational
     }
 
     #endregion Expression level
+
     #region Tabular operators
+
     // NOTE: Kusto.Language class name is FilterOperator, not WhereOperator.
 
     private RelNode? TranslateOperator(QueryOperator op, RelNode input) => op switch
@@ -739,7 +741,6 @@ public sealed class KustoToRelational
         return new JoinNode(input, right, kind, predicate, JoinFlavor.GenericJoin);
     }
 
-
     private RelNode? TranslateLookup(LookupOperator lookup, RelNode input)
     {
         var right = TranslateExpression(lookup.Expression);
@@ -807,6 +808,7 @@ public sealed class KustoToRelational
     }
 
     #endregion Tabular operators
+
     #region Scalar expressions
 
     private ScalarExpr TranslateScalar(SyntaxElement? elem)
@@ -888,7 +890,6 @@ public sealed class KustoToRelational
         _ => throw new NotSupportedException(
             $"Unsupported literal kind: {lit.Kind}")
     };
-
 
     private static ScalarExpr TranslateTypeOfLiteral(TypeOfLiteralExpression typeOf) =>
         // Keep typeof(T) as a scalar literal so functions that accept an optional
@@ -1121,6 +1122,7 @@ public sealed class KustoToRelational
     }
 
     #endregion Scalar expressions
+
     #region Projection helpers
 
     private ProjectionExpr TranslateProjectionExpr(Expression? expr)
@@ -1188,7 +1190,9 @@ public sealed class KustoToRelational
     }
 
     #endregion Projection helpers
+
     #region Utilities
+
     private static Expression? UnwrapSeparated(SyntaxNode node)
     {
         // Kusto.Language wraps list members in SeparatedElement<T>.
