@@ -346,7 +346,7 @@ approximation diagnostic, or reject.
 - [x] `tobool(x)` → `CAST(x AS BOOLEAN)`
 - [x] `todecimal(x)` → `CAST(x AS DECIMAL)`
 - [x] `toguid(x)` → `CAST(x AS VARCHAR)` (no native GUID)
-- [ ] `todatetime(x)` → `CAST(x AS TIMESTAMP)` — *frequency*
+- [x] `todatetime(x)` → `CAST(x AS TIMESTAMP)`
 - [ ] `totimespan(x)` → interval parsing — *format: Kusto timespan syntax differs from SQL INTERVAL*
 
 ### 4.5 Dynamic / JSON Functions
@@ -410,9 +410,9 @@ approximation diagnostic, or reject.
 
 ### 4.8 Special / Miscellaneous Functions
 
-- [ ] `strcat_array(a, delimiter)` → `array_to_string(a, delimiter)` — *frequency* — *frequency*
-- [ ] `format_bytes(n)` — human-readable byte size — *frequency* — *frequency*
-- [ ] `format_timespan(ts, format)` — timespan formatting — *format: needs specifier table* — *format: needs specifier table*
+- [ ] `strcat_array(a, delimiter)` → `array_to_string(a, delimiter)` — *frequency*
+- [ ] `format_bytes(n)` — human-readable byte size — *frequency*
+- [ ] `format_timespan(ts, format)` — timespan formatting — *format: needs specifier table*
 
 ---
 
@@ -463,8 +463,8 @@ approximation diagnostic, or reject.
 - [x] `datetime` ↔ `TIMESTAMP`
 - [x] `timespan` ↔ `BIGINT` (microseconds) — needs arithmetic translation
 - [x] `dynamic` ↔ `JSON` — member access requires special emission
-- [ ] `decimal` ↔ `DECIMAL` or `DOUBLE` — *frequency*
-- [ ] `guid` ↔ `VARCHAR` — *frequency*
+- [x] `decimal` ↔ `DECIMAL` or `DOUBLE`
+- [x] `guid` ↔ `VARCHAR`
 
 ### 6.2 Null Handling
 
@@ -489,23 +489,25 @@ approximation diagnostic, or reject.
 
 | Status | Count | Meaning |
 |--------|------:|---------|
-| `[x]` MVP | 190 | Direct translation to DuckDB SQL |
+| `[x]` MVP | 200 | Direct translation to DuckDB SQL |
 | `[m]` Metadata | 2 | Side-channel only, no SQL emitted |
 | `[B]` Blocked | 3 | Deliberately rejected to prevent silent semantic change |
-| `[ ]` Deferred | 124 | Post-MVP, reason annotated |
+| `[ ]` Deferred | 114 | Post-MVP, reason annotated |
 | **In scope** | **319** | |
 | N/A (out of scope) | N/A | Listed in Section 10 (not tracked as checklist rows) |
 
-MVP-ready = `[x]` + `[m]` = **192 / 319 (60.2%)**
+MVP-ready = `[x]` + `[m]` = **202 / 319 (63.3%)**
 
 ### Deferred by reason
 
 | Reason | Count | Meaning |
 |--------|------:|---------|
-| *frequency* | 48 | Valid translation exists but rare in hunting queries |
-| *complexity* | 1 | Significant implementation effort or no DuckDB equivalent |
-| *uncategorized* | 75 | Deferred without an explicit reason tag |
-| **Total deferred** | **124** | |
+| *frequency* | 39 | Valid translation exists but rare in hunting queries |
+| *complexity* | 49 | Significant implementation effort or no DuckDB equivalent |
+| *dependency* | 8 | Depends on another deferred capability |
+| *format* | 4 | Requires format/specifier translation tables |
+| *uncategorized* | 14 | Deferred without an explicit reason tag |
+| **Total deferred** | **114** | |
 
 ### Blocked items (3 total)
 
@@ -529,9 +531,7 @@ Joins `leftsemi` and `leftanti` are MVP because they are essential for
 hunting exclusion patterns ("find logins from IPs not in the allowlist").
 DuckDB supports `SEMI JOIN` and `ANTI JOIN` natively.
 
-`union` (simple explicit tables) is MVP because DuckDB `UNION ALL BY NAME`
-handles column alignment natively, which is the most common cross-table
-hunting pattern.
+`union` remains deferred: DuckDB can align columns (`UNION ALL BY NAME`), but translator/cross-source binding semantics are not yet implemented in the current code path.
 
 ---
 
@@ -599,4 +599,4 @@ commands. These operate on Kusto cluster state, not on data.
 
 ---
 
-*Last updated: 2026-05-26 — Added sample-distinct, percentile, trim_start/trim_end, base64 encode/decode, and parse_path support*
+*Last updated: 2026-05-26 — Coverage checklist re-validated against current translator/emitter capabilities (including sample-distinct, percentile, trim_start/trim_end, base64 encode/decode, and parse_path).*

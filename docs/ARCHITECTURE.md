@@ -277,29 +277,21 @@ Full register in `kql-syntax-coverage-checklist.md` Section 9. Significant items
 - **Detection-as-code** — saved queries, scheduled hunts, alerting.
 - **Post-translation planner** — logical query shaping once primitive translation and emission are proven (see below).
 
-### Future Challenge: Post-Translation Planner
+### Planner Stage (Implemented)
 
-The POC uses a direct two-stage path: `Kusto AST → RelNode → DuckDB SQL`. This is correct
-and sufficient for the first implementation.
-
-A future planner would sit between translation and emission:
+The runtime path now includes an optional logical planner stage between translation and SQL
+emission:
 
 ```
 Kusto AST → Primitive RelNode → Planned RelNode → DuckDB SQL
 ```
 
-It would be a logical rewriting stage only — not a physical optimizer. DuckDB remains
-responsible for physical optimization and execution. Candidate responsibilities: projection
-pruning, predicate pushdown, CTE stage collapse, JSON expression deduplication, aggregate
-normalization, join-side pruning.
-
-**Trigger criterion:** planner work begins only after at least three concrete SQL-quality
-problems are captured as reproducible examples with original KQL, primitive RelNode, emitted
-SQL, observed issue, proposed planned shape, and a semantic equivalence test.
-
-Do not add `RelationalPlanner`, `Planning/`, `Plan` diagnostic phase, or planner test seam
-before the POC works end-to-end.
+`RelationalPlanner` performs semantics-preserving rewrites only (no physical optimization).
+DuckDB remains responsible for physical planning/execution. Current passes focus on SQL-shape
+quality and dead-expression cleanup (for example: projection pruning, safe filter pushdown,
+filter-extend inlining, and common scalar hoisting), with emitter-side stage simplifications
+applied after planning.
 
 ---
 
-*Last updated: 2026-05-25 — Phases 0–3 complete; Phase 4 hardening in progress*
+*Last updated: 2026-05-26 — Documentation aligned to current implementation state (Phase 4: schema automation + SQL preview + second table family complete; monaco-kusto pending).*

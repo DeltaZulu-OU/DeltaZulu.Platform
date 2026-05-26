@@ -108,7 +108,7 @@ QueryResult`. Single connection through `DuckDbConnectionFactory`. Returns `Quer
 (success: columns + rows + SQL) or `QueryResult` (failure: diagnostics).
 
 **Exit criteria met:** vertical slice query executes end-to-end, MSTest suites pass,
-`EndToEndPipelineTests` covers 13 real hunting scenarios against mock data.
+`EndToEndPipelineTests` covers 17 real hunting scenarios against mock data.
 
 ---
 
@@ -147,7 +147,7 @@ runs end-to-end in the browser.
 
 **Objective:** Automated validation, second table family, integration polish.
 
-### 4a. Schema validation automation ✅ (partial)
+### 4a. Schema validation automation ✅
 `SchemaPipelineTests` (22 tests): DDL generation, DESCRIBE column/type validation, mock data
 flow, extraction correctness, hunting scenarios. Runs against live DuckDB — requires
 `dotnet restore`.
@@ -178,7 +178,7 @@ mode shows generated SQL.
 | Phase 1 | ✅ Complete | 7 days | |
 | Phase 2 | ✅ Complete | 12 days | |
 | Phase 3 | ✅ Complete | 5–7 days | Gate satisfied; UI vertical slice working |
-| Phase 4 | ⏳ In progress | 3–5 days | 4a partial complete; 4c/4d complete; 4b pending |
+| Phase 4 | ⏳ In progress | 3–5 days | 4a complete; 4c/4d complete; 4b pending |
 | **Remaining** | | **2–4 days** | Monaco-Kusto integration + polish |
 
 ---

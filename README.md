@@ -11,17 +11,18 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 - Phases 0–3 (schema + translation + runtime + Blazor UI vertical slice) are complete.
 - Phase 4 (hardening) is in progress: schema validation automation, generated SQL preview, and the second table family are complete; monaco-kusto language-service integration remains pending.
 - Phase 5 (Planner v1 + emitter SQL-shape simplification) is complete.
+- End-to-end pipeline coverage currently includes 17 hunting scenarios in `EndToEndPipelineTests`.
 - Feature parity snapshot (from `docs/kql-syntax-coverage-checklist.md`) now uses an in-scope-only statistics table (out-of-scope constructs excluded):
 
 | Feature parity status (in scope only) | Count | Percent of in-scope total |
 |---|---:|---:|
-| MVP translated (`[x]`) | 191 | 59.9% |
+| MVP translated (`[x]`) | 200 | 62.7% |
 | Metadata-only (`[m]`) | 2 | 0.6% |
 | Blocked for semantic safety (`[B]`) | 3 | 0.9% |
-| Deferred (`[ ]`) | 123 | 38.6% |
+| Deferred (`[ ]`) | 114 | 35.7% |
 | **Total in-scope constructs** | **319** | **100%** |
 
-MVP-ready parity = `[x] + [m]` = **193 / 319 (60.5%)**.
+MVP-ready parity = `[x] + [m]` = **202 / 319 (63.3%)**.
 
 Current public schema families in code: `main.DeviceProcessEvents` and `main.DeviceNetworkEvents`.
 
@@ -97,3 +98,6 @@ From the repository root:
 ## License
 
 This project is licensed under the terms in [`LICENSE`](LICENSE).
+
+
+*Last updated: 2026-05-26 — status aligned with roadmap/architecture (Phase 4 partial with 4b pending; Phase 5 complete).*

@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 ## Purpose
 
@@ -36,7 +36,7 @@ All paths relative to repository root.
 
 | Document | Path | When to read |
 |----------|------|-------------|
-| **This file** | `CLAUDE.md` | Every session, first |
+| **This file** | `AGENTS.md` | Every session, first |
 | Architecture | `docs/ARCHITECTURE.md` | System design, components, divergences |
 | Translation Spec | `docs/KQL-to-DuckDB-translation-spec.md` | Authoritative reference for every KQL construct (796 KB, 21 sections + 12 appendices) |
 | KQL Checklist | `docs/kql-syntax-coverage-checklist.md` | Implementation status (319 in-scope constructs) |
@@ -91,7 +91,7 @@ Requires `dotnet restore`. Organized by concern:
 
 ```
 Hunting.sln
-CLAUDE.md
+AGENTS.md
 
 src/
   Hunting.Core/
