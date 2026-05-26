@@ -441,8 +441,6 @@ public sealed class KustoToRelationalTests
         Assert.AreEqual(JoinKind.LeftOuter, join.Kind);
     }
 
-
-
     [TestMethod]
     [Description("lookup without on clause is rejected with diagnostic")]
     public void Lookup_WithoutOnClause_IsRejected()
@@ -538,7 +536,6 @@ public sealed class KustoToRelationalTests
             "Two query expressions should be rejected rather than silently dropping the first");
         Assert.IsNull(result);
     }
-
 
     // ─── Spec-derived: sort default direction ────────────────────
 
@@ -871,7 +868,7 @@ public sealed class KustoToRelationalTests
         var (result, diag) = Translate(
             """
             DeviceProcessEvents
-            | where FileName == 
+            | where FileName ==
             .drop table DeviceProcessEvents
             """);
 

@@ -250,8 +250,6 @@ public sealed partial class DuckDbQueryEmitterTests
         AssertSqlContains(sql, "power(10, 2) AS e10");
     }
 
-
-
     [TestMethod]
     [Description("bag_has_key and array_slice mappings emit exact SQL shape")]
     public void Emit_Func_BagAndArrayMappings()
@@ -267,7 +265,6 @@ public sealed partial class DuckDbQueryEmitterTests
         AssertSqlContains(sql, "(json_extract(AdditionalFields, concat('$.', 'User')) IS NOT NULL) AS hask");
         AssertSqlContains(sql, "list_slice(Tags, (0) + 1, (2) - (0)) AS slice");
     }
-
 
     // ─── Window functions ────────────────────────────────────────
 
@@ -538,9 +535,9 @@ public sealed partial class DuckDbQueryEmitterTests
     [TestMethod]
     [Description("Unknown function names are rejected")]
     public void Func_Unknown_ThrowsNotSupported() => Assert.ThrowsExactly<NotSupportedException>(() =>
-                                                                  _emitter.Emit(new ExtendNode(
-                                                                      new ScanNode("DeviceProcessEvents"),
-                                                                      [new ProjectionExpr("r", new FunctionCall("custom_function_xyz",
+                                                                      _emitter.Emit(new ExtendNode(
+                                                                          new ScanNode("DeviceProcessEvents"),
+                                                                          [new ProjectionExpr("r", new FunctionCall("custom_function_xyz",
                     [new ColumnRef("FileName"), new LiteralScalar(42, LiteralKind.Int)]))])));
 
     [TestMethod]
