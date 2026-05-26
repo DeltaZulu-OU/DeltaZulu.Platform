@@ -60,7 +60,7 @@ public sealed class DuckDbTimestampSpecTests
         }
 
         // DuckDB INTERVAL / duration types may surface as TimeSpan (or DuckDBInterval elsewhere).
-        if (v is System.TimeSpan ts)
+        if (v is TimeSpan ts)
         {
             // If whole number of days, express as 'N days' to match DuckDB textual form used in tests.
             if (ts.Ticks % System.TimeSpan.TicksPerDay == 0)

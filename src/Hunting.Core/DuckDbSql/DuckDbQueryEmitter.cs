@@ -165,7 +165,7 @@ public sealed partial class DuckDbQueryEmitter
             terminalLimit = terminalLimit with { Source = finalSource };
         }
         TryCollapseProjectedLookupJoin(ref finalSource, ref columns, ref terminalTopK, ref terminalOrder, ref terminalLimit);
-        if (TryRenderDerivedComputedScope(finalSource, columns, terminalTopK, terminalOrder, terminalLimit, out var derivedSql))
+        if (TryRenderDerivedComputedScope(columns, terminalTopK, terminalOrder, terminalLimit, out var derivedSql))
         {
             return derivedSql;
         }
@@ -217,7 +217,6 @@ public sealed partial class DuckDbQueryEmitter
     }
 
     private bool TryRenderDerivedComputedScope(
-        string finalSource,
         string? columns,
         TerminalTopK? terminalTopK,
         TerminalOrder? terminalOrder,
@@ -1677,10 +1676,9 @@ public sealed partial class DuckDbQueryEmitter
     private static string EmitDatetimeAdd(IReadOnlyList<ScalarExpr> rawArgs, List<string> args)
     {
         // Try to extract the part name from the first argument (should be a string literal)
-        var unit = "seconds"; // fallback
         if (rawArgs.Count >= 1 && rawArgs[0] is LiteralScalar { Value: string partName })
         {
-            unit = partName.ToLowerInvariant() switch
+            var unit = partName.ToLowerInvariant() switch
             {
                 "year" => "years",
                 "quarter" => "months", // 3 months — multiply below
@@ -1695,7 +1693,7 @@ public sealed partial class DuckDbQueryEmitter
                 _ => partName + "s"
             };
 
-            var multiplier = partName.ToLowerInvariant() == "quarter" ? $"(({args[1]}) * 3)" : args[1];
+            var multiplier = partName.Equals("quarter", StringComparison.InvariantCultureIgnoreCase) ? $"(({args[1]}) * 3)" : args[1];
             return $"({args[2]} + ({multiplier}) * INTERVAL '1 {unit}')";
         }
 

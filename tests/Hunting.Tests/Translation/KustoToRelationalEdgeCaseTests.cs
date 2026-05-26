@@ -65,7 +65,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Unterminated string literal produces parse error")]
     public void Syntax_UnterminatedString()
     {
-        var (result, diag) = Translate("""DeviceProcessEvents | where FileName == "unterminated""");
+        var (_, diag) = Translate("""DeviceProcessEvents | where FileName == "unterminated""");
         Assert.IsTrue(diag.HasErrors, "Unterminated string should produce error");
     }
 
@@ -73,7 +73,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Missing pipe operator between clauses")]
     public void Syntax_MissingPipe()
     {
-        var (result, diag) = Translate(
+        var (_, diag) = Translate(
             """DeviceProcessEvents where FileName == "cmd.exe" """);
         Assert.IsTrue(diag.HasErrors, "Missing pipe should produce error");
     }
@@ -82,7 +82,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Double pipe operator")]
     public void Syntax_DoublePipe()
     {
-        var (result, diag) = Translate("DeviceProcessEvents || take 10");
+        var (_, diag) = Translate("DeviceProcessEvents || take 10");
         Assert.IsTrue(diag.HasErrors, "Double pipe should produce error");
     }
 
@@ -90,7 +90,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Trailing pipe with no operator")]
     public void Syntax_TrailingPipe()
     {
-        var (result, diag) = Translate("DeviceProcessEvents | take 10 |");
+        var (_, diag) = Translate("DeviceProcessEvents | take 10 |");
         Assert.IsTrue(diag.HasErrors, "Trailing pipe should produce error");
     }
 
@@ -98,7 +98,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Leading pipe with no table")]
     public void Syntax_LeadingPipe()
     {
-        var (result, diag) = Translate("| take 10");
+        var (_, diag) = Translate("| take 10");
         Assert.IsTrue(diag.HasErrors, "Leading pipe should produce error");
     }
 
@@ -106,7 +106,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Mismatched parentheses")]
     public void Syntax_MismatchedParens()
     {
-        var (result, diag) = Translate(
+        var (_, diag) = Translate(
             """DeviceProcessEvents | where (FileName == "cmd.exe" """);
         Assert.IsTrue(diag.HasErrors, "Mismatched parens should produce error");
     }
@@ -115,7 +115,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("take with non-numeric argument")]
     public void Syntax_TakeNonNumeric()
     {
-        var (result, diag) = Translate("""DeviceProcessEvents | take "ten" """);
+        var (_, diag) = Translate("""DeviceProcessEvents | take "ten" """);
         Assert.IsTrue(diag.HasErrors, "take with string should produce error");
     }
 
@@ -123,7 +123,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("take with negative number")]
     public void Syntax_TakeNegative()
     {
-        var (result, diag) = Translate("DeviceProcessEvents | take -5");
+        var (_, diag) = Translate("DeviceProcessEvents | take -5");
         Assert.IsTrue(diag.HasErrors, "take with negative should produce error");
     }
 
@@ -220,7 +220,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Multi-line block comment spanning operators")]
     public void Comment_MultiLineBlock()
     {
-        var (result, diag) = Translate(
+        var (_, diag) = Translate(
             """
             DeviceProcessEvents
             /*
@@ -249,7 +249,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Access to internal.* table rejected")]
     public void Policy_InternalTableAccess()
     {
-        var (result, diag) = Translate("internal.v_process_sysmon_create | take 10");
+        var (_, diag) = Translate("internal.v_process_sysmon_create | take 10");
         Assert.IsTrue(diag.HasErrors);
     }
 
@@ -281,7 +281,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("innerunique join explicitly blocked")]
     public void Policy_InneruniqueJoinBlocked()
     {
-        var (result, diag) = Translate(
+        var (_, diag) = Translate(
             "DeviceProcessEvents | join kind=innerunique (DeviceProcessEvents | take 5) on DeviceName");
         Assert.IsTrue(diag.HasErrors);
     }
@@ -369,7 +369,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Reference to nonexistent column in approved table")]
     public void Column_Nonexistent()
     {
-        var (result, diag) = Translate(
+        var (_, diag) = Translate(
             """DeviceProcessEvents | where FakeColumn == "test" """);
         // Kusto.Language semantic analysis should catch this
         Assert.IsTrue(diag.HasErrors,
@@ -380,7 +380,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Type mismatch in comparison (string == int) caught by analyzer")]
     public void Column_TypeMismatch()
     {
-        var (result, diag) = Translate(
+        var (_, diag) = Translate(
             "DeviceProcessEvents | where FileName == 42");
         // Kusto.Language may or may not flag this — depends on implicit conversion
         // At minimum it should not crash
@@ -429,7 +429,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("project with zero columns should error or produce valid SQL")]
     public void Operator_ProjectEmpty()
     {
-        var (result, diag) = Translate("DeviceProcessEvents | project");
+        var (_, diag) = Translate("DeviceProcessEvents | project");
         // Kusto parser should reject this
         Assert.IsTrue(diag.HasErrors, "project with no columns should error");
     }
@@ -438,7 +438,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("summarize with no aggregation function")]
     public void Operator_SummarizeNoAgg()
     {
-        var (result, diag) = Translate("DeviceProcessEvents | summarize by FileName");
+        var (_, diag) = Translate("DeviceProcessEvents | summarize by FileName");
         // Valid KQL — equivalent to "distinct FileName" in Kusto
         Assert.IsNotNull(diag, "Should not crash");
     }
@@ -525,7 +525,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Adversarial_LongStringLiteral()
     {
         var longValue = new string('X', 10_000);
-        var (result, diag) = Translate(
+        var (_, diag) = Translate(
             $"DeviceProcessEvents | where FileName == \"{longValue}\" | take 1");
         Assert.IsNotNull(diag, "Should not crash on long string");
     }

@@ -307,7 +307,7 @@ public sealed class KustoToRelationalTests
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var ext = AssertIs<ExtendNode>(result);
         Assert.AreEqual("prev_ts", ext.Extensions[0].Alias);
-        Assert.IsInstanceOfType(ext.Extensions[0].Expression, typeof(WindowScalarExpr));
+        Assert.IsInstanceOfType<WindowScalarExpr>(ext.Extensions[0].Expression);
     }
 
     [TestMethod]
@@ -322,7 +322,7 @@ public sealed class KustoToRelationalTests
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var ext = AssertIs<ExtendNode>(result);
-        Assert.IsInstanceOfType(ext.Extensions[0].Expression, typeof(WindowScalarExpr));
+        Assert.IsInstanceOfType<WindowScalarExpr>(ext.Extensions[0].Expression);
     }
 
     [TestMethod]
@@ -619,7 +619,7 @@ public sealed class KustoToRelationalTests
     [Description("Unapproved table name produces parse error")]
     public void Parse_UnapprovedTable()
     {
-        var (result, diag) = Translate("internal.secret_table | take 10");
+        var (_, diag) = Translate("internal.secret_table | take 10");
         Assert.IsTrue(diag.HasErrors);
         AssertPolicyOrParseError(diag);
     }

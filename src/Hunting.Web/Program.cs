@@ -13,7 +13,7 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddMudServices();
 
 // Schema catalog — singleton, shared across all Blazor circuits
-builder.Services.AddSingleton<ApprovedViewCatalog>(sp => {
+builder.Services.AddSingleton(sp => {
     var catalog = new ApprovedViewCatalog();
     catalog.Register(DeviceProcessEventsSchema.View);
     catalog.Register(DeviceNetworkEventsSchema.View);
@@ -21,16 +21,16 @@ builder.Services.AddSingleton<ApprovedViewCatalog>(sp => {
 });
 
 // DuckDB connection factory — singleton MVP model
-builder.Services.AddSingleton<DuckDbConnectionFactory>(sp =>
+builder.Services.AddSingleton(sp =>
     new DuckDbConnectionFactory("DataSource=hunting.db"));
 
 // Schema applier — used at startup to bootstrap schema
 builder.Services.AddSingleton<SchemaApplier>();
 
 // Query runtime — singleton; single connection is serialized by the factory lock
-builder.Services.AddSingleton<QueryRuntime>(sp => {
-    var plannerEnabled = builder.Configuration.GetValue<bool>("Planner:Enabled", false);
-    var plannerMaxIterations = builder.Configuration.GetValue<int>("Planner:MaxIterations", 3);
+builder.Services.AddSingleton(sp => {
+    var plannerEnabled = builder.Configuration.GetValue("Planner:Enabled", false);
+    var plannerMaxIterations = builder.Configuration.GetValue("Planner:MaxIterations", 3);
 
     return new QueryRuntime(
         sp.GetRequiredService<ApprovedViewCatalog>(),

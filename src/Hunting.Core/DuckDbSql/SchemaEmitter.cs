@@ -26,11 +26,12 @@ public sealed class SchemaEmitter
         IEnumerable<ParserViewDef> parserViews,
         IEnumerable<CanonicalViewDef> canonicalViews)
     {
-        var statements = new List<string>();
-
-        // Schemas
-        statements.Add("CREATE SCHEMA IF NOT EXISTS raw");
-        statements.Add("CREATE SCHEMA IF NOT EXISTS internal");
+        var statements = new List<string>
+        {
+            // Schemas
+            "CREATE SCHEMA IF NOT EXISTS raw",
+            "CREATE SCHEMA IF NOT EXISTS internal"
+        };
 
         // Raw tables
         foreach (var t in rawTables)

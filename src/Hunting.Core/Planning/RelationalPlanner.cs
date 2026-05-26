@@ -204,7 +204,11 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                     projections[i] = proj with { Expression = rewrittenExpr };
                 }
             }
-            if (ReferenceEquals(input, p.Input) && projections is null) return p;
+            if (ReferenceEquals(input, p.Input) && projections is null)
+            {
+                return p;
+            }
+
             return p with { Input = input, Projections = projections ?? p.Projections };
         }
 
@@ -230,7 +234,11 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                     sorts[i] = sort with { Expression = rewrittenExpr };
                 }
             }
-            if (ReferenceEquals(input, s.Input) && sorts is null) return s;
+            if (ReferenceEquals(input, s.Input) && sorts is null)
+            {
+                return s;
+            }
+
             return s with { Input = input, Sorts = sorts ?? s.Sorts };
         }
 
@@ -249,7 +257,11 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                     ext[i] = expr with { Expression = rewrittenExpr };
                 }
             }
-            if (ReferenceEquals(input, e.Input) && ext is null) return e;
+            if (ReferenceEquals(input, e.Input) && ext is null)
+            {
+                return e;
+            }
+
             return e with { Input = input, Extensions = ext ?? e.Extensions };
         }
 
@@ -280,7 +292,11 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 }
             }
 
-            if (ReferenceEquals(input, a.Input) && groupBy is null && aggregates is null) return a;
+            if (ReferenceEquals(input, a.Input) && groupBy is null && aggregates is null)
+            {
+                return a;
+            }
+
             return a with
             {
                 Input = input,
@@ -310,7 +326,11 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 case FunctionCall f:
                     {
                         var args = new ScalarExpr[f.Args.Count];
-                        for (var i = 0; i < f.Args.Count; i++) args[i] = RewriteScalar(f.Args[i], owner, ref applied);
+                        for (var i = 0; i < f.Args.Count; i++)
+                        {
+                            args[i] = RewriteScalar(f.Args[i], owner, ref applied);
+                        }
+
                         return f with { Args = args };
                     }
                 case CaseScalar c:
@@ -326,9 +346,17 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 case WindowScalarExpr w:
                     {
                         var args = new ScalarExpr[w.Args.Count];
-                        for (var i = 0; i < w.Args.Count; i++) args[i] = RewriteScalar(w.Args[i], owner, ref applied);
+                        for (var i = 0; i < w.Args.Count; i++)
+                        {
+                            args[i] = RewriteScalar(w.Args[i], owner, ref applied);
+                        }
+
                         var part = new ScalarExpr[w.Window.PartitionBy.Count];
-                        for (var i = 0; i < part.Length; i++) part[i] = RewriteScalar(w.Window.PartitionBy[i], owner, ref applied);
+                        for (var i = 0; i < part.Length; i++)
+                        {
+                            part[i] = RewriteScalar(w.Window.PartitionBy[i], owner, ref applied);
+                        }
+
                         var order = new SortExpr[w.Window.OrderBy.Count];
                         for (var i = 0; i < order.Length; i++)
                         {
@@ -340,7 +368,11 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 case ListScalar l:
                     {
                         var items = new ScalarExpr[l.Items.Count];
-                        for (var i = 0; i < l.Items.Count; i++) items[i] = RewriteScalar(l.Items[i], owner, ref applied);
+                        for (var i = 0; i < l.Items.Count; i++)
+                        {
+                            items[i] = RewriteScalar(l.Items[i], owner, ref applied);
+                        }
+
                         return l with { Items = items };
                     }
                 default:
@@ -359,11 +391,22 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             var right = OutputNames(join.Right);
             var keyCols = JoinKeyRightNames(join.OnPredicate);
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var c in left) map[c] = JoinSide.Left;
+            foreach (var c in left)
+            {
+                map[c] = JoinSide.Left;
+            }
+
             foreach (var c in right)
             {
-                if (keyCols.Contains(c)) continue;
-                if (!map.ContainsKey(c)) map[c] = JoinSide.Right;
+                if (keyCols.Contains(c))
+                {
+                    continue;
+                }
+
+                if (!map.ContainsKey(c))
+                {
+                    map[c] = JoinSide.Right;
+                }
             }
             return map;
         }
@@ -388,7 +431,10 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             void Visit(ScalarExpr e)
             {
                 if (e is BinaryScalar b && b.Op == ScalarBinaryOp.And) { Visit(b.Left); Visit(b.Right); return; }
-                if (e is BinaryScalar eq && eq.Op == ScalarBinaryOp.Eq && eq.Right is ColumnRef { Qualifier: JoinSide.Right } rc) keys.Add(rc.Name);
+                if (e is BinaryScalar eq && eq.Op == ScalarBinaryOp.Eq && eq.Right is ColumnRef { Qualifier: JoinSide.Right } rc)
+                {
+                    keys.Add(rc.Name);
+                }
             }
             Visit(pred);
             return keys;
@@ -507,13 +553,25 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
 
                 case SortNode s:
                     var sortReq = new HashSet<string>(required, StringComparer.OrdinalIgnoreCase);
-                    foreach (var se in s.Sorts) CollectColumnRefs(se.Expression, sortReq);
+                    foreach (var se in s.Sorts)
+                    {
+                        CollectColumnRefs(se.Expression, sortReq);
+                    }
+
                     return s with { Input = RewriteNode(s.Input, sortReq, ref attempted, ref applied) };
 
                 case AggregateNode a:
                     var aggReq = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    foreach (var g in a.GroupBy) CollectColumnRefs(g, aggReq);
-                    foreach (var ag in a.Aggregates) CollectColumnRefs(ag.Expression, aggReq);
+                    foreach (var g in a.GroupBy)
+                    {
+                        CollectColumnRefs(g, aggReq);
+                    }
+
+                    foreach (var ag in a.Aggregates)
+                    {
+                        CollectColumnRefs(ag.Expression, aggReq);
+                    }
+
                     return a with { Input = RewriteNode(a.Input, aggReq, ref attempted, ref applied) };
 
                 case ExtendNode e:
@@ -545,7 +603,11 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
 
                 case DistinctNode d:
                     var dreq = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    foreach (var pr in d.Projections) CollectColumnRefs(pr.Expression, dreq);
+                    foreach (var pr in d.Projections)
+                    {
+                        CollectColumnRefs(pr.Expression, dreq);
+                    }
+
                     return d with { Input = RewriteNode(d.Input, dreq, ref attempted, ref applied) };
 
                 case LimitNode l:
@@ -852,7 +914,11 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 break;
 
             case FunctionCall f:
-                foreach (var a in f.Args) CollectColumnRefs(a, sink);
+                foreach (var a in f.Args)
+                {
+                    CollectColumnRefs(a, sink);
+                }
+
                 break;
 
             case CaseScalar c:
@@ -865,13 +931,29 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 break;
 
             case WindowScalarExpr w:
-                foreach (var a in w.Args) CollectColumnRefs(a, sink);
-                foreach (var p in w.Window.PartitionBy) CollectColumnRefs(p, sink);
-                foreach (var o in w.Window.OrderBy) CollectColumnRefs(o.Expression, sink);
+                foreach (var a in w.Args)
+                {
+                    CollectColumnRefs(a, sink);
+                }
+
+                foreach (var p in w.Window.PartitionBy)
+                {
+                    CollectColumnRefs(p, sink);
+                }
+
+                foreach (var o in w.Window.OrderBy)
+                {
+                    CollectColumnRefs(o.Expression, sink);
+                }
+
                 break;
 
             case ListScalar l:
-                foreach (var i in l.Items) CollectColumnRefs(i, sink);
+                foreach (var i in l.Items)
+                {
+                    CollectColumnRefs(i, sink);
+                }
+
                 break;
         }
     }

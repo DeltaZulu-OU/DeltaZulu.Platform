@@ -26,12 +26,13 @@ public sealed class GlobalStateSpikeTests
         _globals = catalog.BuildGlobalState();
     }
 
-    private static IReadOnlyList<Kusto.Language.Diagnostic> Analyze(string kql)
+    private static IReadOnlyList<Diagnostic> Analyze(string kql)
     {
         var code = KustoCode.ParseAndAnalyze(kql, _globals);
         return code.GetDiagnostics()
             .Where(d => d.Severity == DiagnosticSeverity.Error)
-            .ToList();
+            .ToList()
+            .AsReadOnly();
     }
 
     [TestMethod]
@@ -110,6 +111,6 @@ public sealed class GlobalStateSpikeTests
         }
     }
 
-    private static string FormatErrors(IReadOnlyList<Kusto.Language.Diagnostic> errors)
+    private static string FormatErrors(IReadOnlyList<Diagnostic> errors)
         => string.Join("\n", errors.Select(e => $"  [{e.Code}] {e.Message} (pos {e.Start}..{e.End})"));
 }
