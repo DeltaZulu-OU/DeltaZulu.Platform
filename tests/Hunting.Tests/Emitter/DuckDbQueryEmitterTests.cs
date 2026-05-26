@@ -963,6 +963,192 @@ public sealed partial class DuckDbQueryEmitterTests
     }
 
     [TestMethod]
+    [Description("where|extend|where|extend|project|take keeps one computed-column scope and avoids per-operator staging")]
+    public void WhereExtendWhereExtendProjectTake_OptimizedMode_UsesSingleComputedColumnScope()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: false);
+        var node = new LimitNode(
+            new ProjectNode(
+                new ExtendNode(
+                    new FilterNode(
+                        new ExtendNode(
+                            new FilterNode(
+                                new ScanNode("DeviceProcessEvents"),
+                                new BinaryScalar(
+                                    new FunctionCall("tolower", [new ColumnRef("FileName")]),
+                                    ScalarBinaryOp.Eq,
+                                    new FunctionCall("tolower", [new LiteralScalar("powershell.exe", LiteralKind.String)]))),
+                            [
+                                new ProjectionExpr(
+                                    "EncodedPayload",
+                                    new FunctionCall(
+                                        "coalesce",
+                                        [
+                                            new FunctionCall(
+                                                "extract",
+                                                [
+                                                    new LiteralScalar(@"-enc\s+([^\s]+)", LiteralKind.String),
+                                                    new LiteralScalar(1, LiteralKind.Int),
+                                                    new ColumnRef("ProcessCommandLine")
+                                                ]),
+                                            new LiteralScalar(string.Empty, LiteralKind.String)
+                                        ]))
+                            ]),
+                        new FunctionCall("isnotempty", [new ColumnRef("EncodedPayload")])),
+                    [
+                        new ProjectionExpr("DecodedPayload", new FunctionCall("base64_decode_tostring", [new ColumnRef("EncodedPayload")]))
+                    ]),
+                [
+                    new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
+                    new ProjectionExpr("DeviceName", new ColumnRef("DeviceName")),
+                    new ProjectionExpr("AccountName", new ColumnRef("AccountName")),
+                    new ProjectionExpr("ProcessCommandLine", new ColumnRef("ProcessCommandLine")),
+                    new ProjectionExpr("DecodedPayload", new ColumnRef("DecodedPayload"))
+                ]),
+            25);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.DoesNotContain("WITH __kql_stage_", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("FROM (SELECT *,", norm, StringComparison.Ordinal);
+        Assert.Contains(") AS s WHERE", norm, StringComparison.Ordinal);
+        Assert.Contains("regexp_extract(ProcessCommandLine, '-enc\\s+([^\\s]+)', CAST(1 AS INTEGER))", norm, StringComparison.Ordinal);
+        Assert.Contains("AS EncodedPayload", norm, StringComparison.Ordinal);
+        Assert.Contains("CAST(from_base64(EncodedPayload) AS VARCHAR) AS DecodedPayload", norm, StringComparison.Ordinal);
+        Assert.Contains("lower(FileName) = lower('powershell.exe')", norm, StringComparison.Ordinal);
+        Assert.Contains("EncodedPayload IS NOT NULL", norm, StringComparison.Ordinal);
+        Assert.MatchesRegex(@"EncodedPayload\s*(<>|!=)\s*''", norm);
+        Assert.DoesNotContain("__kql_stage_2", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("__kql_stage_3", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.MatchesRegex(@"\bLIMIT\s+25\s*;?\s*$", norm);
+    }
+
+    [TestMethod]
+    [Description("where|extend collapses the pre-extend filter stage into the extend source when single-use")]
+    public void WhereExtend_OptimizedMode_InlinesFilterIntoExtendStage()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: false);
+        var node = new ExtendNode(
+            new FilterNode(
+                new ScanNode("DeviceProcessEvents"),
+                new BinaryScalar(
+                    new FunctionCall("tolower", [new ColumnRef("FileName")]),
+                    ScalarBinaryOp.Eq,
+                    new FunctionCall("tolower", [new LiteralScalar("powershell.exe", LiteralKind.String)]))),
+            [
+                new ProjectionExpr(
+                    "EncodedPayload",
+                    new FunctionCall(
+                        "extract",
+                        [
+                            new LiteralScalar(@"-enc\s+([^\s]+)", LiteralKind.String),
+                            new LiteralScalar(1, LiteralKind.Int),
+                            new ColumnRef("ProcessCommandLine")
+                        ]))
+            ]);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.DoesNotContain("__kql_stage_1", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("FROM main.DeviceProcessEvents WHERE (lower(FileName) = lower('powershell.exe'))", norm, StringComparison.Ordinal);
+        Assert.Contains("regexp_extract(ProcessCommandLine, '-enc\\s+([^\\s]+)', CAST(1 AS INTEGER))", norm, StringComparison.Ordinal);
+        Assert.Contains("AS EncodedPayload", norm, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    [Description("where|extend|project keeps computed alias in projection while still preserving explicit limit")]
+    public void WhereExtendProjectTake_OptimizedMode_PreservesComputedAliasAndLimit()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: false);
+        var node = new LimitNode(
+            new ProjectNode(
+                new ExtendNode(
+                    new FilterNode(
+                        new ScanNode("DeviceProcessEvents"),
+                        new BinaryScalar(
+                            new FunctionCall("tolower", [new ColumnRef("FileName")]),
+                            ScalarBinaryOp.Eq,
+                            new FunctionCall("tolower", [new LiteralScalar("powershell.exe", LiteralKind.String)]))),
+                    [
+                        new ProjectionExpr(
+                            "EncodedPayload",
+                            new FunctionCall(
+                                "extract",
+                                [
+                                    new LiteralScalar(@"-enc\s+([^\s]+)", LiteralKind.String),
+                                    new LiteralScalar(1, LiteralKind.Int),
+                                    new ColumnRef("ProcessCommandLine")
+                                ]))
+                    ]),
+                [
+                    new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
+                    new ProjectionExpr("EncodedPayload", new ColumnRef("EncodedPayload"))
+                ]),
+            25);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.Contains("SELECT Timestamp, EncodedPayload FROM", norm, StringComparison.Ordinal);
+        Assert.Contains("AS EncodedPayload", norm, StringComparison.Ordinal);
+        Assert.DoesNotContain("__kql_stage_1", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.MatchesRegex(@"\bLIMIT\s+25\s*;?\s*$", norm);
+    }
+
+    [TestMethod]
+    [Description("extend over scan keeps staged alias dependency for chained extend expressions")]
+    public void ExtendExtend_OptimizedMode_PreservesAliasDependency()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: false);
+        var node = new ExtendNode(
+            new ExtendNode(
+                new ScanNode("DeviceProcessEvents"),
+                [
+                    new ProjectionExpr("lower_name", new FunctionCall("tolower", [new ColumnRef("FileName")]))
+                ]),
+            [
+                new ProjectionExpr("name_len", new FunctionCall("strlen", [new ColumnRef("lower_name")]))
+            ]);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.Contains("lower(FileName) AS lower_name", norm, StringComparison.Ordinal);
+        Assert.Contains("length(lower_name) AS name_len", norm, StringComparison.Ordinal);
+        Assert.MatchesRegex(@"FROM\s+__kql_stage_\d+", norm);
+        Assert.DoesNotContain("length(lower(FileName) AS lower_name)", norm, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    [Description("simple extend|project|take preserves computed alias and explicit limit")]
+    public void ExtendProjectTake_OptimizedMode_PreservesComputedAliasAndLimit()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: false);
+        var node = new LimitNode(
+            new ProjectNode(
+                new ExtendNode(
+                    new ScanNode("DeviceProcessEvents"),
+                    [
+                        new ProjectionExpr("lower_name", new FunctionCall("tolower", [new ColumnRef("FileName")]))
+                    ]),
+                [
+                    new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
+                    new ProjectionExpr("lower_name", new ColumnRef("lower_name"))
+                ]),
+            10);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.Contains("lower(FileName) AS lower_name", norm, StringComparison.Ordinal);
+        Assert.Contains("SELECT Timestamp, lower_name FROM", norm, StringComparison.Ordinal);
+        Assert.MatchesRegex(@"\bLIMIT\s+10\s*;?\s*$", norm);
+        Assert.DoesNotContain("LIMIT 10000", norm, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [TestMethod]
     [Description("Default LIMIT is opt-in; semantic mode can emit no implicit limit")]
     public void WhereInProject_SemanticMode_DoesNotAddImplicitLimit()
     {

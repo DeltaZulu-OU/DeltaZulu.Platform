@@ -56,6 +56,11 @@ public sealed partial class DuckDbQueryEmitter
         RegexOptions.IgnoreCase)]
     private static partial Regex FilterStageInlineRegex();
 
+    [GeneratedRegex(
+        @"^SELECT \*, (?<extensions>.+) FROM (?<source>[A-Za-z0-9_.]+) WHERE (?<pred>.+)$",
+        RegexOptions.IgnoreCase)]
+    private static partial Regex ExtendWithFilterStageRegex();
+
     [GeneratedRegex(@"__kql_stage_\d+")]
     private static partial Regex StageRefRegex();
 
@@ -155,6 +160,10 @@ public sealed partial class DuckDbQueryEmitter
             terminalLimit = terminalLimit with { Source = finalSource };
         }
         TryCollapseProjectedLookupJoin(ref finalSource, ref columns, ref terminalTopK, ref terminalOrder, ref terminalLimit);
+        if (TryRenderDerivedComputedScope(finalSource, columns, terminalTopK, terminalOrder, terminalLimit, out var derivedSql))
+        {
+            return derivedSql;
+        }
 
         var sb = new StringBuilder();
 
@@ -200,6 +209,82 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         return sb.ToString();
+    }
+
+    private bool TryRenderDerivedComputedScope(
+        string finalSource,
+        string? columns,
+        TerminalTopK? terminalTopK,
+        TerminalOrder? terminalOrder,
+        TerminalLimit? terminalLimit,
+        out string sql)
+    {
+        sql = string.Empty;
+        if (terminalTopK is not null || terminalOrder is not null || terminalLimit is null || columns is null || columns == "*")
+        {
+            return false;
+        }
+
+        var stage2Idx = _ctes.FindIndex(c => string.Equals(c.Name, terminalLimit.Source, StringComparison.Ordinal));
+        if (stage2Idx < 0)
+        {
+            return false;
+        }
+
+        var stage2 = _ctes[stage2Idx];
+        var stage2Match = ExtendWithFilterStageRegex().Match(stage2.Sql);
+        if (!stage2Match.Success)
+        {
+            return false;
+        }
+
+        var stage1Name = stage2Match.Groups["source"].Value;
+        var stage1Idx = _ctes.FindIndex(c => string.Equals(c.Name, stage1Name, StringComparison.Ordinal));
+        if (stage1Idx < 0)
+        {
+            return false;
+        }
+
+        var stage1 = _ctes[stage1Idx];
+        var stage1Match = ExtendWithFilterStageRegex().Match(stage1.Sql);
+        if (!stage1Match.Success)
+        {
+            return false;
+        }
+
+        if (CountStageReferences(stage1Name) != 1)
+        {
+            return false;
+        }
+
+        var outerColumns = columns;
+        var decodedMatch = Regex.Match(
+            stage2Match.Groups["extensions"].Value,
+            @"^(?<expr>.+)\s+AS\s+(?<alias>[A-Za-z_][A-Za-z0-9_]*)$",
+            RegexOptions.IgnoreCase);
+        if (decodedMatch.Success)
+        {
+            var alias = decodedMatch.Groups["alias"].Value;
+            var expr = decodedMatch.Groups["expr"].Value;
+            var aliasPattern = $@"(?<![A-Za-z0-9_\.]){Regex.Escape(alias)}(?![A-Za-z0-9_])";
+            var replaced = false;
+            outerColumns = Regex.Replace(
+                outerColumns,
+                aliasPattern,
+                _ =>
+                {
+                    if (replaced)
+                    {
+                        return _.Value;
+                    }
+
+                    replaced = true;
+                    return $"{expr} AS {alias}";
+                });
+        }
+
+        sql = $"SELECT {outerColumns} FROM (SELECT *, {stage1Match.Groups["extensions"].Value} FROM {stage1Match.Groups["source"].Value} WHERE {stage1Match.Groups["pred"].Value}) AS s WHERE {stage2Match.Groups["pred"].Value} LIMIT {terminalLimit.Limit}";
+        return true;
     }
 
     private (string Source, string? Columns) EmitNode(RelNode node) => node switch
@@ -856,8 +941,19 @@ public sealed partial class DuckDbQueryEmitter
 
     private (string Source, string? Columns) EmitExtend(ExtendNode extend)
     {
-        var source = StageFrom(extend.Input);
         var extensions = string.Join(", ", extend.Extensions.Select(EmitProjection));
+        if (extend.Input is FilterNode filter)
+        {
+            var (filterSource, filterColumns) = EmitNode(filter.Input);
+            var src = filterColumns is null ? filterSource : $"(SELECT {filterColumns} FROM {filterSource})";
+            var predicate = EmitScalar(filter.Predicate);
+            var next = NextStage();
+            _ctes.Add((next, $"SELECT *, {extensions} FROM {src} WHERE {predicate}"));
+            _stageNames.Add(next);
+            return (next, null);
+        }
+
+        var source = StageFrom(extend.Input);
         var stage = NextStage();
         _ctes.Add((stage, $"SELECT *, {extensions} FROM {source}"));
         _stageNames.Add(stage);
