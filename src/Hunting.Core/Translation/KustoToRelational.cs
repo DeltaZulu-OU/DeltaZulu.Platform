@@ -5,8 +5,6 @@ using Kusto.Language;
 using Kusto.Language.Syntax;
 using Policy;
 using QueryModel;
-using System.Text;
-using System.Text.RegularExpressions;
 
 /// <summary>
 /// Translates analyzed Kusto AST into a RelNode intermediate query model.
@@ -63,10 +61,8 @@ public sealed class KustoToRelational
             return null;
         }
 
-        var normalizedKql = NormalizeUnsupportedStringEscapes(kql);
-
         var globals = _catalog.BuildGlobalState();
-        var code = KustoCode.ParseAndAnalyze(normalizedKql, globals);
+        var code = KustoCode.ParseAndAnalyze(kql, globals);
 
         var hasParseErrors = false;
 
@@ -1250,51 +1246,4 @@ public sealed class KustoToRelational
     }
 
     #endregion Utilities
-    private static string NormalizeUnsupportedStringEscapes(string kql)
-    {
-        if (string.IsNullOrEmpty(kql))
-        {
-            return kql;
-        }
-
-        var sb = new StringBuilder(kql.Length);
-        var inString = false;
-
-        for (var i = 0; i < kql.Length; i++)
-        {
-            var ch = kql[i];
-
-            if (ch == '"')
-            {
-                inString = !inString;
-                sb.Append(ch);
-                continue;
-            }
-
-            if (!inString || ch != '\\' || i + 1 >= kql.Length)
-            {
-                sb.Append(ch);
-                continue;
-            }
-
-            var next = kql[i + 1];
-            if (IsRecognizedEscape(next))
-            {
-                sb.Append(ch);
-                continue;
-            }
-
-            // Compatibility shim: KQL regex patterns commonly use escapes like \s
-            // inside normal string literals. Double unknown escapes to preserve the
-            // intended literal sequence for the parser.
-            sb.Append("\\");
-        }
-
-        return sb.ToString();
-    }
-
-    private static bool IsRecognizedEscape(char ch)
-        => ch is '\\' or '"' or '\'' or 'n' or 'r' or 't' or 'b' or 'f' or 'u' or 'x' or '0' or '/';
-
-
 }
