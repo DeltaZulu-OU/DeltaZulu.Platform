@@ -274,6 +274,37 @@ public sealed class DuckDbQueryEmitterExecutionTests
         AssertExecutes(node, expectedMinRows: 1);
     }
 
+    [TestMethod]
+    [Description("trim_start/trim_end and base64 encode/decode execute")]
+    public void Execute_StringHelpers_New()
+    {
+        var node = new ExtendNode(
+            new ScanNode("DeviceProcessEvents"),
+            [
+                new ProjectionExpr("trimmed_l", new FunctionCall("trim_start", [new LiteralScalar(@"[A-Za-z]:\\\\", LiteralKind.String), new ColumnRef("FolderPath")])),
+                new ProjectionExpr("trimmed_r", new FunctionCall("trim_end", [new LiteralScalar(@"\\\\", LiteralKind.String), new ColumnRef("FolderPath")])),
+                new ProjectionExpr("b64", new FunctionCall("base64_encode_tostring", [new ColumnRef("FileName")])),
+                new ProjectionExpr("decoded", new FunctionCall("base64_decode_tostring", [new LiteralScalar("YQ==", LiteralKind.String)]))
+            ]);
+        AssertExecutes(node, expectedMinRows: 1);
+    }
+
+    [TestMethod]
+    [Description("parse_path and percentile execute")]
+    public void Execute_ParsePath_And_Percentile()
+    {
+        var parsePathNode = new ExtendNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("parsed", new FunctionCall("parse_path", [new ColumnRef("FolderPath")]))]);
+        AssertExecutes(parsePathNode, expectedMinRows: 1);
+
+        var percentileNode = new AggregateNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("p95", new FunctionCall("percentile", [new ColumnRef("ProcessId"), new LiteralScalar(95, LiteralKind.Int)]))],
+            []);
+        AssertExecutes(percentileNode, expectedMinRows: 1);
+    }
+
     // ─── Window functions execute ───────────────────────────────────
 
     [TestMethod]

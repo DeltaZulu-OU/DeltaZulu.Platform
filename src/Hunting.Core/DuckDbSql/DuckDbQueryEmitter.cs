@@ -97,6 +97,7 @@ public sealed partial class DuckDbQueryEmitter
     // resolve to the correct side. Null elsewhere.
     private string? _joinLeftAlias;
     private string? _joinRightAlias;
+    private bool _inAggregateProjection;
 
     public DuckDbQueryEmitter(int defaultLimit = 10_000, bool applyDefaultLimit = true)
     {
@@ -113,6 +114,7 @@ public sealed partial class DuckDbQueryEmitter
         _ctes.Clear();
         _stageNames.Clear();
         _scalarBindings.Clear();
+        _inAggregateProjection = false;
 
         var (finalSource, columns) = EmitNode(node);
         var hasUserLimit = HasLimit(node);
@@ -1100,7 +1102,16 @@ public sealed partial class DuckDbQueryEmitter
     {
         var source = StageFrom(agg.Input);
         var groupCols = agg.GroupBy.Select(EmitScalar).ToList();
-        var aggCols = agg.Aggregates.Select(EmitProjection).ToList();
+        List<string> aggCols;
+        _inAggregateProjection = true;
+        try
+        {
+            aggCols = agg.Aggregates.Select(EmitProjection).ToList();
+        }
+        finally
+        {
+            _inAggregateProjection = false;
+        }
 
         var allCols = new List<string>();
         allCols.AddRange(groupCols);
@@ -1485,7 +1496,10 @@ public sealed partial class DuckDbQueryEmitter
             "indexof" => $"(strpos({args[0]}, {args[1]}) - 1)",
             "reverse" => $"reverse({args[0]})",
             "trim" => $"regexp_replace(regexp_replace({args[1]}, concat('^(', {args[0]}, ')'), ''), concat('(', {args[0]}, ')$'), '')",
+            "trim_start" => $"regexp_replace({args[1]}, concat('^(', {args[0]}, ')'), '')",
+            "trim_end" => $"regexp_replace({args[1]}, concat('(', {args[0]}, ')$'), '')",
             "extract" => $"COALESCE(regexp_extract({args[2]}, {args[0]}, CAST({args[1]} AS INTEGER)), '')",
+            "parse_path" => $"struct_pack(root := regexp_extract({args[0]}, '^([A-Za-z]:)', 1), directory := regexp_replace({args[0]}, '[^\\\\/]+$', ''), filename := regexp_extract({args[0]}, '([^\\\\/]+)$', 1), extension := regexp_extract({args[0]}, '\\\\.([^\\\\/.]+)$', 1))",
 
             // DateTime functions
             "ago" => EmitAgo(args),
@@ -1597,6 +1611,9 @@ public sealed partial class DuckDbQueryEmitter
             "stdevif" => $"stddev_samp({args[0]}) FILTER (WHERE {args[1]})",
             "variance" => $"var_samp({args[0]})",
             "varianceif" => $"var_samp({args[0]}) FILTER (WHERE {args[1]})",
+            "percentile" when _inAggregateProjection => $"quantile_cont({args[0]}, ({args[1]}) / 100.0)",
+            "percentile" => throw new NotSupportedException(
+                "KQL function 'percentile' is only supported inside summarize projections."),
             "binary_all_and" => $"bit_and({args[0]})",
             "binary_all_or" => $"bit_or({args[0]})",
             "binary_all_xor" => $"bit_xor({args[0]})",

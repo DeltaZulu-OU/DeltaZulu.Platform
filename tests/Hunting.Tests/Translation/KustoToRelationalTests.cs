@@ -543,6 +543,20 @@ public sealed class KustoToRelationalTests
     }
 
     [TestMethod]
+    [Description("sample-distinct n of Col translates to DistinctNode followed by SampleNode")]
+    public void SampleDistinct_TranslatesToNode()
+    {
+        var (result, diag) = Translate("DeviceProcessEvents | sample-distinct 5 of FileName");
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var sample = AssertIs<SampleNode>(result);
+        Assert.AreEqual(5, sample.Count);
+        var distinct = AssertIs<DistinctNode>(sample.Input);
+        Assert.AreEqual(1, distinct.Projections.Count);
+        var col = AssertIs<ColumnRef>(distinct.Projections[0].Expression);
+        Assert.AreEqual("FileName", col.Name);
+    }
+
+    [TestMethod]
     [Description("Bare-column join 'on Col' produces $left.Col == $right.Col, not Col == Col")]
     public void Join_OnCondition_QualifiesEachSide()
     {

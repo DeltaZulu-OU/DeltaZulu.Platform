@@ -50,7 +50,7 @@ approximation diagnostic, or reject.
 - [ ] `top-nested` — hierarchical top-N — *complexity: recursive aggregation*
 - [ ] `top-hitters` — approximate top-N by frequency — *frequency*
 - [x] `sample` — random row sampling — staged `USING SAMPLE reservoir(n ROWS)` (**caveat**: nondeterministic; tests assert shape/count bounds, not exact rows)
-- [ ] `sample-distinct` — random distinct values — *frequency*
+- [x] `sample-distinct` — random distinct values — caveated `SELECT DISTINCT expr ... LIMIT n` (nondeterministic/bias caveat)
 
 ### 1.2 Join Operators
 
@@ -256,21 +256,21 @@ approximation diagnostic, or reject.
 - [x] `reverse(s)` → `reverse(s)`
 - [ ] `parse_url(url)` — URL component extraction — *complexity: returns dynamic object*
 - [ ] `parse_urlquery(query)` — query parameter extraction — *dependency: depends on parse_url*
-- [ ] `parse_path(path)` — file path parsing — *frequency*
+- [x] `parse_path(path)` — file path parsing — minimal `struct_pack(root,directory,filename,extension)` mapping
 - [x] `parse_ipv4(ip)` — IP address parsing — dotted-quad to bigint with validation
 - [ ] `parse_ipv6(ip)` — IPv6 parsing — *frequency*
 - [ ] `ipv4_compare(a, b)` — IP comparison — *complexity: requires integer conversion*
 - [ ] `ipv4_is_in_range(ip, cidr)` — CIDR membership — *complexity: requires CIDR parsing + masking*
 - [ ] `ipv4_is_private(ip)` — private range test — *dependency: depends on ipv4_is_in_range*
 - [ ] `format_ipv4(ip)` — IP formatting — *frequency*
-- [ ] `base64_encode_tostring(s)` — base64 encode — *frequency*
-- [ ] `base64_decode_tostring(s)` — base64 decode — *frequency*
+- [x] `base64_encode_tostring(s)` → `to_base64(CAST(s AS BLOB))`
+- [x] `base64_decode_tostring(s)` → `CAST(from_base64(s) AS VARCHAR)`
 - [ ] `url_encode(s)` / `url_decode(s)` — URL encoding — *frequency*
 - [ ] `hash_sha256(s)` → `md5(s)` variant — *frequency*
 - [ ] `hash_md5(s)` — MD5 hash (discouraged) — *frequency*
 - [ ] `hash(s, mod)` — generic hash — *frequency*
 - [ ] `translate(s, from, to)` — character translation — *frequency*
-- [ ] `trim_start(regex, s)` / `trim_end(regex, s)` — directional trim — *frequency*
+- [x] `trim_start(regex, s)` / `trim_end(regex, s)` — directional regex trim via anchored `regexp_replace`
 
 ### 4.2 DateTime Functions
 
@@ -327,7 +327,7 @@ approximation diagnostic, or reject.
 - [x] `stdevif(x, p)` → `stddev_samp(x) FILTER (WHERE p)`
 - [x] `variance(x)` → `var_samp(x)`
 - [x] `varianceif(x, p)` → `var_samp(x) FILTER (WHERE p)`
-- [ ] `percentile(x, n)` → `percentile_cont(n) WITHIN GROUP (ORDER BY x)` — *frequency*
+- [x] `percentile(x, n)` → `quantile_cont(x, n/100.0)` (**caveat**: interpolation semantics may differ from Kusto)
 - [ ] `percentiles(x, n1, n2, ...)` → multiple percentile calls — *complexity: returns dynamic array*
 - [x] `binary_all_and(x)` → `bit_and(x)`
 - [x] `binary_all_or(x)` → `bit_or(x)`
@@ -599,4 +599,4 @@ commands. These operate on Kusto cluster state, not on data.
 
 ---
 
-*Last updated: 2026-05-25 — Added rightsemi/rightanti joins and parse_ipv4() support*
+*Last updated: 2026-05-26 — Added sample-distinct, percentile, trim_start/trim_end, base64 encode/decode, and parse_path support*

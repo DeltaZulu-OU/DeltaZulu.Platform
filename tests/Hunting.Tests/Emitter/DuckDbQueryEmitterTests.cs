@@ -251,6 +251,58 @@ public sealed partial class DuckDbQueryEmitterTests
     }
 
     [TestMethod]
+    [Description("sample-distinct emits DISTINCT stage then sample stage")]
+    public void Emit_SampleDistinct()
+    {
+        var node = new SampleNode(
+            new DistinctNode(
+                new ScanNode("DeviceProcessEvents"),
+                [new ProjectionExpr("sample_distinct_value", new ColumnRef("FileName"))]),
+            7);
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "SELECT DISTINCT FileName AS sample_distinct_value FROM main.DeviceProcessEvents");
+        AssertSqlContains(sql, "USING SAMPLE reservoir(7 ROWS)");
+    }
+
+    [TestMethod]
+    [Description("trim_start/trim_end, percentile, parse_path emit expected SQL")]
+    public void Funcs_NewMappings_Emit()
+    {
+        var node = new ProjectNode(
+            new ScanNode("DeviceProcessEvents"),
+            [
+                new ProjectionExpr("ts", new FunctionCall("trim_start", [new LiteralScalar("\\\\+", LiteralKind.String), new ColumnRef("FolderPath")])),
+                new ProjectionExpr("te", new FunctionCall("trim_end", [new LiteralScalar("\\\\+", LiteralKind.String), new ColumnRef("FolderPath")])),
+                new ProjectionExpr("pp", new FunctionCall("parse_path", [new ColumnRef("FolderPath")])),
+                new ProjectionExpr("b64e", new FunctionCall("base64_encode_tostring", [new ColumnRef("FileName")])),
+                new ProjectionExpr("b64d", new FunctionCall("base64_decode_tostring", [new LiteralScalar("YQ==", LiteralKind.String)]))
+            ]);
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "regexp_replace(FolderPath, concat('^(', '\\\\+', ')'), '')");
+        AssertSqlContains(sql, "regexp_replace(FolderPath, concat('(', '\\\\+', ')$'), '')");
+        AssertSqlContains(sql, "struct_pack(");
+        AssertSqlContains(sql, "to_base64(CAST(FileName AS BLOB))");
+        AssertSqlContains(sql, "CAST(from_base64('YQ==') AS VARCHAR)");
+
+        var aggNode = new AggregateNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("p95", new FunctionCall("percentile", [new ColumnRef("ProcessId"), new LiteralScalar(95, LiteralKind.Int)]))],
+            []);
+        var aggSql = _emitter.Emit(aggNode);
+        AssertSqlContains(aggSql, "quantile_cont(ProcessId, (95) / 100.0) AS p95");
+    }
+
+    [TestMethod]
+    [Description("percentile outside summarize is rejected by emitter")]
+    public void Func_Percentile_OutsideAggregate_Rejected()
+    {
+        var node = new ProjectNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("p", new FunctionCall("percentile", [new ColumnRef("ProcessId"), new LiteralScalar(95, LiteralKind.Int)]))]);
+        Assert.ThrowsExactly<NotSupportedException>(() => _emitter.Emit(node));
+    }
+
+    [TestMethod]
     [Description("bag_has_key and array_slice mappings emit exact SQL shape")]
     public void Emit_Func_BagAndArrayMappings()
     {
@@ -827,7 +879,7 @@ public sealed partial class DuckDbQueryEmitterTests
             20);
         var sql = _emitter.Emit(node);
         var norm = NormSql(sql);
-        var passThrough = Regex.Count(norm, @"AS \(SELECT \* FROM __kql_stage_\d+\)");
+        var passThrough = PassthroughPattern().Count(norm);
         Assert.AreEqual(0, passThrough);
         Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("__kql_stage_", norm, StringComparison.OrdinalIgnoreCase);
@@ -1388,4 +1440,6 @@ public sealed partial class DuckDbQueryEmitterTests
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex MyRegex();
+    [GeneratedRegex(@"AS \(SELECT \* FROM __kql_stage_\d+\)")]
+    private static partial Regex PassthroughPattern();
 }

@@ -527,6 +527,7 @@ public sealed class KustoToRelational
         SortOperator sort => TranslateSort(sort, input),
         TakeOperator take => TranslateTake(take, input),
         SampleOperator sample => TranslateSample(sample, input),
+        SampleDistinctOperator sampleDistinct => TranslateSampleDistinct(sampleDistinct, input),
         TopOperator top => TranslateTop(top, input),
         DistinctOperator dist => TranslateDistinct(dist, input),
         CountOperator => TranslateCount(input),
@@ -624,6 +625,19 @@ public sealed class KustoToRelational
             return null;
         }
         return new SampleNode(input, count);
+    }
+
+    private RelNode? TranslateSampleDistinct(SampleDistinctOperator sampleDistinct, RelNode input)
+    {
+        var count = GetIntLiteral(sampleDistinct.Expression);
+        if (count < 0)
+        {
+            return null;
+        }
+
+        var projection = new ProjectionExpr("sample_distinct_value", TranslateScalarExpr(sampleDistinct.OfExpression));
+        var distinct = new DistinctNode(input, [projection]);
+        return new SampleNode(distinct, count);
     }
 
     private RelNode? TranslateTop(TopOperator top, RelNode input)
