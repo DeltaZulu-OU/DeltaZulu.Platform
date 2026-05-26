@@ -67,9 +67,7 @@ public sealed class DuckDbWindowSpecTests
         return rows;
     }
 
-    private static long AsInt64(object? v)
-    {
-        return v is null
+    private static long AsInt64(object? v) => v is null
             ? throw new InvalidOperationException("Value is null")
             : v switch
             {
@@ -84,7 +82,6 @@ public sealed class DuckDbWindowSpecTests
                 string s => long.Parse(s),
                 _ => Convert.ToInt64(v)
             };
-    }
 
     // ─── lag() — KQL: prev() ────────────────────────────────────────
 

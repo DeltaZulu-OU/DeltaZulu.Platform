@@ -1,6 +1,7 @@
 namespace Hunting.Tests.Translation;
 
 using Hunting.Core.Catalog;
+using Hunting.Core.DuckDbSql;
 using Hunting.Core.Policy;
 using Hunting.Core.QueryModel;
 using Hunting.Core.Translation;
@@ -453,9 +454,9 @@ public sealed class KustoToRelationalTests
             """);
         Assert.IsNull(result);
         Assert.IsTrue(diag.HasErrors, "lookup without on clause should fail");
-        Assert.IsTrue(diag.All.Any(d =>
+        Assert.Contains(d =>
                 string.Equals(d.DeveloperDetail, "KQL_LOOKUP_NO_CONDITION", StringComparison.OrdinalIgnoreCase) ||
-                d.Message.Contains("lookup has no 'on' clause", StringComparison.OrdinalIgnoreCase)),
+                d.Message.Contains("Missing join on condition clause", StringComparison.OrdinalIgnoreCase), diag.All,
             string.Join("\n", diag.All));
     }
 
@@ -482,6 +483,15 @@ public sealed class KustoToRelationalTests
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var sample = AssertIs<SampleNode>(result);
         Assert.AreEqual(10, sample.Count);
+    }
+
+    [TestMethod]
+    [Description("sample with negative number is rejected")]
+    public void Sample_Negative_Rejected()
+    {
+        var (result, diag) = Translate("DeviceProcessEvents | sample -2");
+        Assert.IsNull(result);
+        Assert.IsTrue(diag.HasErrors, "sample with negative should produce error");
     }
 
     [TestMethod]
@@ -559,11 +569,357 @@ public sealed class KustoToRelationalTests
     // ─── Policy: unapproved table rejected ──────────────────────────
 
     [TestMethod]
-    [Description("Unapproved table name produces policy error")]
-    public void Policy_UnapprovedTable()
+    [Description("Unapproved table name produces parse error")]
+    public void Parse_UnapprovedTable()
     {
         var (result, diag) = Translate("internal.secret_table | take 10");
         Assert.IsTrue(diag.HasErrors);
-        Assert.Contains(d => d.Phase == DiagnosticPhase.Policy, diag.All);
+        AssertPolicyOrParseError(diag);
+    }
+
+    [TestMethod]
+    [Description("Semicolon and dot-command text inside string literal should not be treated as mixed statements")]
+    public void Policy_SemicolonDotInsideStringLiteral_NotMixedStatement()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | where ProcessCommandLine contains "; .drop table internal.secret"
+            | take 1
+            """);
+
+        Assert.IsNotNull(result);
+        AssertNoPolicyErrors(diag);
+    }
+
+    [TestMethod]
+    [Description("Query followed by executable management dot-command must be rejected")]
+    public void Policy_QueryFollowedByDotCommand_Rejected()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | where FileName == "cmd.exe";
+            .drop table DeviceProcessEvents
+            """);
+
+        Assert.IsNull(result);
+        AssertPolicyError(diag);
+    }
+
+    [TestMethod]
+    [Description("Management dot-command followed by query must be rejected")]
+    public void Policy_DotCommandFollowedByQuery_Rejected()
+    {
+        var (result, diag) = Translate(
+            """
+            .drop table DeviceProcessEvents;
+            DeviceProcessEvents
+            | take 1
+            """);
+
+        Assert.IsNull(result);
+        AssertPolicyError(diag);
+    }
+
+    [TestMethod]
+    [Description("Single management dot-command must be rejected")]
+    public void Policy_SingleDotCommand_Rejected()
+    {
+        var (result, diag) = Translate(
+            """
+            .show tables
+            """);
+
+        Assert.IsNull(result);
+        AssertPolicyError(diag);
+    }
+
+    [TestMethod]
+    [Description("Dot-command after newline without semicolon must be rejected if parser recognizes it as executable input")]
+    public void Policy_QueryThenDotCommandOnNewLine_Rejected()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | take 1
+            .drop table DeviceProcessEvents
+            """);
+
+        Assert.IsNull(result);
+        AssertPolicyOrParseError(diag);
+    }
+
+    [TestMethod]
+    [Description("Multiple query statements must be rejected rather than silently translating only one")]
+    public void Policy_TwoQueryStatements_Rejected()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents | take 1;
+            DeviceNetworkEvents | take 1
+            """);
+
+        Assert.IsNull(result);
+        AssertDiagnosticContaining(diag, "Multiple query statements");
+    }
+
+    [TestMethod]
+    [Description("Let bindings may precede the final query")]
+    public void Policy_LetBindingThenQuery_Allowed()
+    {
+        var (result, diag) = Translate(
+            """
+            let TargetFile = "cmd.exe";
+            DeviceProcessEvents
+            | where FileName == TargetFile
+            | take 1
+            """);
+
+        Assert.IsNotNull(result);
+        AssertNoPolicyErrors(diag);
+    }
+
+    [TestMethod]
+    [Description("Let binding followed by dot-command must be rejected")]
+    public void Policy_LetBindingThenDotCommand_Rejected()
+    {
+        var (result, diag) = Translate(
+            """
+            let TargetFile = "cmd.exe";
+            .drop table DeviceProcessEvents
+            """);
+
+        Assert.IsNull(result);
+        AssertPolicyError(diag);
+    }
+
+    [TestMethod]
+    [Description("Dot-command text inside let string value must not trigger policy error")]
+    public void Policy_DotCommandInsideLetString_Allowed()
+    {
+        var (result, diag) = Translate(
+            """
+            let Suspicious = "; .drop table DeviceProcessEvents";
+            DeviceProcessEvents
+            | where ProcessCommandLine contains Suspicious
+            | take 1
+            """);
+
+        Assert.IsNotNull(result);
+        AssertNoPolicyErrors(diag);
+    }
+
+    [TestMethod]
+    [Description("SQL-looking injection text inside string literal must remain inert")]
+    public void Policy_SqlInjectionTextInsideStringLiteral_Allowed()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | where ProcessCommandLine contains "'; DROP TABLE DeviceProcessEvents; --"
+            | take 1
+            """);
+
+        Assert.IsNotNull(result);
+        AssertNoPolicyErrors(diag);
+    }
+
+    [TestMethod]
+    [Description("SQL comment marker inside string literal must remain inert")]
+    public void Policy_SqlCommentMarkerInsideStringLiteral_Allowed()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | where ProcessCommandLine contains "-- pretend SQL comment"
+            | take 1
+            """);
+
+        Assert.IsNotNull(result);
+        AssertNoPolicyErrors(diag);
+    }
+
+    [TestMethod]
+    [Description("Semicolon inside string literal must not split KQL statements")]
+    public void Policy_SemicolonInsideStringLiteral_Allowed()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | where ProcessCommandLine contains "cmd.exe; whoami; hostname"
+            | take 1
+            """);
+
+        Assert.IsNotNull(result);
+        AssertNoPolicyErrors(diag);
+    }
+
+    [TestMethod]
+    [Description("Single quote inside KQL string should be accepted as literal data")]
+    public void Policy_SingleQuoteInsideStringLiteral_Allowed()
+    {
+        var kql = """
+        DeviceProcessEvents
+        | where ProcessCommandLine contains "O'Reilly"
+        | take 1
+        """;
+
+        var (result, diag) = Translate(kql);
+
+        Assert.IsNotNull(result);
+        AssertNoPolicyErrors(diag);
+    }
+
+    [TestMethod]
+    [Description("Single quote inside string literal must be escaped when relational plan is emitted as SQL")]
+    public void SqlEmitter_SingleQuoteInsideStringLiteral_Escaped()
+    {
+        var kql = """
+        DeviceProcessEvents
+        | where ProcessCommandLine contains "O'Reilly"
+        | take 1
+        """;
+
+        var (rel, diag) = Translate(kql);
+
+        Assert.IsNotNull(rel);
+        AssertNoPolicyErrors(diag);
+
+        var sql = new DuckDbQueryEmitter().Emit(rel);
+
+        Assert.Contains("O''Reilly", sql);
+        AssertNoSecondSqlStatement(sql);
+    }
+
+    [TestMethod]
+    [Description("Newline inside string literal must not create a second executable statement")]
+    public void Policy_NewlineInsideStringLiteral_Rejected()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | where ProcessCommandLine contains @"first line
+            .drop table DeviceProcessEvents"
+            | take 1
+            """);
+
+        Assert.IsNull(result);
+        AssertPolicyError(diag);
+    }
+
+    [TestMethod]
+    [Description("Unapproved table name should be rejected even if query syntax is otherwise valid")]
+    public void Policy_UnapprovedTableName_Rejected()
+    {
+        var (result, diag) = Translate(
+            """
+            internal.secret
+            | take 1
+            """);
+
+        Assert.IsNull(result);
+        AssertPolicyOrParseError(diag);
+    }
+
+    [TestMethod]
+    [Description("Table-name-like SQL injection must not be accepted as a table reference")]
+    public void Policy_TableNameSqlInjection_Rejected()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents; DROP TABLE DeviceProcessEvents
+            | take 1
+            """);
+
+        Assert.IsNull(result);
+        AssertPolicyOrParseError(diag);
+    }
+
+    [TestMethod]
+    [Description("Column-name-like SQL injection must not be accepted as a valid projected column")]
+    public void Policy_ColumnNameSqlInjection_Rejected()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | project FileName, ["x); DROP TABLE DeviceProcessEvents; --"]
+            """);
+
+        Assert.IsNull(result);
+        AssertPolicyOrParseError(diag);
+    }
+
+    [TestMethod]
+    [Description("Unsupported KQL command syntax must fail closed")]
+    public void Policy_UnsupportedCommandSyntax_FailsClosed()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | evaluate pivot(FileName)
+            """);
+
+        Assert.IsNull(result);
+        AssertPolicyOrTranslateError(diag);
+    }
+
+    [TestMethod]
+    [Description("Malformed input that contains a management command must not translate a recovered partial query")]
+    public void Policy_MalformedQueryWithDotCommand_FailsClosed()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | where FileName == 
+            .drop table DeviceProcessEvents
+            """);
+
+        Assert.IsNull(result);
+        AssertPolicyOrParseError(diag);
+    }
+
+    private static void AssertPolicyError(DiagnosticBag diag) => Assert.Contains(
+            d => d.Phase == DiagnosticPhase.Policy, diag.All,
+            "Expected at least one policy diagnostic.");
+
+    private static void AssertNoPolicyErrors(DiagnosticBag diag) => Assert.DoesNotContain(
+            d => d.Phase == DiagnosticPhase.Policy, diag.All,
+            "Expected no policy diagnostics.");
+
+    private static void AssertPolicyOrParseError(DiagnosticBag diag) => Assert.Contains(
+            d =>
+                d.Phase == DiagnosticPhase.Policy ||
+                d.Phase == DiagnosticPhase.Parse, diag.All,
+            "Expected a policy or parse diagnostic.");
+
+    private static void AssertPolicyOrTranslateError(DiagnosticBag diag) => Assert.Contains(
+            d =>
+                d.Phase == DiagnosticPhase.Policy ||
+                d.Phase == DiagnosticPhase.Translate, diag.All,
+            "Expected a policy or translation diagnostic.");
+
+    private static void AssertDiagnosticContaining(DiagnosticBag diag, string text) => Assert.Contains(
+            d => d.Message.Contains(text, StringComparison.OrdinalIgnoreCase), diag.All,
+            $"Expected diagnostic containing: {text}");
+
+    private static void AssertNoPolicyErrorContaining(DiagnosticBag diag, string text) => Assert.DoesNotContain(
+            d =>
+                d.Phase == DiagnosticPhase.Policy &&
+                d.Message.Contains(text, StringComparison.OrdinalIgnoreCase), diag.All,
+            $"Did not expect policy diagnostic containing: {text}");
+
+    private static void AssertNoSecondSqlStatement(string sql)
+    {
+        var normalized = sql.Trim();
+
+        if (normalized.EndsWith(";", StringComparison.Ordinal))
+        {
+            normalized = normalized[..^1];
+        }
+
+        Assert.IsFalse(
+            normalized.Contains(';'),
+            "Generated SQL must not contain multiple statements.");
     }
 }

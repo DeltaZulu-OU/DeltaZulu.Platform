@@ -36,33 +36,76 @@ public sealed class KustoToRelational
             return null;
         }
 
-        // Defense-in-depth: explicitly reject mixed statement chains that append
-        // management dot-commands after a query (e.g. "...; .drop table ...").
-        // This prevents ambiguous execution intent and blocks command-chaining
-        // payloads before translation/SQL emission.
-        if (HasMixedQueryAndManagementCommand(kql))
+        /*
+        * Security boundary:
+        *
+        * This translator accepts only query expressions, optionally preceded by
+        * let bindings. Kusto management dot-commands are not part of the accepted
+        * language subset.
+        *
+        * This pre-parse guard catches both:
+        *
+        *   .show tables
+        *
+        * and:
+        *
+        *   DeviceProcessEvents | take 1;
+        *   .drop table DeviceProcessEvents
+        *
+        * without rejecting dot-command-looking text inside string literals.
+        */
+        if (ContainsExecutableManagementCommandText(kql))
         {
             _diagnostics.AddError(
                 DiagnosticPhase.Policy,
-                "Mixed query and management command input is not allowed. " +
-                "Submit only a single query expression (optionally preceded by let bindings).");
+                "Management commands are not allowed. Submit only a single query expression, optionally preceded by let bindings.");
             return null;
         }
 
         var globals = _catalog.BuildGlobalState();
         var code = KustoCode.ParseAndAnalyze(kql, globals);
 
+        var hasParseErrors = false;
+
         foreach (var diag in code.GetDiagnostics())
         {
             if (diag.Severity == Kusto.Language.DiagnosticSeverity.Error)
             {
-                _diagnostics.AddError(DiagnosticPhase.Parse,
-                    diag.Message, diag.Code, diag.Start, diag.Length);
+                var category = diag.Category;
+                hasParseErrors = true;
+
+                _diagnostics.AddError(
+                    DiagnosticPhase.Parse,
+                    diag.Message,
+                    diag.Code,
+                    diag.Start,
+                    diag.Length);
             }
         }
 
-        // Note: do not short-circuit translation here. Keep parse diagnostics in the bag
-        // but continue to translation so policy checks can run (e.g., unapproved table names).
+        /*
+         * Security boundary:
+         *
+         * Do not derive policy safety from the statement selected for translation.
+         * A malicious input such as:
+         *
+         *   DeviceProcessEvents | take 1;
+         *   .drop table DeviceProcessEvents
+         *
+         * may leave the query expression visible to the translator while the
+         * management command is missed by top-level Statement filtering.
+         *
+         * This check must inspect the full parsed syntax tree, not only the
+         * Statement list used for translation.
+         */
+        if (ContainsExecutableManagementCommand(code.Syntax))
+        {
+            _diagnostics.AddError(
+                DiagnosticPhase.Policy,
+                "Management commands are not allowed. Submit only a single query expression, optionally preceded by let bindings.");
+
+            return null;
+        }
 
         var statements = code.Syntax.GetDescendants<Statement>()
             .Where(s => IsTopLevel(s, code.Syntax))
@@ -76,29 +119,231 @@ public sealed class KustoToRelational
 
         if (statements.Count >= 2)
         {
-            // Only 'let' bindings may precede the final query expression. If any
-            // earlier statement is something else, translating just the last one
-            // would silently drop the others and hide the user's intent.
-            var leading = statements.Take(statements.Count - 1);
-            if (leading.All(s => s is LetStatement))
+            var leading = statements.Take(statements.Count - 1).ToList();
+            var final = statements[^1];
+
+            if (!leading.All(s => s is LetStatement))
             {
-                return TranslateLetChain(statements);
+                _diagnostics.AddError(
+                    DiagnosticPhase.Policy,
+                    "Only 'let' bindings may precede the final query expression. Multiple query statements are not supported.");
+
+                return null;
             }
 
-            _diagnostics.AddError(DiagnosticPhase.Translate,
-                "Only 'let' bindings may precede the final query expression. " +
-                "Multiple query statements are not supported.");
+            if (!IsTranslatableQueryStatement(final))
+            {
+                _diagnostics.AddError(
+                    DiagnosticPhase.Policy,
+                    "A let chain must end with a query expression.");
+
+                return null;
+            }
+
+            return TranslateLetChain(statements);
+        }
+
+        /*
+         * After policy validation, fail closed on parse/analyze errors.
+         * This still preserves parse diagnostics in the bag, but prevents
+         * translation from operating on a recovered or malformed syntax tree.
+         */
+        if (hasParseErrors)
+        {
             return null;
         }
 
-        return TranslateStatement(statements[^1]);
+        if (!IsTranslatableQueryStatement(statements[0]))
+        {
+            _diagnostics.AddError(
+                DiagnosticPhase.Policy,
+                "Only query expressions are supported. Management commands and other statement types are not allowed.");
+
+            return null;
+        }
+
+        return TranslateStatement(statements[0]);
     }
 
-    private static bool HasMixedQueryAndManagementCommand(string kql)
+    private static bool ContainsExecutableManagementCommandText(string kql)
     {
-        // Detect a semicolon-delimited statement where a management command starts
-        // a subsequent statement. Example: "... ; .drop table X"
-        return Regex.IsMatch(kql, @";\s*\.[A-Za-z_]", RegexOptions.CultureInvariant);
+        var inSingleQuotedString = false;
+        var inDoubleQuotedString = false;
+        var inMultilineString = false;
+        var inLineComment = false;
+        var inBlockComment = false;
+
+        var commandStartPossible = true;
+
+        for (var i = 0; i < kql.Length; i++)
+        {
+            var c = kql[i];
+            var next = i + 1 < kql.Length ? kql[i + 1] : '\0';
+
+            if (inMultilineString)
+            {
+                if (c == '`' &&
+                    i + 2 < kql.Length &&
+                    kql[i + 1] == '`' &&
+                    kql[i + 2] == '`')
+                {
+                    inMultilineString = false;
+                    i += 2;
+                    commandStartPossible = false;
+                }
+
+                continue;
+            }
+
+            if (inLineComment)
+            {
+                if (c is '\r' or '\n')
+                {
+                    inLineComment = false;
+                    commandStartPossible = true;
+                }
+
+                continue;
+            }
+
+            if (inBlockComment)
+            {
+                if (c == '*' && next == '/')
+                {
+                    inBlockComment = false;
+                    i++;
+                }
+
+                continue;
+            }
+
+            if (inSingleQuotedString)
+            {
+                if (c == '\\')
+                {
+                    i++;
+                    continue;
+                }
+
+                if (c == '\'' && next == '\'')
+                {
+                    i++;
+                    continue;
+                }
+
+                if (c == '\'')
+                {
+                    inSingleQuotedString = false;
+                    commandStartPossible = false;
+                }
+
+                continue;
+            }
+
+            if (inDoubleQuotedString)
+            {
+                if (c == '\\')
+                {
+                    i++;
+                    continue;
+                }
+
+                if (c == '"' && next == '"')
+                {
+                    i++;
+                    continue;
+                }
+
+                if (c == '"')
+                {
+                    inDoubleQuotedString = false;
+                    commandStartPossible = false;
+                }
+
+                continue;
+            }
+
+            if (c == '`' &&
+                i + 2 < kql.Length &&
+                kql[i + 1] == '`' &&
+                kql[i + 2] == '`')
+            {
+                inMultilineString = true;
+                i += 2;
+                commandStartPossible = false;
+                continue;
+            }
+
+            if (c == '/' && next == '/')
+            {
+                inLineComment = true;
+                i++;
+                continue;
+            }
+
+            if (c == '/' && next == '*')
+            {
+                inBlockComment = true;
+                i++;
+                continue;
+            }
+
+            if (c == '"')
+            {
+                inDoubleQuotedString = true;
+                commandStartPossible = false;
+                continue;
+            }
+
+            if (c == '\'')
+            {
+                inSingleQuotedString = true;
+                commandStartPossible = false;
+                continue;
+            }
+
+            if (c == ';')
+            {
+                commandStartPossible = true;
+                continue;
+            }
+
+            if (c is '\r' or '\n')
+            {
+                commandStartPossible = true;
+                continue;
+            }
+
+            if (char.IsWhiteSpace(c))
+            {
+                continue;
+            }
+
+            if (commandStartPossible && c == '.')
+            {
+                return true;
+            }
+
+            commandStartPossible = false;
+        }
+
+        return false;
+    }
+
+    private static bool ContainsExecutableManagementCommand(SyntaxNode root) => root.GetDescendants<SyntaxNode>()
+            .Any(IsManagementCommandNode);
+
+    private static bool IsTranslatableQueryStatement(Statement statement) => statement is ExpressionStatement;
+
+    private static bool IsManagementCommandNode(SyntaxNode node)
+    {
+        var typeName = node.GetType().Name;
+
+        return typeName.Equals("CommandBlock", StringComparison.Ordinal)
+            || typeName.Equals("Command", StringComparison.Ordinal)
+            || typeName.Equals("CommandStatement", StringComparison.Ordinal)
+            || typeName.Contains("CommandBlock", StringComparison.Ordinal)
+            || typeName.Contains("CommandStatement", StringComparison.Ordinal);
     }
 
     private static bool IsTopLevel(SyntaxNode node, SyntaxNode root)
@@ -202,7 +447,9 @@ public sealed class KustoToRelational
             return Reject(path, "Empty path expression");
         }
 
-        var tableName = parts.Count == 1 ? parts[0] : parts[1];
+        // For dotted names (schema.table or db.schema.table), treat the right-most
+        // segment as the table identifier; earlier segments are qualifiers.
+        var tableName = parts[^1];
         // For now accept schema-qualified names like internal.secret_table — policy checks will reject unapproved schemas.
         if (!_catalog.IsApproved(tableName))
         {
@@ -348,9 +595,13 @@ public sealed class KustoToRelational
         return new LimitNode(input, count);
     }
 
-    private RelNode TranslateSample(SampleOperator sample, RelNode input)
+    private RelNode? TranslateSample(SampleOperator sample, RelNode input)
     {
         var count = GetIntLiteral(sample.Expression);
+        if (count < 0)
+        {
+            return null;
+        }
         return new SampleNode(input, count);
     }
 

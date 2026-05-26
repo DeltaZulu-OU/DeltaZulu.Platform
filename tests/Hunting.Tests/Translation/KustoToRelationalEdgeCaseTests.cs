@@ -289,11 +289,29 @@ public sealed class KustoToRelationalEdgeCaseTests
 
         Assert.IsNull(result, "Translator must reject multi-statement input that chains commands.");
         Assert.IsTrue(diag.HasErrors, "A diagnostic should be raised for mixed query/command input.");
-        Assert.IsTrue(
-            diag.All.Any(d =>
-                d.Message.Contains("Mixed query and management command input is not allowed") ||
-                d.Message.Contains("Multiple query statements are not supported")),
+        Assert.Contains(
+            d =>
+                d.Message.Contains("Management commands are not allowed. Submit only a single query expression, optionally preceded by let bindings."), diag.All,
             "Expected rejection diagnostic for mixed query/command input was not emitted.");
+    }
+
+    [TestMethod]
+    [Description("Ordinary quoted string spanning newline should not be translated as a recovered partial query")]
+    public void Policy_OrdinaryQuotedStringWithNewline_FailsClosed()
+    {
+        var (result, diag) = Translate(
+            """
+        let Suspicious = ";
+        .drop table DeviceProcessEvents";
+        DeviceProcessEvents
+        | where ProcessCommandLine contains Suspicious
+        | take 1
+        """);
+
+        Assert.IsNull(result);
+        Assert.Contains(d =>
+            d.Phase == DiagnosticPhase.Parse ||
+            d.Phase == DiagnosticPhase.Policy, diag.All);
     }
 
     [TestMethod]
