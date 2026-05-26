@@ -39,6 +39,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
         _passes = [
             new LookupOutputBindingPass(),
             new FilterPushdownPass(),
+            new FilterExtendInlinePass(),
             new ProjectionPruningPass(),
             new IdentityProjectionCollapsePass(),
             new CommonScalarHoistPass()
@@ -204,12 +205,9 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                     projections[i] = proj with { Expression = rewrittenExpr };
                 }
             }
-            if (ReferenceEquals(input, p.Input) && projections is null)
-            {
-                return p;
-            }
-
-            return p with { Input = input, Projections = projections ?? p.Projections };
+            return ReferenceEquals(input, p.Input) && projections is null
+                ? p
+                : (p with { Input = input, Projections = projections ?? p.Projections });
         }
 
         private static FilterNode RewriteFilter(FilterNode f, ref int applied)
@@ -234,12 +232,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                     sorts[i] = sort with { Expression = rewrittenExpr };
                 }
             }
-            if (ReferenceEquals(input, s.Input) && sorts is null)
-            {
-                return s;
-            }
-
-            return s with { Input = input, Sorts = sorts ?? s.Sorts };
+            return ReferenceEquals(input, s.Input) && sorts is null ? s : (s with { Input = input, Sorts = sorts ?? s.Sorts });
         }
 
         private static ExtendNode RewriteExtend(ExtendNode e, ref int applied)
@@ -257,12 +250,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                     ext[i] = expr with { Expression = rewrittenExpr };
                 }
             }
-            if (ReferenceEquals(input, e.Input) && ext is null)
-            {
-                return e;
-            }
-
-            return e with { Input = input, Extensions = ext ?? e.Extensions };
+            return ReferenceEquals(input, e.Input) && ext is null ? e : (e with { Input = input, Extensions = ext ?? e.Extensions });
         }
 
         private static AggregateNode RewriteAggregate(AggregateNode a, ref int applied)
@@ -292,17 +280,14 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 }
             }
 
-            if (ReferenceEquals(input, a.Input) && groupBy is null && aggregates is null)
-            {
-                return a;
-            }
-
-            return a with
+            return ReferenceEquals(input, a.Input) && groupBy is null && aggregates is null
+                ? a
+                : (a with
             {
                 Input = input,
                 GroupBy = groupBy ?? a.GroupBy,
                 Aggregates = aggregates ?? a.Aggregates
-            };
+            });
         }
 
         private static ScalarExpr RewriteScalar(ScalarExpr expr, IReadOnlyDictionary<string, string> owner, ref int applied)
@@ -312,17 +297,14 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 case ColumnRef { Qualifier: null } c when owner.TryGetValue(c.Name, out var q):
                     applied++;
                     return new ColumnRef(c.Name, q);
-
                 case BinaryScalar b:
                     return b with
                     {
                         Left = RewriteScalar(b.Left, owner, ref applied),
                         Right = RewriteScalar(b.Right, owner, ref applied)
                     };
-
                 case UnaryScalar u:
                     return u with { Operand = RewriteScalar(u.Operand, owner, ref applied) };
-
                 case FunctionCall f:
                     {
                         var args = new ScalarExpr[f.Args.Count];
@@ -668,12 +650,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
         {
             var input = RewriteNode(e.Input, ref attempted, ref applied);
             var rewrittenExt = TryHoistExtensions(e.Extensions, ref attempted, ref applied, out var changed);
-            if (!changed)
-            {
-                return input == e.Input ? e : e with { Input = input };
-            }
-
-            return new ExtendNode(input, rewrittenExt);
+            return !changed ? input == e.Input ? e : e with { Input = input } : new ExtendNode(input, rewrittenExt);
         }
 
         private static IReadOnlyList<ProjectionExpr> TryHoistExtensions(
@@ -753,6 +730,214 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
 
             var inner = new ExtendNode(input, ext);
             return new ProjectNode(inner, outProj);
+        }
+    }
+
+    /// <summary>
+    /// Inlines a computed <see cref="ExtendNode"/> column into a directly-following
+    /// <see cref="FilterNode"/> predicate when that column is consumed only by the
+    /// filter. This removes a throwaway boolean/intermediate column (and its CTE
+    /// stage) that exists solely to feed a <c>where</c>:
+    ///
+    ///   <c>... | extend Flag = expr | where Flag</c>  →  <c>... | where expr</c>
+    ///
+    /// The rewrite is gated on liveness: <c>required</c> tracks the columns
+    /// downstream operators still need, so a column kept in the <c>project</c>
+    /// output (or any ancestor) is never inlined away. It is also gated on a single
+    /// reference in the predicate so the expression is not duplicated, and on the
+    /// extension not being referenced by a sibling extension in the same node.
+    /// </summary>
+    private sealed class FilterExtendInlinePass : IPlannerPass
+    {
+        public string Name => "FilterExtendInlinePass";
+
+        public RelNode Apply(RelNode node, out bool changed, out int attempted, out int applied)
+        {
+            attempted = 0;
+            applied = 0;
+            var rewritten = Rewrite(node, null, ref attempted, ref applied);
+            changed = rewritten != node;
+            return rewritten;
+        }
+
+        // `required` is the set of column names that ancestors consume from this
+        // node's output. `null` means "all output columns are required" — used at
+        // the query root (every column is returned) and across boundaries (joins,
+        // tabular let values) where the live set cannot be tracked precisely. A
+        // null set conservatively disables inlining, because no column can be
+        // proven dead.
+        private static RelNode Rewrite(RelNode node, HashSet<string>? required, ref int attempted, ref int applied) => node switch
+        {
+            FilterNode f when f.Input is ExtendNode ext => RewriteFilterOverExtend(f, ext, required, ref attempted, ref applied),
+            FilterNode f => f with { Input = Rewrite(f.Input, PassThrough(required, f.Predicate), ref attempted, ref applied) },
+            // A projection redefines the output schema to its aliases, so the
+            // incoming required set no longer applies below it; the input must
+            // expose the columns the projection expressions reference.
+            ProjectNode p => p with { Input = Rewrite(p.Input, ResetTo(p.Projections), ref attempted, ref applied) },
+            DistinctNode d => d with { Input = Rewrite(d.Input, ResetTo(d.Projections), ref attempted, ref applied) },
+            AggregateNode a => a with { Input = Rewrite(a.Input, AggregateInputRequired(a), ref attempted, ref applied) },
+            ExtendNode e => e with { Input = Rewrite(e.Input, ExtendInputRequired(required, e), ref attempted, ref applied) },
+            SortNode s => s with { Input = Rewrite(s.Input, PassThrough(required, s.Sorts.Select(x => x.Expression)), ref attempted, ref applied) },
+            LimitNode l => l with { Input = Rewrite(l.Input, required, ref attempted, ref applied) },
+            SampleNode sm => sm with { Input = Rewrite(sm.Input, required, ref attempted, ref applied) },
+            JoinNode j => j with
+            {
+                Left = Rewrite(j.Left, null, ref attempted, ref applied),
+                Right = Rewrite(j.Right, null, ref attempted, ref applied)
+            },
+            LetBindingNode lb => lb with
+            {
+                Body = Rewrite(lb.Body, required, ref attempted, ref applied),
+                TabularValue = lb.TabularValue is null ? null : Rewrite(lb.TabularValue, null, ref attempted, ref applied)
+            },
+            _ => node,
+        };
+
+        private static RelNode RewriteFilterOverExtend(
+            FilterNode f,
+            ExtendNode ext,
+            HashSet<string>? required,
+            ref int attempted,
+            ref int applied)
+        {
+            var predicate = f.Predicate;
+            var remaining = new List<ProjectionExpr>();
+            var inlinedAny = false;
+
+            foreach (var extension in ext.Extensions)
+            {
+                attempted++;
+
+                // Inline only when the extension column is:
+                //  - provably dead above the filter (not in `required`, set known),
+                //  - an actual computation (a bare passthrough saves nothing and
+                //    could shadow a base column),
+                //  - not depended on by a sibling extension in this same node, and
+                //  - referenced exactly once in the predicate (so the expression is
+                //    substituted, not duplicated).
+                if (required is not null
+                    && !required.Contains(extension.Alias)
+                    && extension.Expression is not ColumnRef
+                    && !SiblingReferences(ext.Extensions, extension)
+                    && CountColumnRefOccurrences(predicate, extension.Alias) == 1)
+                {
+                    predicate = SubstituteColumn(predicate, extension.Alias, extension.Expression);
+                    inlinedAny = true;
+                    applied++;
+                    continue;
+                }
+
+                remaining.Add(extension);
+            }
+
+            if (!inlinedAny)
+            {
+                return f with { Input = Rewrite(ext, PassThrough(required, f.Predicate), ref attempted, ref applied) };
+            }
+
+            var newInput = remaining.Count == 0 ? ext.Input : ext with { Extensions = remaining };
+            var rewrittenInput = Rewrite(newInput, PassThrough(required, predicate), ref attempted, ref applied);
+            return new FilterNode(rewrittenInput, predicate);
+        }
+
+        private static bool SiblingReferences(IReadOnlyList<ProjectionExpr> extensions, ProjectionExpr target)
+        {
+            foreach (var e in extensions)
+            {
+                if (ReferenceEquals(e, target))
+                {
+                    continue;
+                }
+
+                var refs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                CollectColumnRefs(e.Expression, refs);
+                if (refs.Contains(target.Alias))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static HashSet<string> ResetTo(IReadOnlyList<ProjectionExpr> projections)
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in projections)
+            {
+                CollectColumnRefs(p.Expression, set);
+            }
+
+            return set;
+        }
+
+        private static HashSet<string> AggregateInputRequired(AggregateNode a)
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var g in a.GroupBy)
+            {
+                CollectColumnRefs(g, set);
+            }
+
+            foreach (var ag in a.Aggregates)
+            {
+                CollectColumnRefs(ag.Expression, set);
+            }
+
+            return set;
+        }
+
+        private static HashSet<string>? ExtendInputRequired(HashSet<string>? required, ExtendNode e)
+        {
+            if (required is null)
+            {
+                return null;
+            }
+
+            var aliases = e.Extensions.Select(x => x.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var r in required)
+            {
+                if (!aliases.Contains(r))
+                {
+                    set.Add(r);
+                }
+            }
+
+            foreach (var ex in e.Extensions)
+            {
+                CollectColumnRefs(ex.Expression, set);
+            }
+
+            return set;
+        }
+
+        private static HashSet<string>? PassThrough(HashSet<string>? required, ScalarExpr extra)
+        {
+            if (required is null)
+            {
+                return null;
+            }
+
+            var set = new HashSet<string>(required, StringComparer.OrdinalIgnoreCase);
+            CollectColumnRefs(extra, set);
+            return set;
+        }
+
+        private static HashSet<string>? PassThrough(HashSet<string>? required, IEnumerable<ScalarExpr> extras)
+        {
+            if (required is null)
+            {
+                return null;
+            }
+
+            var set = new HashSet<string>(required, StringComparer.OrdinalIgnoreCase);
+            foreach (var e in extras)
+            {
+                CollectColumnRefs(e, set);
+            }
+
+            return set;
         }
     }
 
@@ -893,6 +1078,93 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             }
         },
         ListScalar l => l with { Items = l.Items.Select(i => RemapColumns(i, aliasToSource)).ToArray() },
+        _ => expr
+    };
+
+    private static int CountColumnRefOccurrences(ScalarExpr expr, string name)
+    {
+        var count = 0;
+        void Visit(ScalarExpr e)
+        {
+            switch (e)
+            {
+                case ColumnRef c when c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase):
+                    count++;
+                    break;
+                case BinaryScalar b:
+                    Visit(b.Left);
+                    Visit(b.Right);
+                    break;
+                case UnaryScalar u:
+                    Visit(u.Operand);
+                    break;
+                case FunctionCall f:
+                    foreach (var a in f.Args)
+                    {
+                        Visit(a);
+                    }
+
+                    break;
+                case CaseScalar cs:
+                    foreach (var (w, t) in cs.Branches)
+                    {
+                        Visit(w);
+                        Visit(t);
+                    }
+                    Visit(cs.Else);
+                    break;
+                case WindowScalarExpr w:
+                    foreach (var a in w.Args)
+                    {
+                        Visit(a);
+                    }
+
+                    foreach (var p in w.Window.PartitionBy)
+                    {
+                        Visit(p);
+                    }
+
+                    foreach (var o in w.Window.OrderBy)
+                    {
+                        Visit(o.Expression);
+                    }
+
+                    break;
+                case ListScalar l:
+                    foreach (var i in l.Items)
+                    {
+                        Visit(i);
+                    }
+
+                    break;
+            }
+        }
+
+        Visit(expr);
+        return count;
+    }
+
+    private static ScalarExpr SubstituteColumn(ScalarExpr expr, string name, ScalarExpr replacement) => expr switch
+    {
+        ColumnRef c when c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase) => replacement,
+        BinaryScalar b => b with { Left = SubstituteColumn(b.Left, name, replacement), Right = SubstituteColumn(b.Right, name, replacement) },
+        UnaryScalar u => u with { Operand = SubstituteColumn(u.Operand, name, replacement) },
+        FunctionCall f => f with { Args = f.Args.Select(a => SubstituteColumn(a, name, replacement)).ToArray() },
+        CaseScalar cs => cs with
+        {
+            Branches = cs.Branches.Select(b => (SubstituteColumn(b.When, name, replacement), SubstituteColumn(b.Then, name, replacement))).ToArray(),
+            Else = SubstituteColumn(cs.Else, name, replacement)
+        },
+        WindowScalarExpr w => w with
+        {
+            Args = w.Args.Select(a => SubstituteColumn(a, name, replacement)).ToArray(),
+            Window = w.Window with
+            {
+                PartitionBy = w.Window.PartitionBy.Select(p => SubstituteColumn(p, name, replacement)).ToArray(),
+                OrderBy = w.Window.OrderBy.Select(o => o with { Expression = SubstituteColumn(o.Expression, name, replacement) }).ToArray()
+            }
+        },
+        ListScalar l => l with { Items = l.Items.Select(i => SubstituteColumn(i, name, replacement)).ToArray() },
         _ => expr
     };
 

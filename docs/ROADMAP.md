@@ -190,9 +190,17 @@ mode shows generated SQL.
 
 **Implemented:**
 1. Feature-flagged planner runtime integration (`Planner:Enabled`, `Planner:MaxIterations`).
-2. Safe passes: filter pushdown subset, identity projection collapse, projection pruning, common scalar hoisting.
+2. Safe passes: filter pushdown subset, filter-extend inline, identity projection collapse, projection pruning, common scalar hoisting.
 3. Planner observability in developer mode (`PlannerStatsJson`, `DebugTrace`).
 4. Planner seam + end-to-end test coverage for safety and parity scenarios.
+
+**Filter-extend inline (`FilterExtendInlinePass`):** a computed `extend` column consumed only
+by the immediately following `where` is inlined into the predicate and its column dropped, so
+`... | extend Flag = expr | where Flag` no longer materializes a throwaway boolean column and
+its CTE stage. The emitter's pass-through/filter-stage collapse then folds the result into a
+single computed scope. Gated on liveness (the column must be dead above the filter — never
+inlined when still projected), a single predicate reference (no expression duplication), and
+no sibling-extension dependency.
 
 **Status:** Complete.
 

@@ -169,7 +169,7 @@ public sealed class RelationalPlannerTests
         Assert.IsGreaterThanOrEqualTo(1, planner.LastRunStats!.Iterations);
         Assert.IsGreaterThanOrEqualTo(1, planner.LastRunStats.TotalRulesAttempted);
         Assert.IsFalse(planner.LastRunStats.HitRuleApplicationBudget);
-        Assert.HasCount(5, planner.LastRunStats.PassStats, "Expected five registered planner passes");
+        Assert.HasCount(6, planner.LastRunStats.PassStats, "Expected six registered planner passes");
     }
 
     [TestMethod]
@@ -481,5 +481,103 @@ public sealed class RelationalPlannerTests
         var project = (ProjectNode)planned;
         Assert.IsInstanceOfType<ScanNode>(project.Input, "Outer identity projection should collapse to inner project");
         Assert.AreEqual("DeviceName", project.Projections[0].Alias);
+    }
+
+    [TestMethod]
+    [Description("A computed column consumed only by the following filter is inlined and its extend dropped")]
+    public void FilterExtendInline_DeadComputedColumn_InlinedIntoFilter()
+    {
+        var planner = new RelationalPlanner();
+
+        // DeviceProcessEvents
+        //   | extend CommandUrlEncoded = url_encode(ProcessCommandLine)
+        //   | extend HasEncodedCmd = indexof(CommandUrlEncoded, "%2Denc") >= 0
+        //   | where HasEncodedCmd
+        //   | project Timestamp, CommandUrlEncoded
+        var encoded = new ExtendNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("CommandUrlEncoded", new FunctionCall("url_encode", [new ColumnRef("ProcessCommandLine")]))]);
+        var flag = new ExtendNode(
+            encoded,
+            [new ProjectionExpr("HasEncodedCmd", new BinaryScalar(
+                new FunctionCall("indexof", [new ColumnRef("CommandUrlEncoded"), new LiteralScalar("%2Denc", LiteralKind.String)]),
+                ScalarBinaryOp.Gte,
+                new LiteralScalar(0L, LiteralKind.Long)))]);
+        RelNode node = new ProjectNode(
+            new FilterNode(flag, new ColumnRef("HasEncodedCmd")),
+            [
+                new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
+                new ProjectionExpr("CommandUrlEncoded", new ColumnRef("CommandUrlEncoded"))
+            ]);
+
+        var planned = planner.Plan(node, new PlannerContext(Enabled: true));
+
+        var project = (ProjectNode)planned;
+        var filter = (FilterNode)project.Input;
+        Assert.IsInstanceOfType<BinaryScalar>(filter.Predicate,
+            "The boolean flag column must be inlined as its defining expression, not left as a column reference");
+
+        // The throwaway HasEncodedCmd extend is gone; the still-needed
+        // CommandUrlEncoded extend survives.
+        var ext = (ExtendNode)filter.Input;
+        Assert.HasCount(1, ext.Extensions);
+        Assert.AreEqual("CommandUrlEncoded", ext.Extensions[0].Alias);
+
+        var stats = planner.LastRunStats!;
+        var pass = stats.PassStats.First(s => s.Name == "FilterExtendInlinePass");
+        Assert.IsGreaterThan(0, pass.Applied, "Inline pass should apply at least one rewrite");
+    }
+
+    [TestMethod]
+    [Description("A computed column kept in the projection output is not inlined away")]
+    public void FilterExtendInline_ColumnUsedDownstream_NotInlined()
+    {
+        var planner = new RelationalPlanner();
+
+        // The flag is both filtered on AND projected, so it is live above the
+        // filter and must remain materialized.
+        var flag = new ExtendNode(
+            new ScanNode("DeviceProcessEvents"),
+            [new ProjectionExpr("HasEncodedCmd", new BinaryScalar(
+                new ColumnRef("ProcessId"), ScalarBinaryOp.Gt, new LiteralScalar(0L, LiteralKind.Long)))]);
+        RelNode node = new ProjectNode(
+            new FilterNode(flag, new ColumnRef("HasEncodedCmd")),
+            [new ProjectionExpr("HasEncodedCmd", new ColumnRef("HasEncodedCmd"))]);
+
+        var planned = planner.Plan(node, new PlannerContext(Enabled: true));
+
+        var project = (ProjectNode)planned;
+        var filter = (FilterNode)project.Input;
+        Assert.IsInstanceOfType<ColumnRef>(filter.Predicate,
+            "A column still consumed downstream must not be inlined into the filter");
+        Assert.IsInstanceOfType<ExtendNode>(filter.Input);
+    }
+
+    [TestMethod]
+    [Description("A computed column referenced by a sibling extension is not inlined/dropped")]
+    public void FilterExtendInline_SiblingDependency_NotInlined()
+    {
+        var planner = new RelationalPlanner();
+
+        // A is consumed only by the filter, but sibling B = upper(A) depends on it
+        // and B is projected — dropping A would break B.
+        var ext = new ExtendNode(
+            new ScanNode("DeviceProcessEvents"),
+            [
+                new ProjectionExpr("A", new FunctionCall("lower", [new ColumnRef("FileName")])),
+                new ProjectionExpr("B", new FunctionCall("upper", [new ColumnRef("A")]))
+            ]);
+        RelNode node = new ProjectNode(
+            new FilterNode(ext, new ColumnRef("A")),
+            [new ProjectionExpr("B", new ColumnRef("B"))]);
+
+        var planned = planner.Plan(node, new PlannerContext(Enabled: true));
+
+        var project = (ProjectNode)planned;
+        var filter = (FilterNode)project.Input;
+        Assert.IsInstanceOfType<ColumnRef>(filter.Predicate,
+            "A column a sibling extension depends on must not be inlined away");
+        var kept = (ExtendNode)filter.Input;
+        Assert.HasCount(2, kept.Extensions);
     }
 }
