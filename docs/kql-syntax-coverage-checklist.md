@@ -64,7 +64,7 @@ approximation diagnostic, or reject.
 - [x] `join kind=rightsemi` — right semi join — `RIGHT SEMI JOIN`
 - [B] `join` (bare, no kind) — Kusto default is `innerunique` (deduplicates left side before joining); must reject until innerunique semantics are implemented. Do not silently emit SQL `INNER JOIN`.
 - [B] `join kind=innerunique` — dedup-left join; blocked until deterministic row selection is implemented
-- [ ] `lookup` — optimized dimension join → `LEFT JOIN` with binding validation — *frequency*
+- [x] `lookup` — optimized dimension join → `LEFT JOIN` with side-qualified output binding; emitter collapses `project` over the lookup into one qualified SELECT
 
 ### 1.3 Union
 

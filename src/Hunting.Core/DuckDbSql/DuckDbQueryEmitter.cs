@@ -74,6 +74,11 @@ public sealed partial class DuckDbQueryEmitter
         RegexOptions.IgnoreCase)]
     private static partial Regex LeftLookupJoinStageRegex();
 
+    [GeneratedRegex(
+        @"^SELECT __join_left\.\*(?:, (?<payload>.+))? FROM (?<left>[A-Za-z0-9_.]+) AS __join_left LEFT JOIN (?<right>[A-Za-z0-9_.]+) AS __join_right ON \((?<pred>.+)\)$",
+        RegexOptions.IgnoreCase)]
+    private static partial Regex LeftLookupProjectedJoinStageRegex();
+
     private int _stageCounter;
     private readonly List<(string Name, string Sql)> _ctes = [];
     private readonly HashSet<string> _stageNames = new(StringComparer.Ordinal);
@@ -330,49 +335,178 @@ public sealed partial class DuckDbQueryEmitter
             return;
         }
 
-        var joinMatch = LeftLookupJoinStageRegex().Match(_ctes[joinIndex].Sql);
-        if (!joinMatch.Success)
-        {
-            return;
-        }
-
         static string RenameJoinAliases(string text) =>
             text.Replace("__join_left.", "left_agg.", StringComparison.Ordinal)
                 .Replace("__join_right.", "right_agg.", StringComparison.Ordinal);
 
-        var projected = RenameJoinAliases(projectionMatch.Groups["projection"].Value);
-        var joinSql =
-            $"SELECT {projected} FROM {joinMatch.Groups["left"].Value} AS left_agg LEFT JOIN {joinMatch.Groups["right"].Value} AS right_agg ON {RenameJoinAliases(joinMatch.Groups["pred"].Value)}";
+        var plainMatch = LeftLookupJoinStageRegex().Match(_ctes[joinIndex].Sql);
+        if (plainMatch.Success)
+        {
+            // Generic `SELECT * FROM left LEFT JOIN right` join: keep the join as a
+            // single CTE stage and fold the trailing projection into it verbatim.
+            var projected = RenameJoinAliases(projectionMatch.Groups["projection"].Value);
+            var joinSql =
+                $"SELECT {projected} FROM {plainMatch.Groups["left"].Value} AS left_agg LEFT JOIN {plainMatch.Groups["right"].Value} AS right_agg ON {RenameJoinAliases(plainMatch.Groups["pred"].Value)}";
 
-        _ctes[joinIndex] = (joinStageName, joinSql);
-        _ctes.RemoveAt(projectionIndex);
+            _ctes[joinIndex] = (joinStageName, joinSql);
+            _ctes.RemoveAt(projectionIndex);
+            _stageNames.Remove(terminalSource);
+
+            finalSource = joinStageName;
+            columns = null;
+            if (terminalTopK is not null)
+            {
+                terminalTopK = terminalTopK with { Source = joinStageName, OrderBy = RenameJoinAliases(terminalTopK.OrderBy) };
+            }
+
+            if (terminalOrder is not null)
+            {
+                terminalOrder = terminalOrder with { Source = joinStageName, OrderBy = RenameJoinAliases(terminalOrder.OrderBy) };
+            }
+
+            if (terminalLimit is not null)
+            {
+                terminalLimit = terminalLimit with { Source = joinStageName };
+            }
+
+            return;
+        }
+
+        // A `lookup` join emits `SELECT __join_left.*, __join_right.<cols> FROM ...`
+        // rather than `SELECT *`, so the plain rule above never matches it. Fold the
+        // trailing projection into a fully-qualified SELECT directly over the join
+        // and drop both intermediate CTEs. Qualification is mandatory here: the join
+        // key column lives on both inputs, so a bare reference would be ambiguous.
+        var lookupMatch = LeftLookupProjectedJoinStageRegex().Match(_ctes[joinIndex].Sql);
+        if (!lookupMatch.Success)
+        {
+            return;
+        }
+
+        var rightOwned = ParseRightPayloadColumns(lookupMatch.Groups["payload"].Value);
+        if (rightOwned is null
+            || !TryQualifyLookupProjection(projectionMatch.Groups["projection"].Value, rightOwned, out var qualifiedProjection))
+        {
+            return;
+        }
+
+        var inlinedJoin =
+            $"{lookupMatch.Groups["left"].Value} AS left_agg LEFT JOIN {lookupMatch.Groups["right"].Value} AS right_agg ON {RenameJoinAliases(lookupMatch.Groups["pred"].Value)}";
+
+        // Remove the higher index first so the lower index stays valid.
+        var higher = Math.Max(projectionIndex, joinIndex);
+        var lower = Math.Min(projectionIndex, joinIndex);
+        _ctes.RemoveAt(higher);
+        _ctes.RemoveAt(lower);
         _stageNames.Remove(terminalSource);
+        _stageNames.Remove(joinStageName);
 
-        finalSource = joinStageName;
-        columns = null;
+        finalSource = inlinedJoin;
+        columns = qualifiedProjection;
         if (terminalTopK is not null)
         {
-            terminalTopK = terminalTopK with
-            {
-                Source = joinStageName,
-                OrderBy = RenameJoinAliases(terminalTopK.OrderBy)
-            };
+            terminalTopK = terminalTopK with { Source = inlinedJoin, OrderBy = RenameJoinAliases(terminalTopK.OrderBy) };
         }
 
         if (terminalOrder is not null)
         {
-            terminalOrder = terminalOrder with
-            {
-                Source = joinStageName,
-                OrderBy = RenameJoinAliases(terminalOrder.OrderBy)
-            };
+            terminalOrder = terminalOrder with { Source = inlinedJoin, OrderBy = RenameJoinAliases(terminalOrder.OrderBy) };
         }
 
         if (terminalLimit is not null)
         {
-            terminalLimit = terminalLimit with { Source = joinStageName };
+            terminalLimit = terminalLimit with { Source = inlinedJoin };
         }
     }
+
+    /// <summary>
+    /// Parse the right-side payload of a lookup join's select list
+    /// (<c>__join_right.Col1, __join_right.Col2</c>) into the set of column names
+    /// owned by the right input. Returns an empty set when the right side carries
+    /// only the join key, or null when any entry is not a simple
+    /// <c>__join_right.&lt;identifier&gt;</c> reference (in which case the caller
+    /// must not attempt the collapse).
+    /// </summary>
+    private static HashSet<string>? ParseRightPayloadColumns(string payload)
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrEmpty(payload))
+        {
+            return set;
+        }
+
+        foreach (var raw in payload.Split(", ", StringSplitOptions.None))
+        {
+            const string prefix = "__join_right.";
+            var item = raw.Trim();
+            if (!item.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            var col = item[prefix.Length..];
+            if (!IsSimpleIdentifier(col))
+            {
+                return null;
+            }
+
+            set.Add(col);
+        }
+
+        return set;
+    }
+
+    /// <summary>
+    /// Rewrite a lookup-join output projection so each column is qualified by the
+    /// side that owns it (<c>left_agg</c> or <c>right_agg</c>) and aliased to its
+    /// output name. Returns false unless every projection item is a simple column
+    /// reference (optionally <c>col AS alias</c>); a computed projection is left
+    /// for the unoptimized path rather than risk mis-qualifying it.
+    /// </summary>
+    private static bool TryQualifyLookupProjection(
+        string projection,
+        HashSet<string> rightOwned,
+        out string qualified)
+    {
+        qualified = string.Empty;
+        var rendered = new List<string>();
+        foreach (var raw in projection.Split(", ", StringSplitOptions.None))
+        {
+            var item = raw.Trim();
+            string col;
+            string alias;
+            var asIndex = item.IndexOf(" AS ", StringComparison.OrdinalIgnoreCase);
+            if (asIndex >= 0)
+            {
+                col = item[..asIndex].Trim();
+                alias = item[(asIndex + 4)..].Trim();
+            }
+            else
+            {
+                col = item;
+                alias = item;
+            }
+
+            if (!IsSimpleIdentifier(col) || !IsSimpleIdentifier(alias))
+            {
+                return false;
+            }
+
+            var side = rightOwned.Contains(col) ? "right_agg" : "left_agg";
+            rendered.Add($"{side}.{col} AS {alias}");
+        }
+
+        if (rendered.Count == 0)
+        {
+            return false;
+        }
+
+        qualified = string.Join(", ", rendered);
+        return true;
+    }
+
+    private static bool IsSimpleIdentifier(string s) =>
+        s.Length > 0 && !char.IsDigit(s[0]) && s.All(c => char.IsLetterOrDigit(c) || c == '_');
 
     private string NextStage() => $"__kql_stage_{_stageCounter++}";
 

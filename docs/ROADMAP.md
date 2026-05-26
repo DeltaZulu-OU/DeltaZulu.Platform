@@ -210,6 +210,12 @@ rewrites:
    is provably non-nullable (count-family aggregates), determined by walking the sort input
    subtree. Conservative: nullable keys (e.g. `sum`) and analyst-specified null ordering are
    preserved.
+4. **Projected lookup-join collapse** — a `project` over a `lookup` (`LEFT JOIN`) folds into a
+   single SELECT directly over the join. Each output column is qualified by its owning side
+   (`left_agg`/`right_agg`) and aliased, removing the redundant projection CTE and the
+   `SELECT __join_left.*, __join_right.…` wrapper stage. Conservative: only simple
+   (optionally aliased) column projections are collapsed; computed projections keep the
+   unoptimized staging.
 
 Covered in `tests/Hunting.Tests/Emitter/` (unit + execution parity).
 
@@ -250,4 +256,4 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 | DuckDB connection in Blazor Server | `DuckDbConnectionFactory` + `QueryService` serialization | ✅ Implemented |
 ---
 
-*Last updated: 2026-05-26 — documentation aligned to current implementation state (Phase 4: 4a/4c/4d complete, 4b pending; Phase 5 complete).*
+*Last updated: 2026-05-26 — documentation aligned to current implementation state (Phase 4: 4a/4c/4d complete, 4b pending; Phase 5 complete, incl. projected lookup-join collapse).*

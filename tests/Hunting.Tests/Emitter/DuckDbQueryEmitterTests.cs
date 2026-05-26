@@ -627,6 +627,61 @@ public sealed partial class DuckDbQueryEmitterTests
     }
 
     [TestMethod]
+    [Description("Lookup-flavored aggregate join collapses project+join into one qualified, unambiguous SELECT")]
+    public void Lookup_FlavorAggregateProjectSortTake_InlinesQualifiedJoin()
+    {
+        var leftAgg = new AggregateNode(
+            new ScanNode("DeviceProcessEvents"),
+            Aggregates: [new ProjectionExpr("LaunchCount", new FunctionCall("count", []))],
+            GroupBy: [new ColumnRef("AccountName")]);
+
+        var rightAgg = new AggregateNode(
+            new ScanNode("DeviceProcessEvents"),
+            Aggregates: [new ProjectionExpr("DeviceCount", new FunctionCall("dcount", [new ColumnRef("DeviceName")]))],
+            GroupBy: [new ColumnRef("AccountName")]);
+
+        // JoinFlavor.Lookup is what the translator emits for `| lookup (...) on Col`.
+        var lookupJoin = new JoinNode(
+            leftAgg,
+            rightAgg,
+            JoinKind.LeftOuter,
+            new BinaryScalar(
+                new ColumnRef("AccountName", JoinSide.Left),
+                ScalarBinaryOp.Eq,
+                new ColumnRef("AccountName", JoinSide.Right)),
+            JoinFlavor.Lookup);
+
+        var project = new ProjectNode(
+            lookupJoin,
+            [
+                new ProjectionExpr("AccountName", new ColumnRef("AccountName")),
+                new ProjectionExpr("LaunchCount", new ColumnRef("LaunchCount")),
+                new ProjectionExpr("DeviceCount", new ColumnRef("DeviceCount")),
+            ]);
+
+        var top = new LimitNode(
+            new SortNode(project, [new SortExpr(new ColumnRef("LaunchCount"), SortDirection.Desc)]),
+            25);
+
+        var sql = _emitter.Emit(top);
+        var normalizedSql = NormSql(sql);
+
+        // Each output column is qualified by its owning side and aliased.
+        AssertSqlContains(normalizedSql, "left_agg.AccountName AS AccountName");
+        AssertSqlContains(normalizedSql, "left_agg.LaunchCount AS LaunchCount");
+        AssertSqlContains(normalizedSql, "right_agg.DeviceCount AS DeviceCount");
+        AssertSqlContains(normalizedSql, "LEFT JOIN");
+        AssertSqlContains(normalizedSql, "ON left_agg.AccountName = right_agg.AccountName");
+        AssertSqlContains(normalizedSql, "ORDER BY LaunchCount DESC NULLS LAST");
+        AssertSqlContains(normalizedSql, "LIMIT 25");
+
+        // The redundant projection stage and the __join_* select wrapper are gone.
+        Assert.DoesNotContain("__join_left", normalizedSql, "join-side placeholder aliases must be renamed");
+        Assert.DoesNotContain("__join_right", normalizedSql, "join-side placeholder aliases must be renamed");
+        Assert.DoesNotMatchRegex(@"SELECT\s+__join_left\.\*", normalizedSql);
+    }
+
+    [TestMethod]
     [Description("has_cs uses case-sensitive regex without lower()")]
     public void Op_HasCs_CaseSensitiveRegex()
     {
