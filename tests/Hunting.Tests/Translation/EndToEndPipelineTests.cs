@@ -517,7 +517,17 @@ public sealed class EndToEndPipelineTests
         Assert.AreEqual("Timestamp", withRender.RenderSpec.XColumn);
         Assert.AreEqual(1, withRender.RenderSpec.YColumns.Count);
         Assert.AreEqual("ProcessId", withRender.RenderSpec.YColumns[0]);
-        Assert.AreEqual("Proc", withRender.RenderSpec.Title, "Current parser tokenizes values by spaces; this test pins current subset behavior.");
+        Assert.AreEqual("Proc trend", withRender.RenderSpec.Title);
+    }
+
+
+    [TestMethod]
+    [Description("Non-terminal render is rejected by diagnostics")]
+    public void Runtime_RenderDirective_NonTerminal_Rejected()
+    {
+        var result = _runtime.Execute("ProcessEvents | render linechart xcolumn=Timestamp | take 2");
+        Assert.IsFalse(result.Success);
+        Assert.IsTrue(result.Diagnostics.All.Any(d => d.Message.Contains("Render clause must be terminal", StringComparison.OrdinalIgnoreCase)));
     }
 
     [TestMethod]

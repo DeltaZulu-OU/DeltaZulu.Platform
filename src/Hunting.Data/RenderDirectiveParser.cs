@@ -15,7 +15,9 @@ internal static partial class RenderDirectiveParser
         var match = RenderRegex().Match(kql);
         if (!match.Success)
         {
-            return (kql, RenderSpecDefaults.Table());
+            return ContainsRenderToken(kql)
+                ? (kql, RenderSpecDefaults.Table("Render clause must be terminal and use key=value properties."))
+                : (kql, RenderSpecDefaults.Table());
         }
 
         var kindRaw = match.Groups["kind"].Value;
@@ -25,7 +27,13 @@ internal static partial class RenderDirectiveParser
             return (strippedUnsupported, RenderSpecDefaults.Table($"Unsupported render kind '{kindRaw}'."));
         }
 
-        var properties = ParseProperties(match.Groups["props"].Value);
+        var (properties, malformedProperty) = ParseProperties(match.Groups["props"].Value);
+        if (malformedProperty is not null)
+        {
+            var strippedMalformed = kql[..match.Index].TrimEnd();
+            return (strippedMalformed, RenderSpecDefaults.Table($"Malformed render property '{malformedProperty}'. Expected key=value."));
+        }
+
         var stripped = kql[..match.Index].TrimEnd();
 
         var spec = new RenderSpec(
@@ -54,22 +62,27 @@ internal static partial class RenderDirectiveParser
         _ => RenderKind.Table
     };
 
-    private static Dictionary<string, string> ParseProperties(string input)
+    private static (Dictionary<string, string> Properties, string? MalformedProperty) ParseProperties(string input)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrWhiteSpace(input)) return map;
-        var items = input.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        foreach (var item in items)
+        if (string.IsNullOrWhiteSpace(input))
         {
-            var split = item.Split('=', 2, StringSplitOptions.TrimEntries);
-            if (split.Length == 2)
-            {
-                map[split[0]] = split[1].Trim('\'', '"');
-            }
+            return (map, null);
         }
 
-        return map;
+        foreach (Match propertyMatch in PropertyRegex().Matches(input))
+        {
+            var key = propertyMatch.Groups["key"].Value;
+            var rawValue = propertyMatch.Groups["value"].Value;
+            map[key] = rawValue.Trim('"', '\'');
+        }
+
+        var remainder = PropertyRegex().Replace(input, string.Empty).Trim();
+        return string.IsNullOrWhiteSpace(remainder) ? (map, null) : (map, remainder);
     }
+
+    private static bool ContainsRenderToken(string kql)
+        => Regex.IsMatch(kql, @"\|\s*render\b", RegexOptions.IgnoreCase);
 
     private static string? Get(IReadOnlyDictionary<string, string> props, string key)
         => props.TryGetValue(key, out var value) ? value : null;
@@ -81,4 +94,7 @@ internal static partial class RenderDirectiveParser
 
     [GeneratedRegex(@"\|\s*render\s+(?<kind>[A-Za-z][A-Za-z0-9_-]*)(?<props>(?:\s+[A-Za-z][A-Za-z0-9_-]*\s*=\s*(?:'(?:\\.|[^'\\])*'|""(?:\\.|[^""\\])*""|[^\s|;]+))*)\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex RenderRegex();
+
+    [GeneratedRegex(@"\s+(?<key>[A-Za-z][A-Za-z0-9_-]*)\s*=\s*(?<value>'(?:\\.|[^'\\])*'|""(?:\\.|[^""\\])*""|[^\s|;]+)")]
+    private static partial Regex PropertyRegex();
 }

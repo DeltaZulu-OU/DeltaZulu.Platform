@@ -10,6 +10,9 @@ security data.
 
 ## Recent updates
 
+- 2026-05-27: Render R1/R2 baseline implemented in runtime: terminal-only render parsing/diagnostics and resolver defaults/type validation with table fallback; UI chart adapter remains pending for R3.
+
+- 2026-05-27: Render track reordered into POC/MVP sequence with explicit R0–R5 milestones; checklist/runtime status now reflects that prior metadata-sidecar behavior is reverted and render remains deferred until the new track is implemented.
 - 2026-05-27: Documentation synchronization pass: aligned architecture/roadmap/checklist/README with implemented `golden.*` surface, planner-in-runtime behavior, current ADR statuses, and explicit future tracks from proposed ADRs (Quartz scheduling, multi-backend routing, render sidecar, and time-series blueprint).
 - 2026-05-27: Updated mock-seeder and Blazor sample-query defaults to event-family medallion surfaces (`ProcessEvents`, `NetworkSessions`) while keeping Device* compatibility aliases registered.
 - 2026-05-27: ADR 0008 updated: MVP Golden contracts are explicitly ASIM-shaped bootstrap contracts (provisional/partial), with post-MVP schema-by-schema retain/adapt/diverge governance.
@@ -39,6 +42,112 @@ security data.
 - 2026-05-27: Query telemetry visibility improved — developer-mode `debugTrace[]` is now logged on successful query execution paths as well as failures to support optimization work.
 
 - 2026-05-27: Proposed ADR 0011 to add a pre-planner fast-path gateway in `QueryRuntime` with conservative structural gating and a 50,000 estimated-row data-volume threshold for middle-shape plans.
+
+## Render Roadmap (POC/MVP Track)
+
+### Phase R0 — Baseline realignment (short)
+
+**Objective:** Reconcile status docs with current code reality after render-sidecar revert.
+
+**Scope:**
+- Remove status claims that imply active render functionality in runtime/UI.
+- Align checklist wording with current deferred state.
+- Keep this Render roadmap section (`R1–R4` plus hardening) as the single implementation plan anchor.
+
+**Exit criteria:**
+- Status docs no longer claim render functionality that is absent in current runtime/UI.
+
+### Phase R1 — Terminal render parser + policy diagnostics (runtime-safe)
+
+**Objective:** Add minimal parsing/policy support for terminal `| render ...` with strict guardrails.
+
+**Scope:**
+- Accept only **terminal** `render` clauses.
+- Reject/diagnose non-terminal `render`.
+- Parse initial subset: `timechart`, `linechart` (optional early `barchart`).
+- Parse basic properties: `xcolumn`, `ycolumns`, `title`.
+
+**Exit criteria:**
+- Parser seam tests for:
+  - terminal success,
+  - non-terminal rejection,
+  - malformed-property diagnostics,
+  - unknown-kind fallback/warn behavior.
+
+### Phase R2 — Render resolver over result schema/data
+
+**Objective:** Add `RenderResolver` that validates render intent against result schema/data and emits a normalized plan.
+
+**Inputs:**
+- Parsed render intent,
+- result schema,
+- returned rows/columnar data.
+
+**Outputs:**
+- Validated `ResolvedRenderPlan`, or table fallback with warnings.
+
+**Responsibilities:**
+- Case-insensitive column resolution,
+- default inference when properties are omitted (for example first datetime + first numeric),
+- chart-kind type compatibility checks,
+- multi-series normalization for chart adapter consumption.
+
+**Exit criteria:**
+- Resolver seam tests for:
+  - valid mappings,
+  - missing-column fallback,
+  - wrong-type fallback,
+  - multi-series normalization.
+
+### Phase R3 — UI chart adapter (subset-first)
+
+**Objective:** Deliver first real chart rendering path in Blazor (`Vizor.ECharts` per ADR).
+
+**Scope:**
+- Preserve Table/Render tabs.
+- Render tab shows an actual chart (not metadata-only).
+- Resolver failure path shows warning + table fallback.
+- Keep rendering confined to `Hunting.Web` (no chart adapter leakage into core/runtime).
+
+**First-release subset:**
+- `timechart` and `linechart`,
+- one X axis + up to N Y series,
+- no stacked/multi-axis yet.
+
+**Exit criteria:**
+- End-to-end UI verification for visible chart on happy-path query.
+- Warning/fallback behavior verified for invalid mappings.
+
+### Phase R4 — Expand supported kinds/properties safely
+
+**Objective:** Incrementally broaden chart coverage while preserving seam safety.
+
+**Expansion order:**
+- `barchart`, `columnchart`, `piechart`, `card`,
+- then optional properties such as `kind=stacked`, `legend`, `series`.
+
+**Per-addition requirements:**
+- Checklist update,
+- resolver tests,
+- adapter tests,
+- roadmap/docs update in the same change set.
+
+### Phase R5 — Performance + UX hardening
+
+**Objective:** Production-safe rendering behavior on large/edge-case result sets.
+
+**Scope:**
+- Bound rendered chart points (decimation/downsampling for large results),
+- explicit degraded-render warnings,
+- chart empty-state and schema-mismatch messaging,
+- telemetry counters (render kind usage, fallback frequency, resolver failures).
+
+### Suggested delivery order
+
+1. `R1 + R2` in one PR (parser + resolver; no chart UI yet).
+2. `R3` in next PR (timechart/linechart real render).
+3. `R4` expansion PRs by chart family.
+4. `R5` hardening.
 
 ## Phase 0 — Gate Spike + Scaffolding ✅ COMPLETE
 

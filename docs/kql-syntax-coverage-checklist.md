@@ -113,7 +113,7 @@ approximation diagnostic, or reject.
 
 ### 1.9 Rendering and Visualization
 
-- [m] `render` — visualization hint → metadata-only (does not emit SQL; captured as `RenderSpec` side-channel for UI/runtime; current web UX exposes sidecar via Table/Render result tabs; unsupported kinds produce non-fatal warnings + table fallback; runtime execution contracts covered by EndToEnd tests)
+- [m] `render` — *R1 parser+policy + R2 resolver baseline: terminal-only parsing with diagnostics and table fallback; chart adapter remains pending until R3*
 
 ### 1.10 Search and Find
 
