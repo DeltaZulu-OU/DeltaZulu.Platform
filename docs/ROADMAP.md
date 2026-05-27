@@ -8,6 +8,10 @@ security data.
 
 ---
 
+## Recent updates
+
+- 2026-05-27: Query telemetry visibility improved — developer-mode `debugTrace[]` is now logged on successful query execution paths as well as failures to support optimization work.
+
 ## Phase 0 — Gate Spike + Scaffolding ✅ COMPLETE
 
 **Objective:** Eliminate the last open technical risk and establish the project skeleton.
@@ -286,4 +290,4 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 | DuckDB connection in Blazor Server | `DuckDbConnectionFactory` + `QueryService` serialization | ✅ Implemented |
 ---
 
-*Last updated: 2026-05-26 — documentation aligned to current implementation state (Phase 4 complete; Phase 5 complete, incl. projected lookup-join collapse).*
+*Last updated: 2026-05-27 — documentation aligned to current implementation state (Phase 4 complete; Phase 5 complete, incl. projected lookup-join collapse).*

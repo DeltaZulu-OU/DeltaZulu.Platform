@@ -12,6 +12,7 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 - Phase 4 (hardening) is complete: schema validation automation, generated SQL preview, second table family, and Monaco KQL editor language-service integration are complete.
 - Phase 5 (Planner v1 + emitter SQL-shape simplification) is complete.
 - End-to-end pipeline coverage currently includes 17 hunting scenarios in `EndToEndPipelineTests`.
+- Developer-mode query debug trace is now logged on successful executions (not only failures) to support optimization telemetry.
 - Feature parity snapshot (from `docs/kql-syntax-coverage-checklist.md`) now uses an in-scope-only statistics table (out-of-scope constructs excluded):
 
 | Feature parity status (in scope only) | Count | Percent of in-scope total |
@@ -100,4 +101,4 @@ From the repository root:
 This project is licensed under the terms in [`LICENSE`](LICENSE).
 
 
-*Last updated: 2026-05-26 — status aligned with roadmap/architecture (Phase 4 complete; Phase 5 complete).*
+*Last updated: 2026-05-27 — status aligned with roadmap/architecture (Phase 4 complete; Phase 5 complete).*

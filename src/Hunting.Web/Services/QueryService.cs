@@ -54,7 +54,17 @@ public sealed class QueryService : IDisposable
             // running on the single shared connection, letting a second query in
             // concurrently. A started query runs to completion (or its own
             // CommandTimeout); the semaphore is released only once it truly ends.
-            return await Task.Run(() => _runtime.Execute(kql));
+            var result = await Task.Run(() => _runtime.Execute(kql));
+            if (result.DebugTrace.Count > 0)
+            {
+                _logger.LogDebug(
+                    "Query debug trace ({TraceCount} events, success={Success}): {DebugTrace}",
+                    result.DebugTrace.Count,
+                    result.Success,
+                    string.Join(" | ", result.DebugTrace));
+            }
+
+            return result;
         }
         catch (Exception ex)
         {
