@@ -10,6 +10,7 @@ security data.
 
 ## Recent updates
 
+- 2026-05-27: ADR 0008 updated: MVP Golden contracts are explicitly ASIM-shaped bootstrap contracts (provisional/partial), with post-MVP schema-by-schema retain/adapt/diverge governance.
 - 2026-05-27: Updated `ExecuteTabular(...)` to populate `QueryTabularResult.ColumnData` directly during reader scan via the streamed callback path, removing intermediate row-array materialization in tabular execution.
 - 2026-05-27: Migrated `QueryResult` to a columnar-first contract (`ColumnData` + `GetValue(row, col)`), updating buffered runtime and Blazor query-service/UI materialization paths to remove `IReadOnlyList<object?[]>` row-array dependency.
 - 2026-05-27: Removed another emitter hot-path allocation by replacing `EmitInBinary` list-item `ToArray()` snapshot with direct `IEnumerable<string>` `string.Join` emission.
@@ -62,7 +63,8 @@ database with queryable views.
 ### 1a. Core schema types ✅
 `ColumnDef`, `SchemaObjectDef` hierarchy, `DuckDbType`/`KustoType` enums with cross-mapping,
 `ExprDef` mapping model, `MapDsl` builder helpers. `DeviceProcessEventsSchema`: 14 canonical
-columns, `raw.windows_event_json`, Sysmon EID 1 `ParserViewDef` with full mapping.
+columns, `bronze.windows_event_json`, Sysmon EID 1 `ParserViewDef` with full mapping.
+ASIM-shaped Golden naming (`ProcessEvent`, `NetworkSession`) is tracked as a targeted MVP bootstrap alignment step under ADR 0008.
 
 ### 1b. DuckDB DDL emitter ✅
 `SchemaEmitter` walks schema models and produces DDL — `CREATE SCHEMA`, `CREATE TABLE`,
@@ -79,8 +81,8 @@ persistence (schtasks, reg run key), beaconing (5 events at 1-minute intervals).
 `ApprovedViewCatalog` reads canonical schema models and produces a `GlobalState` via
 `Kusto.Toolkit`. Applies the `dynamic` type strategy from Phase 0 spike.
 
-**Exit criteria met:** mock data flows `raw.*` → `internal.v_process_sysmon_create` →
-`main.DeviceProcessEvents`, queryable via raw SQL through DuckDB.NET.
+**Exit criteria met:** mock data flows `bronze.*` → `silver.v_process_sysmon_create` →
+`golden.DeviceProcessEvents`, queryable via raw SQL through DuckDB.NET.
 
 ---
 
@@ -165,7 +167,7 @@ Tabular grid below editor. Column headers from `QueryResult.Columns`. Sortable. 
 formatting. JSON column rendering (expandable or truncated). Pagination or virtual scroll.
 
 ### 3d. Schema browser + sample queries
-Sidebar listing `main.*` tables with columns and types from `ApprovedViewCatalog`. 5–10 sample
+Sidebar listing `golden.*` tables with columns and types from `ApprovedViewCatalog`. 5–10 sample
 KQL queries per table loadable into editor. Developer mode toggle showing `QueryResult.GeneratedSql`.
 
 **Exit criteria:** analyst can open UI, see available tables, type or select a KQL query,
@@ -251,7 +253,7 @@ mode shows generated SQL.
 - Add `ParserViewDef.FromSql(...)` alongside existing mapping authoring flow.
 - Enforce validation of SQL-backed parser views against declared `ColumnDef` contracts.
 - Update documentation for scoped SQL artifact policy (runtime SQL vs parser-view SQL).
-- Evaluate PascalCase cleanup for `raw.*` and `internal.*` object names as a separate decision.
+- Evaluate PascalCase cleanup for `bronze.*` and `silver.*` object names as a separate decision.
 
 ---
 

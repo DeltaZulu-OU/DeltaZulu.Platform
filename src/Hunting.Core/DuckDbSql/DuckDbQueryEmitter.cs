@@ -39,7 +39,7 @@ public sealed partial class DuckDbQueryEmitter
         int? Limit = null);
 
     [GeneratedRegex(
-        @"^SELECT \* FROM (main\.[A-Za-z_][A-Za-z0-9_]*)$",
+        @"^SELECT \* FROM (golden\.[A-Za-z_][A-Za-z0-9_]*)$",
         RegexOptions.IgnoreCase)]
     private static partial Regex TrivialSourceStageRegex();
 
@@ -168,6 +168,10 @@ public sealed partial class DuckDbQueryEmitter
         // Final-stage inlining can materialize the projection list from a stage source.
         // Re-run filter inlining once so where|project|take shapes can collapse fully.
         TryInlineSingleUseFilterStageIntoProjection(ref finalSource, ref columns);
+        // A filter-inline pass can produce "<stage> WHERE <pred>" where <stage> is now
+        // a trivial pass-through CTE ("SELECT * FROM golden.X"). Collapse that final
+        // wrapper so optimized where|where|project shapes do not retain a leading WITH.
+        TryInlinePassThroughBaseStage(ref finalSource);
         if (terminalOrder is not null)
         {
             // Keep terminal ORDER source aligned with later projection/filter inlining.
@@ -307,10 +311,7 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         var outerColumns = columns;
-        var decodedMatch = Regex.Match(
-            stage2Match.Groups["extensions"].Value,
-            @"^(?<expr>.+)\s+AS\s+(?<alias>[A-Za-z_][A-Za-z0-9_]*)$",
-            RegexOptions.IgnoreCase);
+        var decodedMatch = DecodedPattern().Match(stage2Match.Groups["extensions"].Value);
         if (decodedMatch.Success)
         {
             var alias = decodedMatch.Groups["alias"].Value;
@@ -561,7 +562,7 @@ public sealed partial class DuckDbQueryEmitter
         // Pass-through elimination: when the input already produced a standalone
         // CTE stage and no column projection needs to be applied, reuse that
         // stage directly instead of emitting a redundant `SELECT * FROM stage`
-        // wrapper. Base-table scans (`main.X`) are never CTE references, so the
+        // wrapper. Base-table scans (`golden.X`) are never CTE references, so the
         // scan still gets its own stage.
         if (cols is null && IsStageReference(source))
         {
@@ -1003,6 +1004,38 @@ public sealed partial class DuckDbQueryEmitter
         RemoveStageAt(idx);
     }
 
+    private void TryInlinePassThroughBaseStage(ref string finalSource)
+    {
+        var whereIdx = finalSource.IndexOf(" WHERE ", StringComparison.OrdinalIgnoreCase);
+        if (whereIdx <= 0)
+        {
+            return;
+        }
+
+        var sourceToken = finalSource[..whereIdx].Trim();
+        var predicateTail = finalSource[whereIdx..];
+        var idx = GetStageIndex(sourceToken);
+        if (idx < 0)
+        {
+            return;
+        }
+
+        var cte = _ctes[idx];
+        var match = TrivialSourceStageRegex().Match(cte.Sql);
+        if (!match.Success)
+        {
+            return;
+        }
+
+        if (CountStageReferences(cte.Name) != 0)
+        {
+            return;
+        }
+
+        finalSource = $"{match.Groups["source"].Value}{predicateTail}";
+        RemoveStageAt(idx);
+    }
+
     private void TryInlineSingleUseAggregateStageIntoTerminalTopK(
         ref TerminalTopK? terminalTopK,
         ref string? columns)
@@ -1301,7 +1334,7 @@ public sealed partial class DuckDbQueryEmitter
 
     #region Scan
 
-    private (string Source, string? Columns) EmitScan(ScanNode scan) => ($"main.{EscapeIdent(scan.ViewName)}", null);
+    private (string Source, string? Columns) EmitScan(ScanNode scan) => ($"golden.{EscapeIdent(scan.ViewName)}", null);
 
     #endregion Scan
     #region Filter
@@ -2444,7 +2477,7 @@ to_json(
     }
 
     /// <summary>
-    /// Escape a possibly schema-qualified name (e.g. <c>internal.v_foo</c>) by
+    /// Escape a possibly schema-qualified name (e.g. <c>silver.v_foo</c>) by
     /// escaping each dot-separated segment independently. Escaping the whole
     /// string would quote the dot and treat it as one identifier.
     /// </summary>
@@ -2459,5 +2492,7 @@ to_json(
     }
 
     private static string EscapeString(string s) => s.Replace("'", "''");
+    [GeneratedRegex(@"^(?<expr>.+)\s+AS\s+(?<alias>[A-Za-z_][A-Za-z0-9_]*)$", RegexOptions.IgnoreCase, "en-150")]
+    private static partial Regex DecodedPattern();
 }
 #endregion Helpers

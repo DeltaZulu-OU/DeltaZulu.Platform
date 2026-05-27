@@ -32,7 +32,7 @@ public sealed class ApprovedViewCatalog
     }
 
     /// <summary>
-    /// All registered canonical views (main.* public hunting views).
+    /// All registered canonical views (golden.* public hunting views).
     /// </summary>
     public IReadOnlyDictionary<string, CanonicalViewDef> Views => _views;
 

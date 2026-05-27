@@ -1,6 +1,6 @@
 using Hunting.Core.Catalog;
 using Hunting.Data;
-using Hunting.Schema.Definitions;
+using Hunting.Schema;
 using Hunting.Web.Services;
 using MudBlazor.Services;
 
@@ -15,8 +15,7 @@ builder.Services.AddMudServices();
 // Schema catalog — singleton, shared across all Blazor circuits
 builder.Services.AddSingleton(sp => {
     var catalog = new ApprovedViewCatalog();
-    catalog.Register(DeviceProcessEventsSchema.View);
-    catalog.Register(DeviceNetworkEventsSchema.View);
+    SchemaConventions.RegisterCanonicalViews(catalog);
     return catalog;
 });
 
@@ -77,18 +76,17 @@ static async Task BootstrapSchemaAsync(WebApplication app)
         var emitter = new Hunting.Core.DuckDbSql.SchemaEmitter();
 
         var ddl = emitter.EmitAll(
-            rawTables: [DeviceProcessEventsSchema.RawWindowsEventJson],
+            rawTables: SchemaConventions.RawTables,
             internalTables: [],
-            parserViews: [DeviceProcessEventsSchema.SysmonProcessCreate,
-                             DeviceNetworkEventsSchema.SysmonNetworkConnect],
-            canonicalViews: [DeviceProcessEventsSchema.View,
-                             DeviceNetworkEventsSchema.View]);
+            parserViews: SchemaConventions.ParserViews,
+            canonicalViews: SchemaConventions.CanonicalViews);
 
         applier.ApplyStatements(ddl);
+        applier.ExecuteRaw($"SET schema = '{SchemaConventions.GoldenSchema}'");
         app.Logger.LogInformation("Schema bootstrapped: {Count} DDL statements applied", ddl.Count);
 
         // Seed mock data only if the raw table is empty
-        var rowCount = applier.QueryScalar("SELECT count(*) FROM raw.windows_event_json");
+        var rowCount = applier.QueryScalar("SELECT count(*) FROM bronze.windows_event_json");
         if (rowCount == 0)
         {
             applier.ExecuteRaw(MockDataSeeder.GetSeedSql());

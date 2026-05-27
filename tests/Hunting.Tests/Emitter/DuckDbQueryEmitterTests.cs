@@ -19,12 +19,12 @@ public sealed partial class DuckDbQueryEmitterTests
     // ─── Basic operators ────────────────────────────────────────────
 
     [TestMethod]
-    [Description("ScanNode emits FROM main.<view>")]
+    [Description("ScanNode emits FROM golden.<view>")]
     public void Emit_Scan()
     {
         var node = new ScanNode("DeviceProcessEvents");
         var sql = _emitter.Emit(node);
-        AssertSqlContains(sql, "FROM main.DeviceProcessEvents");
+        AssertSqlContains(sql, "FROM golden.DeviceProcessEvents");
         AssertSqlContains(sql, "LIMIT 10000"); // default safety limit
     }
 
@@ -52,7 +52,7 @@ public sealed partial class DuckDbQueryEmitterTests
 
         var sql = _emitter.Emit(node);
         AssertSqlContains(sql, "FileName = 'powershell.exe'");
-        AssertSqlContains(sql, "main.DeviceProcessEvents");
+        AssertSqlContains(sql, "golden.DeviceProcessEvents");
     }
 
     [TestMethod]
@@ -280,7 +280,7 @@ public sealed partial class DuckDbQueryEmitterTests
                 [new ProjectionExpr("sample_distinct_value", new ColumnRef("FileName"))]),
             7);
         var sql = _emitter.Emit(node);
-        AssertSqlContains(sql, "SELECT DISTINCT FileName AS sample_distinct_value FROM main.DeviceProcessEvents");
+        AssertSqlContains(sql, "SELECT DISTINCT FileName AS sample_distinct_value FROM golden.DeviceProcessEvents");
         AssertSqlContains(sql, "USING SAMPLE reservoir(7 ROWS)");
     }
 
@@ -482,7 +482,7 @@ public sealed partial class DuckDbQueryEmitterTests
         Assert.DoesNotContain("WITH", NormSql(sql), StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("__kql_stage_", NormSql(sql), StringComparison.OrdinalIgnoreCase);
         AssertSqlContains(sql, "FileName = 'cmd.exe'");
-        AssertSqlContains(sql, "SELECT Timestamp, DeviceName FROM main.DeviceProcessEvents");
+        AssertSqlContains(sql, "SELECT Timestamp, DeviceName FROM golden.DeviceProcessEvents");
         AssertSqlContains(sql, "LIMIT 10");
     }
 
@@ -545,7 +545,7 @@ public sealed partial class DuckDbQueryEmitterTests
         AssertSqlContains(sql, "FileName = 'powershell.exe'");
         AssertSqlContains(sql, "Timestamp, DeviceName, ProcessCommandLine");
         AssertSqlContains(sql, "LIMIT 20");
-        AssertSqlContains(sql, "main.DeviceProcessEvents");
+        AssertSqlContains(sql, "golden.DeviceProcessEvents");
     }
 
     // ─── Let binding semantics ─────────────────────────────────────
@@ -911,7 +911,7 @@ public sealed partial class DuckDbQueryEmitterTests
             norm);
         Assert.DoesNotMatchRegex(@"SELECT\s+\*\s+FROM\s+__kql_stage_\d+\s*;?\s*$", norm);
         AssertSqlContains(sql, "SELECT RemoteIP, RemotePort, count(*) AS count_");
-        AssertSqlContains(sql, "FROM main.DeviceNetworkEvents");
+        AssertSqlContains(sql, "FROM golden.DeviceNetworkEvents");
         AssertSqlContains(sql, "GROUP BY RemoteIP, RemotePort");
     }
 
@@ -1002,9 +1002,9 @@ public sealed partial class DuckDbQueryEmitterTests
         Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
         Assert.DoesNotMatchRegex(@"SELECT\s+\*", norm);
-        AssertSqlContains(sql, "FROM main.DeviceNetworkEvents WHERE (RemotePort IN (4444, 1337, 8888, 9999, 31337))");
+        AssertSqlContains(sql, "FROM golden.DeviceNetworkEvents WHERE (RemotePort IN (4444, 1337, 8888, 9999, 31337))");
         Assert.MatchesRegex(
-            @"SELECT\s+Timestamp\s*,\s*DeviceName\s*,\s*LocalIP\s*,\s*RemoteIP\s*,\s*RemotePort\s*,\s*InitiatingProcessFileName\s+FROM\s+main\.DeviceNetworkEvents",
+            @"SELECT\s+Timestamp\s*,\s*DeviceName\s*,\s*LocalIP\s*,\s*RemoteIP\s*,\s*RemotePort\s*,\s*InitiatingProcessFileName\s+FROM\s+golden\.DeviceNetworkEvents",
             norm);
     }
 
@@ -1047,7 +1047,7 @@ public sealed partial class DuckDbQueryEmitterTests
         Assert.DoesNotMatchRegex(@"SELECT\s+\*", norm);
         Assert.DoesNotContain("LIMIT 10000", norm, StringComparison.OrdinalIgnoreCase);
         Assert.MatchesRegex(
-            @"SELECT\s+Timestamp\s*,\s*DeviceName\s*,\s*RemoteUrl\s*,\s*InitiatingProcessFileName\s*,\s*InitiatingProcessCommandLine\s+FROM\s+main\.DeviceNetworkEvents",
+            @"SELECT\s+Timestamp\s*,\s*DeviceName\s*,\s*RemoteUrl\s*,\s*InitiatingProcessFileName\s*,\s*InitiatingProcessCommandLine\s+FROM\s+golden\.DeviceNetworkEvents",
             norm);
         Assert.MatchesRegex(@"WHERE\s+\(+\s*RemotePort\s*=\s*53\s*\)+\s+AND\s+\(", norm);
         Assert.MatchesRegex(@"WHERE\s+\(+\s*RemotePort\s*=\s*53\s*\)+\s+AND\s+\(+.*powershell.*\s+OR\s+.*cmd.*\)+", norm);
@@ -1081,7 +1081,7 @@ public sealed partial class DuckDbQueryEmitterTests
         Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
         Assert.DoesNotMatchRegex(@"SELECT\s+\*", norm);
         Assert.MatchesRegex(
-            @"SELECT\s+Timestamp\s*,\s*DeviceName\s*,\s*AccountName\s*,\s*ProcessCommandLine\s+FROM\s+main\.DeviceProcessEvents",
+            @"SELECT\s+Timestamp\s*,\s*DeviceName\s*,\s*AccountName\s*,\s*ProcessCommandLine\s+FROM\s+golden\.DeviceProcessEvents",
             norm);
         Assert.Contains("regexp_matches(lower(FileName)", norm, StringComparison.Ordinal);
         Assert.Contains("powershell", norm, StringComparison.OrdinalIgnoreCase);
@@ -1179,7 +1179,7 @@ public sealed partial class DuckDbQueryEmitterTests
         var norm = NormSql(sql);
 
         Assert.DoesNotContain("__kql_stage_1", norm, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("FROM main.DeviceProcessEvents WHERE (lower(FileName) = lower('powershell.exe'))", norm, StringComparison.Ordinal);
+        Assert.Contains("FROM golden.DeviceProcessEvents WHERE (lower(FileName) = lower('powershell.exe'))", norm, StringComparison.Ordinal);
         Assert.Contains("regexp_extract(ProcessCommandLine, '-enc\\s+([^\\s]+)', CAST(1 AS INTEGER))", norm, StringComparison.Ordinal);
         Assert.Contains("AS EncodedPayload", norm, StringComparison.Ordinal);
     }
@@ -1314,7 +1314,7 @@ public sealed partial class DuckDbQueryEmitterTests
         Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
         Assert.DoesNotMatchRegex(@"SELECT\s+\*", norm);
         Assert.MatchesRegex(
-            @"SELECT\s+DeviceName\s*,\s*count\(\*\)\s+AS\s+count_\s+FROM\s+main\.DeviceProcessEvents\s+GROUP\s+BY\s+DeviceName\s+ORDER\s+BY\s+count_\s+DESC\s*;?\s*$",
+            @"SELECT\s+DeviceName\s*,\s*count\(\*\)\s+AS\s+count_\s+FROM\s+golden\.DeviceProcessEvents\s+GROUP\s+BY\s+DeviceName\s+ORDER\s+BY\s+count_\s+DESC\s*;?\s*$",
             norm);
         Assert.DoesNotContain("LIMIT 10000", norm, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotMatchRegex(@"\bLIMIT\b", norm);
@@ -1335,7 +1335,7 @@ public sealed partial class DuckDbQueryEmitterTests
         var sql = emitter.Emit(node);
         var normalizedSql = NormSql(sql);
 
-        Assert.Contains("main.DeviceProcessEvents", normalizedSql);
+        Assert.Contains("golden.DeviceProcessEvents", normalizedSql);
         Assert.Contains("DeviceName", normalizedSql);
         Assert.Contains("count(*) AS count_", normalizedSql);
         Assert.Contains("GROUP BY DeviceName", normalizedSql);
@@ -1373,7 +1373,7 @@ public sealed partial class DuckDbQueryEmitterTests
 
         Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
-        Assert.Contains("FROM main.DeviceNetworkEvents", norm);
+        Assert.Contains("FROM golden.DeviceNetworkEvents", norm);
         Assert.Contains("WHERE (RemoteUrl IS NULL OR RemoteUrl = '')", norm);
         Assert.Contains("GROUP BY DeviceName, RemoteIP, InitiatingProcessFileName", norm);
         Assert.Contains("HAVING (count(*) > 3)", norm);

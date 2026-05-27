@@ -99,7 +99,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
             new BinaryScalar(
                 new ColumnRef("FileName"),
                 ScalarBinaryOp.Eq,
-                new LiteralScalar("'; DROP TABLE main.DeviceProcessEvents; --", LiteralKind.String)));
+                new LiteralScalar("'; DROP TABLE golden.DeviceProcessEvents; --", LiteralKind.String)));
 
         var sql = _emitter.Emit(node);
         // The leading single quote in the payload must be escaped to ''
@@ -126,7 +126,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
             new BinaryScalar(
                 new ColumnRef("FileName"),
                 ScalarBinaryOp.Eq,
-                new LiteralScalar("test; SELECT * FROM internal.secrets", LiteralKind.String)));
+                new LiteralScalar("test; SELECT * FROM silver.secrets", LiteralKind.String)));
 
         var sql = _emitter.Emit(node);
         // Entire payload must be within quotes

@@ -9,7 +9,7 @@ it, and returns bounded results. Users never write SQL, never see internal table
 access raw schemas.
 
 The system provides a Microsoft Sentinel / Defender Advanced Hunting-like experience over local
-or embedded security data. Analysts query logical tables such as `DeviceProcessEvents` and `DeviceNetworkEvents` — not files, staging tables, or DuckDB internals.
+or embedded security data. Analysts query logical event families (for MVP, ASIM-shaped Golden contracts) — not files, staging tables, or DuckDB internals.
 
 ## Structural Pattern
 
@@ -37,7 +37,7 @@ adding a new parser family only changes the write side.
 **Bet 1: Kusto.Language as parsing frontend.** Microsoft's own KQL parser, analyzer, and
 symbol resolver handles all syntactic and semantic work. The project does not build a custom
 parser, a custom LSP, or a custom language. `Kusto.Toolkit` provides the ergonomic layer for
-injecting a synthetic `GlobalState` with `main.*` views registered as `TableSymbol` instances.
+injecting a synthetic `GlobalState` with `golden.*` views registered as `TableSymbol` instances.
 Verified: `FilterOperator` (not `WhereOperator`), `TopOperator.ByExpression`, `JoinOnClause`,
 `SummarizeByClause`, and all `SyntaxKind` enum names confirmed against
 `microsoft/Kusto-Query-Language` source.
@@ -106,7 +106,7 @@ C# schema and mapping models (RawTableDef, ParserViewDef, CanonicalViewDef)
       ├─ CREATE TABLE with typed columns
       ├─ CREATE VIEW parser definitions from mapping-backed or SQL-backed ParserViewDef
       │   Null literals emitted as CAST(NULL AS type) to prevent DuckDB type inference errors
-      └─ CREATE VIEW main.* as UNION ALL over parser views
+      └─ CREATE VIEW golden.* as UNION ALL over parser views
   → SchemaApplier: executes DDL through DuckDB.NET
   → DESCRIBE validation: columns and types checked against C# contracts
   → SQL discarded; provenance metadata retained
@@ -140,7 +140,7 @@ KQL input (from Monaco editor or API)
 |-----------|--------|-------|
 | `Schema/DuckDbType`, `KustoType` | Complete | Type enums with cross-mapping |
 | `Schema/SchemaObjectDef` hierarchy | Complete | `RawTableDef`, `InternalTableDef`, `ParserViewDef`, `CanonicalViewDef` |
-| `Schema/Definitions/DeviceProcessEventsSchema` | Complete | 14-column canonical schema, Sysmon EID 1 parser view |
+| `Schema/Definitions/DeviceProcessEventsSchema` | Complete | Current process-family schema (transitional naming), Sysmon EID 1 parser view |
 | `Mapping/MappingModel` | Complete | `ExprDef` tree, `MapDsl` builder helpers |
 | `Catalog/ApprovedViewCatalog` | Complete | C# schema → Kusto.Language `GlobalState` via `Kusto.Toolkit` |
 | `Policy/QueryDiagnostic` | Complete | `DiagnosticBag`, five-phase error contract |
@@ -164,20 +164,82 @@ KQL input (from Monaco editor or API)
 
 | Schema | Visibility | Purpose |
 |--------|-----------|---------|
-| `raw` | Internal only | Original or minimally parsed source records (JSON) |
-| `internal` | Internal only | Normalized tables, parser views (`internal.v_*`), lookups, enrichment, versioning |
-| `main` | User-facing | Public hunting views — the only KQL-queryable surface |
-| `accelerator` | Internal only, optional | Future derived/optimized tables behind `main.*` views |
+| `bronze` | Internal only | Original or minimally parsed source records (JSON) |
+| `silver` | Internal only | Source/event-specific parser views, lookups, enrichment, versioning |
+| `golden` | User-facing | Event-family hunting views — the only KQL-queryable surface |
+| `accelerator` | Internal only, optional | Future derived/optimized tables behind `golden.*` views |
 
-View composition:
+View composition (current implementation):
 
 ```
-main.DeviceProcessEvents
+golden.DeviceProcessEvents
   = UNION ALL over:
-      internal.v_process_sysmon_create
-      internal.v_process_windows_4688_create  ← future
-      internal.v_process_defender_create      ← future
+      silver.v_process_sysmon_create
+      silver.v_process_windows_4688_create  ← future
+      silver.v_process_defender_create      ← future
 ```
+
+MVP event-family composition target (ASIM-style aggregation logic with project-owned medallion naming):
+
+```mermaid
+flowchart LR
+    subgraph bronze["bronze"]
+        B1["WindowsEventJson"]
+    end
+
+    subgraph silver["silver — Sysmon parsers"]
+        S22["SysmonDnsQueryId22"]
+        S11["SysmonFileCreateId11"]
+        S23["SysmonFileDeleteId23"]
+        S26["SysmonFileDeleteDetectedId26"]
+        S3["SysmonNetworkConnectId3"]
+        S1["SysmonProcessCreateId1"]
+        S5["SysmonProcessTerminateId5"]
+        S12["SysmonRegistryObjectCreateDeleteId12"]
+        S13["SysmonRegistryValueSetId13"]
+        S14["SysmonRegistryObjectRenameId14"]
+    end
+
+    subgraph golden["golden — operator-facing event families"]
+        Gdns["DnsEvents"]
+        Gfile["FileEvents"]
+        Gnet["NetworkSessions"]
+        Gproc["ProcessEvents"]
+        Gpc["ProcessCreateEvents"]
+        Gpt["ProcessTerminateEvents"]
+        Greg["RegistryEvents"]
+    end
+
+    B1 --> S22
+    B1 --> S11
+    B1 --> S23
+    B1 --> S26
+    B1 --> S3
+    B1 --> S1
+    B1 --> S5
+    B1 --> S12
+    B1 --> S13
+    B1 --> S14
+
+    S22 --> Gdns
+    S11 --> Gfile
+    S23 --> Gfile
+    S26 --> Gfile
+    S3 --> Gnet
+    S1 --> Gproc
+    S5 --> Gproc
+    S1 --> Gpc
+    S5 --> Gpt
+    S12 --> Greg
+    S13 --> Greg
+    S14 --> Greg
+
+    Gpc -. "specializes" .-> Gproc
+    Gpt -. "specializes" .-> Gproc
+```
+
+Golden event-family views document explicit Silver contributors. “Contributes to” edges are physical data-flow dependencies; “specializes” edges are semantic subset relationships between Golden views.
+Silver contributors in this model are DuckDB SQL parser views (mapping-backed generated SQL or SQL-backed embedded definitions), not KQL parser artifacts.
 
 All parser views feeding the same public view emit identical columns with compatible types.
 Null projections are emitted as `CAST(NULL AS type)` — bare `NULL` would cause DuckDB to
@@ -287,7 +349,7 @@ Post-stable-v1 direction is a single-KQL-front-door architecture with backend-sp
 
 - **Quack protocol** — concurrent access + server-side query authorization (DuckDB v2.0, September 2026). The CQRS shape (separate write/read connections with different permission levels) maps naturally to Quack's per-query authorization callback.
 - **One-off schema bootstrap import** — optional starter import from ASIM/Sentinel parser definitions, followed by provider-agnostic schema evolution in C# contracts.
-- **Accelerator schema** — materialized/optimized tables behind `main.*` views.
+- **Accelerator schema** — materialized/optimized tables behind `golden.*` views.
 - **Detection-as-code** — saved queries, scheduled hunts, alerting.
 - **Scheduled query runner (ADR 0007)** — Quartz-based scheduler as a separate solution project with DB-backed saved queries, schedule definitions, and run history; includes dashboard-adjacent UI for saved query and schedule management (no near-real-time processing in this stage).
 - **Post-translation planner** — logical query shaping once primitive translation and emission are proven (see below).

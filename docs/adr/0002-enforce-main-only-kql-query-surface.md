@@ -6,14 +6,14 @@ Accepted
 
 ## Context
 
-The hunting experience is intentionally table-oriented and analyst-facing. Internal ingestion and normalization objects (`raw.*`, `internal.*`) are implementation details, while `main.*` is the stable contract surface.
+The hunting experience is intentionally table-oriented and analyst-facing. Internal ingestion and normalization objects (`bronze.*`, `silver.*`) are implementation details, while `golden.*` is the stable contract surface.
 
 Allowing user KQL over internal schemas would couple analyst queries to ingestion internals, increase accidental data exposure risk, and make parser evolution harder.
 
 ## Decision
 
-- User-authored KQL is restricted to `main.*` views only.
-- `raw.*` and `internal.*` remain non-queryable through the KQL interface.
+- User-authored KQL is restricted to `golden.*` views only.
+- `bronze.*` and `silver.*` remain non-queryable through the KQL interface.
 - Enforcement remains defense-in-depth across catalog registration, policy validation, and translation/emission behavior.
 
 ## Consequences

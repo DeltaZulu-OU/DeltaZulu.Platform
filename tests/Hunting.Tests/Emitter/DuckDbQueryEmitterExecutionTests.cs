@@ -24,14 +24,15 @@ public sealed class DuckDbQueryEmitterExecutionTests
         _conn.Open();
         _emitter = new DuckDbQueryEmitter(defaultLimit: 1000);
 
-        // Create the main.DeviceProcessEvents view with mock data
+        // Create the golden.DeviceProcessEvents view with mock data
         using var cmd = _conn.CreateCommand();
         cmd.CommandText =
             """
-            CREATE SCHEMA IF NOT EXISTS raw;
-            CREATE SCHEMA IF NOT EXISTS internal;
+            CREATE SCHEMA IF NOT EXISTS bronze;
+            CREATE SCHEMA IF NOT EXISTS silver;
+            CREATE SCHEMA IF NOT EXISTS golden;
 
-            CREATE TABLE raw.windows_event_json (
+            CREATE TABLE bronze.windows_event_json (
                 ingest_time TIMESTAMP,
                 source_type VARCHAR,
                 provider VARCHAR,
@@ -41,7 +42,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
                 raw_text VARCHAR
             );
 
-            INSERT INTO raw.windows_event_json VALUES
+            INSERT INTO bronze.windows_event_json VALUES
                 (TIMESTAMP '2024-01-01 10:00:00', 'sysmon', 'Microsoft-Windows-Sysmon', 1, 'PC-001',
                  '{"Image":"C:\\Windows\\System32\\cmd.exe","CommandLine":"cmd /c dir","User":"alice","ProcessId":"1234","ParentImage":"C:\\explorer.exe","ParentCommandLine":"explorer.exe"}', ''),
                 (TIMESTAMP '2024-01-01 10:01:00', 'sysmon', 'Microsoft-Windows-Sysmon', 1, 'PC-002',
@@ -53,7 +54,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
                 (TIMESTAMP '2024-01-01 10:10:00', 'sysmon', 'Microsoft-Windows-Sysmon', 1, 'PC-001',
                  '{"Image":"C:\\tools\\mimikatz.exe","CommandLine":"mimikatz","User":"alice","ProcessId":"6666","ParentImage":"C:\\cmd.exe","ParentCommandLine":"cmd"}', '');
 
-            CREATE VIEW internal.v_process_sysmon_create AS
+            CREATE VIEW silver.v_process_sysmon_create AS
                 SELECT
                     ingest_time AS Timestamp,
                     NULL AS DeviceId,
@@ -69,11 +70,11 @@ public sealed class DuckDbQueryEmitterExecutionTests
                     json_extract_string(event_data, '$.ParentCommandLine') AS InitiatingProcessCommandLine,
                     NULL AS ReportId,
                     event_data AS AdditionalFields
-                FROM raw.windows_event_json
+                FROM bronze.windows_event_json
                 WHERE provider = 'Microsoft-Windows-Sysmon' AND event_id = 1;
 
-            CREATE VIEW main.DeviceProcessEvents AS
-                SELECT * FROM internal.v_process_sysmon_create;
+            CREATE VIEW golden.DeviceProcessEvents AS
+                SELECT * FROM silver.v_process_sysmon_create;
             """;
         cmd.ExecuteNonQuery();
     }
@@ -431,13 +432,13 @@ public sealed class DuckDbQueryEmitterExecutionTests
             new BinaryScalar(
                 new ColumnRef("FileName"),
                 ScalarBinaryOp.Eq,
-                new LiteralScalar("'; DROP TABLE main.DeviceProcessEvents; --", LiteralKind.String)));
+                new LiteralScalar("'; DROP TABLE golden.DeviceProcessEvents; --", LiteralKind.String)));
 
         // Should execute (finding zero rows) without dropping the table
         AssertExecutes(node, expectedMinRows: 0);
 
         // Verify table still exists
-        var verifyRows = Execute("SELECT count(*) FROM main.DeviceProcessEvents");
+        var verifyRows = Execute("SELECT count(*) FROM golden.DeviceProcessEvents");
         Assert.IsGreaterThan(0, verifyRows, "Table should still exist after injection attempt");
     }
 

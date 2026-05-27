@@ -28,7 +28,7 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 
 MVP-ready parity = `[x] + [m]` = **222 / 319 (69.6%)**.
 
-Current public schema families in code: `main.DeviceProcessEvents` and `main.DeviceNetworkEvents`.
+Current public schema families in code include event-family surfaces `golden.ProcessEvents` and `golden.NetworkSessions`, with transitional compatibility aliases `golden.DeviceProcessEvents` and `golden.DeviceNetworkEvents`.
 
 - Hot-path latency review and optimization plan is documented in `docs/HOTPATH-LATENCY-REVIEW.md`.
 - Emitter hot-path optimization is in progress: stage-name index and reference-count caches were added to reduce repeated stage scans during SQL-shape rewrites.
@@ -68,9 +68,10 @@ KQL query
 Key constraints:
 
 1. SQL is never hand-authored as durable project source.
-2. Only `main.*` views are user-queryable.
-3. Unsupported KQL constructs are rejected with diagnostics (not silently approximated).
-4. Translator and emitter are validated with a two-seam test strategy.
+2. Only `golden.*` views are user-queryable.
+3. MVP Golden contracts may be ASIM-shaped as a provisional bootstrap contract; post-MVP names/fields are project-governed by schema review.
+4. Unsupported KQL constructs are rejected with diagnostics (not silently approximated).
+5. Translator and emitter are validated with a two-seam test strategy.
 
 ## Repository Layout
 

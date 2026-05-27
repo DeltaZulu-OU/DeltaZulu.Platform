@@ -235,10 +235,10 @@ public sealed class KustoToRelationalEdgeCaseTests
     // ─── Policy violations ──────────────────────────────────────────
 
     [TestMethod]
-    [Description("Access to raw.* table rejected")]
+    [Description("Access to bronze.* table rejected")]
     public void Policy_RawTableAccess()
     {
-        var (result, diag) = Translate("raw.windows_event_json | take 10");
+        var (result, diag) = Translate("bronze.windows_event_json | take 10");
         Assert.IsTrue(diag.HasErrors);
         Assert.Contains(d => d.Phase == DiagnosticPhase.Policy ||
                                         d.Phase == DiagnosticPhase.Parse, diag.All,
@@ -246,10 +246,10 @@ public sealed class KustoToRelationalEdgeCaseTests
     }
 
     [TestMethod]
-    [Description("Access to internal.* table rejected")]
+    [Description("Access to silver.* table rejected")]
     public void Policy_InternalTableAccess()
     {
-        var (_, diag) = Translate("internal.v_process_sysmon_create | take 10");
+        var (_, diag) = Translate("silver.v_process_sysmon_create | take 10");
         Assert.IsTrue(diag.HasErrors);
     }
 
@@ -357,7 +357,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Parse_StringLiteralSqlPayload_RemainsSingleStatement()
     {
         var (result, diag) = Translate(
-            """DeviceProcessEvents | where FileName == "'; DROP TABLE main.DeviceProcessEvents;--" | take 1""");
+            """DeviceProcessEvents | where FileName == "'; DROP TABLE golden.DeviceProcessEvents;--" | take 1""");
 
         Assert.IsNotNull(result, "Payload embedded in a KQL string should remain data, not a statement separator.");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All.Select(d => d.Message)));

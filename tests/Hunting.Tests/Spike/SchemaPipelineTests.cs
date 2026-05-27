@@ -9,7 +9,7 @@ using Hunting.Schema.Definitions;
 ///   C# models → SchemaEmitter → DDL → SchemaApplier → DuckDB → DESCRIBE validation
 ///
 /// These prove the vertical slice works end-to-end: mock data flows from
-/// raw.windows_event_json → internal.v_process_sysmon_create → main.DeviceProcessEvents
+/// bronze.windows_event_json → silver.v_process_sysmon_create → golden.DeviceProcessEvents
 /// and returns correctly shaped, queryable rows.
 /// </summary>
 [TestClass]
@@ -54,8 +54,8 @@ public sealed class SchemaPipelineTests
             parserViews: [DeviceProcessEventsSchema.SysmonProcessCreate],
             canonicalViews: [DeviceProcessEventsSchema.View]);
 
-        // 2 schemas + 1 raw table + 1 parser view + 1 canonical view = 5
-        Assert.HasCount(5, ddl);
+        // 3 schemas + 1 bronze table + 1 parser view + 1 canonical view = 6
+        Assert.HasCount(6, ddl);
     }
 
     [TestMethod]
@@ -68,7 +68,7 @@ public sealed class SchemaPipelineTests
         Assert.Contains("provider", sql);
         Assert.Contains("event_id", sql);
         Assert.Contains("event_data", sql);
-        Assert.Contains("raw.windows_event_json", sql);
+        Assert.Contains("bronze.windows_event_json", sql);
     }
 
     [TestMethod]
@@ -76,8 +76,8 @@ public sealed class SchemaPipelineTests
     public void EmitParserView_ReferencesSource()
     {
         var sql = _emitter.EmitParserView(DeviceProcessEventsSchema.SysmonProcessCreate);
-        Assert.Contains("raw.windows_event_json", sql);
-        Assert.Contains("internal.v_process_sysmon_create", sql);
+        Assert.Contains("bronze.windows_event_json", sql);
+        Assert.Contains("silver.v_process_sysmon_create", sql);
         Assert.Contains("Microsoft-Windows-Sysmon", sql);
     }
 
@@ -86,8 +86,8 @@ public sealed class SchemaPipelineTests
     public void EmitCanonicalView_UnionsParserViews()
     {
         var sql = _emitter.EmitCanonicalView(DeviceProcessEventsSchema.View);
-        Assert.Contains("main.DeviceProcessEvents", sql);
-        Assert.Contains("internal.v_process_sysmon_create", sql);
+        Assert.Contains("golden.DeviceProcessEvents", sql);
+        Assert.Contains("silver.v_process_sysmon_create", sql);
     }
 
     // ─── Schema validation via DESCRIBE ─────────────────────────────
@@ -137,7 +137,7 @@ public sealed class SchemaPipelineTests
     [Description("Mock data is inserted into raw table")]
     public void MockData_InsertedIntoRaw()
     {
-        var count = _applier.QueryScalar("SELECT count(*) FROM raw.windows_event_json");
+        var count = _applier.QueryScalar("SELECT count(*) FROM bronze.windows_event_json");
         Assert.AreEqual(45L, count, "Expected 45 mock events");
     }
 
@@ -145,7 +145,7 @@ public sealed class SchemaPipelineTests
     [Description("Parser view filters to Sysmon Event ID 1 only")]
     public void MockData_ParserViewFilters()
     {
-        var count = _applier.QueryScalar("SELECT count(*) FROM internal.v_process_sysmon_create");
+        var count = _applier.QueryScalar("SELECT count(*) FROM silver.v_process_sysmon_create");
         Assert.AreEqual(45L, count, "All 45 events are Sysmon EID 1");
     }
 
@@ -153,7 +153,7 @@ public sealed class SchemaPipelineTests
     [Description("Public view returns same count as parser view")]
     public void MockData_CanonicalViewCount()
     {
-        var count = _applier.QueryScalar("SELECT count(*) FROM main.DeviceProcessEvents");
+        var count = _applier.QueryScalar("SELECT count(*) FROM golden.DeviceProcessEvents");
         Assert.AreEqual(45L, count);
     }
 
@@ -164,7 +164,7 @@ public sealed class SchemaPipelineTests
     public void Extraction_FileName()
     {
         var count = _applier.QueryScalar(
-            "SELECT count(*) FROM main.DeviceProcessEvents WHERE FileName = 'cmd.exe'");
+            "SELECT count(*) FROM golden.DeviceProcessEvents WHERE FileName = 'cmd.exe'");
         Assert.IsGreaterThanOrEqualTo(2, count, $"Expected at least 2 cmd.exe events, got {count}");
     }
 
@@ -173,7 +173,7 @@ public sealed class SchemaPipelineTests
     public void Extraction_FolderPath()
     {
         var count = _applier.QueryScalar(
-            """SELECT count(*) FROM main.DeviceProcessEvents WHERE FolderPath LIKE '%System32%'""");
+            """SELECT count(*) FROM golden.DeviceProcessEvents WHERE FolderPath LIKE '%System32%'""");
         Assert.IsGreaterThanOrEqualTo(5, count, $"Expected at least 5 System32 paths, got {count}");
     }
 
@@ -182,7 +182,7 @@ public sealed class SchemaPipelineTests
     public void Extraction_AccountName()
     {
         var count = _applier.QueryScalar(
-            """SELECT count(*) FROM main.DeviceProcessEvents WHERE AccountName = 'CORP\alice'""");
+            """SELECT count(*) FROM golden.DeviceProcessEvents WHERE AccountName = 'CORP\alice'""");
         Assert.IsGreaterThanOrEqualTo(5, count, $"Expected at least 5 alice events, got {count}");
     }
 
@@ -191,7 +191,7 @@ public sealed class SchemaPipelineTests
     public void Extraction_ProcessCommandLine()
     {
         var count = _applier.QueryScalar(
-            """SELECT count(*) FROM main.DeviceProcessEvents WHERE ProcessCommandLine LIKE '%mimikatz%'""");
+            """SELECT count(*) FROM golden.DeviceProcessEvents WHERE ProcessCommandLine LIKE '%mimikatz%'""");
         Assert.AreEqual(2L, count);
     }
 
@@ -200,7 +200,7 @@ public sealed class SchemaPipelineTests
     public void Extraction_ActionType()
     {
         var count = _applier.QueryScalar(
-            "SELECT count(DISTINCT ActionType) FROM main.DeviceProcessEvents");
+            "SELECT count(DISTINCT ActionType) FROM golden.DeviceProcessEvents");
         Assert.AreEqual(1L, count, "All events should have ActionType='ProcessCreated'");
     }
 
@@ -209,7 +209,7 @@ public sealed class SchemaPipelineTests
     public void Extraction_DeviceName()
     {
         var count = _applier.QueryScalar(
-            "SELECT count(DISTINCT DeviceName) FROM main.DeviceProcessEvents");
+            "SELECT count(DISTINCT DeviceName) FROM golden.DeviceProcessEvents");
         Assert.IsGreaterThanOrEqualTo(3, count, $"Expected at least 3 distinct devices, got {count}");
     }
 
@@ -218,7 +218,7 @@ public sealed class SchemaPipelineTests
     public void Extraction_ProcessId()
     {
         var count = _applier.QueryScalar(
-            "SELECT count(*) FROM main.DeviceProcessEvents WHERE ProcessId > 0");
+            "SELECT count(*) FROM golden.DeviceProcessEvents WHERE ProcessId > 0");
         Assert.AreEqual(45L, count, "All events should have numeric ProcessId");
     }
 
@@ -230,7 +230,7 @@ public sealed class SchemaPipelineTests
     {
         var count = _applier.QueryScalar(
             """
-            SELECT count(*) FROM main.DeviceProcessEvents
+            SELECT count(*) FROM golden.DeviceProcessEvents
             WHERE FileName IN ('mimikatz.exe', 'rundll32.exe')
               AND ProcessCommandLine LIKE '%lsass%' OR ProcessCommandLine LIKE '%sekurlsa%'
             """);
@@ -243,7 +243,7 @@ public sealed class SchemaPipelineTests
     {
         var count = _applier.QueryScalar(
             """
-            SELECT count(*) FROM main.DeviceProcessEvents
+            SELECT count(*) FROM golden.DeviceProcessEvents
             WHERE FileName IN ('whoami.exe', 'net.exe', 'ipconfig.exe', 'nltest.exe')
             """);
         Assert.AreEqual(4L, count, "Should find all 4 recon commands");
@@ -255,7 +255,7 @@ public sealed class SchemaPipelineTests
     {
         var count = _applier.QueryScalar(
             """
-            SELECT count(*) FROM main.DeviceProcessEvents
+            SELECT count(*) FROM golden.DeviceProcessEvents
             WHERE FileName = 'beacon.exe'
             """);
         Assert.AreEqual(5L, count, "Should find 5 beaconing events");
@@ -267,7 +267,7 @@ public sealed class SchemaPipelineTests
     {
         var count = _applier.QueryScalar(
             """
-            SELECT count(*) FROM main.DeviceProcessEvents
+            SELECT count(*) FROM golden.DeviceProcessEvents
             WHERE FileName IN ('schtasks.exe', 'reg.exe')
               AND (ProcessCommandLine LIKE '%/create%' OR ProcessCommandLine LIKE '%add%')
             """);
@@ -280,7 +280,7 @@ public sealed class SchemaPipelineTests
     {
         var count = _applier.QueryScalar(
             """
-            SELECT count(*) FROM main.DeviceProcessEvents
+            SELECT count(*) FROM golden.DeviceProcessEvents
             WHERE FileName = 'powershell.exe'
               AND ProcessCommandLine LIKE '%-enc%'
             """);

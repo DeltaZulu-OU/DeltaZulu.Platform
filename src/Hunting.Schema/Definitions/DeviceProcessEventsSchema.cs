@@ -32,16 +32,27 @@ public static class DeviceProcessEventsSchema
     /// The public hunting view exposed to KQL users.
     /// </summary>
     public static readonly CanonicalViewDef View = new(
-        Schema: "main",
+        Schema: "golden",
         Name: "DeviceProcessEvents",
-        ParserViews: ["internal.v_process_sysmon_create"],
+        ParserViews: ["silver.v_process_sysmon_create"],
         Columns: Columns,
         Description: "Process creation and related events across sources");
+
+    /// <summary>
+    /// MVP event-family Golden surface (ASIM-style composition semantics with project naming).
+    /// Maintained alongside Device* transitional names during migration.
+    /// </summary>
+    public static readonly CanonicalViewDef ProcessEventsView = new(
+        Schema: "golden",
+        Name: "ProcessEvents",
+        ParserViews: ["silver.v_process_sysmon_create"],
+        Columns: Columns,
+        Description: "Operator-facing process event-family view");
 
     // ─── Raw table ──────────────────────────────────────────────────────
 
     public static readonly RawTableDef RawWindowsEventJson = new(
-        Schema: "raw",
+        Schema: "bronze",
         Name: "windows_event_json",
         Columns:
         [
@@ -58,12 +69,12 @@ public static class DeviceProcessEventsSchema
     // ─── Sysmon process-create parser view ───────────────────────────────
 
     public static readonly ParserViewDef SysmonProcessCreate = new(
-        Schema: "internal",
+        Schema: "silver",
         Name: "v_process_sysmon_create",
         SourceName: "Microsoft Sysmon Event ID 1",
-        CanonicalTarget: "DeviceProcessEvents",
+        CanonicalTarget: "ProcessEvents",
         Mapping: new MappingQueryDef(
-            SourceObject: "raw.windows_event_json",
+            SourceObject: "bronze.windows_event_json",
             Filter: And(
                 Eq(Col("provider"), Lit("Microsoft-Windows-Sysmon")),
                 Eq(Col("event_id"), Lit(1))),

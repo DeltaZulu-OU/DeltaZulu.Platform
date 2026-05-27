@@ -23,14 +23,14 @@ Real parser views need DuckDB-native transformation semantics, including JSON ex
 - `MapDsl` remains allowed for simple generated mappings, tests, and prototypes, but is no longer the only parser authoring mechanism.
 - Embedded SQL must create exactly one parser view and must match the declared `ParserViewDef` object name.
 - All parser views, regardless of authoring mode, must be validated by DuckDB `DESCRIBE` against the declared `ColumnDef` contract.
-- `main.*` views may continue to be generated mechanically from `CanonicalViewDef.ParserViews`, usually as `UNION ALL`.
-- User-authored KQL remains restricted to `main.*`.
+- `golden.*` views may continue to be generated mechanically from `CanonicalViewDef.ParserViews`, usually as `UNION ALL`.
+- User-authored KQL remains restricted to `golden.*`.
 
 ## Consequences
 
 - Positive: avoids creating a second transformation language; complex parser logic remains inspectable as DuckDB SQL; C# remains useful for metadata, binding, validation, and documentation.
 - Negative: SQL becomes a limited source artifact for parser views; embedded SQL can make C# definitions heavier; stricter validation is mandatory.
-- Neutral/deferred: does not require external `.sql` files; does not decide whether `internal.*` views become materialized tables; does not change runtime KQL-to-DuckDB SQL generation.
+- Neutral/deferred: does not require external `.sql` files; does not decide whether `silver.*` views become materialized tables; does not change runtime KQL-to-DuckDB SQL generation.
 
 ### Implementation implications
 

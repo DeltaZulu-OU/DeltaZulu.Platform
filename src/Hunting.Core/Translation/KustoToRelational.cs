@@ -470,12 +470,12 @@ public sealed class KustoToRelational
         // For dotted names (schema.table or db.schema.table), treat the right-most
         // segment as the table identifier; earlier segments are qualifiers.
         var tableName = parts[^1];
-        // For now accept schema-qualified names like internal.secret_table — policy checks will reject unapproved schemas.
+        // For now accept schema-qualified names like silver.secret_table — policy checks will reject unapproved schemas.
         if (!_catalog.IsApproved(tableName))
         {
             var sanitizedTableName = parts.Count == 1 ? tableName : string.Join('.', parts);
             _diagnostics.AddError(DiagnosticPhase.Policy,
-                $"Table '{sanitizedTableName}' is not an approved hunting view. Only main.* views are queryable.");
+                $"Table '{sanitizedTableName}' is not an approved hunting view. Only golden.* views are queryable.");
             return null;
         }
 
@@ -499,7 +499,7 @@ public sealed class KustoToRelational
         if (!_catalog.IsApproved(tableName))
         {
             _diagnostics.AddError(DiagnosticPhase.Policy,
-                $"Table '{tableName}' is not an approved hunting view. Only main.* views are queryable.");
+                $"Table '{tableName}' is not an approved hunting view. Only golden.* views are queryable.");
             return null;
         }
         return new ScanNode(tableName);

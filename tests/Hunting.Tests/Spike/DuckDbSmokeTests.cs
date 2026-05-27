@@ -33,15 +33,18 @@ public sealed class DuckDbSmokeTests
 
         using var cmd = connection.CreateCommand();
 
-        cmd.CommandText = "CREATE SCHEMA IF NOT EXISTS raw";
+        cmd.CommandText = "CREATE SCHEMA IF NOT EXISTS bronze";
         cmd.ExecuteNonQuery();
 
-        cmd.CommandText = "CREATE SCHEMA IF NOT EXISTS internal";
+        cmd.CommandText = "CREATE SCHEMA IF NOT EXISTS silver";
+        cmd.ExecuteNonQuery();
+
+        cmd.CommandText = "CREATE SCHEMA IF NOT EXISTS golden";
         cmd.ExecuteNonQuery();
 
         cmd.CommandText =
             """
-            CREATE TABLE raw.test_events (
+            CREATE TABLE bronze.test_events (
                 ingest_time TIMESTAMP,
                 source_type VARCHAR,
                 payload JSON
@@ -51,31 +54,31 @@ public sealed class DuckDbSmokeTests
 
         cmd.CommandText =
             """
-            INSERT INTO raw.test_events VALUES
+            INSERT INTO bronze.test_events VALUES
                 (TIMESTAMP '2025-01-01 00:00:00', 'sysmon', '{"Image":"cmd.exe"}')
             """;
         cmd.ExecuteNonQuery();
 
         cmd.CommandText =
             """
-            CREATE VIEW internal.v_test AS
+            CREATE VIEW silver.v_test AS
                 SELECT ingest_time AS Timestamp,
                        source_type AS Source,
                        json_extract_string(payload, '$.Image') AS FileName
-                FROM raw.test_events
+                FROM bronze.test_events
             """;
         cmd.ExecuteNonQuery();
 
-        // main schema is default — create unifying view
+        // golden schema is operator-facing in POC — create unifying view
         cmd.CommandText =
             """
-            CREATE VIEW main.TestEvents AS
-                SELECT * FROM internal.v_test
+            CREATE VIEW golden.TestEvents AS
+                SELECT * FROM silver.v_test
             """;
         cmd.ExecuteNonQuery();
 
         // Query the public view
-        cmd.CommandText = "SELECT FileName FROM main.TestEvents LIMIT 1";
+        cmd.CommandText = "SELECT FileName FROM golden.TestEvents LIMIT 1";
         var fileName = cmd.ExecuteScalar()?.ToString();
 
         Assert.AreEqual("cmd.exe", fileName);

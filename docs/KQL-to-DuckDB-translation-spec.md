@@ -2183,7 +2183,7 @@ WHERE EventID  = 4624;
 It should first resolve SecurityEvent:
 
 SecurityEvent
-  -> normalized view: main.SecurityEvent
+  -> normalized view: golden.SecurityEvent
 
 or:
 
@@ -2227,7 +2227,7 @@ Example registry entry:
 {
   "kqlName": "SecurityEvent",
   "kind": "DuckDbView",
-  "duckDbSql": "main.SecurityEvent",
+  "duckDbSql": "golden.SecurityEvent",
   "columns": [
     { "name": "TimeGenerated", "kqlType": "datetime", "duckDbType": "TIMESTAMP" },
     { "name": "EventID", "kqlType": "long", "duckDbType": "BIGINT" },
@@ -2298,7 +2298,7 @@ Example layout:
 
 DuckDB raw views:
 
-CREATE OR REPLACE VIEW raw.security_logs AS
+CREATE OR REPLACE VIEW bronze.security_logs AS
 SELECT *
 FROM read_ndjson(
     '/data/security_logs/*.ndjson',
@@ -2308,14 +2308,14 @@ FROM read_ndjson(
 
 Normalized view:
 
-CREATE OR REPLACE VIEW main.SecurityEvent AS
+CREATE OR REPLACE VIEW golden.SecurityEvent AS
 SELECT
     try_cast(TimeGenerated AS TIMESTAMP) AS TimeGenerated,
     try_cast(EventID AS BIGINT) AS EventID,
     Computer::VARCHAR AS Computer,
     Account::VARCHAR AS Account,
     RawEvent::JSON AS RawEvent
-FROM raw.security_logs;
+FROM bronze.security_logs;
 
 KQL:
 
@@ -2326,10 +2326,10 @@ SecurityEvent
 DuckDB SQL:
 
 SELECT TimeGenerated, Computer, Account
-FROM main.SecurityEvent
+FROM golden.SecurityEvent
 WHERE EventID  = 4624;
 
-The source binder should prefer main.SecurityEvent over expanding read_ndjson(...) inline in every translated query. This keeps source normalization outside query translation and makes the generated SQL easier to debug.
+The source binder should prefer golden.SecurityEvent over expanding read_ndjson(...) inline in every translated query. This keeps source normalization outside query translation and makes the generated SQL easier to debug.
 
 ### 4.6 JSON-backed folder bindings
 
@@ -2367,7 +2367,7 @@ Recommended source binding:
   "path": "/data/security_logs/*.ndjson",
   "duckDbSql": "read_ndjson('/data/security_logs/*.ndjson', union_by_name = true)",
   "schemaMode": "registered",
-  "normalizationView": "main.SecurityEvent"
+  "normalizationView": "golden.SecurityEvent"
 }
 
 The converter should not infer paths from arbitrary KQL names at runtime unless the binding policy explicitly allows it.
@@ -2384,14 +2384,14 @@ WHERE EventID  = 4624;
 
 Option B: persistent or session view.
 
-CREATE OR REPLACE VIEW main.SecurityEvent AS
+CREATE OR REPLACE VIEW golden.SecurityEvent AS
 SELECT *
 FROM read_ndjson('/data/security_logs/*.ndjson', union_by_name = true);
 
 Then:
 
 SELECT *
-FROM main.SecurityEvent
+FROM golden.SecurityEvent
 WHERE EventID  = 4624;
 
 Recommended policy:
@@ -2402,7 +2402,7 @@ Stable normalized schemas | Persistent/session DuckDB views
 Ad hoc exploration | Inline table function
 Unit tests | Small inline table or temp view
 Production hunting/detections | Registered normalized views
-Raw forensic mode | Explicit raw.* sources
+Raw forensic mode | Explicit bronze.* sources
 
 
 The converter should target views by default. Inline read_ndjson(...) should be a source-binding implementation detail, not something the operator translator needs to know.
@@ -2424,7 +2424,7 @@ raw | Expose raw JSON column plus minimal metadata
 
 Example strict source view:
 
-CREATE OR REPLACE VIEW raw.security_logs AS
+CREATE OR REPLACE VIEW bronze.security_logs AS
 SELECT *
 FROM read_ndjson(
     '/data/security_logs/*.ndjson',
@@ -2441,14 +2441,14 @@ FROM read_ndjson(
 
 Then normalize:
 
-CREATE OR REPLACE VIEW main.SecurityEvent AS
+CREATE OR REPLACE VIEW golden.SecurityEvent AS
 SELECT
     try_cast(TimeGenerated AS TIMESTAMP) AS TimeGenerated,
     EventID,
     Computer,
     Account,
     RawEvent
-FROM raw.security_logs;
+FROM bronze.security_logs;
 
 This avoids coupling KQL translation correctness to whatever schema DuckDB inferred from a sample of files.
 
@@ -2471,15 +2471,15 @@ For logs, schema drift is normal. But the KQL layer should not expose drift dire
 
 Recommended distinction:
 
-main.SecurityEvent
+golden.SecurityEvent
   stable normalized schema
   used by KQL queries
 
-raw.security_logs
+bronze.security_logs
   file-reader schema
   allowed to drift more
 
-raw.security_logs_json
+bronze.security_logs_json
   raw JSON object per row
   used for forensic extraction
 
@@ -2514,12 +2514,12 @@ Example binding:
 
 KQL: SecurityEvent
 Binding kind: DuckDbView
-DuckDB SQL: main.SecurityEvent
+DuckDB SQL: golden.SecurityEvent
 
 Generated SQL:
 
 SELECT *
-FROM main.SecurityEvent;
+FROM golden.SecurityEvent;
 
 If both a function and a view are registered under the same KQL name, fail at registry validation time.
 
@@ -2545,12 +2545,12 @@ database("Logs").SecurityEvent
 Possible future binding:
 
 database("Logs").SecurityEvent
-  -> logs_catalog.main.SecurityEvent
+  -> logs_catalog.golden.SecurityEvent
 
 or:
 
 database("Logs").SecurityEvent
-  -> attached DuckDB database: Logs.main.SecurityEvent
+  -> attached DuckDB database: Logs.golden.SecurityEvent
 
 MVP behavior:
 
@@ -2588,7 +2588,7 @@ table("SecurityEvent")
 SQL:
 
 SELECT *
-FROM main.SecurityEvent
+FROM golden.SecurityEvent
 WHERE EventID  = 4624;
 
 MVP restrictions:
@@ -2639,11 +2639,11 @@ SecurityIncident
 
 SQL target:
 
-SELECT * FROM main.SecurityEvent
+SELECT * FROM golden.SecurityEvent
 UNION BY NAME
-SELECT * FROM main.SecurityAlert
+SELECT * FROM golden.SecurityAlert
 UNION BY NAME
-SELECT * FROM main.SecurityIncident;
+SELECT * FROM golden.SecurityIncident;
 
 MVP behavior: reject wildcard entity references.
 
@@ -2790,7 +2790,7 @@ For MVP, treat stored functions as source bindings only when pre-expanded or rep
 Supported:
 
 KQL name: SuccessfulLogons
-Binding: main.SuccessfulLogons view
+Binding: golden.SuccessfulLogons view
 
 Unsupported:
 
@@ -2804,8 +2804,8 @@ Recommended namespace model:
 
 Namespace | Purpose | KQL visibility
 
-main.* | Stable normalized log views | default visible
-raw.* | Raw file-reader views | hidden or explicit
+golden.* | Stable normalized log views | default visible
+bronze.* | Raw file-reader views | hidden or explicit
 forensic.* | Raw JSON object views, low-level access | explicit only
 meta.* | Schema/source metadata | explicit diagnostic mode
 test.* | Unit-test fixtures | test only
@@ -2814,10 +2814,10 @@ test.* | Unit-test fixtures | test only
 Example:
 
 KQL source: SecurityEvent
-DuckDB source: main.SecurityEvent
+DuckDB source: golden.SecurityEvent
 
-KQL source: raw.security_logs
-DuckDB source: raw.security_logs
+KQL source: bronze.security_logs
+DuckDB source: bronze.security_logs
 Only allowed when raw mode is enabled.
 
 This preserves KQL-style ergonomics while keeping implementation details reachable for debugging.
@@ -2901,9 +2901,9 @@ CREATE OR REPLACE VIEW meta.kql_sources AS
 SELECT *
 FROM (
     VALUES
-        ('SecurityEvent', 'main.SecurityEvent', 'normalized_view', '/data/security_logs/*.ndjson'),
-        ('SigninLogs', 'main.SigninLogs', 'normalized_view', '/data/signin_logs/*.ndjson'),
-        ('DnsEvents', 'main.DnsEvents', 'normalized_view', '/data/dns_logs/*.ndjson')
+        ('SecurityEvent', 'golden.SecurityEvent', 'normalized_view', '/data/security_logs/*.ndjson'),
+        ('SigninLogs', 'golden.SigninLogs', 'normalized_view', '/data/signin_logs/*.ndjson'),
+        ('DnsEvents', 'golden.DnsEvents', 'normalized_view', '/data/dns_logs/*.ndjson')
 ) AS t(kql_name, duckdb_source, kind, backing_path);
 
 Potential KQL compatibility command later:
@@ -2949,7 +2949,7 @@ DuckDB test setup:
 CREATE SCHEMA IF NOT EXISTS raw;
 CREATE SCHEMA IF NOT EXISTS main;
 
-CREATE OR REPLACE VIEW raw.security_logs AS
+CREATE OR REPLACE VIEW bronze.security_logs AS
 SELECT *
 FROM read_ndjson(
     'testdata/security_logs/*.ndjson',
@@ -2962,13 +2962,13 @@ FROM read_ndjson(
     union_by_name = true
 );
 
-CREATE OR REPLACE VIEW main.SecurityEvent AS
+CREATE OR REPLACE VIEW golden.SecurityEvent AS
 SELECT
     try_cast(TimeGenerated AS TIMESTAMP) AS TimeGenerated,
     EventID,
     Computer,
     Account
-FROM raw.security_logs;
+FROM bronze.security_logs;
 
 KQL test:
 
@@ -3423,7 +3423,7 @@ Caveats | This differs from project, where requested order controls output order
 Required tests | parse, binding, translation, execution, column-order tests, pattern tests
 
 
-KQL project-keep keeps only specified columns, but the order is determined by the original table order; only the specified columns remain. 
+KQL project-keep keeps only specified columns, but the order is determined by the original table order; only the specified columns regolden. 
 
 Example input schema:
 
@@ -3561,7 +3561,7 @@ Caveats | Wildcard matching order and granny-* sorting must be implemented by th
 Required tests | parse, binding, translation, execution, ordering tests
 
 
-KQL project-reorder reorders output columns but does not remove or rename them; all existing columns remain. If no explicit ordering is supplied for matched patterns, matching columns appear as they occur in the source table. Ambiguous pattern matches use the first matching position, and unspecified columns appear last. 
+KQL project-reorder reorders output columns but does not remove or rename them; all existing columns regolden. If no explicit ordering is supplied for matched patterns, matching columns appear as they occur in the source table. Ambiguous pattern matches use the first matching position, and unspecified columns appear last. 
 
 Example input schema:
 
@@ -5722,11 +5722,11 @@ search "failed"
 Future SQL shape:
 
 SELECT '$SecurityEvent' AS "$table", *
-FROM main.SecurityEvent
+FROM golden.SecurityEvent
 WHERE ...
 UNION BY NAME
 SELECT '$SigninLogs' AS "$table", *
-FROM main.SigninLogs
+FROM golden.SigninLogs
 WHERE ...;
 
 But because schemas differ, projection policy must be defined before this is implemented.
@@ -6993,11 +6993,11 @@ This keeps security log queries predictable. If the storage layer preserves time
 
 Recommended source view normalization:
 
-CREATE OR REPLACE VIEW main.SecurityEvent AS
+CREATE OR REPLACE VIEW golden.SecurityEvent AS
 SELECT
     try_cast(TimeGenerated AS TIMESTAMP) AS TimeGenerated,
     ...
-FROM raw.security_logs;
+FROM bronze.security_logs;
 
 If raw logs contain offsets such as ### 2026-05 -01T12 :00:00+### 03:00, the normalization view should convert them deliberately before exposing them as KQL datetime.
 
@@ -11340,13 +11340,13 @@ Normalized KQL-facing views:
 
 Example source model:
 
-CREATE OR REPLACE VIEW main.SecurityEvent AS
+CREATE OR REPLACE VIEW golden.SecurityEvent AS
 SELECT
     try_cast(TimeGenerated AS TIMESTAMP) AS TimeGenerated,
     try_cast(EventID AS BIGINT) AS EventID,
     Computer::VARCHAR AS Computer,
     RawEvent::JSON AS RawEvent
-FROM raw.security_logs;
+FROM bronze.security_logs;
 
 The translator should not care whether RawEvent.Subject.UserName is physically JSON or STRUCT until binding. The binder should provide that.
 
@@ -12318,11 +12318,11 @@ DuckDB supports json_group_structure to infer combined JSON shape and json_trans
 Example source exploration:
 
 SELECT json_group_structure(RawEvent)
-FROM raw.security_logs;
+FROM bronze.security_logs;
 
 Example normalized view:
 
-CREATE OR REPLACE VIEW main.SecurityEvent AS
+CREATE OR REPLACE VIEW golden.SecurityEvent AS
 SELECT
     try_cast(json_extract_string(RawEvent, '$."TimeGenerated"') AS TIMESTAMP) AS TimeGenerated,
     try_cast(json_extract_string(RawEvent, '$."EventID"') AS BIGINT) AS EventID,
@@ -12330,7 +12330,7 @@ SELECT
         RawEvent,
         '{"Subject":{"UserName":"VARCHAR","Domain":"VARCHAR"},"IpAddresses":["VARCHAR"]}'
     ) AS Event
-FROM raw.security_logs;
+FROM bronze.security_logs;
 
 Then KQL:
 
@@ -12340,7 +12340,7 @@ SecurityEvent
 SQL:
 
 SELECT Event.Subject.UserName AS User
-FROM main.SecurityEvent;
+FROM golden.SecurityEvent;
 
 This is faster and more type-stable than repeated JSON extraction.
 
@@ -19476,14 +19476,14 @@ The source registry defines what KQL table names can resolve to.
   "sources": [
     {
       "kqlName": "SecurityEvent",
-      "duckDbRelation": "main.SecurityEvent",
+      "duckDbRelation": "golden.SecurityEvent",
       "kind": "view",
       "queryable": true,
       "writable": false
     },
     {
       "kqlName": "raw_security_logs",
-      "duckDbRelation": "raw.security_logs",
+      "duckDbRelation": "bronze.security_logs",
       "kind": "raw_json",
       "queryable": false,
       "writable": false
@@ -19728,7 +19728,7 @@ Profile:
   CoreHunting + VisualizationMetadata
 
 Stages:
-  1. Source SecurityEvent -> main.SecurityEvent
+  1. Source SecurityEvent -> golden.SecurityEvent
   2. where EventID == 4624 -> WHERE EventID  = 4624
   3. summarize Count=count() by Computer -> GROUP BY Computer
   4. render barchart -> metadata only
@@ -19738,7 +19738,7 @@ Diagnostics:
 
 Generated SQL:
   SELECT Computer, count(*) AS Count
-  FROM main.SecurityEvent
+  FROM golden.SecurityEvent
   WHERE EventID  = 4624
   GROUP BY Computer
 

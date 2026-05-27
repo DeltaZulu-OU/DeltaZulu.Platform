@@ -1,7 +1,7 @@
 namespace Hunting.Data;
 
 /// <summary>
-/// Seeds mock Sysmon Event ID 1 (Process Create) data into raw.windows_event_json.
+/// Seeds mock Sysmon Event ID 1 (Process Create) data into bronze.windows_event_json.
 /// Used for MVP vertical slice testing and development.
 ///
 /// Each record simulates a realistic Windows process creation event
@@ -16,7 +16,7 @@ public static class MockDataSeeder
     /// </summary>
     public static string GetSeedSql() =>
         """
-        INSERT INTO raw.windows_event_json (ingest_time, source_type, provider, event_id, computer, event_data, raw_text) VALUES
+        INSERT INTO bronze.windows_event_json (ingest_time, source_type, provider, event_id, computer, event_data, raw_text) VALUES
         -- Normal user activity
         (TIMESTAMP '2024-06-15 08:00:00', 'sysmon', 'Microsoft-Windows-Sysmon', 1, 'WS-001',
          '{"Image":"C:\\Windows\\explorer.exe","CommandLine":"explorer.exe","User":"CORP\\alice","ProcessId":"1000","ParentImage":"C:\\Windows\\System32\\userinit.exe","ParentCommandLine":"userinit.exe","Hashes":"SHA256=abc001"}', ''),
@@ -133,7 +133,7 @@ public static class MockDataSeeder
     /// </summary>
     public static string GetNetworkSeedSql() =>
         """
-        INSERT INTO raw.windows_event_json (ingest_time, source_type, provider, event_id, computer, event_data, raw_text) VALUES
+        INSERT INTO bronze.windows_event_json (ingest_time, source_type, provider, event_id, computer, event_data, raw_text) VALUES
         -- Normal browsing
         (TIMESTAMP '2024-06-15 08:30:00', 'sysmon', 'Microsoft-Windows-Sysmon', 3, 'WS-001',
          '{"SourceIp":"10.1.1.10","SourcePort":"54321","DestinationIp":"142.250.185.46","DestinationPort":"443","Protocol":"tcp","DestinationHostname":"google.com","Image":"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe","ProcessId":"2000","User":"CORP\\alice","Hashes":"SHA256=chrome_hash"}', ''),

@@ -675,7 +675,7 @@ public sealed class KustoToRelationalTests
     [Description("Unapproved table name produces parse error")]
     public void Parse_UnapprovedTable()
     {
-        var (_, diag) = Translate("internal.secret_table | take 10");
+        var (_, diag) = Translate("silver.secret_table | take 10");
         Assert.IsTrue(diag.HasErrors);
         AssertPolicyOrParseError(diag);
     }
@@ -687,7 +687,7 @@ public sealed class KustoToRelationalTests
         var (result, diag) = Translate(
             """
             DeviceProcessEvents
-            | where ProcessCommandLine contains "; .drop table internal.secret"
+            | where ProcessCommandLine contains "; .drop table silver.secret"
             | take 1
             """);
 
@@ -917,7 +917,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            internal.secret
+            silver.secret
             | take 1
             """);
 

@@ -9,8 +9,8 @@ using Schema;
 /// from C# schema models. SQL is generated, executed, and discarded — never
 /// persisted as a source artifact.
 ///
-/// Emission order matters: schemas → raw tables → internal tables →
-/// internal parser views → main public hunting views.
+/// Emission order matters: schemas → bronze tables → silver tables →
+/// silver parser views → golden public hunting views.
 /// </summary>
 public sealed class SchemaEmitter
 {
@@ -29,8 +29,9 @@ public sealed class SchemaEmitter
         var statements = new List<string>
         {
             // Schemas
-            "CREATE SCHEMA IF NOT EXISTS raw",
-            "CREATE SCHEMA IF NOT EXISTS internal"
+            "CREATE SCHEMA IF NOT EXISTS bronze",
+            "CREATE SCHEMA IF NOT EXISTS silver",
+            "CREATE SCHEMA IF NOT EXISTS golden"
         };
 
         // Raw tables
@@ -90,7 +91,7 @@ public sealed class SchemaEmitter
     }
 
     #endregion CREATE TABLE
-    #region Parser view (internal.v_*)
+    #region Parser view (silver.v_*)
 
     public string EmitParserView(ParserViewDef view)
     {
@@ -142,8 +143,8 @@ public sealed class SchemaEmitter
         return sb.ToString();
     }
 
-    #endregion Parser view (internal.v_*)
-    #region Canonical view (main.*)
+    #endregion Parser view (silver.v_*)
+    #region Canonical view (golden.*)
 
     public string EmitCanonicalView(CanonicalViewDef view)
     {
@@ -172,7 +173,7 @@ public sealed class SchemaEmitter
         return sb.ToString();
     }
 
-    #endregion Canonical view (main.*)
+    #endregion Canonical view (golden.*)
     #region Mapping expression → SQL
 
     private string EmitMappingExpr(ExprDef expr) => expr switch

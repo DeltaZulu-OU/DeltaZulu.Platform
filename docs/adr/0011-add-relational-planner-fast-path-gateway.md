@@ -13,7 +13,7 @@ Recent optimization work has reduced planner overhead, but not eliminated it. Fo
 Constraints that must remain intact:
 - Rewrites remain semantics-preserving whenever planning runs.
 - Query correctness and diagnostics behavior must not regress.
-- Only approved `main.*` views remain queryable via policy and catalog enforcement.
+- Only approved `golden.*` views remain queryable via policy and catalog enforcement.
 - Planner bypass decisions must be observable and configurable.
 
 ## Decision

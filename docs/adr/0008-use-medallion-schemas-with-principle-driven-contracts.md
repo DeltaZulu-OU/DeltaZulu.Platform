@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -12,7 +12,7 @@ DuckDB database objects remain native DuckDB objects. The system does not introd
 
 The project may consult existing security data normalization and hunting table models as prior art to accelerate early design, especially around event families, parser layering, field obligations, provenance, and query ergonomics. These references are starting points, not end-state targets.
 
-The project must not use Microsoft product or schema names such as ASIM, Sentinel, Defender, or Advanced Hunting in its public architecture, code namespaces, database objects, documentation, or UI. It must not copy external schemas/tables as-is or imply product compatibility unless that scope is explicitly approved later.
+For MVP only, the project may use ASIM schema/table/field names as an explicit bootstrap contract for Golden views. This is an implementation accelerator for query familiarity and parser throughput, not a permanent compatibility promise. Documentation and UI must state that ASIM alignment is provisional and partial unless a specific schema is tested and declared supported. Outside MVP Golden contracts (Bronze/Silver objects, code namespaces, product positioning), the project must not imply Sentinel/Defender compatibility.
 
 The project owns its own DuckDB-native data model. Its schemas, naming, field semantics, parser contracts, and governance principles should evolve from observed source data, parser behavior, fixtures, and operator needs.
 
@@ -35,6 +35,8 @@ On initialization, the service configures `golden` as default schema so operator
 - KQL-like binder allows only Golden objects in POC and rejects explicit `bronze.*` / `silver.*` references.
 - Silver and Golden are governed by schema review principles, not rigid universal column mandates.
 - Prior-art references may inform bootstrapping, but do not define architecture targets or compatibility promises.
+- For MVP, Golden contracts are ASIM-shaped where practical (for example, `golden.ProcessEvent`, `golden.NetworkSession`) while Bronze/Silver naming remains project-owned.
+- Post-MVP, Golden contracts are reviewed schema-by-schema and may be retained, adapted, renamed, split, or replaced based on observed data quality, parser behavior, fixtures, and operator ergonomics.
 
 Core rule:
 
@@ -53,13 +55,13 @@ Review rule:
 
 - Positive: clear layer boundaries; honest source-specific interpretation; stable operator-facing semantics; provider-agnostic evolution.
 - Negative: requires disciplined review and tests to prevent semantic drift; binder/catalog responsibilities become central earlier.
-- Neutral/deferred: no near-real-time requirement; no external compatibility guarantee; naming/shape may evolve as sources and fixtures grow.
+- Neutral/deferred: no near-real-time requirement; ASIM alignment is MVP-scoped and provisional; naming/shape may evolve as sources and fixtures grow.
 
 Implementation guidance (POC):
 
 - Bronze preserves source fidelity and replayability with minimal interpretation.
-- Silver parser views remain source/event specific (for example, `silver.ProcessCreateSysmonId1`).
-- Golden views remain source-neutral, operator-facing, and stable (for example, `golden.ProcessEvents`).
+- Silver parser views remain source/event specific (for example, `silver.ProcessCreateSysmonId1`) and are implemented as DuckDB SQL views (mapping-generated SQL or embedded SQL), not KQL artifacts.
+- Golden views remain operator-facing and stable, and are ASIM-shaped during MVP (for example, `golden.ProcessEvent`, `golden.NetworkSession`).
 - Golden rows retain provenance (source family, source identity, parser identity/version, ingest/event time).
 - Null/type handling remains explicit and non-fabricating.
 
@@ -70,4 +72,4 @@ Acceptance criteria (POC):
 - Binder enforces Golden-only operator visibility.
 - At least two Silver contributors feed one Golden view.
 - Tests cover parser correctness, Golden compatibility, provenance, and binding boundaries.
-- Docs explicitly state prior-art boundary and project-owned semantic model.
+- Docs explicitly state MVP ASIM bootstrap scope and post-MVP divergence governance.

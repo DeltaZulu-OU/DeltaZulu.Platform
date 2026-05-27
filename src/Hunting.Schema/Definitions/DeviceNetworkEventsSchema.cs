@@ -47,19 +47,30 @@ public static class DeviceNetworkEventsSchema
     ];
 
     public static readonly CanonicalViewDef View = new(
-        Schema: "main",
+        Schema: "golden",
         Name: "DeviceNetworkEvents",
-        ParserViews: ["internal.v_network_sysmon_connect"],
+        ParserViews: ["silver.v_network_sysmon_connect"],
         Columns: Columns,
         Description: "Network connection events from all configured sources");
 
+    /// <summary>
+    /// MVP event-family Golden surface (ASIM-style composition semantics with project naming).
+    /// Maintained alongside Device* transitional names during migration.
+    /// </summary>
+    public static readonly CanonicalViewDef NetworkSessionsView = new(
+        Schema: "golden",
+        Name: "NetworkSessions",
+        ParserViews: ["silver.v_network_sysmon_connect"],
+        Columns: Columns,
+        Description: "Operator-facing network session event-family view");
+
     public static readonly ParserViewDef SysmonNetworkConnect = new(
-        Schema: "internal",
+        Schema: "silver",
         Name: "v_network_sysmon_connect",
         SourceName: "Microsoft Sysmon Event ID 3",
-        CanonicalTarget: "DeviceNetworkEvents",
+        CanonicalTarget: "NetworkSessions",
         Mapping: new MappingQueryDef(
-            SourceObject: "raw.windows_event_json",
+            SourceObject: "bronze.windows_event_json",
             Filter: And(
                 Eq(Col("provider"), Lit("Microsoft-Windows-Sysmon")),
                 Eq(Col("event_id"), Lit(3))),

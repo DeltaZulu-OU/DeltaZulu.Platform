@@ -384,7 +384,7 @@ public sealed class EndToEndPipelineTests
         var result = _runtime.Execute("DeviceProcessEvents | take 5");
         AssertSuccess(result);
         Assert.IsNotNull(result.GeneratedSql);
-        Assert.Contains("main.DeviceProcessEvents", result.GeneratedSql);
+        Assert.Contains("golden.DeviceProcessEvents", result.GeneratedSql);
         Assert.IsNotEmpty(result.DebugTrace, "Developer mode should include debug trace events");
     }
 
