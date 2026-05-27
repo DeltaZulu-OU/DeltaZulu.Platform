@@ -9,7 +9,7 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 ## Project Status
 
 - Phases 0–3 (schema + translation + runtime + Blazor UI vertical slice) are complete.
-- Phase 4 (hardening) is in progress: schema validation automation, generated SQL preview, and the second table family are complete; monaco-kusto language-service integration remains pending.
+- Phase 4 (hardening) is complete: schema validation automation, generated SQL preview, second table family, and Monaco KQL editor language-service integration are complete.
 - Phase 5 (Planner v1 + emitter SQL-shape simplification) is complete.
 - End-to-end pipeline coverage currently includes 17 hunting scenarios in `EndToEndPipelineTests`.
 - Feature parity snapshot (from `docs/kql-syntax-coverage-checklist.md`) now uses an in-scope-only statistics table (out-of-scope constructs excluded):
@@ -39,7 +39,7 @@ Current public schema families in code: `main.DeviceProcessEvents` and `main.Dev
 KQL query
   -> Kusto.Language parse + semantic checks
   -> KustoToRelational (KQL AST -> RelNode)
-  -> RelationalPlanner (feature-flagged rewrite passes)
+  -> RelationalPlanner (logical rewrite passes)
   -> DuckDbQueryEmitter (RelNode -> DuckDB SQL)
   -> DuckDB execution
   -> tabular results + diagnostics
@@ -100,4 +100,4 @@ From the repository root:
 This project is licensed under the terms in [`LICENSE`](LICENSE).
 
 
-*Last updated: 2026-05-26 — status aligned with roadmap/architecture (Phase 4 partial with 4b pending; Phase 5 complete).*
+*Last updated: 2026-05-26 — status aligned with roadmap/architecture (Phase 4 complete; Phase 5 complete).*

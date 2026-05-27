@@ -29,7 +29,7 @@ The two pipelines share only the `ColumnDef`/`CanonicalViewDef` type definitions
 contract surface. The `ApprovedViewCatalog` bridges them by projecting write-side schema
 models into read-side Kusto.Language symbols. Everything else is separate.
 
-This separation means the read path can be optimized independently (feature-flagged planner now implemented), and
+This separation means the read path can be optimized independently (planner stage implemented), and
 adding a new parser family only changes the write side.
 
 ## Core Architectural Bets
@@ -48,10 +48,10 @@ then the `RelNode` tree is emitted as DuckDB SQL. This boundary decouples Kusto 
 DuckDB dialect, makes each stage independently testable, and provides a clean insertion point
 for policy enforcement and future optimization.
 
-**Bet 3: C# schema models as the durable source of truth.** SQL is generated and transient.
+**Bet 3: C# schema models as the durable source of truth for contracts.** Parser-view SQL may be embedded in C# definitions when authored as DuckDB SQL. Runtime query SQL remains transient. Generated mapping SQL remains transient.
 The maintained artifacts are C# record types defining raw tables, internal tables, parser views,
 and canonical public views. Schema provenance (hashes, versions, generator metadata) is
-persisted; SQL text is not.
+persisted; SQL text is not persisted as standalone artifacts.
 
 **Bet 4: DuckDB as embedded analytical engine.** No external database. No cluster. DuckDB runs
 in-process for MVP (single connection through the Blazor Server backend). Post-MVP, the Quack
@@ -99,9 +99,12 @@ The test harness operates at two independent seams:
 
 ```
 C# schema and mapping models (RawTableDef, ParserViewDef, CanonicalViewDef)
+  → ParserViewDef authoring mode
+      ├─ Mapping-backed: ExprDef/MappingQueryDef → generated parser-view SQL
+      └─ SQL-backed: embedded DuckDB SQL → emitted/applied as-is
   → SchemaEmitter: generates DDL and view SQL
       ├─ CREATE TABLE with typed columns
-      ├─ CREATE VIEW with ExprDef mapping tree (json_extract_string, regexp_extract, CAST)
+      ├─ CREATE VIEW parser definitions from mapping-backed or SQL-backed ParserViewDef
       │   Null literals emitted as CAST(NULL AS type) to prevent DuckDB type inference errors
       └─ CREATE VIEW main.* as UNION ALL over parser views
   → SchemaApplier: executes DDL through DuckDB.NET
@@ -109,9 +112,7 @@ C# schema and mapping models (RawTableDef, ParserViewDef, CanonicalViewDef)
   → SQL discarded; provenance metadata retained
 ```
 
-Bootstrapped from ASIM parser definitions where available, but the internal source of truth is
-always the C# model. ASIM compliance is a starting point, not a constraint — divergence after
-v1 is expected and planned.
+Initial table/view coverage can be bootstrapped from ASIM parser definitions as a one-off accelerator, but the internal source of truth remains the C# model. This is not a permanent ingestion pipeline. ASIM is Azure-centric reference material, and long-term schema growth is expected to follow a provider-agnostic model.
 
 ### Runtime Query Pipeline (read side)
 
@@ -229,13 +230,14 @@ belongs to exactly one phase and is always attributed correctly.
 
 ## SQL Artifact Policy
 
-SQL is not a developer-authored source artifact.
+SQL artifact policy is scoped by pipeline role (see ADR 0001: `docs/adr/0001-use-embedded-duckdb-sql-for-parser-views.md`).
 
 | SQL Type | Persisted? | Notes |
 |----------|-----------|-------|
-| Schema DDL | No | Generated from C# models, applied, discarded |
-| Parser view SQL | No | Generated from `ExprDef` mapping models |
-| Public hunting view SQL | No | Generated from `CanonicalViewDef` |
+| Schema DDL | No | Generated from C# models; applied, not persisted as standalone SQL |
+| Mapping-backed parser view SQL | No | Generated from `ExprDef` / `MappingQueryDef`; not persisted as standalone SQL |
+| SQL-backed parser view SQL | Yes (embedded in C#) | Developer-authored DuckDB SQL embedded in C# schema definitions |
+| Public hunting view SQL | No (default) | Generated from `CanonicalViewDef` unless explicitly overridden later |
 | Runtime query SQL | No | Generated from `RelNode`, executed, discarded |
 | Debug SQL preview | Optional | Exposed via `QueryResult.GeneratedSql` in developer mode |
 | Schema provenance | Yes | Hashes, versions, generator metadata |
@@ -265,22 +267,34 @@ Full register in `kql-syntax-coverage-checklist.md` Section 9. Significant items
 | `DuckDB.NET.Data` | 1.* | DuckDB ADO.NET provider |
 | `DuckDB.NET.Bindings` | 1.* | DuckDB native bindings |
 | Monaco Editor | latest | Browser code editor |
-| `azure/monaco-kusto` | latest | KQL editor support (intellisense, diagnostics) — preferred, not gating |
-| `System.Text.Json` | inbox | ASIM import, JSON handling |
+| Monaco KQL editor language service (JS interop) | current | KQL editor support (syntax, completions, schema-aware suggestions, run shortcut) |
+| `System.Text.Json` | inbox | JSON handling and one-off bootstrap import tooling |
 | MSTest | 3.* | Test framework |
+
+## Medallion Layering Direction (ADR 0008)
+
+POC and forward design use `bronze`/`silver`/`golden` schema layering with Golden as the operator-facing query surface and binder-enforced lower-layer isolation in normal operator use. See `docs/adr/0008-use-medallion-schemas-with-principle-driven-contracts.md`.
+
+## Multi-Dialect Backend Direction (ADR 0009)
+
+Post-stable-v1 direction is a single-KQL-front-door architecture with backend-specific execution adapters. Core translation/planning remain engine-agnostic; backend selection is workload-routed (scheduled/historical vs realtime). See `docs/adr/0009-multi-dialect-backend-architecture.md`.
+
+## Render Visualization Sidecar Direction (ADR 0010)
+
+`render` is treated as terminal presentation metadata, not relational semantics. Translation emits SQL plus a render sidecar, and UI compilation to Vizor.ECharts remains outside translator/planner/emitter layers. See `docs/adr/0010-render-poc-subset-with-vizor-echarts.md`.
 
 ## Post-MVP Architecture Evolution
 
 - **Quack protocol** — concurrent access + server-side query authorization (DuckDB v2.0, September 2026). The CQRS shape (separate write/read connections with different permission levels) maps naturally to Quack's per-query authorization callback.
-- **ASIM parser import pipeline** — bulk bootstrap from Sentinel parser definitions.
+- **One-off schema bootstrap import** — optional starter import from ASIM/Sentinel parser definitions, followed by provider-agnostic schema evolution in C# contracts.
 - **Accelerator schema** — materialized/optimized tables behind `main.*` views.
 - **Detection-as-code** — saved queries, scheduled hunts, alerting.
+- **Scheduled query runner (ADR 0007)** — Quartz-based scheduler as a separate solution project with DB-backed saved queries, schedule definitions, and run history; includes dashboard-adjacent UI for saved query and schedule management (no near-real-time processing in this stage).
 - **Post-translation planner** — logical query shaping once primitive translation and emission are proven (see below).
 
 ### Planner Stage (Implemented)
 
-The runtime path now includes an optional logical planner stage between translation and SQL
-emission:
+The runtime path includes a logical planner stage between translation and SQL emission:
 
 ```
 Kusto AST → Primitive RelNode → Planned RelNode → DuckDB SQL
@@ -294,4 +308,4 @@ applied after planning.
 
 ---
 
-*Last updated: 2026-05-26 — Documentation aligned to current implementation state (Phase 4: schema automation + SQL preview + second table family complete; monaco-kusto pending).*
+*Last updated: 2026-05-26 — Documentation aligned to current implementation state (Phase 4 complete, including Monaco editor language service).*

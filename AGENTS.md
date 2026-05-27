@@ -11,24 +11,17 @@ what constraints are non-negotiable.
 A schema-first KQL hunting platform over DuckDB. Analysts write KQL against logical security
 tables (`DeviceProcessEvents`, `SigninLogs`, etc.) in a Blazor Server UI. The backend parses
 KQL with Kusto.Language, translates a controlled subset through a `RelNode` intermediate model
-into transient DuckDB SQL, executes it, and returns bounded results. SQL is never a source
-artifact. The durable source of truth is C# schema and mapping models.
+into transient DuckDB SQL, executes it, and returns bounded results. Runtime query SQL is never
+a source artifact. Standalone SQL migrations/views are not used for MVP. Parser-view SQL may
+be embedded inside C# schema definitions when declared as SQL-backed parser views. The durable
+source of truth is C# schema and mapping models.
 
 Not a Sentinel replacement. Not a generic SQL explorer. A familiar hunting experience over
 local or embedded data.
 
-## Current State (as of 2026-05-24)
+## Current State (as of 2026-05-26)
 
-Phases 0, 1, and 2 are functionally complete. Phase 3 (Blazor UI) is the next gate.
-
-| Layer | Status |
-|-------|--------|
-| Schema pipeline (write side) | Complete: `SchemaEmitter`, `SchemaApplier`, `MockDataSeeder` |
-| Translation pipeline (read side) | Complete: `KustoToRelational`, `DuckDbQueryEmitter`, `QueryRuntime` |
-| MSTest suite | 254 tests written; requires `dotnet restore` for live run |
-| Blazor UI | Skeleton `Program.cs` only — not started |
-
-The single gate before Phase 3: `dotnet restore && dotnet test` must pass.
+Phases 0, 1, 2, 3, 4, and 5 are complete. The current quality gate remains `dotnet restore && dotnet test`.
 
 ## Reference Documents
 
@@ -41,6 +34,7 @@ All paths relative to repository root.
 | Translation Spec | `docs/KQL-to-DuckDB-translation-spec.md` | Authoritative reference for every KQL construct (796 KB, 21 sections + 12 appendices) |
 | KQL Checklist | `docs/kql-syntax-coverage-checklist.md` | Implementation status (319 in-scope constructs) |
 | Roadmap | `docs/ROADMAP.md` | Phase plan, exit criteria, post-MVP priorities |
+| ADR Index | `docs/adr/README.md` | ADR process, status lifecycle, and template |
 
 ## Specification Hierarchy
 
@@ -126,7 +120,7 @@ src/
     MockDataSeeder.cs            — 20 realistic Sysmon events
 
   Hunting.Web/
-    Program.cs                   — Blazor Server skeleton (Phase 3 not started)
+    Program.cs                   — Blazor Server host wiring + startup bootstrap (Phase 3 complete)
 
 tests/
   Hunting.Tests/
@@ -164,8 +158,9 @@ Target framework: `net9.0`. Nullable reference types enabled. Implicit usings en
 
 Non-negotiable for MVP. Violating any requires explicit discussion and documented justification.
 
-1. **SQL is never a source artifact.** Generated, executed, discarded. Developers do not
-   hand-author DuckDB SQL views or migrations.
+1. **Runtime query SQL is never a source artifact.** Runtime SQL is generated, executed, and
+   discarded. Standalone SQL migrations/views are not used for MVP. Parser-view SQL may be
+   embedded inside C# schema definitions when a parser view is declared as SQL-backed.
 
 2. **Only `main.*` views are user-queryable.** `raw.*` and `internal.*` are never accessible
    through the KQL interface. The catalog, policy layer, and emitter each enforce this
@@ -199,7 +194,7 @@ Non-negotiable for MVP. Violating any requires explicit discussion and documente
 9. **Ensure the post-translation planner does not break query logic or syntax.** The pipeline is
    `KustoToRelational` → `RelNode` → (`RelationalPlanner`) → `DuckDbQueryEmitter`. The
    `Planning/` namespace and `RelationalPlanner` were added deliberately and are wired into
-   `QueryRuntime` behind the `plannerEnabled` flag (default off). The planner performs only
+   `QueryRuntime` as part of the runtime pipeline. The planner performs only
    logical `RelNode → RelNode` rewrites (filter pushdown, projection pruning, identity-projection
    collapse, common-scalar hoist); physical optimization remains DuckDB's responsibility. The
    planner must be **semantics-preserving**: a rewrite that changes the result set is a bug, not
@@ -303,8 +298,7 @@ Active path: `KustoToRelational` → `RelNode` → (`RelationalPlanner`) → `Du
 
 The `RelationalPlanner` (`src/Hunting.Core/Planning/RelationalPlanner.cs`) performs logical
 rewriting of primitive `RelNode` into planned `RelNode` before SQL emission. It runs only when
-`QueryRuntime` is constructed with `plannerEnabled: true` (default off), so the unplanned path
-remains the baseline. Physical optimization remains DuckDB's responsibility.
+`QueryRuntime` runs with the planner enabled in the active runtime path. Physical optimization remains DuckDB's responsibility.
 
 Passes (each must be semantics-preserving):
 - `FilterPushdownPass` — push filters below identity projections.

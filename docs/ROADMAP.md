@@ -124,9 +124,8 @@ Wire `QueryRuntime` into Blazor Server dependency injection. Register
 `Program.cs`. Apply schema and seed mock data on startup.
 
 ### 3b. Monaco editor integration
-Embed Monaco editor via Blazor Server JS interop. Decision point: start with plain Monaco
-(server-side diagnostics only) if `monaco-kusto` version compatibility causes friction.
-Wire "Run" button to call `QueryRuntime.Execute(kql)`. Display `QueryDiagnostic` errors inline.
+Embed Monaco editor via Blazor Server JS interop. Wire "Run" button to call
+`QueryRuntime.Execute(kql)` and display `QueryDiagnostic` errors inline.
 
 ### 3c. Result grid
 Tabular grid below editor. Column headers from `QueryResult.Columns`. Sortable. Timestamp
@@ -142,47 +141,6 @@ execute it, see results or diagnostics. Vertical slice query
 runs end-to-end in the browser.
 
 ---
-
-## Phase 4 — Hardening ⏳ PARTIAL
-
-**Objective:** Automated validation, second table family, integration polish.
-
-### 4a. Schema validation automation ✅
-`SchemaPipelineTests` (22 tests): DDL generation, DESCRIBE column/type validation, mock data
-flow, extraction correctness, hunting scenarios. Runs against live DuckDB — requires
-`dotnet restore`.
-
-### 4b. `monaco-kusto` integration ⏳
-Wire `monaco-kusto` with generated schema JSON for column-aware intellisense and inline
-diagnostics. Deferred if version compatibility requires significant JS interop work during
-Phase 3.
-
-### 4c. Generated SQL preview ✅
-`QueryResult.GeneratedSql` is exposed and surfaced in the UI with a developer toggle.
-
-### 4d. Second table family ✅
-Add `DeviceNetworkEvents` with a Sysmon EID 3 (network connection) `ParserViewDef`. Proves the
-schema model and translator generalize beyond one table. Latent bugs surface here. Required
-before claiming "MVP complete."
-
-**Exit criteria:** two table families work end-to-end, schema validation automated, developer
-mode shows generated SQL.
-
----
-
-## Timeline
-
-| Phase | Status | Duration | Notes |
-|-------|--------|----------|-------|
-| Phase 0 | ✅ Complete | 3 days | |
-| Phase 1 | ✅ Complete | 7 days | |
-| Phase 2 | ✅ Complete | 12 days | |
-| Phase 3 | ✅ Complete | 5–7 days | Gate satisfied; UI vertical slice working |
-| Phase 4 | ⏳ In progress | 3–5 days | 4a complete; 4c/4d complete; 4b pending |
-| **Remaining** | | **2–4 days** | Monaco-Kusto integration + polish |
-
----
-
 
 ## Phase 5 — Planner v1 ✅ COMPLETE
 
@@ -203,6 +161,8 @@ inlined when still projected), a single predicate reference (no expression dupli
 no sibling-extension dependency.
 
 **Status:** Complete.
+
+**Future planner work:** additional semantics-preserving relational rewrites remain backlog work and must ship with planner-seam parity tests.
 
 ### 5a. Emitter SQL-shape simplification ✅
 
@@ -230,6 +190,53 @@ Covered in `tests/Hunting.Tests/Emitter/` (unit + execution parity).
 ---
 
 
+
+## Phase 4 — Hardening ✅ COMPLETE
+
+**Objective:** Automated validation, second table family, integration polish.
+
+### 4a. Schema validation automation ✅
+`SchemaPipelineTests` (22 tests): DDL generation, DESCRIBE column/type validation, mock data
+flow, extraction correctness, hunting scenarios. Runs against live DuckDB — requires
+`dotnet restore`.
+
+### 4b. Monaco KQL editor language-service integration ✅
+Wire Monaco KQL language-service behavior into the Blazor editor using JS interop with generated schema for table/column-aware completions and runtime diagnostics handoff.
+
+### 4c. Generated SQL preview ✅
+`QueryResult.GeneratedSql` is exposed and surfaced in the UI with a developer toggle.
+
+### 4d. Second table family ✅
+Add `DeviceNetworkEvents` with a Sysmon EID 3 (network connection) `ParserViewDef`. Proves the
+schema model and translator generalize beyond one table. Latent bugs surface here. Required
+before claiming "MVP complete."
+
+**Exit criteria:** two table families work end-to-end, schema validation automated, developer
+mode shows generated SQL.
+
+### 4e. ADR-backed parser-view authoring model (backlog)
+- Add `ParserViewDef.FromSql(...)` alongside existing mapping authoring flow.
+- Enforce validation of SQL-backed parser views against declared `ColumnDef` contracts.
+- Update documentation for scoped SQL artifact policy (runtime SQL vs parser-view SQL).
+- Evaluate PascalCase cleanup for `raw.*` and `internal.*` object names as a separate decision.
+
+---
+
+## Timeline
+
+| Phase | Status | Duration | Notes |
+|-------|--------|----------|-------|
+| Phase 0 | ✅ Complete | 3 days | |
+| Phase 1 | ✅ Complete | 7 days | |
+| Phase 2 | ✅ Complete | 12 days | |
+| Phase 3 | ✅ Complete | 5–7 days | Gate satisfied; UI vertical slice working |
+| Phase 5 | ✅ Complete | 2–3 days | Planner v1 + emitter SQL-shape simplification |
+| Phase 4 | ✅ Complete | 3–5 days | 4a/4b/4c/4d complete |
+| **Remaining** | | **0 days** | Phase 4 completion criteria satisfied |
+
+---
+
+
 ## Post-MVP Priorities
 
 Ordered by hunting-workflow impact:
@@ -238,11 +245,22 @@ Ordered by hunting-workflow impact:
 2. Dynamic member access (`d.key`, `d[0]`) — JSON path emission
 3. `format_datetime` — Kusto-to-strftime format string translation
 4. `has_any` / `has_all` — OR/AND chain of regex word-boundary matches
-6. `monaco-kusto` full integration (if deferred from Phase 4)
-7. ASIM parser import pipeline — bulk bootstrap from Sentinel parser definitions
+5. Planner v2 relational optimizations — safer pushdown expansion, join/aggregation rewrites, improved CSE, and SQL-shape reduction with parity tests
+6. Monaco language-service quality improvements (advanced semantics + richer diagnostics)
+7. One-off schema bootstrap import + generic model alignment — optional ASIM/Sentinel starter import, then provider-agnostic table/view modeling
 8. Quack protocol migration — concurrent access + server-side query authorization
+9. Scheduled query runner (Quartz) with DB-backed saved queries, schedule management, dashboard-adjacent UI, and run-history visibility (ADR 0007)
+10. Medallion schema transition (ADR 0008): introduce `bronze`/`silver`/`golden`, set `golden` default visibility, and enforce Golden-only binding in operator workflows
+11. Multi-dialect backend architecture (ADR 0009): backend contracts + workload routing for DuckDB scheduled/historical and future Proton/Arroyo realtime execution
+12. KQL `render` POC subset (ADR 0010): terminal render sidecar + Vizor.ECharts adapter with table fallback diagnostics
 
 ---
+
+ADR references:
+- `docs/adr/0007-use-quartz-with-db-backed-saved-queries-and-schedules.md`
+- `docs/adr/0008-use-medallion-schemas-with-principle-driven-contracts.md`
+- `docs/adr/0009-multi-dialect-backend-architecture.md`
+- `docs/adr/0010-render-poc-subset-with-vizor-echarts.md`
 
 ## Post-POC / Future Challenges
 
@@ -264,4 +282,4 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 | DuckDB connection in Blazor Server | `DuckDbConnectionFactory` + `QueryService` serialization | ✅ Implemented |
 ---
 
-*Last updated: 2026-05-26 — documentation aligned to current implementation state (Phase 4: 4a/4c/4d complete, 4b pending; Phase 5 complete, incl. projected lookup-join collapse).*
+*Last updated: 2026-05-26 — documentation aligned to current implementation state (Phase 4 complete; Phase 5 complete, incl. projected lookup-join collapse).*
