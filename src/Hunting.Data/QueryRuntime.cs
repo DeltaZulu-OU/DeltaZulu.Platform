@@ -112,11 +112,14 @@ public sealed class QueryRuntime
 
         // Phase 3: Emit SQL
         string sql;
+        string? sqlShapeStats;
         try
         {
             var emitter = new DuckDbQueryEmitter(_defaultLimit, applyDefaultLimit: false);
             sql = emitter.Emit(relNode);
-            debugTrace?.Add($"Emit complete: sqlLength={sql.Length}");
+            var shape = SqlShapeMetrics.FromSql(sql);
+            sqlShapeStats = JsonSerializer.Serialize(shape);
+            debugTrace?.Add($"Emit complete: sqlLength={sql.Length}, cteStages={shape.CteStageCount}, selects={shape.SelectCount}, joins={shape.JoinCount}");
         }
         catch (Exception ex)
         {
@@ -162,7 +165,7 @@ public sealed class QueryRuntime
             // GeneratedSql is only exposed in developer mode — SQL is an internal artifact
             var exposedSql = _developerMode ? sql : null;
             debugTrace?.Add($"Execute complete: rows={rows.Count}, columns={columns.Count}");
-            return QueryResult.FromData(columns, rows, exposedSql, plannerStats, debugTrace, diagnostics);
+            return QueryResult.FromData(columns, rows, exposedSql, plannerStats, sqlShapeStats, debugTrace, diagnostics);
         }
         catch (DuckDBException ex)
         {
@@ -241,6 +244,7 @@ public sealed class QueryResult
     public IReadOnlyList<object?[]> Rows { get; init; } = [];
     public string? GeneratedSql { get; init; }
     public string? PlannerStatsJson { get; init; }
+    public string? SqlShapeStatsJson { get; init; }
     public IReadOnlyList<string> DebugTrace { get; init; } = [];
     public DiagnosticBag Diagnostics { get; init; } = new();
 
@@ -252,6 +256,7 @@ public sealed class QueryResult
         List<object?[]> rows,
         string? sql,
         string? plannerStatsJson,
+        string? sqlShapeStatsJson,
         List<string>? debugTrace,
         DiagnosticBag diagnostics) => new QueryResult
         {
@@ -260,6 +265,7 @@ public sealed class QueryResult
             Rows = rows,
             GeneratedSql = sql,
             PlannerStatsJson = plannerStatsJson,
+            SqlShapeStatsJson = sqlShapeStatsJson,
             DebugTrace = debugTrace ?? [],
             Diagnostics = diagnostics
         };

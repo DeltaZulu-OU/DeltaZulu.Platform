@@ -171,9 +171,9 @@ public sealed class EndToEndPipelineTests
         var catalog = new ApprovedViewCatalog();
         catalog.Register(DeviceProcessEventsSchema.View);
 
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => new QueryRuntime(catalog, _factory, defaultLimit: 0));
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => new QueryRuntime(catalog, _factory, timeoutSeconds: 0));
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => new QueryRuntime(catalog, _factory, plannerMaxIterations: 0));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new QueryRuntime(catalog, _factory, defaultLimit: 0));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new QueryRuntime(catalog, _factory, timeoutSeconds: 0));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new QueryRuntime(catalog, _factory, plannerMaxIterations: 0));
     }
 
     // ─── Hunting scenarios ──────────────────────────────────────────
@@ -290,6 +290,39 @@ public sealed class EndToEndPipelineTests
         Assert.IsFalse(result.Success);
         Assert.Contains(d =>
             d.Message.Contains("innerunique") || d.Message.Contains("kind"), result.Diagnostics.All);
+    }
+
+    [TestMethod]
+    [Description("Successful query always exposes SqlShapeStatsJson")]
+    public void SqlShapeStats_AvailableOnSuccess()
+    {
+        var result = _runtime.Execute("DeviceProcessEvents | where FileName == \"cmd.exe\" | take 5");
+        AssertSuccess(result);
+        Assert.IsNotNull(result.SqlShapeStatsJson);
+
+        var stats = System.Text.Json.JsonSerializer.Deserialize<SqlShapeMetrics>(result.SqlShapeStatsJson!);
+        Assert.IsNotNull(stats);
+        Assert.IsGreaterThanOrEqualTo(1, stats.SelectCount);
+        Assert.IsGreaterThanOrEqualTo(0, stats.CteStageCount);
+        Assert.IsGreaterThanOrEqualTo(0, stats.JoinCount);
+        Assert.IsGreaterThanOrEqualTo(0, stats.OrderByCount);
+        Assert.IsGreaterThanOrEqualTo(0, stats.LimitCount);
+        Assert.IsGreaterThan(0, stats.SqlLength);
+    }
+
+    [TestMethod]
+    [Description("SqlShapeStatsJson is available even when developer mode is disabled")]
+    public void SqlShapeStats_AvailableWhenDeveloperModeDisabled()
+    {
+        var catalog = new ApprovedViewCatalog();
+        catalog.Register(DeviceProcessEventsSchema.View);
+
+        var runtime = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: false);
+        var result = runtime.Execute("DeviceProcessEvents | take 3");
+
+        AssertSuccess(result);
+        Assert.IsNull(result.GeneratedSql, "Generated SQL should remain hidden outside developer mode");
+        Assert.IsNotNull(result.SqlShapeStatsJson, "SQL-shape stats should be available regardless of developer mode");
     }
 
     // ─── Generated SQL available in developer mode ──────────────────
