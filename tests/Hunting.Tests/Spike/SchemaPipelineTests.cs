@@ -138,7 +138,7 @@ public sealed class SchemaPipelineTests
     public void MockData_InsertedIntoRaw()
     {
         var count = _applier.QueryScalar("SELECT count(*) FROM raw.windows_event_json");
-        Assert.AreEqual(20L, count, "Expected 20 mock events");
+        Assert.AreEqual(45L, count, "Expected 45 mock events");
     }
 
     [TestMethod]
@@ -146,7 +146,7 @@ public sealed class SchemaPipelineTests
     public void MockData_ParserViewFilters()
     {
         var count = _applier.QueryScalar("SELECT count(*) FROM internal.v_process_sysmon_create");
-        Assert.AreEqual(20L, count, "All 20 events are Sysmon EID 1");
+        Assert.AreEqual(45L, count, "All 45 events are Sysmon EID 1");
     }
 
     [TestMethod]
@@ -154,7 +154,7 @@ public sealed class SchemaPipelineTests
     public void MockData_CanonicalViewCount()
     {
         var count = _applier.QueryScalar("SELECT count(*) FROM main.DeviceProcessEvents");
-        Assert.AreEqual(20L, count);
+        Assert.AreEqual(45L, count);
     }
 
     // ─── Column extraction correctness ──────────────────────────────
@@ -192,7 +192,7 @@ public sealed class SchemaPipelineTests
     {
         var count = _applier.QueryScalar(
             """SELECT count(*) FROM main.DeviceProcessEvents WHERE ProcessCommandLine LIKE '%mimikatz%'""");
-        Assert.AreEqual(1L, count);
+        Assert.AreEqual(2L, count);
     }
 
     [TestMethod]
@@ -219,7 +219,7 @@ public sealed class SchemaPipelineTests
     {
         var count = _applier.QueryScalar(
             "SELECT count(*) FROM main.DeviceProcessEvents WHERE ProcessId > 0");
-        Assert.AreEqual(20L, count, "All events should have numeric ProcessId");
+        Assert.AreEqual(45L, count, "All events should have numeric ProcessId");
     }
 
     // ─── Hunting query scenarios against mock data ───────────────────
@@ -271,7 +271,7 @@ public sealed class SchemaPipelineTests
             WHERE FileName IN ('schtasks.exe', 'reg.exe')
               AND (ProcessCommandLine LIKE '%/create%' OR ProcessCommandLine LIKE '%add%')
             """);
-        Assert.AreEqual(2L, count, "Should find schtasks + reg persistence");
+        Assert.AreEqual(4L, count, "Should find schtasks + reg persistence");
     }
 
     [TestMethod]
@@ -284,6 +284,6 @@ public sealed class SchemaPipelineTests
             WHERE FileName = 'powershell.exe'
               AND ProcessCommandLine LIKE '%-enc%'
             """);
-        Assert.AreEqual(1L, count, "Should find 1 encoded PowerShell");
+        Assert.AreEqual(2L, count, "Should find 2 encoded PowerShell");
     }
 }

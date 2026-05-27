@@ -184,7 +184,7 @@ public sealed class EndToEndPipelineTests
     {
         var result = _runtime.Execute("DeviceProcessEvents | take 100");
         AssertSuccess(result);
-        Assert.AreEqual(20, result.RowCount);
+        Assert.AreEqual(45, result.RowCount);
     }
 
     [TestMethod]
@@ -209,7 +209,7 @@ public sealed class EndToEndPipelineTests
             | project Timestamp, DeviceName, AccountName, ProcessCommandLine
             """);
         AssertSuccess(result);
-        Assert.AreEqual(1, result.RowCount);
+        Assert.AreEqual(3, result.RowCount);
     }
 
     [TestMethod]
@@ -224,7 +224,7 @@ public sealed class EndToEndPipelineTests
             | project Timestamp, DeviceName, AccountName, lower_cmd
             """);
         AssertSuccess(result);
-        Assert.AreEqual(1, result.RowCount);
+        Assert.AreEqual(2, result.RowCount);
     }
 
     [TestMethod]
