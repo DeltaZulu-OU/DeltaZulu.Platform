@@ -21,7 +21,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Literal_Null()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("empty_col",
                 new LiteralScalar(null, LiteralKind.Null))]);
 
@@ -34,7 +34,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Literal_EmptyString()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("FileName"),
                 ScalarBinaryOp.Eq,
@@ -49,7 +49,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Literal_BoolTrue()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("flag",
                 new LiteralScalar(true, LiteralKind.Bool))]);
 
@@ -62,7 +62,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Literal_BoolFalse()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("flag",
                 new LiteralScalar(false, LiteralKind.Bool))]);
 
@@ -77,7 +77,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Injection_SingleQuote()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("FileName"),
                 ScalarBinaryOp.Eq,
@@ -95,11 +95,11 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Injection_DropTable()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("FileName"),
                 ScalarBinaryOp.Eq,
-                new LiteralScalar("'; DROP TABLE golden.DeviceProcessEvents; --", LiteralKind.String)));
+                new LiteralScalar("'; DROP TABLE golden.ProcessEvents; --", LiteralKind.String)));
 
         var sql = _emitter.Emit(node);
         // The leading single quote in the payload must be escaped to ''
@@ -122,7 +122,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Injection_Semicolon()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("FileName"),
                 ScalarBinaryOp.Eq,
@@ -139,7 +139,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Literal_Backslash()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("FolderPath"),
                 ScalarBinaryOp.Eq,
@@ -154,7 +154,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Literal_Unicode()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("AccountName"),
                 ScalarBinaryOp.Eq,
@@ -170,7 +170,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     [Description("Limit 0 emits LIMIT 0")]
     public void Limit_Zero()
     {
-        var node = new LimitNode(new ScanNode("DeviceProcessEvents"), 0);
+        var node = new LimitNode(new ScanNode("ProcessEvents"), 0);
         var sql = _emitter.Emit(node);
         AssertSqlContains(sql, "LIMIT 0");
     }
@@ -179,7 +179,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     [Description("Limit 1 emits LIMIT 1")]
     public void Limit_One()
     {
-        var node = new LimitNode(new ScanNode("DeviceProcessEvents"), 1);
+        var node = new LimitNode(new ScanNode("ProcessEvents"), 1);
         var sql = _emitter.Emit(node);
         AssertSqlContains(sql, "LIMIT 1");
     }
@@ -188,7 +188,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     [Description("Very large limit value")]
     public void Limit_VeryLarge()
     {
-        var node = new LimitNode(new ScanNode("DeviceProcessEvents"), 1_000_000);
+        var node = new LimitNode(new ScanNode("ProcessEvents"), 1_000_000);
         var sql = _emitter.Emit(node);
         AssertSqlContains(sql, "LIMIT 1000000");
     }
@@ -197,7 +197,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     [Description("Default safety limit injected when no user LIMIT")]
     public void Limit_DefaultInjected()
     {
-        var node = new ScanNode("DeviceProcessEvents");
+        var node = new ScanNode("ProcessEvents");
         var sql = _emitter.Emit(node);
         AssertSqlContains(sql, "LIMIT 10000");
     }
@@ -206,7 +206,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     [Description("Default limit NOT injected when user provides LIMIT")]
     public void Limit_NotDoubled()
     {
-        var node = new LimitNode(new ScanNode("DeviceProcessEvents"), 50);
+        var node = new LimitNode(new ScanNode("ProcessEvents"), 50);
         var sql = _emitter.Emit(node);
         var norm = NormSql(sql);
         // Count occurrences of LIMIT — should be exactly one
@@ -220,7 +220,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     [Description("10-stage pipeline produces valid CTE chain")]
     public void Deep_Pipeline_10Stages()
     {
-        RelNode node = new ScanNode("DeviceProcessEvents");
+        RelNode node = new ScanNode("ProcessEvents");
         for (var i = 0; i < 5; i++)
         {
             node = new FilterNode(node, new BinaryScalar(
@@ -248,7 +248,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Project_SingleColumn()
     {
         var node = new ProjectNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("Timestamp", new ColumnRef("Timestamp"))]);
 
         var sql = _emitter.Emit(node);
@@ -260,7 +260,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Aggregate_NoGroupBy()
     {
         var node = new AggregateNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             Aggregates: [new ProjectionExpr("total", new FunctionCall("count", []))],
             GroupBy: []);
 
@@ -275,7 +275,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Extend_MultipleColumns()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [
                 new ProjectionExpr("a", new FunctionCall("tolower", [new ColumnRef("FileName")])),
                 new ProjectionExpr("b", new FunctionCall("toupper", [new ColumnRef("DeviceName")])),
@@ -295,7 +295,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Sort_MultipleColumns()
     {
         var node = new SortNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [
                 new SortExpr(new ColumnRef("DeviceName"), SortDirection.Asc),
                 new SortExpr(new ColumnRef("Timestamp"), SortDirection.Desc),
@@ -312,7 +312,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Sort_NullsFirst()
     {
         var node = new SortNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new SortExpr(new ColumnRef("FileName"), SortDirection.Asc, NullOrder.First)]);
 
         var sql = _emitter.Emit(node);
@@ -324,7 +324,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Sort_NullsLast()
     {
         var node = new SortNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new SortExpr(new ColumnRef("FileName"), SortDirection.Desc, NullOrder.Last)]);
 
         var sql = _emitter.Emit(node);
@@ -339,7 +339,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     {
         // (a == 1 AND b == 2) OR (c == 3 AND d == 4)
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new BinaryScalar(
                     new BinaryScalar(new ColumnRef("ProcessId"), ScalarBinaryOp.Eq, new LiteralScalar(1, LiteralKind.Int)),
@@ -362,7 +362,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Expr_NotCompound()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new UnaryScalar(
                 ScalarUnaryOp.Not,
                 new BinaryScalar(
@@ -381,7 +381,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     {
         // tolower(substring(FileName, 0, 5))
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("prefix",
                 new FunctionCall("tolower",
                     [new FunctionCall("substring",
@@ -400,7 +400,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Expr_CaseMultiBranch()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("severity",
                 new CaseScalar(
                     [(new BinaryScalar(new ColumnRef("ProcessId"), ScalarBinaryOp.Gt, new LiteralScalar(1000, LiteralKind.Int)),
@@ -423,7 +423,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void StringOp_Contains()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("ProcessCommandLine"),
                 ScalarBinaryOp.Contains,
@@ -438,7 +438,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void StringOp_StartsWith()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("FileName"),
                 ScalarBinaryOp.StartsWith,
@@ -457,7 +457,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Timespan_Days()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("Timestamp"),
                 ScalarBinaryOp.Gt,
@@ -473,7 +473,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     {
         var lit = new LiteralScalar("2h", LiteralKind.Timespan);
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("Timestamp"),
                 ScalarBinaryOp.Gt,
@@ -489,7 +489,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     {
         var lit = new LiteralScalar("30m", LiteralKind.Timespan);
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("Timestamp"),
                 ScalarBinaryOp.Gt,
@@ -505,7 +505,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     {
         var lit = new LiteralScalar("10s", LiteralKind.Timespan);
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("Timestamp"),
                 ScalarBinaryOp.Gt,
@@ -521,7 +521,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     {
         var lit = new LiteralScalar("500ms", LiteralKind.Timespan);
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("Timestamp"),
                 ScalarBinaryOp.Gt,
@@ -546,7 +546,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Ident_WithSpace()
     {
         var node = new ProjectNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("Device Name", new ColumnRef("Device Name"))]);
 
         var sql = _emitter.Emit(node);
@@ -558,7 +558,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Ident_StartsWithDigit()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("123col", new LiteralScalar(1, LiteralKind.Int))]);
 
         var sql = _emitter.Emit(node);
@@ -570,7 +570,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Ident_NormalNotQuoted()
     {
         var node = new ProjectNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("Timestamp", new ColumnRef("Timestamp"))]);
 
         var sql = _emitter.Emit(node);
@@ -585,7 +585,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Reuse_ConsistentOutput()
     {
         var emitter = new DuckDbQueryEmitter(defaultLimit: 100);
-        var node = new LimitNode(new ScanNode("DeviceProcessEvents"), 5);
+        var node = new LimitNode(new ScanNode("ProcessEvents"), 5);
 
         var sql1 = emitter.Emit(node);
         var sql2 = emitter.Emit(node);
@@ -603,13 +603,13 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
         // First call with deep pipeline
         var deep = new LimitNode(
             new FilterNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 new BinaryScalar(new ColumnRef("ProcessId"), ScalarBinaryOp.Gt, new LiteralScalar(0, LiteralKind.Int))),
             10);
         emitter.Emit(deep);
 
         // Second call should start from stage 0 again
-        var simple = new ScanNode("DeviceProcessEvents");
+        var simple = new ScanNode("ProcessEvents");
         var sql2 = emitter.Emit(simple);
 
         // Should not contain high stage numbers from first call
@@ -624,8 +624,8 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Join_SemiJoin()
     {
         var node = new JoinNode(
-            new ScanNode("DeviceProcessEvents"),
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
+            new ScanNode("ProcessEvents"),
             JoinKind.LeftSemi,
             new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
 
@@ -638,8 +638,8 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Join_AntiJoin()
     {
         var node = new JoinNode(
-            new ScanNode("DeviceProcessEvents"),
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
+            new ScanNode("ProcessEvents"),
             JoinKind.LeftAnti,
             new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
 
@@ -652,8 +652,8 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Join_RightOuterJoin()
     {
         var node = new JoinNode(
-            new ScanNode("DeviceProcessEvents"),
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
+            new ScanNode("ProcessEvents"),
             JoinKind.RightOuter,
             new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
 
@@ -666,8 +666,8 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Join_FullOuterJoin()
     {
         var node = new JoinNode(
-            new ScanNode("DeviceProcessEvents"),
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
+            new ScanNode("ProcessEvents"),
             JoinKind.FullOuter,
             new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
 
@@ -680,8 +680,8 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Join_RightSemiJoin()
     {
         var node = new JoinNode(
-            new ScanNode("DeviceProcessEvents"),
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
+            new ScanNode("ProcessEvents"),
             JoinKind.RightSemi,
             new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
 
@@ -694,8 +694,8 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Join_RightAntiJoin()
     {
         var node = new JoinNode(
-            new ScanNode("DeviceProcessEvents"),
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
+            new ScanNode("ProcessEvents"),
             JoinKind.RightAnti,
             new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
 
@@ -707,7 +707,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     [Description("SampleNode emits USING SAMPLE reservoir(n ROWS)")]
     public void Tabular_Sample_EmitsReservoir()
     {
-        var node = new SampleNode(new ScanNode("DeviceProcessEvents"), 7);
+        var node = new SampleNode(new ScanNode("ProcessEvents"), 7);
         var sql = _emitter.Emit(node);
         AssertSqlContains(sql, "USING SAMPLE reservoir(7 ROWS)");
     }
@@ -719,7 +719,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Func_IsEmpty()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new FunctionCall("isempty", [new ColumnRef("FileName")]));
 
         var sql = _emitter.Emit(node);
@@ -732,7 +732,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Func_IsNull()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new FunctionCall("isnull", [new ColumnRef("FileName")]));
 
         var sql = _emitter.Emit(node);
@@ -744,7 +744,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Func_Coalesce()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("name",
                 new FunctionCall("coalesce",
                     [new ColumnRef("DeviceName"),
@@ -759,7 +759,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Func_TrivialMappings_InvalidArity_Rejected()
     {
         var node = new ProjectNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [
                 new ProjectionExpr("a", new FunctionCall("strcat_array", [new ColumnRef("Tags")])),
                 new ProjectionExpr("b", new FunctionCall("bag_keys", [new ColumnRef("AdditionalFields"), new LiteralScalar("extra", LiteralKind.String)])),
@@ -780,7 +780,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     public void Expr_Star()
     {
         var node = new ProjectNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("all", new StarExpr())]);
 
         var sql = _emitter.Emit(node);

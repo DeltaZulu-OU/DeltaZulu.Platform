@@ -10,7 +10,7 @@ public sealed class RelationalPlannerTests
     public void Plan_Disabled_ReturnsInputUnchanged()
     {
         var planner = new RelationalPlanner();
-        RelNode node = new ScanNode("DeviceProcessEvents");
+        RelNode node = new ScanNode("ProcessEvents");
 
         var planned = planner.Plan(node, new PlannerContext(Enabled: false));
 
@@ -24,7 +24,7 @@ public sealed class RelationalPlannerTests
 
         RelNode node = new ProjectNode(
             new ProjectNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [
                     new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
                     new ProjectionExpr("DeviceName", new ColumnRef("DeviceName"))
@@ -49,7 +49,7 @@ public sealed class RelationalPlannerTests
 
         RelNode node = new FilterNode(
             new ProjectNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [new ProjectionExpr("DeviceName", new ColumnRef("DeviceName"))]),
             new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new LiteralScalar("A", LiteralKind.String)));
 
@@ -67,7 +67,7 @@ public sealed class RelationalPlannerTests
 
         RelNode node = new FilterNode(
             new ProjectNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [new ProjectionExpr("Name", new ColumnRef("DeviceName"))]),
             new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new LiteralScalar("A", LiteralKind.String)));
 
@@ -83,7 +83,7 @@ public sealed class RelationalPlannerTests
 
         RelNode node = new FilterNode(
             new ProjectNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [new ProjectionExpr("Name", new ColumnRef("DeviceName"))]),
             new BinaryScalar(new ColumnRef("Name"), ScalarBinaryOp.Eq, new LiteralScalar("A", LiteralKind.String)));
 
@@ -105,7 +105,7 @@ public sealed class RelationalPlannerTests
 
         RelNode node = new FilterNode(
             new ProjectNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [new ProjectionExpr("DeviceName", new ColumnRef("DeviceName"))]),
             new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new LiteralScalar("A", LiteralKind.String)));
 
@@ -122,7 +122,7 @@ public sealed class RelationalPlannerTests
 
         RelNode node = new FilterNode(
             new ProjectNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [
                     new ProjectionExpr("Name", new ColumnRef("DeviceName")),
                     new ProjectionExpr("Name", new ColumnRef("Timestamp"))
@@ -141,7 +141,7 @@ public sealed class RelationalPlannerTests
 
         RelNode node = new ProjectNode(
             new ProjectNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [new ProjectionExpr("Timestamp", new ColumnRef("Timestamp"))]),
             [new ProjectionExpr("Timestamp", new ColumnRef("Timestamp"))]);
 
@@ -159,7 +159,7 @@ public sealed class RelationalPlannerTests
 
         RelNode node = new FilterNode(
             new ProjectNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [new ProjectionExpr("DeviceName", new ColumnRef("DeviceName"))]),
             new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new LiteralScalar("A", LiteralKind.String)));
 
@@ -179,7 +179,7 @@ public sealed class RelationalPlannerTests
 
         RelNode node = new ProjectNode(
             new ProjectNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [
                     new ProjectionExpr("A", new ColumnRef("DeviceName")),
                     new ProjectionExpr("B", new ColumnRef("Timestamp"))
@@ -201,7 +201,7 @@ public sealed class RelationalPlannerTests
         RelNode node = new ProjectNode(
             new ExtendNode(
                 new ProjectNode(
-                    new ScanNode("DeviceProcessEvents"),
+                    new ScanNode("ProcessEvents"),
                     [
                         new ProjectionExpr("A", new ColumnRef("DeviceName")),
                         new ProjectionExpr("B", new ColumnRef("Timestamp"))
@@ -224,11 +224,11 @@ public sealed class RelationalPlannerTests
         var planner = new RelationalPlanner();
 
         var leftAgg = new AggregateNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("LaunchCount", new FunctionCall("count", []))],
             [new ColumnRef("AccountName")]);
         var rightAgg = new AggregateNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("DeviceCount", new FunctionCall("dcount", [new ColumnRef("DeviceName")]))],
             [new ColumnRef("AccountName")]);
         var join = new JoinNode(
@@ -259,7 +259,7 @@ public sealed class RelationalPlannerTests
         var planner = new RelationalPlanner();
 
         RelNode node = new ProjectNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [
                 new ProjectionExpr("X", new FunctionCall("tolower", [new ColumnRef("DeviceName")])),
                 new ProjectionExpr("Y", new FunctionCall("tolower", [new ColumnRef("DeviceName")]))
@@ -279,7 +279,7 @@ public sealed class RelationalPlannerTests
         var planner = new RelationalPlanner();
 
         RelNode node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [
                 new ProjectionExpr("X", new FunctionCall("tolower", [new ColumnRef("DeviceName")])) ,
                 new ProjectionExpr("Y", new FunctionCall("tolower", [new ColumnRef("DeviceName")]))
@@ -301,7 +301,7 @@ public sealed class RelationalPlannerTests
 
         RelNode node = new ProjectNode(
             new ProjectNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [new ProjectionExpr("Timestamp", new ColumnRef("Timestamp"))]),
             [new ProjectionExpr("Ts", new ColumnRef("Timestamp"))]);
 
@@ -320,7 +320,7 @@ public sealed class RelationalPlannerTests
 
         RelNode node = new ProjectNode(
             new ProjectNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [
                     new ProjectionExpr("A", new ColumnRef("DeviceName")),
                     new ProjectionExpr("B", new ColumnRef("Timestamp")),
@@ -355,7 +355,7 @@ public sealed class RelationalPlannerTests
             new WindowSpec(PartitionBy: [new ColumnRef("FileName")], OrderBy: []));
 
         RelNode node = new ProjectNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [
                 new ProjectionExpr("X", byDevice),
                 new ProjectionExpr("Y", byFile)
@@ -375,7 +375,7 @@ public sealed class RelationalPlannerTests
         var planner = new RelationalPlanner();
 
         RelNode node = new ProjectNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [
                 new ProjectionExpr("X", new FunctionCall("tolower", [new ColumnRef("DeviceName")])),
                 new ProjectionExpr("Y", new FunctionCall("tolower", [new ColumnRef("DeviceName")]))
@@ -405,7 +405,7 @@ public sealed class RelationalPlannerTests
         // must survive pruning while the unreferenced FileName is dropped.
         RelNode node = new SortNode(
             new ProjectNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [
                     new ProjectionExpr("DeviceName", new ColumnRef("DeviceName")),
                     new ProjectionExpr("FileName", new ColumnRef("FileName"))
@@ -427,7 +427,7 @@ public sealed class RelationalPlannerTests
         var planner = new RelationalPlanner();
 
         RelNode node = new ProjectNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [
                 new ProjectionExpr("X", new FunctionCall("tolower", [new ColumnRef("DeviceName")])) ,
                 new ProjectionExpr("Y", new FunctionCall("ToLower", [new ColumnRef("DeviceName")]))
@@ -449,7 +449,7 @@ public sealed class RelationalPlannerTests
 
         RelNode node = new ProjectNode(
             new ProjectNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [
                     new ProjectionExpr("A", new ColumnRef("DeviceName")),
                     new ProjectionExpr("B", new ColumnRef("Timestamp"))
@@ -471,7 +471,7 @@ public sealed class RelationalPlannerTests
 
         RelNode node = new ProjectNode(
             new ProjectNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [new ProjectionExpr("DeviceName", new ColumnRef("DeviceName"))]),
             [new ProjectionExpr("devicename", new ColumnRef("DeviceName"))]);
 
@@ -489,13 +489,13 @@ public sealed class RelationalPlannerTests
     {
         var planner = new RelationalPlanner();
 
-        // DeviceProcessEvents
+        // ProcessEvents
         //   | extend CommandUrlEncoded = url_encode(ProcessCommandLine)
         //   | extend HasEncodedCmd = indexof(CommandUrlEncoded, "%2Denc") >= 0
         //   | where HasEncodedCmd
         //   | project Timestamp, CommandUrlEncoded
         var encoded = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("CommandUrlEncoded", new FunctionCall("url_encode", [new ColumnRef("ProcessCommandLine")]))]);
         var flag = new ExtendNode(
             encoded,
@@ -537,7 +537,7 @@ public sealed class RelationalPlannerTests
         // The flag is both filtered on AND projected, so it is live above the
         // filter and must remain materialized.
         var flag = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("HasEncodedCmd", new BinaryScalar(
                 new ColumnRef("ProcessId"), ScalarBinaryOp.Gt, new LiteralScalar(0L, LiteralKind.Long)))]);
         RelNode node = new ProjectNode(
@@ -562,7 +562,7 @@ public sealed class RelationalPlannerTests
         // A is consumed only by the filter, but sibling B = upper(A) depends on it
         // and B is projected — dropping A would break B.
         var ext = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [
                 new ProjectionExpr("A", new FunctionCall("lower", [new ColumnRef("FileName")])),
                 new ProjectionExpr("B", new FunctionCall("upper", [new ColumnRef("A")]))

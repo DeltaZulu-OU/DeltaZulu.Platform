@@ -66,7 +66,7 @@ public sealed record ParserViewDef(
     : SchemaObjectDef(Schema, Name, Columns, Description);
 
 /// <summary>
-/// A public hunting view (e.g. golden.DeviceProcessEvents).
+/// A public hunting view (e.g. golden.ProcessEvents).
 /// UNION ALL over parser views. The only user-queryable surface.
 /// </summary>
 public sealed record CanonicalViewDef(

@@ -5,7 +5,7 @@ using Hunting.Core.Schema;
 using static Hunting.Core.Mapping.MapDsl;
 
 /// <summary>
-/// Canonical schema for DeviceNetworkEvents — Microsoft Defender Advanced Hunting compatible.
+/// Canonical schema for NetworkSessions — Microsoft Defender Advanced Hunting compatible.
 /// Parser: Sysmon Event ID 3 (Network Connection detected).
 ///
 /// This is the second table family in the POC. Adding it proves that the schema model,
@@ -22,7 +22,7 @@ using static Hunting.Core.Mapping.MapDsl;
 ///   ProcessId             → InitiatingProcessId
 ///   User                  → InitiatingProcessAccountName
 /// </summary>
-public static class DeviceNetworkEventsSchema
+public static class NetworkSessions
 {
     public static readonly IReadOnlyList<ColumnDef> Columns =
     [

@@ -4,6 +4,7 @@ using Hunting.Core.Catalog;
 using Hunting.Core.DuckDbSql;
 using Hunting.Core.Planning;
 using Hunting.Core.QueryModel;
+using Hunting.Core.Render;
 using Hunting.Data;
 using Hunting.Schema.Definitions;
 
@@ -29,16 +30,16 @@ public sealed class EndToEndPipelineTests
         var emitter = new SchemaEmitter();
         var applier = new SchemaApplier(_factory);
         var ddl = emitter.EmitAll(
-            rawTables: [DeviceProcessEventsSchema.RawWindowsEventJson],
+            rawTables: [ProcessEvents.RawWindowsEventJson],
             internalTables: [],
-            parserViews: [DeviceProcessEventsSchema.SysmonProcessCreate],
-            canonicalViews: [DeviceProcessEventsSchema.View]);
+            parserViews: [ProcessEvents.SysmonProcessCreate],
+            canonicalViews: [ProcessEvents.View]);
         applier.ApplyStatements(ddl);
         applier.ExecuteRaw(MockDataSeeder.GetProcessSeedSql());
 
         // Build runtime
         var catalog = new ApprovedViewCatalog();
-        catalog.Register(DeviceProcessEventsSchema.View);
+        catalog.Register(ProcessEvents.View);
         // Enable developer mode so tests can assert GeneratedSql is exposed for debugging
         _runtime = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true);
     }
@@ -54,7 +55,7 @@ public sealed class EndToEndPipelineTests
     {
         var result = _runtime.Execute(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | where FileName == "cmd.exe"
             | project Timestamp, DeviceName, ProcessCommandLine
             | take 20
@@ -73,12 +74,12 @@ public sealed class EndToEndPipelineTests
     public void Planner_NoOp_PreservesBehavior()
     {
         var catalog = new ApprovedViewCatalog();
-        catalog.Register(DeviceProcessEventsSchema.View);
+        catalog.Register(ProcessEvents.View);
 
         var runtimeDefault = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true);
         var runtimeNoOp = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true, planner: new NoOpRelationalPlanner());
 
-        const string kql = "DeviceProcessEvents | where FileName == \"cmd.exe\" | project Timestamp, DeviceName | take 5";
+        const string kql = "ProcessEvents | where FileName == \"cmd.exe\" | project Timestamp, DeviceName | take 5";
 
         var off = runtimeDefault.Execute(kql);
         var on = runtimeNoOp.Execute(kql);
@@ -96,12 +97,12 @@ public sealed class EndToEndPipelineTests
     public void Planner_DefaultPlanner_PreservesSemantics()
     {
         var catalog = new ApprovedViewCatalog();
-        catalog.Register(DeviceProcessEventsSchema.View);
+        catalog.Register(ProcessEvents.View);
 
         var runtimeOff = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true, planner: new NoOpRelationalPlanner());
         var runtimeOn = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true);
 
-        const string kql = "DeviceProcessEvents | where FileName == \"cmd.exe\" | project Timestamp, DeviceName | take 5";
+        const string kql = "ProcessEvents | where FileName == \"cmd.exe\" | project Timestamp, DeviceName | take 5";
 
         var off = runtimeOff.Execute(kql);
         var on = runtimeOn.Execute(kql);
@@ -125,7 +126,7 @@ public sealed class EndToEndPipelineTests
     public void Planner_Exception_ProducesDiagnostic()
     {
         var catalog = new ApprovedViewCatalog();
-        catalog.Register(DeviceProcessEventsSchema.View);
+        catalog.Register(ProcessEvents.View);
 
         var runtime = new QueryRuntime(
             catalog,
@@ -134,7 +135,7 @@ public sealed class EndToEndPipelineTests
             developerMode: true,
             planner: new ThrowingPlanner());
 
-        var result = runtime.Execute("DeviceProcessEvents | take 1");
+        var result = runtime.Execute("ProcessEvents | take 1");
 
         Assert.IsFalse(result.Success);
         Assert.IsTrue(result.Diagnostics.HasErrors);
@@ -146,7 +147,7 @@ public sealed class EndToEndPipelineTests
     public void Planner_MaxIterations_IsForwarded()
     {
         var catalog = new ApprovedViewCatalog();
-        catalog.Register(DeviceProcessEventsSchema.View);
+        catalog.Register(ProcessEvents.View);
 
         var capturing = new CapturingPlanner();
         var runtime = new QueryRuntime(
@@ -157,7 +158,7 @@ public sealed class EndToEndPipelineTests
             plannerMaxIterations: 7,
             planner: capturing);
 
-        var result = runtime.Execute("DeviceProcessEvents | take 1");
+        var result = runtime.Execute("ProcessEvents | take 1");
 
         AssertSuccess(result);
         Assert.AreEqual(7, capturing.LastContext?.MaxIterations);
@@ -170,7 +171,7 @@ public sealed class EndToEndPipelineTests
     public void PlannerGateway_BypassesSimpleShape()
     {
         var catalog = new ApprovedViewCatalog();
-        catalog.Register(DeviceProcessEventsSchema.View);
+        catalog.Register(ProcessEvents.View);
 
         var capturing = new CapturingPlanner();
         var runtime = new QueryRuntime(
@@ -181,7 +182,7 @@ public sealed class EndToEndPipelineTests
             planner: capturing,
             plannerGatewayEnabled: true);
 
-        var result = runtime.Execute("DeviceProcessEvents | project Timestamp, DeviceName | take 1");
+        var result = runtime.Execute("ProcessEvents | project Timestamp, DeviceName | take 1");
 
         AssertSuccess(result);
         Assert.IsNull(capturing.LastContext, "Planner should be bypassed for simple shape.");
@@ -193,7 +194,7 @@ public sealed class EndToEndPipelineTests
     public void PlannerGateway_RunsPlanner_WhenAboveThreshold()
     {
         var catalog = new ApprovedViewCatalog();
-        catalog.Register(DeviceProcessEventsSchema.View);
+        catalog.Register(ProcessEvents.View);
 
         var capturing = new CapturingPlanner();
         var runtime = new QueryRuntime(
@@ -205,7 +206,7 @@ public sealed class EndToEndPipelineTests
             plannerGatewayEnabled: true,
             plannerGatewayMaxEstimatedRows: 0);
 
-        var result = runtime.Execute("DeviceProcessEvents | summarize count() by DeviceName");
+        var result = runtime.Execute("ProcessEvents | summarize count() by DeviceName");
 
         AssertSuccess(result);
         Assert.IsNotNull(capturing.LastContext, "Planner should run when estimated rows exceed threshold for middle shapes.");
@@ -217,7 +218,7 @@ public sealed class EndToEndPipelineTests
     public void RuntimeCtor_InvalidParameters_Throw()
     {
         var catalog = new ApprovedViewCatalog();
-        catalog.Register(DeviceProcessEventsSchema.View);
+        catalog.Register(ProcessEvents.View);
 
         Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new QueryRuntime(catalog, _factory, defaultLimit: 0));
         Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new QueryRuntime(catalog, _factory, timeoutSeconds: 0));
@@ -232,7 +233,7 @@ public sealed class EndToEndPipelineTests
     [Description("Hunt: find all process events")]
     public void Hunt_AllEvents()
     {
-        var result = _runtime.Execute("DeviceProcessEvents | take 100");
+        var result = _runtime.Execute("ProcessEvents | take 100");
         AssertSuccess(result);
         Assert.AreEqual(45, result.RowCount);
     }
@@ -242,7 +243,7 @@ public sealed class EndToEndPipelineTests
     public void Hunt_CountByDevice()
     {
         var result = _runtime.Execute(
-            "DeviceProcessEvents | summarize count() by DeviceName | sort by count_ desc");
+            "ProcessEvents | summarize count() by DeviceName | sort by count_ desc");
         AssertSuccess(result);
         Assert.IsGreaterThanOrEqualTo(3, result.RowCount, "Should have at least 3 devices");
     }
@@ -253,7 +254,7 @@ public sealed class EndToEndPipelineTests
     {
         var result = _runtime.Execute(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | where FileName == "powershell.exe"
             | where ProcessCommandLine contains "enc"
             | project Timestamp, DeviceName, AccountName, ProcessCommandLine
@@ -268,7 +269,7 @@ public sealed class EndToEndPipelineTests
     {
         var result = _runtime.Execute(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | where FileName == "mimikatz.exe"
             | extend lower_cmd = tolower(ProcessCommandLine)
             | project Timestamp, DeviceName, AccountName, lower_cmd
@@ -282,7 +283,7 @@ public sealed class EndToEndPipelineTests
     public void Hunt_TopProcesses()
     {
         var result = _runtime.Execute(
-            "DeviceProcessEvents | summarize count() by FileName | top 5 by count_ desc");
+            "ProcessEvents | summarize count() by FileName | top 5 by count_ desc");
         AssertSuccess(result);
         Assert.IsTrue(result.RowCount >= 1 && result.RowCount <= 5);
     }
@@ -293,7 +294,7 @@ public sealed class EndToEndPipelineTests
     {
         var result = _runtime.Execute(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | where FileName in ("whoami.exe", "net.exe", "ipconfig.exe", "nltest.exe")
             | project Timestamp, DeviceName, FileName, ProcessCommandLine
             | sort by Timestamp asc
@@ -336,7 +337,7 @@ public sealed class EndToEndPipelineTests
     public void Error_BareJoin()
     {
         var result = _runtime.Execute(
-            "DeviceProcessEvents | join (DeviceProcessEvents | take 5) on DeviceName");
+            "ProcessEvents | join (ProcessEvents | take 5) on DeviceName");
         Assert.IsFalse(result.Success);
         Assert.Contains(d =>
             d.Message.Contains("innerunique") || d.Message.Contains("kind"), result.Diagnostics.All);
@@ -346,7 +347,7 @@ public sealed class EndToEndPipelineTests
     [Description("Successful query always exposes SqlShapeStatsJson")]
     public void SqlShapeStats_AvailableOnSuccess()
     {
-        var result = _runtime.Execute("DeviceProcessEvents | where FileName == \"cmd.exe\" | take 5");
+        var result = _runtime.Execute("ProcessEvents | where FileName == \"cmd.exe\" | take 5");
         AssertSuccess(result);
         Assert.IsNotNull(result.SqlShapeStatsJson);
 
@@ -365,10 +366,10 @@ public sealed class EndToEndPipelineTests
     public void SqlShapeStats_AvailableWhenDeveloperModeDisabled()
     {
         var catalog = new ApprovedViewCatalog();
-        catalog.Register(DeviceProcessEventsSchema.View);
+        catalog.Register(ProcessEvents.View);
 
         var runtime = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: false);
-        var result = runtime.Execute("DeviceProcessEvents | take 3");
+        var result = runtime.Execute("ProcessEvents | take 3");
 
         AssertSuccess(result);
         Assert.IsNull(result.GeneratedSql, "Generated SQL should remain hidden outside developer mode");
@@ -381,10 +382,10 @@ public sealed class EndToEndPipelineTests
     [Description("Successful query exposes generated SQL")]
     public void DeveloperMode_SqlAvailable()
     {
-        var result = _runtime.Execute("DeviceProcessEvents | take 5");
+        var result = _runtime.Execute("ProcessEvents | take 5");
         AssertSuccess(result);
         Assert.IsNotNull(result.GeneratedSql);
-        Assert.Contains("golden.DeviceProcessEvents", result.GeneratedSql);
+        Assert.Contains("golden.ProcessEvents", result.GeneratedSql);
         Assert.IsNotEmpty(result.DebugTrace, "Developer mode should include debug trace events");
     }
 
@@ -405,7 +406,7 @@ public sealed class EndToEndPipelineTests
     {
         var streamedRows = new List<object?[]>();
         var result = _runtime.ExecuteStreamed(
-            "DeviceProcessEvents | project DeviceName, FileName | take 5",
+            "ProcessEvents | project DeviceName, FileName | take 5",
             reader =>
             {
                 var row = new object?[reader.FieldCount];
@@ -433,7 +434,7 @@ public sealed class EndToEndPipelineTests
     {
         var seen = 0;
         var result = _runtime.ExecuteStreamed(
-            "DeviceProcessEvents | take 100",
+            "ProcessEvents | take 100",
             _ =>
             {
                 seen++;
@@ -449,7 +450,7 @@ public sealed class EndToEndPipelineTests
     public void Runtime_ExecuteTabular_Shape()
     {
         var result = _runtime.ExecuteTabular(
-            "DeviceProcessEvents | project DeviceName, FileName | take 3");
+            "ProcessEvents | project DeviceName, FileName | take 3");
 
         Assert.IsTrue(result.Success, "Tabular query should succeed.");
         Assert.AreEqual(3, result.RowCount);
@@ -465,7 +466,7 @@ public sealed class EndToEndPipelineTests
     [Description("Execute with maxRows bounds buffered row materialization")]
     public void Runtime_Execute_BoundedMaxRows()
     {
-        var result = _runtime.Execute("DeviceProcessEvents | take 100", maxRows: 7);
+        var result = _runtime.Execute("ProcessEvents | take 100", maxRows: 7);
         AssertSuccess(result);
         Assert.AreEqual(7, result.RowCount);
     }
@@ -474,7 +475,7 @@ public sealed class EndToEndPipelineTests
     [Description("Compile cache parity holds across Execute and ExecuteStreamed paths")]
     public void Runtime_CompileCache_ParityAcrossExecuteAndStreamed()
     {
-        const string kql = "DeviceProcessEvents | where FileName == \"cmd.exe\" | take 5";
+        const string kql = "ProcessEvents | where FileName == \"cmd.exe\" | take 5";
 
         var first = _runtime.Execute(kql);
         AssertSuccess(first);
@@ -504,7 +505,7 @@ public sealed class EndToEndPipelineTests
     [Description("Terminal render directive is extracted as metadata and does not change row semantics")]
     public void Runtime_RenderDirective_TerminalMetadataOnly()
     {
-        const string baseQuery = "DeviceProcessEvents | project Timestamp, ProcessId | take 3";
+        const string baseQuery = "ProcessEvents | project Timestamp, ProcessId | take 3";
         var withoutRender = _runtime.Execute(baseQuery);
         var withRender = _runtime.Execute($"{baseQuery} | render linechart xcolumn=Timestamp ycolumns=ProcessId title='Proc trend'");
 
@@ -512,7 +513,7 @@ public sealed class EndToEndPipelineTests
         AssertSuccess(withRender);
         Assert.AreEqual(withoutRender.RowCount, withRender.RowCount, "Render metadata must not alter row count.");
         Assert.AreEqual(withoutRender.ColumnCount, withRender.ColumnCount, "Render metadata must not alter column shape.");
-        Assert.AreEqual(Hunting.Core.Render.RenderKind.Linechart, withRender.RenderSpec.Kind);
+        Assert.AreEqual(RenderKind.Linechart, withRender.RenderSpec.Kind);
         Assert.AreEqual("Timestamp", withRender.RenderSpec.XColumn);
         Assert.AreEqual(1, withRender.RenderSpec.YColumns.Count);
         Assert.AreEqual("ProcessId", withRender.RenderSpec.YColumns[0]);
@@ -523,9 +524,9 @@ public sealed class EndToEndPipelineTests
     [Description("Unsupported render kind falls back to table with non-fatal warning diagnostics")]
     public void Runtime_RenderDirective_UnsupportedKind_WarnsAndFallsBack()
     {
-        var result = _runtime.Execute("DeviceProcessEvents | take 2 | render treemap");
+        var result = _runtime.Execute("ProcessEvents | take 2 | render treemap");
         AssertSuccess(result);
-        Assert.AreEqual(Hunting.Core.Render.RenderKind.Table, result.RenderSpec.Kind);
+        Assert.AreEqual(RenderKind.Table, result.RenderSpec.Kind);
         Assert.IsTrue(result.RenderSpec.IsFallback);
         Assert.IsTrue(result.Diagnostics.All.Any(d => d.Severity == Hunting.Core.Policy.DiagnosticSeverity.Warning
             && d.Message.Contains("Unsupported render kind", StringComparison.OrdinalIgnoreCase)));
@@ -536,16 +537,16 @@ public sealed class EndToEndPipelineTests
     public void Runtime_RenderDirective_StreamedAndTabularContracts_PreserveRenderSpec()
     {
         var streamed = _runtime.ExecuteStreamed(
-            "DeviceProcessEvents | project DeviceName, ProcessId | take 4 | render barchart xcolumn=DeviceName ycolumns=ProcessId",
+            "ProcessEvents | project DeviceName, ProcessId | take 4 | render barchart xcolumn=DeviceName ycolumns=ProcessId",
             _ => true);
         Assert.IsTrue(streamed.Success);
-        Assert.AreEqual(Hunting.Core.Render.RenderKind.Barchart, streamed.RenderSpec.Kind);
+        Assert.AreEqual(RenderKind.Barchart, streamed.RenderSpec.Kind);
         Assert.AreEqual("DeviceName", streamed.RenderSpec.XColumn);
 
         var tabular = _runtime.ExecuteTabular(
-            "DeviceProcessEvents | project DeviceName, ProcessId | take 4 | render columnchart xcolumn=DeviceName ycolumns=ProcessId");
+            "ProcessEvents | project DeviceName, ProcessId | take 4 | render columnchart xcolumn=DeviceName ycolumns=ProcessId");
         Assert.IsTrue(tabular.Success);
-        Assert.AreEqual(Hunting.Core.Render.RenderKind.Columnchart, tabular.RenderSpec.Kind);
+        Assert.AreEqual(RenderKind.Columnchart, tabular.RenderSpec.Kind);
         Assert.AreEqual("DeviceName", tabular.RenderSpec.XColumn);
     }
 

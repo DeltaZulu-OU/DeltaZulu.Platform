@@ -79,6 +79,6 @@ internal static partial class RenderDirectiveParser
             ? []
             : csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-    [GeneratedRegex(@"\|\s*render\s+(?<kind>[A-Za-z]+)(?<props>(?:\s+[A-Za-z]+\s*=\s*[^\s|;]+)*)\s*$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\|\s*render\s+(?<kind>[A-Za-z][A-Za-z0-9_-]*)(?<props>(?:\s+[A-Za-z][A-Za-z0-9_-]*\s*=\s*(?:'(?:\\.|[^'\\])*'|""(?:\\.|[^""\\])*""|[^\s|;]+))*)\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex RenderRegex();
 }

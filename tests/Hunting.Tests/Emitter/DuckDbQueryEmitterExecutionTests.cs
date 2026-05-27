@@ -24,7 +24,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
         _conn.Open();
         _emitter = new DuckDbQueryEmitter(defaultLimit: 1000);
 
-        // Create the golden.DeviceProcessEvents view with mock data
+        // Create the golden.ProcessEvents view with mock data
         using var cmd = _conn.CreateCommand();
         cmd.CommandText =
             """
@@ -73,7 +73,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
                 FROM bronze.windows_event_json
                 WHERE provider = 'Microsoft-Windows-Sysmon' AND event_id = 1;
 
-            CREATE VIEW golden.DeviceProcessEvents AS
+            CREATE VIEW golden.ProcessEvents AS
                 SELECT * FROM silver.v_process_sysmon_create;
             """;
         cmd.ExecuteNonQuery();
@@ -136,14 +136,14 @@ public sealed class DuckDbQueryEmitterExecutionTests
 
     [TestMethod]
     [Description("Bare scan executes against mock data")]
-    public void Execute_Scan() => AssertExecutes(new ScanNode("DeviceProcessEvents"), expectedMinRows: 5);
+    public void Execute_Scan() => AssertExecutes(new ScanNode("ProcessEvents"), expectedMinRows: 5);
 
     [TestMethod]
     [Description("Filter executes and reduces rows")]
     public void Execute_Filter()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("FileName"),
                 ScalarBinaryOp.Eq,
@@ -157,7 +157,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_Project()
     {
         var node = new ProjectNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [
                 new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
                 new ProjectionExpr("FileName", new ColumnRef("FileName")),
@@ -171,7 +171,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_Extend()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("lower_name",
                 new FunctionCall("tolower", [new ColumnRef("FileName")]))]);
 
@@ -183,7 +183,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_ExtendChained()
     {
         var inner = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("lower_name",
                 new FunctionCall("tolower", [new ColumnRef("FileName")]))]);
 
@@ -200,7 +200,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_Aggregate()
     {
         var node = new AggregateNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             Aggregates: [new ProjectionExpr("cnt", new FunctionCall("count", []))],
             GroupBy: [new ColumnRef("DeviceName")]);
 
@@ -213,7 +213,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     {
         var node = new LimitNode(
             new SortNode(
-                new ScanNode("DeviceProcessEvents"),
+                new ScanNode("ProcessEvents"),
                 [new SortExpr(new ColumnRef("Timestamp"), SortDirection.Desc)]),
             3);
 
@@ -227,7 +227,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_Ago()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("Timestamp"),
                 ScalarBinaryOp.Gt,
@@ -241,7 +241,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_IsEmpty()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new FunctionCall("isnotempty", [new ColumnRef("FileName")]));
 
         AssertExecutes(node, expectedMinRows: 1);
@@ -252,7 +252,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_Extract()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("drive",
                 new FunctionCall("extract",
                     [new LiteralScalar(@"^([A-Z]):", LiteralKind.String),
@@ -267,7 +267,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_Coalesce()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("safe_id",
                 new FunctionCall("coalesce",
                     [new ColumnRef("DeviceId"),
@@ -281,7 +281,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_ParseIpv4()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("ip_num",
                 new FunctionCall("parse_ipv4", [new LiteralScalar("10.1.2.3", LiteralKind.String)]))]);
 
@@ -293,7 +293,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_StringHelpers_New()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [
                 new ProjectionExpr("trimmed_l", new FunctionCall("trim_start", [new LiteralScalar(@"[A-Za-z]:\\\\", LiteralKind.String), new ColumnRef("FolderPath")])),
                 new ProjectionExpr("trimmed_r", new FunctionCall("trim_end", [new LiteralScalar(@"\\\\", LiteralKind.String), new ColumnRef("FolderPath")])),
@@ -308,7 +308,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_ParsePath_And_Percentile()
     {
         var parsePathNode = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("parsed", new FunctionCall("parse_path", [new ColumnRef("FolderPath")]))]);
         AssertExecutes(parsePathNode, expectedMinRows: 1);
         var parsePathSql = _emitter.Emit(new ProjectNode(parsePathNode, [new ProjectionExpr("parsed", new ColumnRef("parsed"))]));
@@ -316,7 +316,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
         Assert.IsInstanceOfType<string>(parsed, "parse_path should emit JSON text, not a structured CLR object.");
 
         var percentileNode = new AggregateNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("p95", new FunctionCall("percentile", [new ColumnRef("ProcessId"), new LiteralScalar(95, LiteralKind.Int)]))],
             []);
         AssertExecutes(percentileNode, expectedMinRows: 1);
@@ -329,7 +329,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_Window_Lag()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("prev_ts",
                 new WindowScalarExpr(
                     "lag",
@@ -346,7 +346,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_Window_RowNumber()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("rn",
                 new WindowScalarExpr(
                     "row_number",
@@ -363,7 +363,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_Window_CumulativeSum()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("running",
                 new WindowScalarExpr(
                     "sum",
@@ -384,7 +384,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_Window_Partitioned()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("rn_per_device",
                 new WindowScalarExpr(
                     "row_number",
@@ -406,7 +406,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
             new LimitNode(
                 new ProjectNode(
                     new FilterNode(
-                        new ScanNode("DeviceProcessEvents"),
+                        new ScanNode("ProcessEvents"),
                         new BinaryScalar(
                             new ColumnRef("FileName"),
                             ScalarBinaryOp.Eq,
@@ -428,17 +428,17 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_InjectionSafe()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("FileName"),
                 ScalarBinaryOp.Eq,
-                new LiteralScalar("'; DROP TABLE golden.DeviceProcessEvents; --", LiteralKind.String)));
+                new LiteralScalar("'; DROP TABLE golden.ProcessEvents; --", LiteralKind.String)));
 
         // Should execute (finding zero rows) without dropping the table
         AssertExecutes(node, expectedMinRows: 0);
 
         // Verify table still exists
-        var verifyRows = Execute("SELECT count(*) FROM golden.DeviceProcessEvents");
+        var verifyRows = Execute("SELECT count(*) FROM golden.ProcessEvents");
         Assert.IsGreaterThan(0, verifyRows, "Table should still exist after injection attempt");
     }
 
@@ -449,7 +449,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_EmptyResult()
     {
         var node = new FilterNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             new BinaryScalar(
                 new ColumnRef("FileName"),
                 ScalarBinaryOp.Eq,
@@ -464,7 +464,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     [Description("LIMIT 0 returns zero rows")]
     public void Execute_LimitZero()
     {
-        var node = new LimitNode(new ScanNode("DeviceProcessEvents"), 0);
+        var node = new LimitNode(new ScanNode("ProcessEvents"), 0);
         var sql = _emitter.Emit(node);
         var rows = Execute(sql);
         Assert.AreEqual(0, rows);
@@ -477,7 +477,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
     public void Execute_CaseExpr()
     {
         var node = new ExtendNode(
-            new ScanNode("DeviceProcessEvents"),
+            new ScanNode("ProcessEvents"),
             [new ProjectionExpr("risk",
                 new CaseScalar(
                     [(new BinaryScalar(
@@ -501,7 +501,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
             new LimitNode(
                 new SortNode(
                     new AggregateNode(
-                        new ScanNode("DeviceProcessEvents"),
+                        new ScanNode("ProcessEvents"),
                         Aggregates: [new ProjectionExpr("count_", new FunctionCall("count", []))],
                         GroupBy: [new ColumnRef("FileName")]),
                     [new SortExpr(new ColumnRef("count_"), SortDirection.Desc)]),

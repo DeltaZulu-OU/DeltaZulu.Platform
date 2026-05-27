@@ -21,7 +21,7 @@ public sealed class KustoToRelationalTests
     public static void Init(TestContext _)
     {
         _catalog = new ApprovedViewCatalog();
-        _catalog.Register(DeviceProcessEventsSchema.View);
+        _catalog.Register(ProcessEvents.View);
     }
 
     private (RelNode? Node, DiagnosticBag Diag) Translate(string kql)
@@ -54,17 +54,17 @@ public sealed class KustoToRelationalTests
     [Description("Bare table reference → ScanNode")]
     public void Scan_BareTable()
     {
-        var (result, diag) = Translate("DeviceProcessEvents");
+        var (result, diag) = Translate("ProcessEvents");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var scan = AssertIs<ScanNode>(result);
-        Assert.AreEqual("DeviceProcessEvents", scan.ViewName);
+        Assert.AreEqual("ProcessEvents", scan.ViewName);
     }
 
     [TestMethod]
     [Description("take N → LimitNode wrapping ScanNode")]
     public void Limit_Take()
     {
-        var (result, diag) = Translate("DeviceProcessEvents | take 20");
+        var (result, diag) = Translate("ProcessEvents | take 20");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var limit = AssertIs<LimitNode>(result);
         Assert.AreEqual(20, limit.Count);
@@ -78,7 +78,7 @@ public sealed class KustoToRelationalTests
     public void Filter_StringEquality()
     {
         var (result, diag) = Translate(
-            """DeviceProcessEvents | where FileName == "powershell.exe" """);
+            """ProcessEvents | where FileName == "powershell.exe" """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var filter = AssertIs<FilterNode>(result);
         var binary = AssertIs<BinaryScalar>(filter.Predicate);
@@ -90,7 +90,7 @@ public sealed class KustoToRelationalTests
     public void Filter_AgoComparison()
     {
         var (result, diag) = Translate(
-            "DeviceProcessEvents | where Timestamp > ago(7d)");
+            "ProcessEvents | where Timestamp > ago(7d)");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var filter = AssertIs<FilterNode>(result);
         var binary = AssertIs<BinaryScalar>(filter.Predicate);
@@ -102,7 +102,7 @@ public sealed class KustoToRelationalTests
     public void Filter_CompoundAnd()
     {
         var (result, diag) = Translate(
-            """DeviceProcessEvents | where FileName == "cmd.exe" and ProcessId > 0""");
+            """ProcessEvents | where FileName == "cmd.exe" and ProcessId > 0""");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var filter = AssertIs<FilterNode>(result);
         var and = AssertIs<BinaryScalar>(filter.Predicate);
@@ -116,7 +116,7 @@ public sealed class KustoToRelationalTests
     public void Project_NamedColumns()
     {
         var (result, diag) = Translate(
-            "DeviceProcessEvents | project Timestamp, DeviceName, FileName");
+            "ProcessEvents | project Timestamp, DeviceName, FileName");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var proj = AssertIs<ProjectNode>(result);
         Assert.HasCount(3, proj.Projections);
@@ -128,7 +128,7 @@ public sealed class KustoToRelationalTests
     public void Sort_Desc()
     {
         var (result, diag) = Translate(
-            "DeviceProcessEvents | sort by Timestamp desc");
+            "ProcessEvents | sort by Timestamp desc");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var sort = AssertIs<SortNode>(result);
         Assert.AreEqual(SortDirection.Desc, sort.Sorts[0].Direction,
@@ -142,7 +142,7 @@ public sealed class KustoToRelationalTests
     public void Extend_SingleColumn()
     {
         var (result, diag) = Translate(
-            """DeviceProcessEvents | extend lower_name = tolower(FileName)""");
+            """ProcessEvents | extend lower_name = tolower(FileName)""");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var ext = AssertIs<ExtendNode>(result);
         Assert.HasCount(1, ext.Extensions);
@@ -155,7 +155,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | extend lower_name = tolower(FileName)
             | extend name_len = strlen(lower_name)
             """);
@@ -170,7 +170,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | extend EncodedPayload = extract("-enc\\s+([^\\s]+)", 1, ProcessCommandLine)
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
@@ -187,7 +187,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | extend EncodedPayload = extract(@"-enc\s+([^\s]+)", 1, ProcessCommandLine)
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
@@ -203,7 +203,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | extend EncodedPayload = extract("-enc\\s+([^\\s]+)", 1, ProcessCommandLine, typeof(string))
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
@@ -219,7 +219,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | extend
                 Arr = strcat_array(split(FileName, ","), ","),
                 Keys = bag_keys(AdditionalFields),
@@ -238,7 +238,7 @@ public sealed class KustoToRelationalTests
     [TestMethod]
     public void Filter_Between_Translates()
     {
-        var (result, diag) = Translate("DeviceProcessEvents | where ProcessId between (1 .. 5)");
+        var (result, diag) = Translate("ProcessEvents | where ProcessId between (1 .. 5)");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var filter = AssertIs<FilterNode>(result);
         var and = AssertIs<BinaryScalar>(filter.Predicate);
@@ -262,7 +262,7 @@ public sealed class KustoToRelationalTests
     public void Aggregate_CountBy()
     {
         var (result, diag) = Translate(
-            "DeviceProcessEvents | summarize count() by FileName");
+            "ProcessEvents | summarize count() by FileName");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var agg = AssertIs<AggregateNode>(result);
         Assert.HasCount(1, agg.Aggregates);
@@ -274,7 +274,7 @@ public sealed class KustoToRelationalTests
     public void Aggregate_MultipleAggregates()
     {
         var (result, diag) = Translate(
-            """DeviceProcessEvents | summarize event_count = count(), earliest = min(Timestamp) by DeviceName""");
+            """ProcessEvents | summarize event_count = count(), earliest = min(Timestamp) by DeviceName""");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var agg = AssertIs<AggregateNode>(result);
         Assert.HasCount(2, agg.Aggregates);
@@ -287,7 +287,7 @@ public sealed class KustoToRelationalTests
     public void Let_ScalarBinding()
     {
         var (result, diag) = Translate(
-            """let cutoff = ago(7d); DeviceProcessEvents | where Timestamp > cutoff""");
+            """let cutoff = ago(7d); ProcessEvents | where Timestamp > cutoff""");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var let_ = AssertIs<LetBindingNode>(result);
         Assert.AreEqual("cutoff", let_.Name);
@@ -302,7 +302,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | where FileName == "powershell.exe"
             | project Timestamp, DeviceName, ProcessCommandLine
             | take 20
@@ -321,7 +321,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | where Timestamp > ago(1d)
             | summarize count() by FileName
             | sort by count_ desc
@@ -342,7 +342,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | serialize
             | extend prev_ts = prev(Timestamp)
             """);
@@ -358,7 +358,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | serialize
             | extend next_ts = next(Timestamp)
             """);
@@ -373,7 +373,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | serialize rn = row_number()
             """);
         // serialize with assignment may parse differently — accept extend or serialize form
@@ -387,7 +387,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | summarize event_count = count() by FileName
             | serialize
             | extend running_total = row_cumsum(event_count)
@@ -404,7 +404,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | where FileName == "beacon.exe"
             | sort by Timestamp asc
             | serialize
@@ -426,8 +426,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
-            | join (DeviceProcessEvents | take 5) on DeviceName
+            ProcessEvents
+            | join (ProcessEvents | take 5) on DeviceName
             """);
         Assert.IsTrue(diag.HasErrors, "Bare join should be rejected");
         Assert.Contains(d => d.Message.Contains("innerunique") || d.Message.Contains("Bare"), diag.All,
@@ -440,8 +440,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
-            | join kind=leftsemi (DeviceProcessEvents | take 5) on DeviceName
+            ProcessEvents
+            | join kind=leftsemi (ProcessEvents | take 5) on DeviceName
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var join = AssertIs<JoinNode>(result);
@@ -454,8 +454,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
-            | join kind=leftanti (DeviceProcessEvents | take 5) on DeviceName
+            ProcessEvents
+            | join kind=leftanti (ProcessEvents | take 5) on DeviceName
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var join = AssertIs<JoinNode>(result);
@@ -468,8 +468,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
-            | join kind=rightouter (DeviceProcessEvents | take 5) on DeviceName
+            ProcessEvents
+            | join kind=rightouter (ProcessEvents | take 5) on DeviceName
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var join = AssertIs<JoinNode>(result);
@@ -482,8 +482,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
-            | join kind=fullouter (DeviceProcessEvents | take 5) on DeviceName
+            ProcessEvents
+            | join kind=fullouter (ProcessEvents | take 5) on DeviceName
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var join = AssertIs<JoinNode>(result);
@@ -496,8 +496,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
-            | join kind=rightsemi (DeviceProcessEvents | take 5) on DeviceName
+            ProcessEvents
+            | join kind=rightsemi (ProcessEvents | take 5) on DeviceName
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var join = AssertIs<JoinNode>(result);
@@ -510,8 +510,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
-            | join kind=rightanti (DeviceProcessEvents | take 5) on DeviceName
+            ProcessEvents
+            | join kind=rightanti (ProcessEvents | take 5) on DeviceName
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var join = AssertIs<JoinNode>(result);
@@ -524,8 +524,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
-            | lookup (DeviceProcessEvents | take 5) on DeviceName
+            ProcessEvents
+            | lookup (ProcessEvents | take 5) on DeviceName
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var join = AssertIs<JoinNode>(result);
@@ -539,8 +539,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
-            | lookup (DeviceProcessEvents | take 5)
+            ProcessEvents
+            | lookup (ProcessEvents | take 5)
             """);
         Assert.IsNull(result);
         Assert.IsTrue(diag.HasErrors, "lookup without on clause should fail");
@@ -556,8 +556,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
-            | lookup (DeviceProcessEvents | take 5) on DeviceName, AccountName
+            ProcessEvents
+            | lookup (ProcessEvents | take 5) on DeviceName, AccountName
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var join = AssertIs<JoinNode>(result);
@@ -569,7 +569,7 @@ public sealed class KustoToRelationalTests
     [Description("sample n translates to SampleNode")]
     public void Sample_TranslatesToSampleNode()
     {
-        var (result, diag) = Translate("DeviceProcessEvents | sample 10");
+        var (result, diag) = Translate("ProcessEvents | sample 10");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var sample = AssertIs<SampleNode>(result);
         Assert.AreEqual(10, sample.Count);
@@ -579,7 +579,7 @@ public sealed class KustoToRelationalTests
     [Description("sample with negative number is rejected")]
     public void Sample_Negative_Rejected()
     {
-        var (result, diag) = Translate("DeviceProcessEvents | sample -2");
+        var (result, diag) = Translate("ProcessEvents | sample -2");
         Assert.IsNull(result);
         Assert.IsTrue(diag.HasErrors, "sample with negative should produce error");
     }
@@ -588,7 +588,7 @@ public sealed class KustoToRelationalTests
     [Description("sample-distinct n of Col translates to DistinctNode followed by SampleNode")]
     public void SampleDistinct_TranslatesToNode()
     {
-        var (result, diag) = Translate("DeviceProcessEvents | sample-distinct 5 of FileName");
+        var (result, diag) = Translate("ProcessEvents | sample-distinct 5 of FileName");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var sample = AssertIs<SampleNode>(result);
         Assert.AreEqual(5, sample.Count);
@@ -604,8 +604,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
-            | join kind=inner (DeviceProcessEvents | take 5) on DeviceName
+            ProcessEvents
+            | join kind=inner (ProcessEvents | take 5) on DeviceName
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var join = AssertIs<JoinNode>(result);
@@ -622,7 +622,7 @@ public sealed class KustoToRelationalTests
     [Description("Unary plus is identity: +x translates to x, not -x")]
     public void UnaryPlus_IsIdentity()
     {
-        var (result, diag) = Translate("DeviceProcessEvents | extend Doubled = +ProcessId");
+        var (result, diag) = Translate("ProcessEvents | extend Doubled = +ProcessId");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var ext = AssertIs<ExtendNode>(result);
         // +ProcessId must be the bare column reference, never a UnaryScalar(Negate).
@@ -637,7 +637,7 @@ public sealed class KustoToRelationalTests
     public void MultipleQueryStatements_Rejected()
     {
         var (result, diag) = Translate(
-            "DeviceProcessEvents | take 5; DeviceProcessEvents | take 3");
+            "ProcessEvents | take 5; ProcessEvents | take 3");
         Assert.IsTrue(diag.HasErrors,
             "Two query expressions should be rejected rather than silently dropping the first");
         Assert.IsNull(result);
@@ -650,7 +650,7 @@ public sealed class KustoToRelationalTests
     public void Sort_DefaultDesc()
     {
         var (result, diag) = Translate(
-            "DeviceProcessEvents | sort by Timestamp");
+            "ProcessEvents | sort by Timestamp");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var sort = AssertIs<SortNode>(result);
         Assert.AreEqual(SortDirection.Desc, sort.Sorts[0].Direction,
@@ -664,7 +664,7 @@ public sealed class KustoToRelationalTests
     public void Filter_CaseInsensitiveEq()
     {
         var (result, diag) = Translate(
-            """DeviceProcessEvents | where FileName =~ "Powershell.EXE" """);
+            """ProcessEvents | where FileName =~ "Powershell.EXE" """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         AssertIs<FilterNode>(result);
     }
@@ -686,7 +686,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | where ProcessCommandLine contains "; .drop table silver.secret"
             | take 1
             """);
@@ -701,9 +701,9 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | where FileName == "cmd.exe";
-            .drop table DeviceProcessEvents
+            .drop table ProcessEvents
             """);
 
         Assert.IsNull(result);
@@ -716,8 +716,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            .drop table DeviceProcessEvents;
-            DeviceProcessEvents
+            .drop table ProcessEvents;
+            ProcessEvents
             | take 1
             """);
 
@@ -744,9 +744,9 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | take 1
-            .drop table DeviceProcessEvents
+            .drop table ProcessEvents
             """);
 
         Assert.IsNull(result);
@@ -759,8 +759,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents | take 1;
-            DeviceNetworkEvents | take 1
+            ProcessEvents | take 1;
+            NetworkSessions | take 1
             """);
 
         Assert.IsNull(result);
@@ -774,7 +774,7 @@ public sealed class KustoToRelationalTests
         var (result, diag) = Translate(
             """
             let TargetFile = "cmd.exe";
-            DeviceProcessEvents
+            ProcessEvents
             | where FileName == TargetFile
             | take 1
             """);
@@ -790,7 +790,7 @@ public sealed class KustoToRelationalTests
         var (result, diag) = Translate(
             """
             let TargetFile = "cmd.exe";
-            .drop table DeviceProcessEvents
+            .drop table ProcessEvents
             """);
 
         Assert.IsNull(result);
@@ -803,8 +803,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            let Suspicious = "; .drop table DeviceProcessEvents";
-            DeviceProcessEvents
+            let Suspicious = "; .drop table ProcessEvents";
+            ProcessEvents
             | where ProcessCommandLine contains Suspicious
             | take 1
             """);
@@ -819,8 +819,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
-            | where ProcessCommandLine contains "'; DROP TABLE DeviceProcessEvents; --"
+            ProcessEvents
+            | where ProcessCommandLine contains "'; DROP TABLE ProcessEvents; --"
             | take 1
             """);
 
@@ -834,7 +834,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | where ProcessCommandLine contains "-- pretend SQL comment"
             | take 1
             """);
@@ -849,7 +849,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | where ProcessCommandLine contains "cmd.exe; whoami; hostname"
             | take 1
             """);
@@ -863,7 +863,7 @@ public sealed class KustoToRelationalTests
     public void Policy_SingleQuoteInsideStringLiteral_Allowed()
     {
         var kql = """
-        DeviceProcessEvents
+        ProcessEvents
         | where ProcessCommandLine contains "O'Reilly"
         | take 1
         """;
@@ -879,7 +879,7 @@ public sealed class KustoToRelationalTests
     public void SqlEmitter_SingleQuoteInsideStringLiteral_Escaped()
     {
         var kql = """
-        DeviceProcessEvents
+        ProcessEvents
         | where ProcessCommandLine contains "O'Reilly"
         | take 1
         """;
@@ -901,9 +901,9 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | where ProcessCommandLine contains @"first line
-            .drop table DeviceProcessEvents"
+            .drop table ProcessEvents"
             | take 1
             """);
 
@@ -931,7 +931,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents; DROP TABLE DeviceProcessEvents
+            ProcessEvents; DROP TABLE ProcessEvents
             | take 1
             """);
 
@@ -945,8 +945,8 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
-            | project FileName, ["x); DROP TABLE DeviceProcessEvents; --"]
+            ProcessEvents
+            | project FileName, ["x); DROP TABLE ProcessEvents; --"]
             """);
 
         Assert.IsNull(result);
@@ -959,7 +959,7 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | evaluate pivot(FileName)
             """);
 
@@ -973,9 +973,9 @@ public sealed class KustoToRelationalTests
     {
         var (result, diag) = Translate(
             """
-            DeviceProcessEvents
+            ProcessEvents
             | where FileName ==
-            .drop table DeviceProcessEvents
+            .drop table ProcessEvents
             """);
 
         Assert.IsNull(result);

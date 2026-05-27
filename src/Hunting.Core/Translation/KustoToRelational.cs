@@ -48,8 +48,8 @@ public sealed class KustoToRelational
         *
         * and:
         *
-        *   DeviceProcessEvents | take 1;
-        *   .drop table DeviceProcessEvents
+        *   ProcessEvents | take 1;
+        *   .drop table ProcessEvents
         *
         * without rejecting dot-command-looking text inside string literals.
         */
@@ -97,8 +97,8 @@ public sealed class KustoToRelational
          * Do not derive policy safety from the statement selected for translation.
          * A malicious input such as:
          *
-         *   DeviceProcessEvents | take 1;
-         *   .drop table DeviceProcessEvents
+         *   ProcessEvents | take 1;
+         *   .drop table ProcessEvents
          *
          * may leave the query expression visible to the translator while the
          * management command is missed by top-level Statement filtering.

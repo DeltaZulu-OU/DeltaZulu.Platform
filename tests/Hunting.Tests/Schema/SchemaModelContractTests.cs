@@ -22,10 +22,10 @@ public class SchemaModelContractTests
         Assert.AreEqual(DuckDbType.Json, KustoType.Dynamic.ToDefaultDuckDbType());
         Assert.AreEqual(DuckDbType.BigInt, KustoType.Timespan.ToDefaultDuckDbType());
 
-        Assert.AreEqual("golden.DeviceProcessEvents", DeviceProcessEventsSchema.View.QualifiedName);
-        Assert.AreEqual("bronze.windows_event_json", DeviceProcessEventsSchema.RawWindowsEventJson.QualifiedName);
-        Assert.HasCount(14, DeviceProcessEventsSchema.Columns);
-        Assert.HasCount(7, DeviceProcessEventsSchema.RawWindowsEventJson.Columns);
-        Assert.HasCount(14, DeviceProcessEventsSchema.SysmonProcessCreate.Mapping.Projections);
+        Assert.AreEqual("golden.ProcessEvents", ProcessEvents.View.QualifiedName);
+        Assert.AreEqual("bronze.windows_event_json", ProcessEvents.RawWindowsEventJson.QualifiedName);
+        Assert.HasCount(14, ProcessEvents.Columns);
+        Assert.HasCount(7, ProcessEvents.RawWindowsEventJson.Columns);
+        Assert.HasCount(14, ProcessEvents.SysmonProcessCreate.Mapping.Projections);
     }
 }

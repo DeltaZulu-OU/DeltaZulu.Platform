@@ -22,7 +22,7 @@ public sealed class GlobalStateSpikeTests
     public static void Init(TestContext _)
     {
         var catalog = new ApprovedViewCatalog();
-        catalog.Register(DeviceProcessEventsSchema.View);
+        catalog.Register(ProcessEvents.View);
         _globals = catalog.BuildGlobalState();
     }
 
@@ -39,7 +39,7 @@ public sealed class GlobalStateSpikeTests
     [Description("Basic table resolution — table name resolves to registered symbol")]
     public void T01_BasicTableResolution()
     {
-        var errors = Analyze("DeviceProcessEvents | take 10");
+        var errors = Analyze("ProcessEvents | take 10");
         Assert.IsEmpty(errors, FormatErrors(errors));
     }
 
@@ -48,7 +48,7 @@ public sealed class GlobalStateSpikeTests
     public void T02_FilterAndProject()
     {
         var errors = Analyze(
-            """DeviceProcessEvents | where FileName == "cmd.exe" | project Timestamp, DeviceName""");
+            """ProcessEvents | where FileName == "cmd.exe" | project Timestamp, DeviceName""");
         Assert.IsEmpty(errors, FormatErrors(errors));
     }
 
@@ -57,7 +57,7 @@ public sealed class GlobalStateSpikeTests
     public void T03_ExtendWithScalar()
     {
         var errors = Analyze(
-            """DeviceProcessEvents | extend lower_name = tolower(FileName)""");
+            """ProcessEvents | extend lower_name = tolower(FileName)""");
         Assert.IsEmpty(errors, FormatErrors(errors));
     }
 
@@ -66,7 +66,7 @@ public sealed class GlobalStateSpikeTests
     public void T04_SummarizeAndSort()
     {
         var errors = Analyze(
-            """DeviceProcessEvents | summarize count() by FileName | sort by count_ desc""");
+            """ProcessEvents | summarize count() by FileName | sort by count_ desc""");
         Assert.IsEmpty(errors, FormatErrors(errors));
     }
 
@@ -75,7 +75,7 @@ public sealed class GlobalStateSpikeTests
     public void T05_ScalarLetBinding()
     {
         var errors = Analyze(
-            """let cutoff = ago(7d); DeviceProcessEvents | where Timestamp > cutoff""");
+            """let cutoff = ago(7d); ProcessEvents | where Timestamp > cutoff""");
         Assert.IsEmpty(errors, FormatErrors(errors));
     }
 
@@ -84,7 +84,7 @@ public sealed class GlobalStateSpikeTests
     public void T06_DynamicMemberAccess()
     {
         var errors = Analyze(
-            """DeviceProcessEvents | where AdditionalFields.someKey == "value" """);
+            """ProcessEvents | where AdditionalFields.someKey == "value" """);
 
         // Decision point: if this produces errors, document which ones
         // and decide suppression strategy before proceeding.
@@ -101,7 +101,7 @@ public sealed class GlobalStateSpikeTests
     public void T07_DynamicFunctionReturn()
     {
         var errors = Analyze(
-            """DeviceProcessEvents | extend parsed = parse_json(AdditionalFields)""");
+            """ProcessEvents | extend parsed = parse_json(AdditionalFields)""");
 
         if (errors.Count > 0)
         {

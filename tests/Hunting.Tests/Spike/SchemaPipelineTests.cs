@@ -9,7 +9,7 @@ using Hunting.Schema.Definitions;
 ///   C# models → SchemaEmitter → DDL → SchemaApplier → DuckDB → DESCRIBE validation
 ///
 /// These prove the vertical slice works end-to-end: mock data flows from
-/// bronze.windows_event_json → silver.v_process_sysmon_create → golden.DeviceProcessEvents
+/// bronze.windows_event_json → silver.v_process_sysmon_create → golden.ProcessEvents
 /// and returns correctly shaped, queryable rows.
 /// </summary>
 [TestClass]
@@ -28,10 +28,10 @@ public sealed class SchemaPipelineTests
 
         // Generate and apply DDL
         var ddl = _emitter.EmitAll(
-            rawTables: [DeviceProcessEventsSchema.RawWindowsEventJson],
+            rawTables: [ProcessEvents.RawWindowsEventJson],
             internalTables: [],
-            parserViews: [DeviceProcessEventsSchema.SysmonProcessCreate],
-            canonicalViews: [DeviceProcessEventsSchema.View]);
+            parserViews: [ProcessEvents.SysmonProcessCreate],
+            canonicalViews: [ProcessEvents.View]);
 
         _applier.ApplyStatements(ddl);
 
@@ -49,10 +49,10 @@ public sealed class SchemaPipelineTests
     public void EmitAll_ProducesCorrectCount()
     {
         var ddl = _emitter.EmitAll(
-            rawTables: [DeviceProcessEventsSchema.RawWindowsEventJson],
+            rawTables: [ProcessEvents.RawWindowsEventJson],
             internalTables: [],
-            parserViews: [DeviceProcessEventsSchema.SysmonProcessCreate],
-            canonicalViews: [DeviceProcessEventsSchema.View]);
+            parserViews: [ProcessEvents.SysmonProcessCreate],
+            canonicalViews: [ProcessEvents.View]);
 
         // 3 schemas + 1 bronze table + 1 parser view + 1 canonical view = 6
         Assert.HasCount(6, ddl);
@@ -62,7 +62,7 @@ public sealed class SchemaPipelineTests
     [Description("Raw table DDL contains correct column names")]
     public void EmitRawTable_CorrectColumns()
     {
-        var sql = _emitter.EmitCreateTable(DeviceProcessEventsSchema.RawWindowsEventJson);
+        var sql = _emitter.EmitCreateTable(ProcessEvents.RawWindowsEventJson);
         Assert.Contains("ingest_time", sql);
         Assert.Contains("source_type", sql);
         Assert.Contains("provider", sql);
@@ -75,7 +75,7 @@ public sealed class SchemaPipelineTests
     [Description("Parser view DDL references correct source table")]
     public void EmitParserView_ReferencesSource()
     {
-        var sql = _emitter.EmitParserView(DeviceProcessEventsSchema.SysmonProcessCreate);
+        var sql = _emitter.EmitParserView(ProcessEvents.SysmonProcessCreate);
         Assert.Contains("bronze.windows_event_json", sql);
         Assert.Contains("silver.v_process_sysmon_create", sql);
         Assert.Contains("Microsoft-Windows-Sysmon", sql);
@@ -85,8 +85,8 @@ public sealed class SchemaPipelineTests
     [Description("Canonical view DDL unions parser views")]
     public void EmitCanonicalView_UnionsParserViews()
     {
-        var sql = _emitter.EmitCanonicalView(DeviceProcessEventsSchema.View);
-        Assert.Contains("golden.DeviceProcessEvents", sql);
+        var sql = _emitter.EmitCanonicalView(ProcessEvents.View);
+        Assert.Contains("golden.ProcessEvents", sql);
         Assert.Contains("silver.v_process_sysmon_create", sql);
     }
 
@@ -96,7 +96,7 @@ public sealed class SchemaPipelineTests
     [Description("Raw table matches C# schema contract")]
     public void Validate_RawTable()
     {
-        var mismatches = _applier.Validate(DeviceProcessEventsSchema.RawWindowsEventJson);
+        var mismatches = _applier.Validate(ProcessEvents.RawWindowsEventJson);
         Assert.IsEmpty(mismatches,
             $"Raw table mismatches:\n{string.Join("\n", mismatches.Select(m => m.Message))}");
     }
@@ -105,7 +105,7 @@ public sealed class SchemaPipelineTests
     [Description("Parser view matches canonical column contract")]
     public void Validate_ParserView()
     {
-        var mismatches = _applier.Validate(DeviceProcessEventsSchema.SysmonProcessCreate);
+        var mismatches = _applier.Validate(ProcessEvents.SysmonProcessCreate);
         // Parser view may have minor type differences due to JSON extraction
         // (e.g., json_extract_string returns VARCHAR where we expect VARCHAR — should match)
         // Filter to only true mismatches, not nullable differences
@@ -124,7 +124,7 @@ public sealed class SchemaPipelineTests
     [Description("Public hunting view matches canonical column contract")]
     public void Validate_CanonicalView()
     {
-        var mismatches = _applier.Validate(DeviceProcessEventsSchema.View);
+        var mismatches = _applier.Validate(ProcessEvents.View);
         // Same tolerance as parser view
         var missing = mismatches.Where(m => m.ActualType == "MISSING").ToList();
         Assert.IsEmpty(missing,
@@ -153,7 +153,7 @@ public sealed class SchemaPipelineTests
     [Description("Public view returns same count as parser view")]
     public void MockData_CanonicalViewCount()
     {
-        var count = _applier.QueryScalar("SELECT count(*) FROM golden.DeviceProcessEvents");
+        var count = _applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvents");
         Assert.AreEqual(45L, count);
     }
 
@@ -164,7 +164,7 @@ public sealed class SchemaPipelineTests
     public void Extraction_FileName()
     {
         var count = _applier.QueryScalar(
-            "SELECT count(*) FROM golden.DeviceProcessEvents WHERE FileName = 'cmd.exe'");
+            "SELECT count(*) FROM golden.ProcessEvents WHERE FileName = 'cmd.exe'");
         Assert.IsGreaterThanOrEqualTo(2, count, $"Expected at least 2 cmd.exe events, got {count}");
     }
 
@@ -173,7 +173,7 @@ public sealed class SchemaPipelineTests
     public void Extraction_FolderPath()
     {
         var count = _applier.QueryScalar(
-            """SELECT count(*) FROM golden.DeviceProcessEvents WHERE FolderPath LIKE '%System32%'""");
+            """SELECT count(*) FROM golden.ProcessEvents WHERE FolderPath LIKE '%System32%'""");
         Assert.IsGreaterThanOrEqualTo(5, count, $"Expected at least 5 System32 paths, got {count}");
     }
 
@@ -182,7 +182,7 @@ public sealed class SchemaPipelineTests
     public void Extraction_AccountName()
     {
         var count = _applier.QueryScalar(
-            """SELECT count(*) FROM golden.DeviceProcessEvents WHERE AccountName = 'CORP\alice'""");
+            """SELECT count(*) FROM golden.ProcessEvents WHERE AccountName = 'CORP\alice'""");
         Assert.IsGreaterThanOrEqualTo(5, count, $"Expected at least 5 alice events, got {count}");
     }
 
@@ -191,7 +191,7 @@ public sealed class SchemaPipelineTests
     public void Extraction_ProcessCommandLine()
     {
         var count = _applier.QueryScalar(
-            """SELECT count(*) FROM golden.DeviceProcessEvents WHERE ProcessCommandLine LIKE '%mimikatz%'""");
+            """SELECT count(*) FROM golden.ProcessEvents WHERE ProcessCommandLine LIKE '%mimikatz%'""");
         Assert.AreEqual(2L, count);
     }
 
@@ -200,7 +200,7 @@ public sealed class SchemaPipelineTests
     public void Extraction_ActionType()
     {
         var count = _applier.QueryScalar(
-            "SELECT count(DISTINCT ActionType) FROM golden.DeviceProcessEvents");
+            "SELECT count(DISTINCT ActionType) FROM golden.ProcessEvents");
         Assert.AreEqual(1L, count, "All events should have ActionType='ProcessCreated'");
     }
 
@@ -209,7 +209,7 @@ public sealed class SchemaPipelineTests
     public void Extraction_DeviceName()
     {
         var count = _applier.QueryScalar(
-            "SELECT count(DISTINCT DeviceName) FROM golden.DeviceProcessEvents");
+            "SELECT count(DISTINCT DeviceName) FROM golden.ProcessEvents");
         Assert.IsGreaterThanOrEqualTo(3, count, $"Expected at least 3 distinct devices, got {count}");
     }
 
@@ -218,7 +218,7 @@ public sealed class SchemaPipelineTests
     public void Extraction_ProcessId()
     {
         var count = _applier.QueryScalar(
-            "SELECT count(*) FROM golden.DeviceProcessEvents WHERE ProcessId > 0");
+            "SELECT count(*) FROM golden.ProcessEvents WHERE ProcessId > 0");
         Assert.AreEqual(45L, count, "All events should have numeric ProcessId");
     }
 
@@ -230,7 +230,7 @@ public sealed class SchemaPipelineTests
     {
         var count = _applier.QueryScalar(
             """
-            SELECT count(*) FROM golden.DeviceProcessEvents
+            SELECT count(*) FROM golden.ProcessEvents
             WHERE FileName IN ('mimikatz.exe', 'rundll32.exe')
               AND ProcessCommandLine LIKE '%lsass%' OR ProcessCommandLine LIKE '%sekurlsa%'
             """);
@@ -243,7 +243,7 @@ public sealed class SchemaPipelineTests
     {
         var count = _applier.QueryScalar(
             """
-            SELECT count(*) FROM golden.DeviceProcessEvents
+            SELECT count(*) FROM golden.ProcessEvents
             WHERE FileName IN ('whoami.exe', 'net.exe', 'ipconfig.exe', 'nltest.exe')
             """);
         Assert.AreEqual(4L, count, "Should find all 4 recon commands");
@@ -255,7 +255,7 @@ public sealed class SchemaPipelineTests
     {
         var count = _applier.QueryScalar(
             """
-            SELECT count(*) FROM golden.DeviceProcessEvents
+            SELECT count(*) FROM golden.ProcessEvents
             WHERE FileName = 'beacon.exe'
             """);
         Assert.AreEqual(5L, count, "Should find 5 beaconing events");
@@ -267,7 +267,7 @@ public sealed class SchemaPipelineTests
     {
         var count = _applier.QueryScalar(
             """
-            SELECT count(*) FROM golden.DeviceProcessEvents
+            SELECT count(*) FROM golden.ProcessEvents
             WHERE FileName IN ('schtasks.exe', 'reg.exe')
               AND (ProcessCommandLine LIKE '%/create%' OR ProcessCommandLine LIKE '%add%')
             """);
@@ -280,7 +280,7 @@ public sealed class SchemaPipelineTests
     {
         var count = _applier.QueryScalar(
             """
-            SELECT count(*) FROM golden.DeviceProcessEvents
+            SELECT count(*) FROM golden.ProcessEvents
             WHERE FileName = 'powershell.exe'
               AND ProcessCommandLine LIKE '%-enc%'
             """);

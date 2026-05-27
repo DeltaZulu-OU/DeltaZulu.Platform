@@ -5,10 +5,10 @@ using Hunting.Core.Schema;
 using static Hunting.Core.Mapping.MapDsl;
 
 /// <summary>
-/// Canonical column definitions and parser view mappings for DeviceProcessEvents.
+/// Canonical column definitions and parser view mappings for ProcessEvents.
 /// This is the first vertical slice — one public hunting view backed by one parser view.
 /// </summary>
-public static class DeviceProcessEventsSchema
+public static class ProcessEvents
 {
     public static readonly IReadOnlyList<ColumnDef> Columns =
     [

@@ -14,18 +14,18 @@ public static class SchemaConventions
     public const string SilverSchema = "silver";
     public const string GoldenSchema = "golden";
 
-    public static IReadOnlyList<RawTableDef> RawTables => [DeviceProcessEventsSchema.RawWindowsEventJson];
+    public static IReadOnlyList<RawTableDef> RawTables => [ProcessEvents.RawWindowsEventJson];
 
     public static IReadOnlyList<ParserViewDef> ParserViews =>
     [
-        DeviceProcessEventsSchema.SysmonProcessCreate,
-        DeviceNetworkEventsSchema.SysmonNetworkConnect
+        ProcessEvents.SysmonProcessCreate,
+        NetworkSessions.SysmonNetworkConnect
     ];
 
     public static IReadOnlyList<CanonicalViewDef> CanonicalViews =>
     [
-        DeviceProcessEventsSchema.View,
-        DeviceNetworkEventsSchema.View
+        ProcessEvents.View,
+        NetworkSessions.View
     ];
 
     public static void RegisterCanonicalViews(ApprovedViewCatalog catalog)
