@@ -21,7 +21,6 @@ public sealed class QueryRuntime
     private readonly DuckDbConnectionFactory _connectionFactory;
     private readonly int _defaultLimit;
     private readonly int _timeoutSeconds;
-    private readonly bool _plannerEnabled;
     private readonly IRelationalPlanner _planner;
     private readonly int _plannerMaxIterations;
     private readonly bool _includeSensitiveDeveloperDetail;
@@ -33,7 +32,6 @@ public sealed class QueryRuntime
         int timeoutSeconds = 30,
         bool developerMode = false,
         bool includeSensitiveDeveloperDetail = false,
-        bool plannerEnabled = false,
         int plannerMaxIterations = 3,
         IRelationalPlanner? planner = null)
     {
@@ -60,7 +58,6 @@ public sealed class QueryRuntime
         _timeoutSeconds = timeoutSeconds;
         _developerMode = developerMode;
         _includeSensitiveDeveloperDetail = includeSensitiveDeveloperDetail;
-        _plannerEnabled = plannerEnabled;
         _planner = planner ?? new RelationalPlanner();
         _plannerMaxIterations = plannerMaxIterations;
     }
@@ -74,7 +71,7 @@ public sealed class QueryRuntime
     {
         var diagnostics = new DiagnosticBag();
         var debugTrace = _developerMode ? new List<string>() : null;
-        debugTrace?.Add($"Runtime start: plannerEnabled={_plannerEnabled}, plannerMaxIterations={_plannerMaxIterations}, timeoutSeconds={_timeoutSeconds}");
+        debugTrace?.Add($"Runtime start: plannerMaxIterations={_plannerMaxIterations}, timeoutSeconds={_timeoutSeconds}");
 
         // Phase 1: Parse + Translate
         var translator = new KustoToRelational(_catalog, diagnostics);
@@ -87,25 +84,22 @@ public sealed class QueryRuntime
         }
 
         // Phase 2: Optional logical planning
-        if (_plannerEnabled)
+        try
         {
-            try
-            {
-                relNode = _planner.Plan(relNode, new PlannerContext(Enabled: true, MaxIterations: _plannerMaxIterations));
-                debugTrace?.Add($"Planner complete: relNode={relNode.GetType().Name}");
-            }
-            catch (Exception ex)
-            {
-                diagnostics.AddError(DiagnosticPhase.Emit,
-                    "Failed during logical planning stage.",
-                    ex.Message,
-                    code: QueryDiagnosticCodes.PlannerFailed);
-                return QueryResult.FromDiagnostics(diagnostics, debugTrace);
-            }
+            relNode = _planner.Plan(relNode, new PlannerContext(Enabled: true, MaxIterations: _plannerMaxIterations));
+            debugTrace?.Add($"Planner complete: relNode={relNode.GetType().Name}");
+        }
+        catch (Exception ex)
+        {
+            diagnostics.AddError(DiagnosticPhase.Emit,
+                "Failed during logical planning stage.",
+                ex.Message,
+                code: QueryDiagnosticCodes.PlannerFailed);
+            return QueryResult.FromDiagnostics(diagnostics, debugTrace);
         }
 
         string? plannerStats = null;
-        if (_developerMode && _plannerEnabled && _planner is IPlannerTelemetry telemetry && telemetry.LastRunStats is not null)
+        if (_developerMode && _planner is IPlannerTelemetry telemetry && telemetry.LastRunStats is not null)
         {
             plannerStats = JsonSerializer.Serialize(telemetry.LastRunStats);
         }
@@ -113,13 +107,16 @@ public sealed class QueryRuntime
         // Phase 3: Emit SQL
         string sql;
         string? sqlShapeStats;
+        string? emitterStats;
         try
         {
             var emitter = new DuckDbQueryEmitter(_defaultLimit, applyDefaultLimit: false);
             sql = emitter.Emit(relNode);
             var shape = SqlShapeMetrics.FromSql(sql);
             sqlShapeStats = JsonSerializer.Serialize(shape);
+            emitterStats = JsonSerializer.Serialize(emitter.LastRunStats);
             debugTrace?.Add($"Emit complete: sqlLength={sql.Length}, cteStages={shape.CteStageCount}, selects={shape.SelectCount}, joins={shape.JoinCount}");
+            debugTrace?.Add($"Emitter stats: {emitterStats}");
         }
         catch (Exception ex)
         {

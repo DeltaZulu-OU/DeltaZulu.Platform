@@ -15,6 +15,18 @@ using QueryModel;
 /// </summary>
 public sealed partial class DuckDbQueryEmitter
 {
+    public EmitterRunStats? LastRunStats { get; private set; }
+
+    public sealed record EmitterRunStats(
+        int StageAdds,
+        int StageRemoves,
+        int StageIndexBuilds,
+        int StageRefCountBuilds,
+        int StageIndexLookups,
+        int StageRefCountLookups,
+        int CacheInvalidations,
+        int FinalCteCount);
+
     private sealed record TerminalTopK(string Source, string OrderBy, int Limit);
     private sealed record TerminalOrder(string Source, string OrderBy);
     private sealed record TerminalLimit(string Source, int Limit);
@@ -82,8 +94,17 @@ public sealed partial class DuckDbQueryEmitter
     private int _stageCounter;
     private readonly List<(string Name, string Sql)> _ctes = [];
     private readonly HashSet<string> _stageNames = new(StringComparer.Ordinal);
+    private Dictionary<string, int>? _stageIndexByName;
+    private Dictionary<string, int>? _stageReferenceCounts;
     private readonly int _defaultLimit;
     private readonly bool _applyDefaultLimit;
+    private int _stageAdds;
+    private int _stageRemoves;
+    private int _stageIndexBuilds;
+    private int _stageRefCountBuilds;
+    private int _stageIndexLookups;
+    private int _stageRefCountLookups;
+    private int _cacheInvalidations;
 
     // Scalar let bindings: name → emitted SQL expression, populated by EmitLet.
     // EmitScalar checks this dictionary for ColumnRef resolution so that
@@ -113,8 +134,16 @@ public sealed partial class DuckDbQueryEmitter
         _stageCounter = 0;
         _ctes.Clear();
         _stageNames.Clear();
+        InvalidateStageCaches();
         _scalarBindings.Clear();
         _inAggregateProjection = false;
+        _stageAdds = 0;
+        _stageRemoves = 0;
+        _stageIndexBuilds = 0;
+        _stageRefCountBuilds = 0;
+        _stageIndexLookups = 0;
+        _stageRefCountLookups = 0;
+        _cacheInvalidations = 0;
 
         var (finalSource, columns) = EmitNode(node);
         var hasUserLimit = HasLimit(node);
@@ -169,6 +198,7 @@ public sealed partial class DuckDbQueryEmitter
         TryCollapseProjectedLookupJoin(ref finalSource, ref columns, ref terminalTopK, ref terminalOrder, ref terminalLimit);
         if (TryRenderDerivedComputedScope(columns, terminalTopK, terminalOrder, terminalLimit, out var derivedSql))
         {
+            LastRunStats = BuildRunStats();
             return derivedSql;
         }
 
@@ -215,8 +245,21 @@ public sealed partial class DuckDbQueryEmitter
             sb.Append(" LIMIT ").Append(_defaultLimit);
         }
 
-        return sb.ToString();
+        var sqlText = sb.ToString();
+        LastRunStats = BuildRunStats();
+        return sqlText;
     }
+
+    private EmitterRunStats BuildRunStats()
+        => new(
+            StageAdds: _stageAdds,
+            StageRemoves: _stageRemoves,
+            StageIndexBuilds: _stageIndexBuilds,
+            StageRefCountBuilds: _stageRefCountBuilds,
+            StageIndexLookups: _stageIndexLookups,
+            StageRefCountLookups: _stageRefCountLookups,
+            CacheInvalidations: _cacheInvalidations,
+            FinalCteCount: _ctes.Count);
 
     private bool TryRenderDerivedComputedScope(
         string? columns,
@@ -231,7 +274,7 @@ public sealed partial class DuckDbQueryEmitter
             return false;
         }
 
-        var stage2Idx = _ctes.FindIndex(c => string.Equals(c.Name, terminalLimit.Source, StringComparison.Ordinal));
+        var stage2Idx = GetStageIndex(terminalLimit.Source);
         if (stage2Idx < 0)
         {
             return false;
@@ -245,7 +288,7 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         var stage1Name = stage2Match.Groups["source"].Value;
-        var stage1Idx = _ctes.FindIndex(c => string.Equals(c.Name, stage1Name, StringComparison.Ordinal));
+        var stage1Idx = GetStageIndex(stage1Name);
         if (stage1Idx < 0)
         {
             return false;
@@ -317,7 +360,7 @@ public sealed partial class DuckDbQueryEmitter
         ref TerminalLimit? terminalLimit)
     {
         var terminalSource = terminalTopK?.Source ?? terminalOrder?.Source ?? terminalLimit?.Source ?? finalSource;
-        var projectionIndex = _ctes.FindIndex(c => c.Name == terminalSource);
+        var projectionIndex = GetStageIndex(terminalSource);
         if (projectionIndex < 0)
         {
             return;
@@ -330,7 +373,7 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         var joinStageName = projectionMatch.Groups["joinStage"].Value;
-        var joinIndex = _ctes.FindIndex(c => c.Name == joinStageName);
+        var joinIndex = GetStageIndex(joinStageName);
         if (joinIndex < 0)
         {
             return;
@@ -350,8 +393,7 @@ public sealed partial class DuckDbQueryEmitter
                 $"SELECT {projected} FROM {plainMatch.Groups["left"].Value} AS left_agg LEFT JOIN {plainMatch.Groups["right"].Value} AS right_agg ON {RenameJoinAliases(plainMatch.Groups["pred"].Value)}";
 
             _ctes[joinIndex] = (joinStageName, joinSql);
-            _ctes.RemoveAt(projectionIndex);
-            _stageNames.Remove(terminalSource);
+            RemoveStageAt(projectionIndex);
 
             finalSource = joinStageName;
             columns = null;
@@ -399,6 +441,7 @@ public sealed partial class DuckDbQueryEmitter
         var lower = Math.Min(projectionIndex, joinIndex);
         _ctes.RemoveAt(higher);
         _ctes.RemoveAt(lower);
+        InvalidateStageCaches();
         _stageNames.Remove(terminalSource);
         _stageNames.Remove(joinStageName);
 
@@ -526,9 +569,68 @@ public sealed partial class DuckDbQueryEmitter
 
         var stage = NextStage();
         var sql = $"SELECT {cols ?? "*"} FROM {source}";
+        AddStage(stage, sql);
+        return stage;
+    }
+
+
+    private int GetStageIndex(string stageName)
+    {
+        _stageIndexLookups++;
+        EnsureStageIndex();
+        return _stageIndexByName!.TryGetValue(stageName, out var idx) ? idx : -1;
+    }
+
+    private void EnsureStageIndex()
+    {
+        if (_stageIndexByName is not null)
+        {
+            return;
+        }
+        _stageIndexBuilds++;
+
+        var index = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var i = 0; i < _ctes.Count; i++)
+        {
+            index[_ctes[i].Name] = i;
+        }
+
+        _stageIndexByName = index;
+    }
+
+    private void EnsureStageReferenceCounts()
+    {
+        if (_stageReferenceCounts is not null)
+        {
+            return;
+        }
+
+        _stageReferenceCounts = BuildStageRefCounts();
+        _stageRefCountBuilds++;
+    }
+
+    private void InvalidateStageCaches()
+    {
+        _cacheInvalidations++;
+        _stageIndexByName = null;
+        _stageReferenceCounts = null;
+    }
+
+    private void AddStage(string stage, string sql)
+    {
         _ctes.Add((stage, sql));
         _stageNames.Add(stage);
-        return stage;
+        _stageAdds++;
+        InvalidateStageCaches();
+    }
+
+    private void RemoveStageAt(int idx)
+    {
+        var stageName = _ctes[idx].Name;
+        _ctes.RemoveAt(idx);
+        _stageNames.Remove(stageName);
+        _stageRemoves++;
+        InvalidateStageCaches();
     }
 
     private bool IsStageReference(string source) => _stageNames.Contains(source);
@@ -557,8 +659,7 @@ public sealed partial class DuckDbQueryEmitter
             }
 
             substitutions[cte.Name] = match.Groups[1].Value;
-            _ctes.RemoveAt(i);
-            _stageNames.Remove(cte.Name);
+            RemoveStageAt(i);
         }
 
         if (substitutions.Count > 0)
@@ -610,24 +711,9 @@ public sealed partial class DuckDbQueryEmitter
 
     private int CountStageReferences(string stageName)
     {
-        var refs = 0;
-        foreach (var cte in _ctes)
-        {
-            if (string.Equals(cte.Name, stageName, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            foreach (Match match in StageRefRegex().Matches(cte.Sql))
-            {
-                if (string.Equals(match.Value, stageName, StringComparison.Ordinal))
-                {
-                    refs++;
-                }
-            }
-        }
-
-        return refs;
+        _stageRefCountLookups++;
+        EnsureStageReferenceCounts();
+        return _stageReferenceCounts!.TryGetValue(stageName, out var count) ? count : 0;
     }
 
     private static SelectStageShape? ParseSelectShape(string sql)
@@ -672,7 +758,7 @@ public sealed partial class DuckDbQueryEmitter
 
     private TerminalTopK? TryExtractTerminalTopK(string finalSource)
     {
-        var idx = _ctes.FindIndex(c => string.Equals(c.Name, finalSource, StringComparison.Ordinal));
+        var idx = GetStageIndex(finalSource);
         if (idx < 0)
         {
             return null;
@@ -685,8 +771,7 @@ public sealed partial class DuckDbQueryEmitter
             return null;
         }
 
-        _ctes.RemoveAt(idx);
-        _stageNames.Remove(terminal.Name);
+        RemoveStageAt(idx);
         return new TerminalTopK(
             parsed.Source,
             parsed.OrderBy,
@@ -695,7 +780,7 @@ public sealed partial class DuckDbQueryEmitter
 
     private TerminalOrder? TryExtractTerminalOrder(string finalSource)
     {
-        var idx = _ctes.FindIndex(c => string.Equals(c.Name, finalSource, StringComparison.Ordinal));
+        var idx = GetStageIndex(finalSource);
         if (idx < 0)
         {
             return null;
@@ -708,14 +793,13 @@ public sealed partial class DuckDbQueryEmitter
             return null;
         }
 
-        _ctes.RemoveAt(idx);
-        _stageNames.Remove(terminal.Name);
+        RemoveStageAt(idx);
         return new TerminalOrder(parsed.Source, parsed.OrderBy);
     }
 
     private TerminalLimit? TryExtractTerminalLimit(string finalSource)
     {
-        var idx = _ctes.FindIndex(c => string.Equals(c.Name, finalSource, StringComparison.Ordinal));
+        var idx = GetStageIndex(finalSource);
         if (idx < 0)
         {
             return null;
@@ -728,8 +812,7 @@ public sealed partial class DuckDbQueryEmitter
             return null;
         }
 
-        _ctes.RemoveAt(idx);
-        _stageNames.Remove(terminal.Name);
+        RemoveStageAt(idx);
         return new TerminalLimit(
             match.Groups["source"].Value,
             int.Parse(match.Groups["limit"].Value));
@@ -743,7 +826,7 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         var currentSource = finalSource;
-        var idx = _ctes.FindIndex(c => string.Equals(c.Name, currentSource, StringComparison.Ordinal));
+        var idx = GetStageIndex(currentSource);
         finalSource = currentSource;
         if (idx < 0)
         {
@@ -769,8 +852,7 @@ public sealed partial class DuckDbQueryEmitter
         var groupBy = m.Groups["group"].Value;
         finalSource = string.IsNullOrWhiteSpace(groupBy) ? source : $"{source}{groupBy}";
 
-        _ctes.RemoveAt(idx);
-        _stageNames.Remove(cte.Name);
+        RemoveStageAt(idx);
     }
 
     private void TryInlineSingleUseFilterStageIntoProjection(ref string finalSource, ref string? columns)
@@ -783,7 +865,7 @@ public sealed partial class DuckDbQueryEmitter
         // We cannot use ref string in FindIndex, so we need to capture the index and the filter stage name separately here.
         // Do not inline currentSource.
         var currentSource = finalSource;
-        var idx = _ctes.FindIndex(c => string.Equals(c.Name, currentSource, StringComparison.Ordinal));
+        var idx = GetStageIndex(currentSource);
         finalSource = currentSource;
         if (idx < 0)
         {
@@ -806,7 +888,7 @@ public sealed partial class DuckDbQueryEmitter
         var source = m.Groups["source"].Value;
         var predicate = m.Groups["pred"].Value;
 
-        var sourceIdx = _ctes.FindIndex(c => string.Equals(c.Name, source, StringComparison.Ordinal));
+        var sourceIdx = GetStageIndex(source);
         if (sourceIdx >= 0)
         {
             var sourceCte = _ctes[sourceIdx];
@@ -819,8 +901,7 @@ public sealed partial class DuckDbQueryEmitter
                     source = sourceFilter.Groups["source"].Value;
                     var sourcePredicate = sourceFilter.Groups["pred"].Value;
                     predicate = $"({sourcePredicate}) AND ({predicate})";
-                    _ctes.RemoveAt(sourceIdx);
-                    _stageNames.Remove(sourceCte.Name);
+                    RemoveStageAt(sourceIdx);
 
                     if (sourceIdx < idx)
                     {
@@ -831,8 +912,7 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         finalSource = $"{source} WHERE {predicate}";
-        _ctes.RemoveAt(idx);
-        _stageNames.Remove(cte.Name);
+        RemoveStageAt(idx);
     }
 
     private void TryInlineSingleUseAggregateStageIntoTerminalTopK(
@@ -845,7 +925,7 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         var sourceStage = terminalTopK.Source;
-        var idx = _ctes.FindIndex(c => string.Equals(c.Name, sourceStage, StringComparison.Ordinal));
+        var idx = GetStageIndex(sourceStage);
         if (idx < 0)
         {
             return;
@@ -876,8 +956,7 @@ public sealed partial class DuckDbQueryEmitter
             Source = $"{m.Groups["source"].Value}{groupBy}"
         };
 
-        _ctes.RemoveAt(idx);
-        _stageNames.Remove(cte.Name);
+        RemoveStageAt(idx);
     }
 
     private void TryInlineSingleUseAggregateStageIntoTerminalOrder(
@@ -890,7 +969,7 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         var sourceStage = terminalOrder.Source;
-        var idx = _ctes.FindIndex(c => string.Equals(c.Name, sourceStage, StringComparison.Ordinal));
+        var idx = GetStageIndex(sourceStage);
         if (idx < 0)
         {
             return;
@@ -921,8 +1000,7 @@ public sealed partial class DuckDbQueryEmitter
             Source = $"{m.Groups["source"].Value}{groupBy}"
         };
 
-        _ctes.RemoveAt(idx);
-        _stageNames.Remove(cte.Name);
+        RemoveStageAt(idx);
     }
 
     private void TryInlineSingleUseAggregateFilterStageIntoTerminalOrder(
@@ -935,7 +1013,7 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         var terminalOrderSource = terminalOrder.Source;
-        var filterIdx = _ctes.FindIndex(c => string.Equals(c.Name, terminalOrderSource, StringComparison.Ordinal));
+        var filterIdx = GetStageIndex(terminalOrderSource);
         if (filterIdx < 0)
         {
             return;
@@ -949,7 +1027,7 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         var aggregateStageName = filterMatch.Groups["source"].Value;
-        var aggregateIdx = _ctes.FindIndex(c => string.Equals(c.Name, aggregateStageName, StringComparison.Ordinal));
+        var aggregateIdx = GetStageIndex(aggregateStageName);
         if (aggregateIdx < 0)
         {
             return;
@@ -977,7 +1055,7 @@ public sealed partial class DuckDbQueryEmitter
         // Fold a single-use pre-aggregate filter stage into the aggregate source
         // so optimized output becomes FROM base WHERE ... GROUP BY ... HAVING ...
         // instead of retaining a leading WITH filter CTE.
-        var preFilterIdx = _ctes.FindIndex(c => string.Equals(c.Name, aggregateSource, StringComparison.Ordinal));
+        var preFilterIdx = GetStageIndex(aggregateSource);
         if (preFilterIdx >= 0)
         {
             var preFilterCte = _ctes[preFilterIdx];
@@ -985,8 +1063,7 @@ public sealed partial class DuckDbQueryEmitter
             if (preFilterMatch.Success && CountStageReferences(preFilterCte.Name) == 1)
             {
                 aggregateSource = $"{preFilterMatch.Groups["source"].Value} WHERE {preFilterMatch.Groups["pred"].Value}";
-                _ctes.RemoveAt(preFilterIdx);
-                _stageNames.Remove(preFilterCte.Name);
+                RemoveStageAt(preFilterIdx);
 
                 if (preFilterIdx < filterIdx)
                 {
@@ -1016,6 +1093,7 @@ public sealed partial class DuckDbQueryEmitter
             _ctes.RemoveAt(aggregateIdx);
             _ctes.RemoveAt(filterIdx);
         }
+        InvalidateStageCaches();
         _stageNames.Remove(filterCte.Name);
         _stageNames.Remove(aggregateCte.Name);
     }
@@ -1056,8 +1134,7 @@ public sealed partial class DuckDbQueryEmitter
         var source = StageFrom(filter.Input);
         var stage = NextStage();
         var pred = EmitScalar(filter.Predicate);
-        _ctes.Add((stage, $"SELECT * FROM {source} WHERE {pred}"));
-        _stageNames.Add(stage);
+        AddStage(stage, $"SELECT * FROM {source} WHERE {pred}");
         return (stage, null);
     }
 
@@ -1083,15 +1160,13 @@ public sealed partial class DuckDbQueryEmitter
             var src = filterColumns is null ? filterSource : $"(SELECT {filterColumns} FROM {filterSource})";
             var predicate = EmitScalar(filter.Predicate);
             var next = NextStage();
-            _ctes.Add((next, $"SELECT *, {extensions} FROM {src} WHERE {predicate}"));
-            _stageNames.Add(next);
+            AddStage(next, $"SELECT *, {extensions} FROM {src} WHERE {predicate}");
             return (next, null);
         }
 
         var source = StageFrom(extend.Input);
         var stage = NextStage();
-        _ctes.Add((stage, $"SELECT *, {extensions} FROM {source}"));
-        _stageNames.Add(stage);
+        AddStage(stage, $"SELECT *, {extensions} FROM {source}");
         return (stage, null);
     }
 
@@ -1124,8 +1199,7 @@ public sealed partial class DuckDbQueryEmitter
             sql += $" GROUP BY {string.Join(", ", groupCols)}";
         }
 
-        _ctes.Add((stage, sql));
-        _stageNames.Add(stage);
+        AddStage(stage, sql);
         return (stage, null);
     }
 
@@ -1137,8 +1211,7 @@ public sealed partial class DuckDbQueryEmitter
         var source = StageFrom(sort.Input);
         var orders = string.Join(", ", sort.Sorts.Select(s => EmitTabularSortExpr(s, sort.Input)));
         var stage = NextStage();
-        _ctes.Add((stage, $"SELECT * FROM {source} ORDER BY {orders}"));
-        _stageNames.Add(stage);
+        AddStage(stage, $"SELECT * FROM {source} ORDER BY {orders}");
         return (stage, null);
     }
 
@@ -1150,8 +1223,7 @@ public sealed partial class DuckDbQueryEmitter
         var source = StageFrom(dist.Input);
         var cols = string.Join(", ", dist.Projections.Select(EmitProjection));
         var stage = NextStage();
-        _ctes.Add((stage, $"SELECT DISTINCT {cols} FROM {source}"));
-        _stageNames.Add(stage);
+        AddStage(stage, $"SELECT DISTINCT {cols} FROM {source}");
         return (stage, null);
     }
 
@@ -1169,15 +1241,13 @@ public sealed partial class DuckDbQueryEmitter
             var sortSource = StageFrom(sort.Input);
             var orders = string.Join(", ", sort.Sorts.Select(s => EmitTabularSortExpr(s, sort.Input)));
             var fused = NextStage();
-            _ctes.Add((fused, $"SELECT * FROM {sortSource} ORDER BY {orders} LIMIT {limit.Count}"));
-            _stageNames.Add(fused);
+            AddStage(fused, $"SELECT * FROM {sortSource} ORDER BY {orders} LIMIT {limit.Count}");
             return (fused, null);
         }
 
         var source = StageFrom(limit.Input);
         var stage = NextStage();
-        _ctes.Add((stage, $"SELECT * FROM {source} LIMIT {limit.Count}"));
-        _stageNames.Add(stage);
+        AddStage(stage, $"SELECT * FROM {source} LIMIT {limit.Count}");
         return (stage, null);
     }
 
@@ -1185,8 +1255,7 @@ public sealed partial class DuckDbQueryEmitter
     {
         var source = StageFrom(sample.Input);
         var stage = NextStage();
-        _ctes.Add((stage, $"SELECT * FROM {source} USING SAMPLE reservoir({sample.Count} ROWS)"));
-        _stageNames.Add(stage);
+        AddStage(stage, $"SELECT * FROM {source} USING SAMPLE reservoir({sample.Count} ROWS)");
         return (stage, null);
     }
 
@@ -1244,8 +1313,7 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         var stage = NextStage();
-        _ctes.Add((stage, $"SELECT {selectList} FROM {leftSource} AS {leftAlias} {joinKind} {rightSource} AS {rightAlias} ON {pred}"));
-        _stageNames.Add(stage);
+        AddStage(stage, $"SELECT {selectList} FROM {leftSource} AS {leftAlias} {joinKind} {rightSource} AS {rightAlias} ON {pred}");
         return (stage, null);
     }
 
@@ -1322,8 +1390,7 @@ public sealed partial class DuckDbQueryEmitter
             // Tabular let: emit the subquery as a named CTE.
             var (tabSource, tabCols) = EmitNode(let_.TabularValue);
             var letName = EscapeIdent(let_.Name);
-            _ctes.Add((letName, $"SELECT {tabCols ?? "*"} FROM {tabSource}"));
-            _stageNames.Add(letName);
+            AddStage(letName, $"SELECT {tabCols ?? "*"} FROM {tabSource}");
         }
 
         return EmitNode(let_.Body);

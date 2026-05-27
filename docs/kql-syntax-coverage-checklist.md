@@ -599,4 +599,4 @@ commands. These operate on Kusto cluster state, not on data.
 
 ---
 
-*Last updated: 2026-05-27 — Coverage checklist re-validated against current translator/emitter capabilities (including sample-distinct, percentile, trim_start/trim_end, base64 encode/decode, and parse_path JSON-string emission), with no construct-scope change; UI result-cell drawer UX remains presentation-only (heuristic drives chevron visibility, explicit click opens drawer).*
+*Last updated: 2026-05-27 — checklist status unchanged; planner rewrite policy trimmed for hot-path stability (linear-only filter pushdown + threshold-gated common-scalar hoist); no construct-scope/parity deltas.*

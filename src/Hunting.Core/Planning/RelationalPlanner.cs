@@ -144,6 +144,8 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             var rewrittenInput = RewriteNode(node.Input, ref attempted, ref applied);
             var rewritten = rewrittenInput == node.Input ? node : node with { Input = rewrittenInput };
 
+            // Keep this pass intentionally narrow: only linear parent->child pushdown
+            // through a direct projection wrapper.
             if (rewritten.Input is ProjectNode proj)
             {
                 attempted++;
@@ -614,6 +616,9 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
 
     private sealed class CommonScalarHoistPass : IPlannerPass
     {
+        private const int MinDuplicateCountToHoist = 2;
+        private const int MinScalarComplexityToHoist = 3;
+
         public string Name => "CommonScalarHoistPass";
 
         public RelNode Apply(RelNode node, out bool changed, out int attempted, out int applied)
@@ -660,6 +665,19 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             out bool changed)
         {
             var firstByExpr = new Dictionary<string, string>(StringComparer.Ordinal);
+            var keyCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var extension in extensions)
+            {
+                if (extension.Expression is ColumnRef)
+                {
+                    continue;
+                }
+
+                var key = ScalarKey(extension.Expression);
+                keyCounts.TryGetValue(key, out var count);
+                keyCounts[key] = count + 1;
+            }
+
             var rewritten = new List<ProjectionExpr>();
             changed = false;
 
@@ -673,6 +691,12 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 }
 
                 var key = ScalarKey(e.Expression);
+                if (!ShouldHoist(keyCounts, key, e.Expression))
+                {
+                    rewritten.Add(e);
+                    continue;
+                }
+
                 if (firstByExpr.TryGetValue(key, out var existingAlias))
                 {
                     rewritten.Add(new ProjectionExpr(e.Alias, new ColumnRef(existingAlias)));
@@ -692,6 +716,19 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
         private static ProjectNode? TryHoist(IReadOnlyList<ProjectionExpr> projections, RelNode input, ref int attempted, ref int applied)
         {
             var firstByExpr = new Dictionary<string, string>(StringComparer.Ordinal);
+            var keyCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var projection in projections)
+            {
+                if (projection.Expression is ColumnRef)
+                {
+                    continue;
+                }
+
+                var key = ScalarKey(projection.Expression);
+                keyCounts.TryGetValue(key, out var count);
+                keyCounts[key] = count + 1;
+            }
+
             var ext = new List<ProjectionExpr>();
             var outProj = new List<ProjectionExpr>();
             var changed = false;
@@ -706,6 +743,12 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 }
 
                 var key = ScalarKey(p.Expression);
+                if (!ShouldHoist(keyCounts, key, p.Expression))
+                {
+                    outProj.Add(p);
+                    continue;
+                }
+
                 if (firstByExpr.TryGetValue(key, out var existingAlias))
                 {
                     outProj.Add(new ProjectionExpr(p.Alias, new ColumnRef(existingAlias)));
@@ -731,6 +774,29 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             var inner = new ExtendNode(input, ext);
             return new ProjectNode(inner, outProj);
         }
+
+        private static bool ShouldHoist(IReadOnlyDictionary<string, int> keyCounts, string key, ScalarExpr expression)
+        {
+            if (!keyCounts.TryGetValue(key, out var count) || count < MinDuplicateCountToHoist)
+            {
+                return false;
+            }
+
+            return EstimateScalarComplexity(expression) >= MinScalarComplexityToHoist;
+        }
+
+        private static int EstimateScalarComplexity(ScalarExpr expression) => expression switch
+        {
+            ColumnRef => 1,
+            LiteralScalar => 1,
+            UnaryScalar u => 1 + EstimateScalarComplexity(u.Operand),
+            BinaryScalar b => 1 + EstimateScalarComplexity(b.Left) + EstimateScalarComplexity(b.Right),
+            FunctionCall f => 2 + f.Args.Sum(EstimateScalarComplexity),
+            CaseScalar c => 2 + c.Branches.Sum(b => EstimateScalarComplexity(b.When) + EstimateScalarComplexity(b.Then)) + EstimateScalarComplexity(c.Else),
+            ListScalar l => 1 + l.Items.Sum(EstimateScalarComplexity),
+            WindowScalarExpr w => 3 + w.Args.Sum(EstimateScalarComplexity) + w.Window.PartitionBy.Sum(EstimateScalarComplexity) + w.Window.OrderBy.Sum(o => EstimateScalarComplexity(o.Expression)),
+            _ => 2
+        };
     }
 
     /// <summary>

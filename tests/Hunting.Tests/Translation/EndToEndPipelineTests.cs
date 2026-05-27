@@ -69,38 +69,37 @@ public sealed class EndToEndPipelineTests
     }
 
     [TestMethod]
-    [Description("Planner flag on with no-op planner preserves generated SQL and results")]
+    [Description("No-op planner preserves generated SQL and results")]
     public void Planner_NoOp_PreservesBehavior()
     {
         var catalog = new ApprovedViewCatalog();
         catalog.Register(DeviceProcessEventsSchema.View);
 
-        var runtimeOff = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true, plannerEnabled: false);
-        var runtimeOn = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true, plannerEnabled: true, planner: new NoOpRelationalPlanner());
+        var runtimeDefault = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true);
+        var runtimeNoOp = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true, planner: new NoOpRelationalPlanner());
 
         const string kql = "DeviceProcessEvents | where FileName == \"cmd.exe\" | project Timestamp, DeviceName | take 5";
 
-        var off = runtimeOff.Execute(kql);
-        var on = runtimeOn.Execute(kql);
+        var off = runtimeDefault.Execute(kql);
+        var on = runtimeNoOp.Execute(kql);
 
         AssertSuccess(off);
         AssertSuccess(on);
         Assert.AreEqual(off.RowCount, on.RowCount);
         Assert.AreEqual(off.ColumnCount, on.ColumnCount);
         Assert.AreEqual(off.GeneratedSql, on.GeneratedSql, "No-op planner should preserve emitted SQL");
-        Assert.IsNull(off.PlannerStatsJson, "Planner stats should be hidden when planner is disabled");
-        Assert.IsNotNull(on.PlannerStatsJson, "Planner stats should be present in developer mode when planner runs");
+        Assert.IsNotNull(off.PlannerStatsJson, "Planner stats should be present in developer mode");
     }
 
     [TestMethod]
-    [Description("Planner flag on with default planner preserves query semantics")]
+    [Description("Default planner preserves query semantics")]
     public void Planner_DefaultPlanner_PreservesSemantics()
     {
         var catalog = new ApprovedViewCatalog();
         catalog.Register(DeviceProcessEventsSchema.View);
 
-        var runtimeOff = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true, plannerEnabled: false);
-        var runtimeOn = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true, plannerEnabled: true);
+        var runtimeOff = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true, planner: new NoOpRelationalPlanner());
+        var runtimeOn = new QueryRuntime(catalog, _factory, defaultLimit: 10_000, developerMode: true);
 
         const string kql = "DeviceProcessEvents | where FileName == \"cmd.exe\" | project Timestamp, DeviceName | take 5";
 
@@ -130,7 +129,6 @@ public sealed class EndToEndPipelineTests
             _factory,
             defaultLimit: 10_000,
             developerMode: true,
-            plannerEnabled: true,
             planner: new ThrowingPlanner());
 
         var result = runtime.Execute("DeviceProcessEvents | take 1");
@@ -153,7 +151,6 @@ public sealed class EndToEndPipelineTests
             _factory,
             defaultLimit: 10_000,
             developerMode: true,
-            plannerEnabled: true,
             plannerMaxIterations: 7,
             planner: capturing);
 

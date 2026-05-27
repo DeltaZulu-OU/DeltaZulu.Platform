@@ -30,6 +30,12 @@ MVP-ready parity = `[x] + [m]` = **215 / 319 (67.4%)**.
 
 Current public schema families in code: `main.DeviceProcessEvents` and `main.DeviceNetworkEvents`.
 
+- Hot-path latency review and optimization plan is documented in `docs/HOTPATH-LATENCY-REVIEW.md`.
+- Emitter hot-path optimization is in progress: stage-name index and reference-count caches were added to reduce repeated stage scans during SQL-shape rewrites.
+- Developer-mode debug trace now includes per-query emitter cache/rewrite counters to support optimization benchmarking across future patches.
+- Planner is now always enabled in the runtime execution path (no feature-flag gating).
+- Planner hot-path trimming is in progress: filter pushdown is intentionally kept to linear projection wrappers, and common-scalar hoisting is now threshold-gated to repeated complex expressions.
+
 - The repository currently includes:
   - `Hunting.Core`: translation, relational model, planner, catalog/policy, and DuckDB SQL emitter.
   - `Hunting.Schema`: dedicated schema-definition project (public view schemas + parser mappings).
@@ -104,4 +110,4 @@ From the repository root:
 This project is licensed under the terms in [`LICENSE`](LICENSE).
 
 
-*Last updated: 2026-05-27 — parity snapshot refreshed after promoting trivial emitter-backed mappings (`strcat_array`, `bag_keys`, `bag_has_key`, `bag_merge`, `array_length`, `exp2`, `exp10`) to MVP.*
+*Last updated: 2026-05-27 — continued hot-path optimization by trimming planner rewrite aggressiveness (linear-only filter pushdown + threshold-gated scalar hoisting), with no construct-scope/parity change.*

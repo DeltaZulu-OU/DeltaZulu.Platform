@@ -10,6 +10,10 @@ security data.
 
 ## Recent updates
 
+- 2026-05-27: Trimmed planner rewrite aggressiveness for hot-path stability: `FilterPushdownPass` remains intentionally linear-only (direct projection wrapper) and `CommonScalarHoistPass` now hoists only repeated complex expressions (threshold-gated), reducing speculative rewrite churn.
+- 2026-05-27: Planner is now always enabled in the active `QueryRuntime` execution path; feature-flag gating was removed from runtime wiring.
+- 2026-05-27: Added emitter run-stat telemetry (cache invalidations, cache builds/lookups, stage add/remove counts) to developer-mode debug trace so future optimization patches have directly comparable measurements.
+- 2026-05-27: Implemented first hot-path optimization step in `DuckDbQueryEmitter` by adding stage-index/reference-count caching to cut repeated stage scans during inlining and terminal extraction; no query-semantics change.
 - 2026-05-27: Promoted seven trivial emitter-backed functions to MVP coverage (`strcat_array`, `bag_keys`, `bag_has_key`, `bag_merge`, `array_length`, `exp2`, `exp10`), increasing checklist MVP-ready parity to 215/319 (67.4%).
 - 2026-05-27: Query telemetry visibility improved — developer-mode `debugTrace[]` is now logged on successful query execution paths as well as failures to support optimization work.
 
@@ -156,7 +160,7 @@ runs end-to-end in the browser.
 **Objective:** Introduce a semantics-preserving logical planner between translation and SQL emission.
 
 **Implemented:**
-1. Feature-flagged planner runtime integration (`Planner:Enabled`, `Planner:MaxIterations`).
+1. Planner runtime integration with always-on execution path (`Planner:MaxIterations` remains configurable).
 2. Safe passes: filter pushdown subset, filter-extend inline, identity projection collapse, projection pruning, common scalar hoisting.
 3. Planner observability in developer mode (`PlannerStatsJson`, `DebugTrace`).
 4. Planner seam + end-to-end test coverage for safety and parity scenarios.
@@ -291,4 +295,4 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 | DuckDB connection in Blazor Server | `DuckDbConnectionFactory` + `QueryService` serialization | ✅ Implemented |
 ---
 
-*Last updated: 2026-05-27 — documentation aligned to current implementation state (Phase 4 complete; Phase 5 complete, incl. projected lookup-join collapse), with parse_path dynamic output normalized to JSON text and long/structured grid cells now using inline chevron affordance where the heuristic controls chevron visibility (drawer open remains explicit click action); substantially expanded mock seed scenarios continue to improve sample-query signal density in the UI.*
+*Last updated: 2026-05-27 — planner rewrite aggressiveness trimmed (linear-only filter pushdown and threshold-gated common-scalar hoist) as part of hot-path optimization, with no phase/construct scope change.*

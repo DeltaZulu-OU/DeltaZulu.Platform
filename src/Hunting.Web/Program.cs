@@ -29,7 +29,6 @@ builder.Services.AddSingleton<SchemaApplier>();
 
 // Query runtime — singleton; single connection is serialized by the factory lock
 builder.Services.AddSingleton(sp => {
-    var plannerEnabled = builder.Configuration.GetValue("Planner:Enabled", false);
     var plannerMaxIterations = builder.Configuration.GetValue("Planner:MaxIterations", 3);
 
     return new QueryRuntime(
@@ -38,7 +37,6 @@ builder.Services.AddSingleton(sp => {
         defaultLimit: 10_000,
         timeoutSeconds: 30,
         developerMode: builder.Environment.IsDevelopment(),
-        plannerEnabled: plannerEnabled,
         plannerMaxIterations: plannerMaxIterations);
 });
 
