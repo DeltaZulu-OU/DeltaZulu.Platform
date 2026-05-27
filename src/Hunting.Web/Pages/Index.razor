@@ -5,6 +5,7 @@
 @inject Hunting.Web.Services.EditorBus EditorBus
 @inject Hunting.Web.Services.LanguageService LanguageService
 @inject IJSRuntime JS
+@inject Hunting.Web.Services.UserSettingsState UserSettings
 @inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
@@ -353,7 +354,11 @@
     }
 
     protected override void OnInitialized()
-        => EditorBus.InsertRequested += HandleInsertRequested;
+    {
+        _toolbar.SelectedTimeFilter = UserSettings.DefaultTimeFilter;
+        _toolbar.SelectedResultLimit = UserSettings.DefaultResultLimit;
+        EditorBus.InsertRequested += HandleInsertRequested;
+    }
 
     private void HandleInsertRequested(string text)
     {
