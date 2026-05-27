@@ -125,13 +125,13 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var row in VisibleRows())
+                        @foreach (var rowIndex in VisibleRows())
                         {
                             <tr class="hunt-tr">
-                                @for (int i = 0; i < row.Length; i++)
+                                @for (int i = 0; i < _result.Columns.Count; i++)
                                 {
                                     var cellIndex = i;
-                                    var cellValue = row[cellIndex];
+                                    var cellValue = _result.GetValue(rowIndex, cellIndex);
                                     var hasDrawer = ShouldShowCellDrawerButton(cellValue);
                                     <td class="hunt-td">
                                         <div class="hunt-cell-content">
@@ -377,11 +377,11 @@
         _page = 0;
     }
 
-    private IEnumerable<object?[]> VisibleRows()
+    private IEnumerable<int> VisibleRows()
     {
         if (_result is null) return [];
 
-        var rows = _result.Rows.AsEnumerable();
+        var rowIndexes = Enumerable.Range(0, _result.RowCount);
 
         if (_sortColumn is not null)
         {
@@ -389,12 +389,12 @@
                 .Select((c, i) => (c.Name, i))
                 .FirstOrDefault(t => t.Name == _sortColumn).i;
 
-            rows = _sortAsc
-                ? rows.OrderBy(r => r[colIdx])
-                : rows.OrderByDescending(r => r[colIdx]);
+            rowIndexes = _sortAsc
+                ? rowIndexes.OrderBy(r => _result.GetValue(r, colIdx))
+                : rowIndexes.OrderByDescending(r => _result.GetValue(r, colIdx));
         }
 
-        return rows.Skip(_page * _pageSize).Take(_pageSize);
+        return rowIndexes.Skip(_page * _pageSize).Take(_pageSize);
     }
 
     private static string FormatCell(object? value)

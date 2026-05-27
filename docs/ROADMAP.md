@@ -11,6 +11,8 @@ security data.
 ## Recent updates
 
 - 2026-05-27: Updated `ExecuteTabular(...)` to populate `QueryTabularResult.ColumnData` directly during reader scan via the streamed callback path, removing intermediate row-array materialization in tabular execution.
+- 2026-05-27: Migrated `QueryResult` to a columnar-first contract (`ColumnData` + `GetValue(row, col)`), updating buffered runtime and Blazor query-service/UI materialization paths to remove `IReadOnlyList<object?[]>` row-array dependency.
+- 2026-05-27: Removed another emitter hot-path allocation by replacing `EmitInBinary` list-item `ToArray()` snapshot with direct `IEnumerable<string>` `string.Join` emission.
 - 2026-05-27: Replaced remaining planner lookup-owner pass `ToArray()` snapshot hotspots (project/sort/extend/aggregate rewrite copies) with loop-based copy helpers to reduce hot-path allocation churn.
 - 2026-05-27: Added `QueryRuntime.ExecuteTabular(...)` columnar buffered result contract (`Columns` + `ColumnData`) to avoid `object[]` row-array contracts for buffered consumers.
 - 2026-05-27: Trimmed additional planner recursive rewrite allocation hotspots by replacing remaining case/window branch/order remap/substitute LINQ `ToArray()` paths with loop-based helpers.
@@ -310,4 +312,4 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 | DuckDB connection in Blazor Server | `DuckDbConnectionFactory` + `QueryService` serialization | ✅ Implemented |
 ---
 
-*Last updated: 2026-05-27 — planner and emitter allocation cleanup continued (loop-based pass-stat/output-column materialization replacing select `ToArray()` paths), with no phase/construct scope change.*
+*Last updated: 2026-05-27 — planner/emitter/runtime allocation cleanup continued (including emitter `in` emission and QueryResult columnar-contract migration), with no phase/construct scope change.*

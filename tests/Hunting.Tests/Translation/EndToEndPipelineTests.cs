@@ -113,7 +113,10 @@ public sealed class EndToEndPipelineTests
 
         for (var i = 0; i < off.RowCount; i++)
         {
-            CollectionAssert.AreEqual(off.Rows[i], on.Rows[i]);
+            for (var j = 0; j < off.ColumnCount; j++)
+            {
+                Assert.AreEqual(off.GetValue(i, j), on.GetValue(i, j));
+            }
         }
     }
 

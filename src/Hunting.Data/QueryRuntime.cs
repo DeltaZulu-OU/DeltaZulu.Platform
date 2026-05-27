@@ -13,13 +13,11 @@ using Hunting.Core.Translation;
 /// Orchestrates the full query pipeline:
 ///   KQL string → ParseAndAnalyze → policy → translate → emit → execute → results
 ///
-/// Returns either a QueryResult with column metadata and rows, or a list
+/// Returns either a QueryResult with column metadata and columnar data, or a list
 /// of QueryDiagnostic errors.
 /// </summary>
 public sealed class QueryRuntime
 {
-    private const int InitialRowCapacity = 256;
-    private const int RowChunkSize = 512;
     private readonly ApprovedViewCatalog _catalog;
     private readonly DuckDbConnectionFactory _connectionFactory;
     private readonly int _defaultLimit;
@@ -144,10 +142,19 @@ public sealed class QueryRuntime
         }
 
         columnData ??= CreateColumnData(streamed.Columns.Count);
-        var columnNames = streamed.Columns.Select(c => c.Name).ToArray();
+        var columnNames = new string[streamed.Columns.Count];
+        for (var i = 0; i < streamed.Columns.Count; i++)
+        {
+            columnNames[i] = streamed.Columns[i].Name;
+        }
+        var readonlyColumnData = new IReadOnlyList<object?>[columnData.Length];
+        for (var i = 0; i < columnData.Length; i++)
+        {
+            readonlyColumnData[i] = columnData[i];
+        }
         return QueryTabularResult.FromData(
             columnNames,
-            columnData.Select(c => (IReadOnlyList<object?>)c).ToArray(),
+            readonlyColumnData,
             streamed.RowCount,
             streamed.GeneratedSql,
             streamed.PlannerStatsJson,
@@ -255,7 +262,7 @@ public sealed class QueryRuntime
             }
 
             // Read rows
-            var rows = ReadAllRows(reader, maxRows);
+            var columnData = ReadAllColumns(reader, maxRows);
 
             // GeneratedSql is only exposed in developer mode — SQL is an internal artifact
             var exposedSql = _developerMode ? sql : null;
@@ -267,7 +274,7 @@ public sealed class QueryRuntime
                 debugTrace?.Add("Compile cache store");
             }
 
-            return QueryResult.FromData(columns, rows, exposedSql, plannerStats, sqlShapeStats, debugTrace, diagnostics);
+            return QueryResult.FromData(columns, columnData, exposedSql, plannerStats, sqlShapeStats, debugTrace, diagnostics);
         }
         catch (DuckDBException ex)
         {
@@ -402,7 +409,7 @@ public sealed class QueryRuntime
                 columns.Add(new ResultColumn(reader.GetName(i), reader.GetDataTypeName(i)));
             }
 
-            var rows = ReadAllRows(reader, maxRows);
+            var columnData = ReadAllColumns(reader, maxRows);
 
             var exposedSql = _developerMode ? sql : null;
             debugTrace?.Add($"Execute complete: rows={rows.Count}, columns={columns.Count}");
@@ -410,7 +417,7 @@ public sealed class QueryRuntime
             {
                 debugTrace?.Add($"Emitter stats: {emitterStatsJson}");
             }
-            return QueryResult.FromData(columns, rows, exposedSql, plannerStatsJson, sqlShapeStatsJson, debugTrace, diagnostics);
+            return QueryResult.FromData(columns, columnData, exposedSql, plannerStatsJson, sqlShapeStatsJson, debugTrace, diagnostics);
         }
         catch (DuckDBException ex)
         {
@@ -492,37 +499,25 @@ public sealed class QueryRuntime
     }
 
 
-    private static List<object?[]> ReadAllRows(DuckDBDataReader reader, int? maxRows)
+    private static List<object?>[] ReadAllColumns(DuckDBDataReader reader, int? maxRows)
     {
-        var rows = new List<object?[]>(InitialRowCapacity);
+        var columns = CreateColumnData(reader.FieldCount);
         var typedReaders = BuildTypedReaders(reader);
-        var chunk = new List<object?[]>(RowChunkSize);
+        var rowCount = 0;
         while (reader.Read())
         {
-            if (maxRows.HasValue && rows.Count + chunk.Count >= maxRows.Value)
+            if (maxRows.HasValue && rowCount >= maxRows.Value)
             {
                 break;
             }
-            var row = new object?[reader.FieldCount];
             for (var i = 0; i < reader.FieldCount; i++)
             {
-                row[i] = typedReaders[i](reader, i);
+                columns[i].Add(typedReaders[i](reader, i));
             }
-
-            chunk.Add(row);
-            if (chunk.Count >= RowChunkSize)
-            {
-                rows.AddRange(chunk);
-                chunk.Clear();
-            }
+            rowCount++;
         }
 
-        if (chunk.Count > 0)
-        {
-            rows.AddRange(chunk);
-        }
-
-        return rows;
+        return columns;
     }
 
     private static Func<DuckDBDataReader, int, object?>[] BuildTypedReaders(DuckDBDataReader reader)
@@ -555,34 +550,45 @@ public sealed class QueryResult
 {
     public bool Success { get; init; }
     public IReadOnlyList<ResultColumn> Columns { get; init; } = [];
-    public IReadOnlyList<object?[]> Rows { get; init; } = [];
+    public IReadOnlyList<IReadOnlyList<object?>> ColumnData { get; init; } = [];
     public string? GeneratedSql { get; init; }
     public string? PlannerStatsJson { get; init; }
     public string? SqlShapeStatsJson { get; init; }
     public IReadOnlyList<string> DebugTrace { get; init; } = [];
     public DiagnosticBag Diagnostics { get; init; } = new();
 
-    public int RowCount => Rows.Count;
+    public int RowCount => ColumnData.Count == 0 ? 0 : ColumnData[0].Count;
     public int ColumnCount => Columns.Count;
+
+    public object? GetValue(int row, int column) => ColumnData[column][row];
 
     public static QueryResult FromData(
         List<ResultColumn> columns,
-        List<object?[]> rows,
+        List<object?>[] columnData,
         string? sql,
         string? plannerStatsJson,
         string? sqlShapeStatsJson,
         List<string>? debugTrace,
-        DiagnosticBag diagnostics) => new QueryResult
+        DiagnosticBag diagnostics)
+    {
+        var readonlyColumnData = new IReadOnlyList<object?>[columnData.Length];
+        for (var i = 0; i < columnData.Length; i++)
+        {
+            readonlyColumnData[i] = columnData[i];
+        }
+
+        return new QueryResult
         {
             Success = true,
             Columns = columns,
-            Rows = rows,
+            ColumnData = readonlyColumnData,
             GeneratedSql = sql,
             PlannerStatsJson = plannerStatsJson,
             SqlShapeStatsJson = sqlShapeStatsJson,
             DebugTrace = debugTrace ?? [],
             Diagnostics = diagnostics
         };
+    }
 
     public static QueryResult FromDiagnostics(DiagnosticBag diagnostics, List<string>? debugTrace = null) => new QueryResult
     {

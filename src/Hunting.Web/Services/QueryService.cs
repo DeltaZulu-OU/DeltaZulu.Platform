@@ -55,21 +55,21 @@ public sealed class QueryService : IDisposable
             // running on the single shared connection, letting a second query in
             // concurrently. A started query runs to completion (or its own
             // CommandTimeout); the semaphore is released only once it truly ends.
-            var rows = new List<object?[]>();
+            List<object?>[]? columnData = null;
+            var rowCount = 0;
             var streamResult = await Task.Run(() => _runtime.ExecuteStreamed(kql, reader =>
             {
-                if (rows.Count >= MaxMaterializedRows)
+                if (rowCount >= MaxMaterializedRows)
                 {
                     return false;
                 }
 
-                var row = new object?[reader.FieldCount];
+                columnData ??= CreateColumnData(reader.FieldCount);
                 for (var i = 0; i < reader.FieldCount; i++)
                 {
-                    row[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                    columnData[i].Add(reader.IsDBNull(i) ? null : reader.GetValue(i));
                 }
-
-                rows.Add(row);
+                rowCount++;
                 return true;
             }));
 
@@ -81,14 +81,14 @@ public sealed class QueryService : IDisposable
             else
             {
                 var trace = streamResult.DebugTrace.Count > 0 ? new List<string>(streamResult.DebugTrace) : [];
-                if (streamResult.RowCount > rows.Count)
+                if (streamResult.RowCount > rowCount)
                 {
                     trace.Add($"Materialization truncated at {MaxMaterializedRows} rows for UI safety.");
                 }
 
                 result = QueryResult.FromData(
                     [..streamResult.Columns],
-                    rows,
+                    columnData ?? CreateColumnData(streamResult.Columns.Count),
                     streamResult.GeneratedSql,
                     streamResult.PlannerStatsJson,
                     streamResult.SqlShapeStatsJson,
@@ -122,4 +122,15 @@ public sealed class QueryService : IDisposable
     }
 
     public void Dispose() => _semaphore.Dispose();
+
+    private static List<object?>[] CreateColumnData(int count)
+    {
+        var columns = new List<object?>[count];
+        for (var i = 0; i < count; i++)
+        {
+            columns[i] = [];
+        }
+
+        return columns;
+    }
 }

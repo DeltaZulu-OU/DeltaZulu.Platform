@@ -599,4 +599,4 @@ commands. These operate on Kusto cluster state, not on data.
 
 ---
 
-*Last updated: 2026-05-27 — checklist status unchanged; planner/emitter hot-path allocation cleanup continued (targeted `ToArray()` removals), with no construct-scope/parity deltas.*
+*Last updated: 2026-05-27 — checklist status unchanged; planner/emitter/runtime hot-path allocation cleanup continued (including emitter `in` list snapshot removal and QueryResult columnar-contract migration), with no construct-scope/parity deltas.*

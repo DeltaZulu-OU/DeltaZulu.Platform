@@ -1760,8 +1760,7 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         var items = list.Items
-            .Select(EmitScalar)
-            .ToArray();
+            .Select(EmitScalar);
 
         var sqlOp = bin.Op == ScalarBinaryOp.NotIn
             ? "NOT IN"
