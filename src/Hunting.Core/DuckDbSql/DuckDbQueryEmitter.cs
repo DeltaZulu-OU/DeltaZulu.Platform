@@ -699,14 +699,40 @@ public sealed partial class DuckDbQueryEmitter
         var counts = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var cte in _ctes)
         {
-            foreach (Match match in StageRefRegex().Matches(cte.Sql))
+            foreach (var stageRef in EnumerateStageReferences(cte.Sql))
             {
-                var stageRef = match.Value;
                 counts[stageRef] = counts.TryGetValue(stageRef, out var count) ? count + 1 : 1;
             }
         }
 
         return counts;
+    }
+
+    private static IEnumerable<string> EnumerateStageReferences(string sql)
+    {
+        const string prefix = "__kql_stage_";
+        var idx = 0;
+        while (true)
+        {
+            idx = sql.IndexOf(prefix, idx, StringComparison.Ordinal);
+            if (idx < 0)
+            {
+                yield break;
+            }
+
+            var end = idx + prefix.Length;
+            while (end < sql.Length && char.IsAsciiDigit(sql[end]))
+            {
+                end++;
+            }
+
+            if (end > idx + prefix.Length)
+            {
+                yield return sql[idx..end];
+            }
+
+            idx = end;
+        }
     }
 
     private int CountStageReferences(string stageName)
@@ -718,6 +744,11 @@ public sealed partial class DuckDbQueryEmitter
 
     private static SelectStageShape? ParseSelectShape(string sql)
     {
+        if (TryParseSimpleSelectShape(sql, out var simple))
+        {
+            return simple;
+        }
+
         var topK = TerminalTopKRegex().Match(sql);
         if (topK.Success)
         {
@@ -753,6 +784,62 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         return null;
+    }
+
+    private static bool TryParseSimpleSelectShape(string sql, out SelectStageShape? shape)
+    {
+        shape = null;
+        var text = sql.Trim();
+        if (!text.StartsWith("SELECT * FROM ", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var from = text["SELECT * FROM ".Length..];
+        var orderByIdx = from.IndexOf(" ORDER BY ", StringComparison.OrdinalIgnoreCase);
+        var limitIdx = from.IndexOf(" LIMIT ", StringComparison.OrdinalIgnoreCase);
+        var whereIdx = from.IndexOf(" WHERE ", StringComparison.OrdinalIgnoreCase);
+
+        if (whereIdx > 0)
+        {
+            var source = from[..whereIdx];
+            var pred = from[(whereIdx + " WHERE ".Length)..];
+            shape = new SelectStageShape("*", source, Predicate: pred);
+            return true;
+        }
+
+        if (orderByIdx > 0 && limitIdx > orderByIdx)
+        {
+            var source = from[..orderByIdx];
+            var order = from[(orderByIdx + " ORDER BY ".Length)..limitIdx];
+            var limitText = from[(limitIdx + " LIMIT ".Length)..];
+            if (int.TryParse(limitText, out var lim))
+            {
+                shape = new SelectStageShape("*", source, OrderBy: order, Limit: lim);
+                return true;
+            }
+        }
+
+        if (orderByIdx > 0)
+        {
+            var source = from[..orderByIdx];
+            var order = from[(orderByIdx + " ORDER BY ".Length)..];
+            shape = new SelectStageShape("*", source, OrderBy: order);
+            return true;
+        }
+
+        if (limitIdx > 0)
+        {
+            var source = from[..limitIdx];
+            var limitText = from[(limitIdx + " LIMIT ".Length)..];
+            if (int.TryParse(limitText, out var lim))
+            {
+                shape = new SelectStageShape("*", source, Limit: lim);
+                return true;
+            }
+        }
+
+        return false;
     }
 
 

@@ -346,6 +346,107 @@ public sealed class EndToEndPipelineTests
         Assert.IsNotEmpty(result.DebugTrace, "Failure in developer mode should still include debug trace");
     }
 
+    [TestMethod]
+    [Description("ExecuteStreamed returns rows and columns with diagnostics parity")]
+    public void Runtime_ExecuteStreamed_Success()
+    {
+        var streamedRows = new List<object?[]>();
+        var result = _runtime.ExecuteStreamed(
+            "DeviceProcessEvents | project DeviceName, FileName | take 5",
+            reader =>
+            {
+                var row = new object?[reader.FieldCount];
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    row[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                }
+
+                streamedRows.Add(row);
+                return true;
+            });
+
+        Assert.IsTrue(result.Success, "Streaming query should succeed.");
+        Assert.AreEqual(5, result.RowCount);
+        Assert.AreEqual(5, streamedRows.Count);
+        Assert.AreEqual(2, result.Columns.Count);
+        Assert.AreEqual("DeviceName", result.Columns[0].Name);
+        Assert.AreEqual("FileName", result.Columns[1].Name);
+        Assert.IsNotNull(result.SqlShapeStatsJson);
+    }
+
+    [TestMethod]
+    [Description("ExecuteStreamed supports early-stop callback for bounded read behavior")]
+    public void Runtime_ExecuteStreamed_EarlyStop()
+    {
+        var seen = 0;
+        var result = _runtime.ExecuteStreamed(
+            "DeviceProcessEvents | take 100",
+            _ =>
+            {
+                seen++;
+                return seen < 4;
+            });
+
+        Assert.IsTrue(result.Success, "Streaming query should succeed.");
+        Assert.AreEqual(4, result.RowCount, "RowCount should reflect callback-bounded read count.");
+    }
+
+    [TestMethod]
+    [Description("ExecuteTabular returns columnar data with expected shape")]
+    public void Runtime_ExecuteTabular_Shape()
+    {
+        var result = _runtime.ExecuteTabular(
+            "DeviceProcessEvents | project DeviceName, FileName | take 3");
+
+        Assert.IsTrue(result.Success, "Tabular query should succeed.");
+        Assert.AreEqual(3, result.RowCount);
+        Assert.AreEqual(2, result.Columns.Count);
+        Assert.AreEqual(2, result.ColumnData.Count);
+        Assert.AreEqual(3, result.ColumnData[0].Count);
+        Assert.AreEqual(3, result.ColumnData[1].Count);
+        Assert.AreEqual("DeviceName", result.Columns[0]);
+        Assert.AreEqual("FileName", result.Columns[1]);
+    }
+
+    [TestMethod]
+    [Description("Execute with maxRows bounds buffered row materialization")]
+    public void Runtime_Execute_BoundedMaxRows()
+    {
+        var result = _runtime.Execute("DeviceProcessEvents | take 100", maxRows: 7);
+        AssertSuccess(result);
+        Assert.AreEqual(7, result.RowCount);
+    }
+
+    [TestMethod]
+    [Description("Compile cache parity holds across Execute and ExecuteStreamed paths")]
+    public void Runtime_CompileCache_ParityAcrossExecuteAndStreamed()
+    {
+        const string kql = "DeviceProcessEvents | where FileName == \"cmd.exe\" | take 5";
+
+        var first = _runtime.Execute(kql);
+        AssertSuccess(first);
+
+        var streamed = _runtime.ExecuteStreamed(kql, _ => true);
+        Assert.IsTrue(streamed.Success);
+        Assert.AreEqual(first.RowCount, streamed.RowCount);
+        Assert.AreEqual(first.ColumnCount, streamed.Columns.Count);
+        Assert.IsNotNull(first.SqlShapeStatsJson);
+        Assert.IsNotNull(streamed.SqlShapeStatsJson);
+    }
+
+    [TestMethod]
+    [Description("Diagnostics parity for invalid query across Execute and ExecuteStreamed")]
+    public void Runtime_DiagnosticsParity_ExecuteVsStreamed()
+    {
+        var buffered = _runtime.Execute("FakeTable | take 1");
+        var streamed = _runtime.ExecuteStreamed("FakeTable | take 1", _ => true);
+
+        Assert.IsFalse(buffered.Success);
+        Assert.IsFalse(streamed.Success);
+        Assert.IsTrue(buffered.Diagnostics.HasErrors);
+        Assert.IsTrue(streamed.Diagnostics.HasErrors);
+    }
+
     // ─── Helpers ────────────────────────────────────────────────────
 
     private static void AssertSuccess(QueryResult result) => Assert.IsTrue(result.Success,

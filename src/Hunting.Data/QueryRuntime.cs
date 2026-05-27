@@ -19,6 +19,7 @@ using Hunting.Core.Translation;
 public sealed class QueryRuntime
 {
     private const int InitialRowCapacity = 256;
+    private const int RowChunkSize = 512;
     private readonly ApprovedViewCatalog _catalog;
     private readonly DuckDbConnectionFactory _connectionFactory;
     private readonly int _defaultLimit;
@@ -30,6 +31,8 @@ public sealed class QueryRuntime
     private readonly ConcurrentDictionary<CompileCacheKey, CompileCacheEntry> _compileCache = new();
     private readonly ConcurrentQueue<CompileCacheKey> _compileCacheOrder = new();
     private readonly int _compileCacheCapacity = 256;
+    private long _policyEpoch;
+    private long _compilerEpoch;
 
     public QueryRuntime(
         ApprovedViewCatalog catalog,
@@ -40,6 +43,8 @@ public sealed class QueryRuntime
         bool includeSensitiveDeveloperDetail = false,
         int plannerMaxIterations = 3,
         int compileCacheCapacity = 256,
+        long policyEpoch = 1,
+        long compilerEpoch = 1,
         IRelationalPlanner? planner = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
@@ -64,6 +69,16 @@ public sealed class QueryRuntime
             throw new ArgumentOutOfRangeException(nameof(compileCacheCapacity), compileCacheCapacity, "Compile cache capacity must be zero or greater.");
         }
 
+
+        if (policyEpoch < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(policyEpoch), policyEpoch, "Policy epoch must be at least one.");
+        }
+
+        if (compilerEpoch < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(compilerEpoch), compilerEpoch, "Compiler epoch must be at least one.");
+        }
         _catalog = catalog;
         _connectionFactory = connectionFactory;
         _defaultLimit = defaultLimit;
@@ -73,24 +88,96 @@ public sealed class QueryRuntime
         _planner = planner ?? new RelationalPlanner();
         _plannerMaxIterations = plannerMaxIterations;
         _compileCacheCapacity = compileCacheCapacity;
+        _policyEpoch = policyEpoch;
+        _compilerEpoch = compilerEpoch;
     }
 
     private readonly bool _developerMode;
 
+    public void SetCompileEpochs(long policyEpoch, long compilerEpoch)
+    {
+        if (policyEpoch < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(policyEpoch), policyEpoch, "Policy epoch must be at least one.");
+        }
+
+        if (compilerEpoch < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(compilerEpoch), compilerEpoch, "Compiler epoch must be at least one.");
+        }
+
+        _policyEpoch = policyEpoch;
+        _compilerEpoch = compilerEpoch;
+        _compileCache.Clear();
+        while (_compileCacheOrder.TryDequeue(out _)) { }
+    }
+
     /// <summary>
     /// Execute a KQL query and return the result.
     /// </summary>
-    public QueryResult Execute(string kql)
+    public QueryResult Execute(string kql) => Execute(kql, maxRows: null);
+
+    public QueryTabularResult ExecuteTabular(string kql, int? maxRows = null)
+    {
+        List<object?>[]? columnData = null;
+        var streamed = ExecuteStreamed(
+            kql,
+            reader =>
+            {
+                if (maxRows.HasValue && columnData is not null && columnData.Length > 0 && columnData[0].Count >= maxRows.Value)
+                {
+                    return false;
+                }
+
+                columnData ??= CreateColumnData(reader.FieldCount);
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    columnData[i].Add(reader.IsDBNull(i) ? null : reader.GetValue(i));
+                }
+
+                return true;
+            });
+
+        if (!streamed.Success)
+        {
+            return QueryTabularResult.FromDiagnostics(streamed.Diagnostics, streamed.DebugTrace);
+        }
+
+        columnData ??= CreateColumnData(streamed.Columns.Count);
+        var columnNames = streamed.Columns.Select(c => c.Name).ToArray();
+        return QueryTabularResult.FromData(
+            columnNames,
+            columnData.Select(c => (IReadOnlyList<object?>)c).ToArray(),
+            streamed.RowCount,
+            streamed.GeneratedSql,
+            streamed.PlannerStatsJson,
+            streamed.SqlShapeStatsJson,
+            streamed.DebugTrace,
+            streamed.Diagnostics);
+    }
+
+    private static List<object?>[] CreateColumnData(int count)
+    {
+        var columns = new List<object?>[count];
+        for (var i = 0; i < count; i++)
+        {
+            columns[i] = [];
+        }
+
+        return columns;
+    }
+
+    public QueryResult Execute(string kql, int? maxRows)
     {
         var diagnostics = new DiagnosticBag();
         var debugTrace = _developerMode ? new List<string>() : null;
         debugTrace?.Add($"Runtime start: plannerMaxIterations={_plannerMaxIterations}, timeoutSeconds={_timeoutSeconds}");
 
-        var cacheKey = new CompileCacheKey(kql, _catalog.CatalogVersion, _plannerMaxIterations, _defaultLimit);
+        var cacheKey = new CompileCacheKey(kql, _catalog.CatalogVersion, _plannerMaxIterations, _defaultLimit, _policyEpoch, _compilerEpoch);
         if (_compileCacheCapacity > 0 && _compileCache.TryGetValue(cacheKey, out var cacheHit))
         {
             debugTrace?.Add($"Compile cache hit: catalogVersion={cacheKey.CatalogVersion}");
-            return ExecuteSql(cacheHit.Sql, diagnostics, debugTrace, plannerStatsJson: cacheHit.PlannerStatsJson, sqlShapeStatsJson: cacheHit.SqlShapeStatsJson, emitterStatsJson: cacheHit.EmitterStatsJson);
+            return ExecuteSql(cacheHit.Sql, maxRows, diagnostics, debugTrace, plannerStatsJson: cacheHit.PlannerStatsJson, sqlShapeStatsJson: cacheHit.SqlShapeStatsJson, emitterStatsJson: cacheHit.EmitterStatsJson);
         }
 
         // Phase 1: Parse + Translate
@@ -168,17 +255,7 @@ public sealed class QueryRuntime
             }
 
             // Read rows
-            var rows = new List<object?[]>(InitialRowCapacity);
-            var typedReaders = BuildTypedReaders(reader);
-            while (reader.Read())
-            {
-                var row = new object?[reader.FieldCount];
-                for (var i = 0; i < reader.FieldCount; i++)
-                {
-                    row[i] = typedReaders[i](reader, i);
-                }
-                rows.Add(row);
-            }
+            var rows = ReadAllRows(reader, maxRows);
 
             // GeneratedSql is only exposed in developer mode — SQL is an internal artifact
             var exposedSql = _developerMode ? sql : null;
@@ -210,8 +287,99 @@ public sealed class QueryRuntime
         }
     }
 
+
+    /// <summary>
+    /// Execute a KQL query and stream rows to a callback to avoid full in-memory row materialization.
+    /// The callback can use typed DuckDBDataReader getters directly, avoiding object[] row allocation and boxing.
+    /// </summary>
+    public QueryStreamResult ExecuteStreamed(string kql, Func<DuckDBDataReader, bool> onRow)
+    {
+        ArgumentNullException.ThrowIfNull(onRow);
+
+        var diagnostics = new DiagnosticBag();
+        var debugTrace = _developerMode ? new List<string>() : null;
+        debugTrace?.Add($"Runtime start (streamed): plannerMaxIterations={_plannerMaxIterations}, timeoutSeconds={_timeoutSeconds}");
+
+        var cacheKey = new CompileCacheKey(kql, _catalog.CatalogVersion, _plannerMaxIterations, _defaultLimit, _policyEpoch, _compilerEpoch);
+        string sql;
+        string? plannerStats = null;
+        string? sqlShapeStats = null;
+        string? emitterStats = null;
+
+        if (_compileCacheCapacity > 0 && _compileCache.TryGetValue(cacheKey, out var cacheHit))
+        {
+            sql = cacheHit.Sql;
+            plannerStats = cacheHit.PlannerStatsJson;
+            sqlShapeStats = cacheHit.SqlShapeStatsJson;
+            emitterStats = cacheHit.EmitterStatsJson;
+            debugTrace?.Add($"Compile cache hit: catalogVersion={cacheKey.CatalogVersion}");
+        }
+        else
+        {
+            var translator = new KustoToRelational(_catalog, diagnostics);
+            var relNode = translator.Translate(kql);
+            if (diagnostics.HasErrors || relNode is null)
+            {
+                return QueryStreamResult.FromDiagnostics(diagnostics, debugTrace);
+            }
+
+            relNode = _planner.Plan(relNode, new PlannerContext(Enabled: true, MaxIterations: _plannerMaxIterations));
+            if (_developerMode && _planner is IPlannerTelemetry telemetry && telemetry.LastRunStats is not null)
+            {
+                plannerStats = JsonSerializer.Serialize(telemetry.LastRunStats);
+            }
+
+            var emitter = new DuckDbQueryEmitter(_defaultLimit, applyDefaultLimit: false);
+            sql = emitter.Emit(relNode);
+            sqlShapeStats = JsonSerializer.Serialize(SqlShapeMetrics.FromSql(sql));
+            emitterStats = JsonSerializer.Serialize(emitter.LastRunStats);
+            if (_compileCacheCapacity > 0)
+            {
+                RememberCompileCache(cacheKey, new CompileCacheEntry(sql, plannerStats, sqlShapeStats, emitterStats));
+            }
+        }
+
+        try
+        {
+            var conn = _connectionFactory.GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = sql;
+            cmd.CommandTimeout = _timeoutSeconds;
+            using var reader = cmd.ExecuteReader(System.Data.CommandBehavior.SequentialAccess);
+
+            var columns = new List<ResultColumn>(reader.FieldCount);
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                columns.Add(new ResultColumn(reader.GetName(i), reader.GetDataTypeName(i)));
+            }
+
+            var rowCount = 0;
+            while (reader.Read())
+            {
+                rowCount++;
+                if (!onRow(reader))
+                {
+                    break;
+                }
+            }
+
+            return QueryStreamResult.FromData(columns, rowCount, _developerMode ? sql : null, plannerStats, sqlShapeStats, debugTrace, diagnostics);
+        }
+        catch (DuckDBException ex)
+        {
+            diagnostics.AddError(DiagnosticPhase.Execute, NormalizeDuckDbError(ex.Message), BuildDeveloperDetail(sql, ex.Message), code: QueryDiagnosticCodes.ExecuteDuckDbFailed);
+            return QueryStreamResult.FromDiagnostics(diagnostics, debugTrace);
+        }
+        catch (Exception ex)
+        {
+            diagnostics.AddError(DiagnosticPhase.Execute, "An internal error occurred while executing the query.", BuildDeveloperDetail(sql, $"{ex.GetType().Name}: {ex.Message}"), code: QueryDiagnosticCodes.ExecuteUnhandledFailed);
+            return QueryStreamResult.FromDiagnostics(diagnostics, debugTrace);
+        }
+    }
+
     private QueryResult ExecuteSql(
         string sql,
+        int? maxRows,
         DiagnosticBag diagnostics,
         List<string>? debugTrace,
         string? plannerStatsJson,
@@ -234,18 +402,7 @@ public sealed class QueryRuntime
                 columns.Add(new ResultColumn(reader.GetName(i), reader.GetDataTypeName(i)));
             }
 
-            var rows = new List<object?[]>(InitialRowCapacity);
-            var typedReaders = BuildTypedReaders(reader);
-            while (reader.Read())
-            {
-                var row = new object?[reader.FieldCount];
-                for (var i = 0; i < reader.FieldCount; i++)
-                {
-                    row[i] = typedReaders[i](reader, i);
-                }
-
-                rows.Add(row);
-            }
+            var rows = ReadAllRows(reader, maxRows);
 
             var exposedSql = _developerMode ? sql : null;
             debugTrace?.Add($"Execute complete: rows={rows.Count}, columns={columns.Count}");
@@ -283,7 +440,7 @@ public sealed class QueryRuntime
         }
     }
 
-    private sealed record CompileCacheKey(string Kql, long CatalogVersion, int PlannerMaxIterations, int DefaultLimit);
+    private sealed record CompileCacheKey(string Kql, long CatalogVersion, int PlannerMaxIterations, int DefaultLimit, long PolicyEpoch, long CompilerEpoch);
     private sealed record CompileCacheEntry(string Sql, string? PlannerStatsJson, string? SqlShapeStatsJson, string? EmitterStatsJson);
 
     private string BuildDeveloperDetail(string sql, string exceptionText)
@@ -332,6 +489,40 @@ public sealed class QueryRuntime
         }
 
         return $"Query execution failed: {message}";
+    }
+
+
+    private static List<object?[]> ReadAllRows(DuckDBDataReader reader, int? maxRows)
+    {
+        var rows = new List<object?[]>(InitialRowCapacity);
+        var typedReaders = BuildTypedReaders(reader);
+        var chunk = new List<object?[]>(RowChunkSize);
+        while (reader.Read())
+        {
+            if (maxRows.HasValue && rows.Count + chunk.Count >= maxRows.Value)
+            {
+                break;
+            }
+            var row = new object?[reader.FieldCount];
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                row[i] = typedReaders[i](reader, i);
+            }
+
+            chunk.Add(row);
+            if (chunk.Count >= RowChunkSize)
+            {
+                rows.AddRange(chunk);
+                chunk.Clear();
+            }
+        }
+
+        if (chunk.Count > 0)
+        {
+            rows.AddRange(chunk);
+        }
+
+        return rows;
     }
 
     private static Func<DuckDBDataReader, int, object?>[] BuildTypedReaders(DuckDBDataReader reader)
@@ -405,3 +596,76 @@ public sealed class QueryResult
 /// Column metadata from a query result.
 /// </summary>
 public sealed record ResultColumn(string Name, string TypeName);
+
+
+public sealed class QueryStreamResult
+{
+    public bool Success { get; init; }
+    public int RowCount { get; init; }
+    public IReadOnlyList<ResultColumn> Columns { get; init; } = [];
+    public string? GeneratedSql { get; init; }
+    public string? PlannerStatsJson { get; init; }
+    public string? SqlShapeStatsJson { get; init; }
+    public IReadOnlyList<string> DebugTrace { get; init; } = [];
+    public DiagnosticBag Diagnostics { get; init; } = new();
+
+    public static QueryStreamResult FromData(List<ResultColumn> columns, int rowCount, string? sql, string? plannerStatsJson, string? sqlShapeStatsJson, List<string>? debugTrace, DiagnosticBag diagnostics) => new()
+    {
+        Success = true,
+        Columns = columns,
+        RowCount = rowCount,
+        GeneratedSql = sql,
+        PlannerStatsJson = plannerStatsJson,
+        SqlShapeStatsJson = sqlShapeStatsJson,
+        DebugTrace = debugTrace ?? [],
+        Diagnostics = diagnostics
+    };
+
+    public static QueryStreamResult FromDiagnostics(DiagnosticBag diagnostics, List<string>? debugTrace = null) => new()
+    {
+        Success = false,
+        DebugTrace = debugTrace ?? [],
+        Diagnostics = diagnostics
+    };
+}
+
+public sealed class QueryTabularResult
+{
+    public bool Success { get; init; }
+    public int RowCount { get; init; }
+    public IReadOnlyList<string> Columns { get; init; } = [];
+    public IReadOnlyList<IReadOnlyList<object?>> ColumnData { get; init; } = [];
+    public string? GeneratedSql { get; init; }
+    public string? PlannerStatsJson { get; init; }
+    public string? SqlShapeStatsJson { get; init; }
+    public IReadOnlyList<string> DebugTrace { get; init; } = [];
+    public DiagnosticBag Diagnostics { get; init; } = new();
+
+    public static QueryTabularResult FromData(
+        IReadOnlyList<string> columns,
+        IReadOnlyList<IReadOnlyList<object?>> columnData,
+        int rowCount,
+        string? sql,
+        string? plannerStatsJson,
+        string? sqlShapeStatsJson,
+        IReadOnlyList<string>? debugTrace,
+        DiagnosticBag diagnostics) => new()
+        {
+            Success = true,
+            RowCount = rowCount,
+            Columns = columns,
+            ColumnData = columnData,
+            GeneratedSql = sql,
+            PlannerStatsJson = plannerStatsJson,
+            SqlShapeStatsJson = sqlShapeStatsJson,
+            DebugTrace = debugTrace ?? [],
+            Diagnostics = diagnostics
+        };
+
+    public static QueryTabularResult FromDiagnostics(DiagnosticBag diagnostics, IReadOnlyList<string>? debugTrace = null) => new()
+    {
+        Success = false,
+        DebugTrace = debugTrace ?? [],
+        Diagnostics = diagnostics
+    };
+}

@@ -10,6 +10,17 @@ security data.
 
 ## Recent updates
 
+- 2026-05-27: Updated `ExecuteTabular(...)` to populate `QueryTabularResult.ColumnData` directly during reader scan via the streamed callback path, removing intermediate row-array materialization in tabular execution.
+- 2026-05-27: Replaced remaining planner lookup-owner pass `ToArray()` snapshot hotspots (project/sort/extend/aggregate rewrite copies) with loop-based copy helpers to reduce hot-path allocation churn.
+- 2026-05-27: Added `QueryRuntime.ExecuteTabular(...)` columnar buffered result contract (`Columns` + `ColumnData`) to avoid `object[]` row-array contracts for buffered consumers.
+- 2026-05-27: Trimmed additional planner recursive rewrite allocation hotspots by replacing remaining case/window branch/order remap/substitute LINQ `ToArray()` paths with loop-based helpers.
+- 2026-05-27: Added `QueryRuntime.Execute(kql, maxRows)` bounded-buffer path for non-web callers and `SetCompileEpochs(...)` runtime epoch rotation + compile-cache flush hook for operational cache invalidation control.
+- 2026-05-27: Reduced emitter regex dependence on common `SELECT * FROM ...` shapes by adding structured parsing fast-paths before regex fallback, and trimmed planner arg-rewrite allocations with loop-based arg remap/substitution helpers.
+- 2026-05-27: Switched `Hunting.Web` `QueryService` to execute through `QueryRuntime.ExecuteStreamed(...)` and cap UI materialization with `MaxMaterializedRows`, reducing unbounded row buffering in the default analyst query path.
+- 2026-05-27: Reduced planner rewrite churn further by adding precondition short-circuits for column remap/substitution paths (skip deep recursive rewrites when alias maps/column refs are absent).
+- 2026-05-27: Replaced emitter regex-based stage-reference counting with structured stage-token scanning to reduce regex overhead on SQL-shape optimization paths.
+- 2026-05-27: Extended runtime compile-cache key with explicit `policyEpoch` and `compilerEpoch` dimensions so cached SQL invalidates cleanly across policy/compiler semantic changes.
+- 2026-05-27: Added `QueryRuntime.ExecuteStreamed(...)` callback-based row streaming path so high-volume callers can avoid full `List<object?[]>` buffering and use typed reader getters directly (no per-row object[] allocation).
 - 2026-05-27: Implemented runtime typed row-reader planning in `QueryRuntime` (per-column null-aware primitive getters with fallback to `GetValue`) to reduce per-cell materialization overhead on large result sets.
 - 2026-05-27: Reduced planner allocation churn in `RelationalPlanner` output-name paths by replacing several LINQ `Concat(...).ToHashSet(...)` chains with direct case-insensitive set population helpers.
 - 2026-05-27: Replaced regex-based aggregate projection parsing in `DuckDbQueryEmitter` HAVING-alias rewrite with a structured top-level projection splitter + alias extractor to reduce regex-heavy SQL surgery on a hot rewrite path.

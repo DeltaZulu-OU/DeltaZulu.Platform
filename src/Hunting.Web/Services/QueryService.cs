@@ -16,6 +16,7 @@ public sealed class QueryService : IDisposable
     private readonly QueryRuntime _runtime;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly ILogger<QueryService> _logger;
+    private const int MaxMaterializedRows = 2000;
 
     public QueryService(QueryRuntime runtime, ILogger<QueryService> logger)
     {
@@ -54,7 +55,47 @@ public sealed class QueryService : IDisposable
             // running on the single shared connection, letting a second query in
             // concurrently. A started query runs to completion (or its own
             // CommandTimeout); the semaphore is released only once it truly ends.
-            var result = await Task.Run(() => _runtime.Execute(kql));
+            var rows = new List<object?[]>();
+            var streamResult = await Task.Run(() => _runtime.ExecuteStreamed(kql, reader =>
+            {
+                if (rows.Count >= MaxMaterializedRows)
+                {
+                    return false;
+                }
+
+                var row = new object?[reader.FieldCount];
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    row[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                }
+
+                rows.Add(row);
+                return true;
+            }));
+
+            QueryResult result;
+            if (!streamResult.Success)
+            {
+                result = QueryResult.FromDiagnostics(streamResult.Diagnostics, streamResult.DebugTrace.Count > 0 ? [..streamResult.DebugTrace] : null);
+            }
+            else
+            {
+                var trace = streamResult.DebugTrace.Count > 0 ? new List<string>(streamResult.DebugTrace) : [];
+                if (streamResult.RowCount > rows.Count)
+                {
+                    trace.Add($"Materialization truncated at {MaxMaterializedRows} rows for UI safety.");
+                }
+
+                result = QueryResult.FromData(
+                    [..streamResult.Columns],
+                    rows,
+                    streamResult.GeneratedSql,
+                    streamResult.PlannerStatsJson,
+                    streamResult.SqlShapeStatsJson,
+                    trace,
+                    streamResult.Diagnostics);
+            }
+
             if (result.DebugTrace.Count > 0)
             {
                 _logger.LogDebug(

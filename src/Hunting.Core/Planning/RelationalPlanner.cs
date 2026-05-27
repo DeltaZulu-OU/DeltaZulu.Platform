@@ -203,7 +203,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 var rewrittenExpr = RewriteScalar(proj.Expression, owner, ref applied);
                 if (!Equals(rewrittenExpr, proj.Expression))
                 {
-                    projections ??= p.Projections.ToArray();
+                    projections ??= CopyProjectionExprs(p.Projections);
                     projections[i] = proj with { Expression = rewrittenExpr };
                 }
             }
@@ -230,7 +230,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 var rewrittenExpr = RewriteScalar(sort.Expression, owner, ref applied);
                 if (!Equals(rewrittenExpr, sort.Expression))
                 {
-                    sorts ??= s.Sorts.ToArray();
+                    sorts ??= CopySortExprs(s.Sorts);
                     sorts[i] = sort with { Expression = rewrittenExpr };
                 }
             }
@@ -248,7 +248,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 var rewrittenExpr = RewriteScalar(expr.Expression, owner, ref applied);
                 if (!Equals(rewrittenExpr, expr.Expression))
                 {
-                    ext ??= e.Extensions.ToArray();
+                    ext ??= CopyProjectionExprs(e.Extensions);
                     ext[i] = expr with { Expression = rewrittenExpr };
                 }
             }
@@ -265,7 +265,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 var rewritten = RewriteScalar(a.GroupBy[i], owner, ref applied);
                 if (!Equals(rewritten, a.GroupBy[i]))
                 {
-                    groupBy ??= a.GroupBy.ToArray();
+                    groupBy ??= CopyScalarExprs(a.GroupBy);
                     groupBy[i] = rewritten;
                 }
             }
@@ -277,7 +277,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 var rewrittenExpr = RewriteScalar(agg.Expression, owner, ref applied);
                 if (!Equals(rewrittenExpr, agg.Expression))
                 {
-                    aggregates ??= a.Aggregates.ToArray();
+                    aggregates ??= CopyProjectionExprs(a.Aggregates);
                     aggregates[i] = agg with { Expression = rewrittenExpr };
                 }
             }
@@ -362,6 +362,39 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 default:
                     return expr;
             }
+        }
+
+        private static ProjectionExpr[] CopyProjectionExprs(IReadOnlyList<ProjectionExpr> source)
+        {
+            var copy = new ProjectionExpr[source.Count];
+            for (var i = 0; i < source.Count; i++)
+            {
+                copy[i] = source[i];
+            }
+
+            return copy;
+        }
+
+        private static SortExpr[] CopySortExprs(IReadOnlyList<SortExpr> source)
+        {
+            var copy = new SortExpr[source.Count];
+            for (var i = 0; i < source.Count; i++)
+            {
+                copy[i] = source[i];
+            }
+
+            return copy;
+        }
+
+        private static ScalarExpr[] CopyScalarExprs(IReadOnlyList<ScalarExpr> source)
+        {
+            var copy = new ScalarExpr[source.Count];
+            for (var i = 0; i < source.Count; i++)
+            {
+                copy[i] = source[i];
+            }
+
+            return copy;
         }
 
         private static IReadOnlyDictionary<string, string> LookupOwners(RelNode node)
@@ -1146,29 +1179,37 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
     private static string BoundKey(WindowBound b) =>
         $"{b.Kind}:{(b.Offset is null ? "" : ScalarKey(b.Offset))}";
 
-    private static ScalarExpr RemapColumns(ScalarExpr expr, IReadOnlyDictionary<string, string> aliasToSource) => expr switch
+    private static ScalarExpr RemapColumns(ScalarExpr expr, IReadOnlyDictionary<string, string> aliasToSource)
+    {
+        if (aliasToSource.Count == 0)
+        {
+            return expr;
+        }
+
+        return expr switch
     {
         ColumnRef c when aliasToSource.TryGetValue(c.Name, out var src) => new ColumnRef(src),
         BinaryScalar b => b with { Left = RemapColumns(b.Left, aliasToSource), Right = RemapColumns(b.Right, aliasToSource) },
         UnaryScalar u => u with { Operand = RemapColumns(u.Operand, aliasToSource) },
-        FunctionCall f => f with { Args = f.Args.Select(a => RemapColumns(a, aliasToSource)).ToArray() },
+        FunctionCall f => f with { Args = RemapArgs(f.Args, aliasToSource) },
         CaseScalar c => c with
         {
-            Branches = c.Branches.Select(b => (RemapColumns(b.When, aliasToSource), RemapColumns(b.Then, aliasToSource))).ToArray(),
+            Branches = RemapBranches(c.Branches, aliasToSource),
             Else = RemapColumns(c.Else, aliasToSource)
         },
         WindowScalarExpr w => w with
         {
-            Args = w.Args.Select(a => RemapColumns(a, aliasToSource)).ToArray(),
+            Args = RemapArgs(w.Args, aliasToSource),
             Window = w.Window with
             {
-                PartitionBy = w.Window.PartitionBy.Select(p => RemapColumns(p, aliasToSource)).ToArray(),
-                OrderBy = w.Window.OrderBy.Select(o => o with { Expression = RemapColumns(o.Expression, aliasToSource) }).ToArray()
+                PartitionBy = RemapArgs(w.Window.PartitionBy, aliasToSource),
+                OrderBy = RemapSorts(w.Window.OrderBy, aliasToSource)
             }
         },
-        ListScalar l => l with { Items = l.Items.Select(i => RemapColumns(i, aliasToSource)).ToArray() },
+        ListScalar l => l with { Items = RemapArgs(l.Items, aliasToSource) },
         _ => expr
     };
+    }
 
     private static int CountColumnRefOccurrences(ScalarExpr expr, string name)
     {
@@ -1233,30 +1274,210 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
         return count;
     }
 
-    private static ScalarExpr SubstituteColumn(ScalarExpr expr, string name, ScalarExpr replacement) => expr switch
+    private static ScalarExpr SubstituteColumn(ScalarExpr expr, string name, ScalarExpr replacement)
+    {
+        if (!ContainsUnqualifiedColumnRef(expr, name))
+        {
+            return expr;
+        }
+
+        return expr switch
     {
         ColumnRef c when c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase) => replacement,
         BinaryScalar b => b with { Left = SubstituteColumn(b.Left, name, replacement), Right = SubstituteColumn(b.Right, name, replacement) },
         UnaryScalar u => u with { Operand = SubstituteColumn(u.Operand, name, replacement) },
-        FunctionCall f => f with { Args = f.Args.Select(a => SubstituteColumn(a, name, replacement)).ToArray() },
+        FunctionCall f => f with { Args = SubstituteArgs(f.Args, name, replacement) },
         CaseScalar cs => cs with
         {
-            Branches = cs.Branches.Select(b => (SubstituteColumn(b.When, name, replacement), SubstituteColumn(b.Then, name, replacement))).ToArray(),
+            Branches = SubstituteBranches(cs.Branches, name, replacement),
             Else = SubstituteColumn(cs.Else, name, replacement)
         },
         WindowScalarExpr w => w with
         {
-            Args = w.Args.Select(a => SubstituteColumn(a, name, replacement)).ToArray(),
+            Args = SubstituteArgs(w.Args, name, replacement),
             Window = w.Window with
             {
-                PartitionBy = w.Window.PartitionBy.Select(p => SubstituteColumn(p, name, replacement)).ToArray(),
-                OrderBy = w.Window.OrderBy.Select(o => o with { Expression = SubstituteColumn(o.Expression, name, replacement) }).ToArray()
+                PartitionBy = SubstituteArgs(w.Window.PartitionBy, name, replacement),
+                OrderBy = SubstituteSorts(w.Window.OrderBy, name, replacement)
             }
         },
-        ListScalar l => l with { Items = l.Items.Select(i => SubstituteColumn(i, name, replacement)).ToArray() },
+        ListScalar l => l with { Items = SubstituteArgs(l.Items, name, replacement) },
         _ => expr
     };
+    }
 
+    private static IReadOnlyList<ScalarExpr> RemapArgs(IReadOnlyList<ScalarExpr> args, IReadOnlyDictionary<string, string> aliasToSource)
+    {
+        if (args.Count == 0)
+        {
+            return [];
+        }
+
+        var remapped = new ScalarExpr[args.Count];
+        for (var i = 0; i < args.Count; i++)
+        {
+            remapped[i] = RemapColumns(args[i], aliasToSource);
+        }
+
+        return remapped;
+    }
+
+    private static IReadOnlyList<ScalarExpr> SubstituteArgs(IReadOnlyList<ScalarExpr> args, string name, ScalarExpr replacement)
+    {
+        if (args.Count == 0)
+        {
+            return [];
+        }
+
+        var substituted = new ScalarExpr[args.Count];
+        for (var i = 0; i < args.Count; i++)
+        {
+            substituted[i] = SubstituteColumn(args[i], name, replacement);
+        }
+
+        return substituted;
+    }
+
+    private static IReadOnlyList<(ScalarExpr When, ScalarExpr Then)> RemapBranches(
+        IReadOnlyList<(ScalarExpr When, ScalarExpr Then)> branches,
+        IReadOnlyDictionary<string, string> aliasToSource)
+    {
+        if (branches.Count == 0)
+        {
+            return [];
+        }
+
+        var mapped = new (ScalarExpr When, ScalarExpr Then)[branches.Count];
+        for (var i = 0; i < branches.Count; i++)
+        {
+            mapped[i] = (RemapColumns(branches[i].When, aliasToSource), RemapColumns(branches[i].Then, aliasToSource));
+        }
+
+        return mapped;
+    }
+
+    private static IReadOnlyList<(ScalarExpr When, ScalarExpr Then)> SubstituteBranches(
+        IReadOnlyList<(ScalarExpr When, ScalarExpr Then)> branches,
+        string name,
+        ScalarExpr replacement)
+    {
+        if (branches.Count == 0)
+        {
+            return [];
+        }
+
+        var mapped = new (ScalarExpr When, ScalarExpr Then)[branches.Count];
+        for (var i = 0; i < branches.Count; i++)
+        {
+            mapped[i] = (SubstituteColumn(branches[i].When, name, replacement), SubstituteColumn(branches[i].Then, name, replacement));
+        }
+
+        return mapped;
+    }
+
+    private static IReadOnlyList<SortExpr> RemapSorts(IReadOnlyList<SortExpr> sorts, IReadOnlyDictionary<string, string> aliasToSource)
+    {
+        if (sorts.Count == 0)
+        {
+            return [];
+        }
+
+        var mapped = new SortExpr[sorts.Count];
+        for (var i = 0; i < sorts.Count; i++)
+        {
+            mapped[i] = sorts[i] with { Expression = RemapColumns(sorts[i].Expression, aliasToSource) };
+        }
+
+        return mapped;
+    }
+
+    private static IReadOnlyList<SortExpr> SubstituteSorts(IReadOnlyList<SortExpr> sorts, string name, ScalarExpr replacement)
+    {
+        if (sorts.Count == 0)
+        {
+            return [];
+        }
+
+        var mapped = new SortExpr[sorts.Count];
+        for (var i = 0; i < sorts.Count; i++)
+        {
+            mapped[i] = sorts[i] with { Expression = SubstituteColumn(sorts[i].Expression, name, replacement) };
+        }
+
+        return mapped;
+    }
+
+
+    private static bool ContainsUnqualifiedColumnRef(ScalarExpr expr, string name)
+    {
+        switch (expr)
+        {
+            case ColumnRef c:
+                return c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase);
+            case BinaryScalar b:
+                return ContainsUnqualifiedColumnRef(b.Left, name) || ContainsUnqualifiedColumnRef(b.Right, name);
+            case UnaryScalar u:
+                return ContainsUnqualifiedColumnRef(u.Operand, name);
+            case FunctionCall f:
+                foreach (var a in f.Args)
+                {
+                    if (ContainsUnqualifiedColumnRef(a, name))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            case CaseScalar cs:
+                foreach (var (when, then) in cs.Branches)
+                {
+                    if (ContainsUnqualifiedColumnRef(when, name) || ContainsUnqualifiedColumnRef(then, name))
+                    {
+                        return true;
+                    }
+                }
+
+                return ContainsUnqualifiedColumnRef(cs.Else, name);
+            case WindowScalarExpr w:
+                foreach (var a in w.Args)
+                {
+                    if (ContainsUnqualifiedColumnRef(a, name))
+                    {
+                        return true;
+                    }
+                }
+
+                foreach (var p in w.Window.PartitionBy)
+                {
+                    if (ContainsUnqualifiedColumnRef(p, name))
+                    {
+                        return true;
+                    }
+                }
+
+                foreach (var o in w.Window.OrderBy)
+                {
+                    if (ContainsUnqualifiedColumnRef(o.Expression, name))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            case ListScalar l:
+                foreach (var i in l.Items)
+                {
+                    if (ContainsUnqualifiedColumnRef(i, name))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            default:
+                return false;
+        }
+    }
     private static void CollectColumnRefs(ScalarExpr expr, ISet<string> sink)
     {
         switch (expr)
