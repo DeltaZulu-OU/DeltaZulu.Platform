@@ -113,7 +113,7 @@ From the repository root:
 - Translation specification: [`docs/KQL-to-DuckDB-translation-spec.md`](docs/KQL-to-DuckDB-translation-spec.md)
 - KQL coverage checklist: [`docs/kql-syntax-coverage-checklist.md`](docs/kql-syntax-coverage-checklist.md)
 - Delivery plan: [`docs/ROADMAP.md`](docs/ROADMAP.md)
-- Maintainer context: [`CLAUDE.md`](CLAUDE.md)
+- Maintainer context: [`AGENTS.md`](AGENTS.md)
 
 ## License
 
