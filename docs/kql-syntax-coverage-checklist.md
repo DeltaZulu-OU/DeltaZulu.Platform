@@ -263,6 +263,7 @@ approximation diagnostic, or reject.
 - [ ] `ipv4_is_in_range(ip, cidr)` — CIDR membership — *complexity: requires CIDR parsing + masking*
 - [ ] `ipv4_is_private(ip)` — private range test — *dependency: depends on ipv4_is_in_range*
 - [ ] `format_ipv4(ip)` — IP formatting — *frequency*
+- [m] Runtime foundation: DuckDB core `inet` extension is now loaded by default at connection bootstrap to support pragmatic IP/CIDR-native implementations for pending IP functions.
 - [x] `base64_encode_tostring(s)` → `to_base64(CAST(s AS BLOB))`
 - [x] `base64_decode_tostring(s)` → `CAST(from_base64(s) AS VARCHAR)`
 - [ ] `url_encode(s)` / `url_decode(s)` — URL encoding — *frequency*

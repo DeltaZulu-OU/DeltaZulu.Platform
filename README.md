@@ -45,7 +45,7 @@ Current public schema families in code include event-family surfaces `golden.Pro
 - Emitter output-column/projection helper paths now use loop-based list/set population instead of LINQ `ToArray()` in lookup payload and output-column discovery flows.
 - Emitter `in`/`!in` list emission no longer snapshots scalar item SQL with LINQ `ToArray()` before `string.Join`, trimming one more allocation hotspot on expression emission paths.
 - Runtime `QueryResult` is now columnar-first (`ColumnData` + `GetValue(row, col)`) and buffered/runtime/web materialization paths were migrated off `IReadOnlyList<object?[]>` row-array contracts.
-
+- DuckDB connection initialization now loads the packaged core `inet` extension by default to enable pragmatic IP/CIDR-native function mappings without adding a community-extension dependency.
 - The repository currently includes:
   - `Hunting.Core`: translation, relational model, planner, catalog/policy, and DuckDB SQL emitter.
   - `Hunting.Schema`: dedicated schema-definition project (public view schemas + parser mappings).
@@ -121,4 +121,4 @@ From the repository root:
 This project is licensed under the terms in [`LICENSE`](LICENSE).
 
 
-*Last updated: 2026-05-27 — continued hot-path optimization across runtime/planner/emitter paths: typed result readers in QueryRuntime, reduced planner/emitter allocation churn in projection-output helpers, and structured aggregate-alias projection parsing in the emitter, with no construct-scope/parity change.*
+*Last updated: 2026-05-27 — continued hot-path optimization across runtime/planner/emitter paths, plus default packaged DuckDB `inet` extension load in connection initialization for pragmatic IP-native function support without community-extension dependency.*

@@ -19,12 +19,17 @@ using DuckDB.NET.Data;
 public sealed class DuckDbConnectionFactory : IDisposable
 {
     private readonly string _connectionString;
+    private readonly IReadOnlyList<string> _startupSql;
     private readonly Lock _lock = new();
     private DuckDBConnection? _connection;
 
-    public DuckDbConnectionFactory(string connectionString = "DataSource=:memory:")
+    public DuckDbConnectionFactory(
+        string connectionString = "DataSource=:memory:",
+        IReadOnlyList<string>? startupSql = null)
     {
         _connectionString = connectionString;
+        _startupSql = startupSql ?? [
+            "LOAD inet"];
     }
 
     /// <summary>
@@ -37,10 +42,36 @@ public sealed class DuckDbConnectionFactory : IDisposable
         {
             if (_connection is null)
             {
-                _connection = new DuckDBConnection(_connectionString);
-                _connection.Open();
+                var connection = new DuckDBConnection(_connectionString);
+                connection.Open();
+
+                try
+                {
+                    ApplyStartupSql(connection, _startupSql);
+                    _connection = connection;
+                }
+                catch
+                {
+                    connection.Dispose();
+                    throw;
+                }
             }
             return _connection;
+        }
+    }
+
+    private static void ApplyStartupSql(DuckDBConnection connection, IReadOnlyList<string> startupSql)
+    {
+        if (startupSql.Count == 0)
+        {
+            return;
+        }
+
+        using var cmd = connection.CreateCommand();
+        foreach (var sql in startupSql)
+        {
+            cmd.CommandText = sql;
+            cmd.ExecuteNonQuery();
         }
     }
 

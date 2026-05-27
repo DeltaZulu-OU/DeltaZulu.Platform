@@ -322,3 +322,4 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 
 
 - 2026-05-27: Completed low-risk scalar/operator tranche: `between`/`!between`, `print`, `rand`, trig family, and `format_bytes`; checklist and tests updated.
+- 2026-05-27: Runtime bootstrap now loads packaged DuckDB `inet` by default via `DuckDbConnectionFactory`, establishing core-only IP/CIDR foundation (no community extension dependency).
