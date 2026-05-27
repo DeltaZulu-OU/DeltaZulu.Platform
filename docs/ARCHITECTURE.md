@@ -11,6 +11,13 @@ access raw schemas.
 The system provides a Microsoft Sentinel / Defender Advanced Hunting-like experience over local
 or embedded security data. Analysts query logical event families (for MVP, ASIM-shaped Golden contracts) — not files, staging tables, or DuckDB internals.
 
+
+## ADR Alignment Snapshot
+
+Current implementation aligns with accepted ADRs for parser-view SQL boundaries (ADR 0001), golden-only query surface (ADR 0002), two-seam testing (ADR 0003), semantics-preserving planner rewrites (ADR 0004), single-connection DuckDB MVP runtime (ADR 0005), semantic-safety rejection policy (ADR 0006), planner fast-path gateway direction (ADR 0011), MVP rejection of query-condition-cache extension (ADR 0012), and staged pragmatic `search` implementation boundaries (ADR 0014).
+
+Proposed future tracks remain open for Quartz-backed scheduling (ADR 0007), multi-backend routing/contracts (ADR 0009), render sidecar + Vizor.ECharts compilation (ADR 0010), and time-series compilation contracts (ADR 0015). ADR 0013 is deprecated historical context and is not the active `search` direction.
+
 ## Structural Pattern
 
 The architecture is structurally CQRS, not by design choice but because the problem shape

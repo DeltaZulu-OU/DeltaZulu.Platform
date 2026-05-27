@@ -96,6 +96,7 @@ docs/
   ROADMAP.md
   KQL-to-DuckDB-translation-spec.md
   kql-syntax-coverage-checklist.md
+  /adr				   # Architecture Decision Records (ADRs) documenting key design decisions and trade-offs
 ```
 
 ## Prerequisites
@@ -125,6 +126,3 @@ From the repository root:
 ## License
 
 This project is licensed under the terms in [`LICENSE`](LICENSE).
-
-
-*Last updated: 2026-05-27 — continued hot-path optimization across runtime/planner/emitter paths, plus default packaged DuckDB `inet` extension load in connection initialization for pragmatic IP-native function support without community-extension dependency.*
