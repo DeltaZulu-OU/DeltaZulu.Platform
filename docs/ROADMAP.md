@@ -319,7 +319,10 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 | DuckDB connection in Blazor Server | `DuckDbConnectionFactory` + `QueryService` serialization | ✅ Implemented |
 ---
 
-*Last updated: 2026-05-27 — planner fast-path gateway (ADR 0011) introduced in runtime with configurable structural/volume admission controls and decision telemetry.*
+*Last updated: 2026-05-27 — planner fast-path gateway (ADR 0011) plus ADR-0010 render-POC runtime sidecar extraction scaffolding (terminal `render` metadata + table fallback diagnostics).*
+
+- 2026-05-27: Added web UI Table/Render result tabs for ADR-0010 sidecar visibility; render metadata now inspectable without affecting table semantics, and unsupported render kinds now raise non-fatal warnings.
+- 2026-05-27: Added runtime tests for ADR-0010 subset syntax/contract behavior (metadata-only semantics, unsupported-kind warning fallback, and render sidecar propagation across Execute/ExecuteStreamed/ExecuteTabular).
 
 
 - 2026-05-27: Completed low-risk scalar/operator tranche: `between`/`!between`, `print`, `rand`, trig family, and `format_bytes`; checklist and tests updated.

@@ -452,9 +452,39 @@ html, body {
 }
 
 /* ─── Results table ─────────────────────────────────────────────────────── */
+.hunt-results-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.hunt-tab-active {
+    border-color: var(--accent);
+    color: var(--text-main);
+    background: rgba(88, 166, 255, 0.12);
+}
+
 .hunt-table-wrapper {
     flex: 1;
     overflow: auto;
+}
+
+.hunt-render-panel {
+    padding: 16px;
+    display: grid;
+    gap: 8px;
+    color: var(--text-main);
+}
+
+.hunt-render-fallback {
+    color: #ffb86b;
+}
+
+.hunt-render-note {
+    color: var(--text-dim);
+    font-size: 12px;
+    margin-top: 6px;
 }
 
 .hunt-table {

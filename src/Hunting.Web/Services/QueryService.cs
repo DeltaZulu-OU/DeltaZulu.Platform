@@ -76,7 +76,7 @@ public sealed class QueryService : IDisposable
             QueryResult result;
             if (!streamResult.Success)
             {
-                result = QueryResult.FromDiagnostics(streamResult.Diagnostics, streamResult.DebugTrace.Count > 0 ? [..streamResult.DebugTrace] : null);
+                result = QueryResult.FromDiagnostics(streamResult.Diagnostics, streamResult.DebugTrace.Count > 0 ? [..streamResult.DebugTrace] : null, streamResult.RenderSpec);
             }
             else
             {
@@ -93,7 +93,8 @@ public sealed class QueryService : IDisposable
                     streamResult.PlannerStatsJson,
                     streamResult.SqlShapeStatsJson,
                     trace,
-                    streamResult.Diagnostics);
+                    streamResult.Diagnostics,
+                    streamResult.RenderSpec);
             }
 
             if (result.DebugTrace.Count > 0)

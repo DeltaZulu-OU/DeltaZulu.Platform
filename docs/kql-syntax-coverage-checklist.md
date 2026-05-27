@@ -113,7 +113,7 @@ approximation diagnostic, or reject.
 
 ### 1.9 Rendering and Visualization
 
-- [m] `render` — visualization hint → metadata-only (does not emit SQL; captured as `RenderMetadata` side-channel for UI)
+- [m] `render` — visualization hint → metadata-only (does not emit SQL; captured as `RenderSpec` side-channel for UI/runtime; current web UX exposes sidecar via Table/Render result tabs; unsupported kinds produce non-fatal warnings + table fallback; runtime execution contracts covered by EndToEnd tests)
 
 ### 1.10 Search and Find
 

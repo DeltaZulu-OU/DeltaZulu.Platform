@@ -109,64 +109,105 @@
 
         @if (_result?.Success == true && _result.RowCount > 0)
         {
-            <div class="hunt-table-wrapper">
-                <table class="hunt-table">
-                    <thead>
-                        <tr>
-                            @foreach (var col in _result.Columns)
-                            {
-                                <th class="hunt-th" @onclick="() => SortBy(col.Name)">
-                                    @col.Name
-                                    @if (_sortColumn == col.Name)
-                                    {
-                                        @(_sortAsc ? " ▲" : " ▼")
-                                    }
-                                </th>
-                            }
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var rowIndex in VisibleRows())
-                        {
-                            <tr class="hunt-tr">
-                                @for (int i = 0; i < _result.Columns.Count; i++)
-                                {
-                                    var cellIndex = i;
-                                    var cellValue = _result.GetValue(rowIndex, cellIndex);
-                                    var hasDrawer = ShouldShowCellDrawerButton(cellValue);
-                                    <td class="hunt-td">
-                                        <div class="hunt-cell-content">
-                                            @if (hasDrawer)
-                                            {
-                                                <button class="hunt-cell-chevron"
-                                                        @onclick:stopPropagation="true"
-                                                        @onclick="() => OpenCellDrawer(_result.Columns[cellIndex].Name, cellValue, true)"
-                                                        aria-label="Open full cell content">
-                                                    &gt;
-                                                </button>
-                                            }
-                                            <span class="hunt-cell-text">@FormatCell(cellValue)</span>
-                                        </div>
-                                    </td>
-                                }
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+            <div class="hunt-results-tabs">
+                <button class="hunt-btn @GetTabButtonClass(ResultTab.Table)" @onclick="() => SelectTab(ResultTab.Table)">Table</button>
+                <button class="hunt-btn @GetTabButtonClass(ResultTab.Render)" @onclick="() => SelectTab(ResultTab.Render)">Render</button>
             </div>
 
-            @if (_result.RowCount > _pageSize)
+            @if (_activeTab == ResultTab.Table)
             {
-                <div class="hunt-pagination">
-                    <button class="hunt-btn" disabled="@(_page == 0)"
-                            @onclick="() => _page--">
-                        ◀ Prev
-                    </button>
-                    <span>Page @(_page + 1) of @TotalPages</span>
-                    <button class="hunt-btn" disabled="@(_page >= TotalPages - 1)"
-                            @onclick="() => _page++">
-                        Next ▶
-                    </button>
+                <div class="hunt-table-wrapper">
+                    <table class="hunt-table">
+                        <thead>
+                            <tr>
+                                @foreach (var col in _result.Columns)
+                                {
+                                    <th class="hunt-th" @onclick="() => SortBy(col.Name)">
+                                        @col.Name
+                                        @if (_sortColumn == col.Name)
+                                        {
+                                            @(_sortAsc ? " ▲" : " ▼")
+                                        }
+                                    </th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rowIndex in VisibleRows())
+                            {
+                                <tr class="hunt-tr">
+                                    @for (int i = 0; i < _result.Columns.Count; i++)
+                                    {
+                                        var cellIndex = i;
+                                        var cellValue = _result.GetValue(rowIndex, cellIndex);
+                                        var hasDrawer = ShouldShowCellDrawerButton(cellValue);
+                                        <td class="hunt-td">
+                                            <div class="hunt-cell-content">
+                                                @if (hasDrawer)
+                                                {
+                                                    <button class="hunt-cell-chevron"
+                                                            @onclick:stopPropagation="true"
+                                                            @onclick="() => OpenCellDrawer(_result.Columns[cellIndex].Name, cellValue, true)"
+                                                            aria-label="Open full cell content">
+                                                        &gt;
+                                                    </button>
+                                                }
+                                                <span class="hunt-cell-text">@FormatCell(cellValue)</span>
+                                            </div>
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (_result.RowCount > _pageSize)
+                {
+                    <div class="hunt-pagination">
+                        <button class="hunt-btn" disabled="@(_page == 0)"
+                                @onclick="() => _page--">
+                            ◀ Prev
+                        </button>
+                        <span>Page @(_page + 1) of @TotalPages</span>
+                        <button class="hunt-btn" disabled="@(_page >= TotalPages - 1)"
+                                @onclick="() => _page++">
+                            Next ▶
+                        </button>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="hunt-render-panel">
+                    <h4>Render metadata</h4>
+                    <div><strong>Kind:</strong> @_result.RenderSpec.Kind</div>
+                    @if (!string.IsNullOrWhiteSpace(_result.RenderSpec.Title))
+                    {
+                        <div><strong>Title:</strong> @_result.RenderSpec.Title</div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_result.RenderSpec.XColumn))
+                    {
+                        <div><strong>X column:</strong> @_result.RenderSpec.XColumn</div>
+                    }
+                    @if (_result.RenderSpec.YColumns.Count > 0)
+                    {
+                        <div><strong>Y columns:</strong> @string.Join(", ", _result.RenderSpec.YColumns)</div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_result.RenderSpec.Series))
+                    {
+                        <div><strong>Series:</strong> @_result.RenderSpec.Series</div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_result.RenderSpec.Legend))
+                    {
+                        <div><strong>Legend:</strong> @_result.RenderSpec.Legend</div>
+                    }
+                    <div><strong>Stacked:</strong> @(_result.RenderSpec.IsStacked ? "Yes" : "No")</div>
+                    @if (_result.RenderSpec.IsFallback && !string.IsNullOrWhiteSpace(_result.RenderSpec.FallbackReason))
+                    {
+                        <div class="hunt-render-fallback">@_result.RenderSpec.FallbackReason</div>
+                    }
+                    <p class="hunt-render-note">Chart rendering adapter is pending; use this tab to inspect resolved render directives.</p>
                 </div>
             }
         }
@@ -222,6 +263,7 @@
     private string? _sortColumn;
     private bool _sortAsc = true;
     private int _page;
+    private ResultTab _activeTab = ResultTab.Table;
     private const int _pageSize = 100;
     private int TotalPages => ((_result?.RowCount ?? 0) + _pageSize - 1) / _pageSize;
     private CancellationTokenSource _cts = new();
@@ -250,6 +292,7 @@
         _showSql = false;
         _page = 0;
         _sortColumn = null;
+        _activeTab = ResultTab.Table;
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
         try
@@ -400,6 +443,15 @@
         }
 
         return rowIndexes.Skip(_page * _pageSize).Take(_pageSize);
+    }
+
+    private void SelectTab(ResultTab tab) => _activeTab = tab;
+    private string GetTabButtonClass(ResultTab tab) => _activeTab == tab ? "hunt-tab-active" : string.Empty;
+
+    private enum ResultTab
+    {
+        Table,
+        Render
     }
 
     private static string FormatCell(object? value)

@@ -47,6 +47,10 @@ Current public schema families in code include event-family surfaces `golden.Pro
 - Emitter output-column/projection helper paths now use loop-based list/set population instead of LINQ `ToArray()` in lookup payload and output-column discovery flows.
 - Emitter `in`/`!in` list emission no longer snapshots scalar item SQL with LINQ `ToArray()` before `string.Join`, trimming one more allocation hotspot on expression emission paths.
 - Runtime `QueryResult` is now columnar-first (`ColumnData` + `GetValue(row, col)`) and buffered/runtime/web materialization paths were migrated off `IReadOnlyList<object?[]>` row-array contracts.
+- Added ADR-0010 POC runtime support for terminal `render` extraction into a typed `RenderSpec` sidecar (with unsupported-kind fallback to table metadata).
+- Hunt results now expose a Table/Render tab switch: table data remains primary while the Render tab shows resolved render-sidecar metadata/fallback details from `render` directives.
+- Render fallback behavior now emits non-fatal query warnings alongside the sidecar fallback reason so unsupported render kinds are explicit to analysts.
+- Added runtime contract coverage for ADR-0010 subset behavior: metadata-only render semantics, unsupported-kind fallback warnings, and sidecar propagation across buffered/streamed/tabular execution paths.
 - DuckDB connection initialization now loads the packaged core `inet` extension by default to enable pragmatic IP/CIDR-native function mappings without adding a community-extension dependency.
 - The repository currently includes:
   - `Hunting.Core`: translation, relational model, planner, catalog/policy, and DuckDB SQL emitter.

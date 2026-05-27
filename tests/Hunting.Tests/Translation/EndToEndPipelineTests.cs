@@ -500,6 +500,55 @@ public sealed class EndToEndPipelineTests
         Assert.IsTrue(streamed.Diagnostics.HasErrors);
     }
 
+    [TestMethod]
+    [Description("Terminal render directive is extracted as metadata and does not change row semantics")]
+    public void Runtime_RenderDirective_TerminalMetadataOnly()
+    {
+        const string baseQuery = "DeviceProcessEvents | project Timestamp, ProcessId | take 3";
+        var withoutRender = _runtime.Execute(baseQuery);
+        var withRender = _runtime.Execute($"{baseQuery} | render linechart xcolumn=Timestamp ycolumns=ProcessId title='Proc trend'");
+
+        AssertSuccess(withoutRender);
+        AssertSuccess(withRender);
+        Assert.AreEqual(withoutRender.RowCount, withRender.RowCount, "Render metadata must not alter row count.");
+        Assert.AreEqual(withoutRender.ColumnCount, withRender.ColumnCount, "Render metadata must not alter column shape.");
+        Assert.AreEqual(Hunting.Core.Render.RenderKind.Linechart, withRender.RenderSpec.Kind);
+        Assert.AreEqual("Timestamp", withRender.RenderSpec.XColumn);
+        Assert.AreEqual(1, withRender.RenderSpec.YColumns.Count);
+        Assert.AreEqual("ProcessId", withRender.RenderSpec.YColumns[0]);
+        Assert.AreEqual("Proc", withRender.RenderSpec.Title, "Current parser tokenizes values by spaces; this test pins current subset behavior.");
+    }
+
+    [TestMethod]
+    [Description("Unsupported render kind falls back to table with non-fatal warning diagnostics")]
+    public void Runtime_RenderDirective_UnsupportedKind_WarnsAndFallsBack()
+    {
+        var result = _runtime.Execute("DeviceProcessEvents | take 2 | render treemap");
+        AssertSuccess(result);
+        Assert.AreEqual(Hunting.Core.Render.RenderKind.Table, result.RenderSpec.Kind);
+        Assert.IsTrue(result.RenderSpec.IsFallback);
+        Assert.IsTrue(result.Diagnostics.All.Any(d => d.Severity == Hunting.Core.Policy.DiagnosticSeverity.Warning
+            && d.Message.Contains("Unsupported render kind", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    [TestMethod]
+    [Description("Render sidecar is preserved in ExecuteStreamed and ExecuteTabular contracts")]
+    public void Runtime_RenderDirective_StreamedAndTabularContracts_PreserveRenderSpec()
+    {
+        var streamed = _runtime.ExecuteStreamed(
+            "DeviceProcessEvents | project DeviceName, ProcessId | take 4 | render barchart xcolumn=DeviceName ycolumns=ProcessId",
+            _ => true);
+        Assert.IsTrue(streamed.Success);
+        Assert.AreEqual(Hunting.Core.Render.RenderKind.Barchart, streamed.RenderSpec.Kind);
+        Assert.AreEqual("DeviceName", streamed.RenderSpec.XColumn);
+
+        var tabular = _runtime.ExecuteTabular(
+            "DeviceProcessEvents | project DeviceName, ProcessId | take 4 | render columnchart xcolumn=DeviceName ycolumns=ProcessId");
+        Assert.IsTrue(tabular.Success);
+        Assert.AreEqual(Hunting.Core.Render.RenderKind.Columnchart, tabular.RenderSpec.Kind);
+        Assert.AreEqual("DeviceName", tabular.RenderSpec.XColumn);
+    }
+
     // ─── Helpers ────────────────────────────────────────────────────
 
     private static void AssertSuccess(QueryResult result) => Assert.IsTrue(result.Success,

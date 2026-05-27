@@ -5,6 +5,7 @@ using System.Text.Json;
 using DuckDB.NET.Data;
 using Hunting.Core.Catalog;
 using Hunting.Core.DuckDbSql;
+using Hunting.Core.Render;
 using Hunting.Core.Planning;
 using Hunting.Core.QueryModel;
 using Hunting.Core.Policy;
@@ -159,7 +160,7 @@ public sealed class QueryRuntime
 
         if (!streamed.Success)
         {
-            return QueryTabularResult.FromDiagnostics(streamed.Diagnostics, streamed.DebugTrace);
+            return QueryTabularResult.FromDiagnostics(streamed.Diagnostics, streamed.DebugTrace, streamed.RenderSpec);
         }
 
         columnData ??= CreateColumnData(streamed.Columns.Count);
@@ -181,7 +182,8 @@ public sealed class QueryRuntime
             streamed.PlannerStatsJson,
             streamed.SqlShapeStatsJson,
             streamed.DebugTrace,
-            streamed.Diagnostics);
+            streamed.Diagnostics,
+            streamed.RenderSpec);
     }
 
     private static List<object?>[] CreateColumnData(int count)
@@ -201,21 +203,26 @@ public sealed class QueryRuntime
         var debugTrace = _developerMode ? new List<string>() : null;
         debugTrace?.Add($"Runtime start: plannerMaxIterations={_plannerMaxIterations}, timeoutSeconds={_timeoutSeconds}");
 
-        var cacheKey = new CompileCacheKey(kql, _catalog.CatalogVersion, _plannerMaxIterations, _defaultLimit, _policyEpoch, _compilerEpoch);
+        var (queryWithoutRender, renderSpec) = RenderDirectiveParser.Extract(kql);
+        if (renderSpec.IsFallback && !string.IsNullOrWhiteSpace(renderSpec.FallbackReason))
+        {
+            diagnostics.AddWarning(DiagnosticPhase.Translate, renderSpec.FallbackReason);
+        }
+        var cacheKey = new CompileCacheKey(queryWithoutRender, _catalog.CatalogVersion, _plannerMaxIterations, _defaultLimit, _policyEpoch, _compilerEpoch);
         if (_compileCacheCapacity > 0 && _compileCache.TryGetValue(cacheKey, out var cacheHit))
         {
             debugTrace?.Add($"Compile cache hit: catalogVersion={cacheKey.CatalogVersion}");
-            return ExecuteSql(cacheHit.Sql, maxRows, diagnostics, debugTrace, plannerStatsJson: cacheHit.PlannerStatsJson, sqlShapeStatsJson: cacheHit.SqlShapeStatsJson, emitterStatsJson: cacheHit.EmitterStatsJson);
+            return ExecuteSql(cacheHit.Sql, maxRows, diagnostics, debugTrace, plannerStatsJson: cacheHit.PlannerStatsJson, sqlShapeStatsJson: cacheHit.SqlShapeStatsJson, emitterStatsJson: cacheHit.EmitterStatsJson, renderSpec: renderSpec);
         }
 
         // Phase 1: Parse + Translate
         var translator = new KustoToRelational(_catalog, diagnostics);
-        var relNode = translator.Translate(kql);
+        var relNode = translator.Translate(queryWithoutRender);
         debugTrace?.Add($"Translate complete: hasErrors={diagnostics.HasErrors}, relNode={(relNode is null ? "null" : relNode.GetType().Name)}");
 
         if (diagnostics.HasErrors || relNode is null)
         {
-            return QueryResult.FromDiagnostics(diagnostics, debugTrace);
+            return QueryResult.FromDiagnostics(diagnostics, debugTrace, renderSpec);
         }
 
         // Phase 2: Optional logical planning
@@ -239,7 +246,7 @@ public sealed class QueryRuntime
                 "Failed during logical planning stage.",
                 ex.Message,
                 code: QueryDiagnosticCodes.PlannerFailed);
-            return QueryResult.FromDiagnostics(diagnostics, debugTrace);
+            return QueryResult.FromDiagnostics(diagnostics, debugTrace, renderSpec);
         }
 
         string? plannerStats = null;
@@ -268,7 +275,7 @@ public sealed class QueryRuntime
                 "Failed to generate SQL from query model.",
                 ex.Message,
                 code: QueryDiagnosticCodes.SqlEmitFailed);
-            return QueryResult.FromDiagnostics(diagnostics, debugTrace);
+            return QueryResult.FromDiagnostics(diagnostics, debugTrace, renderSpec);
         }
 
         // Phase 4: Execute against DuckDB
@@ -304,7 +311,7 @@ public sealed class QueryRuntime
                 debugTrace?.Add("Compile cache store");
             }
 
-            return QueryResult.FromData(columns, columnData, exposedSql, plannerStats, sqlShapeStats, debugTrace, diagnostics);
+            return QueryResult.FromData(columns, columnData, exposedSql, plannerStats, sqlShapeStats, debugTrace, diagnostics, renderSpec);
         }
         catch (DuckDBException ex)
         {
@@ -312,7 +319,7 @@ public sealed class QueryRuntime
                 NormalizeDuckDbError(ex.Message),
                 BuildDeveloperDetail(sql, ex.Message),
                 code: QueryDiagnosticCodes.ExecuteDuckDbFailed);
-            return QueryResult.FromDiagnostics(diagnostics, debugTrace);
+            return QueryResult.FromDiagnostics(diagnostics, debugTrace, renderSpec);
         }
         catch (Exception ex)
         {
@@ -320,7 +327,7 @@ public sealed class QueryRuntime
                 "An internal error occurred while executing the query.",
                 BuildDeveloperDetail(sql, $"{ex.GetType().Name}: {ex.Message}"),
                 code: QueryDiagnosticCodes.ExecuteUnhandledFailed);
-            return QueryResult.FromDiagnostics(diagnostics, debugTrace);
+            return QueryResult.FromDiagnostics(diagnostics, debugTrace, renderSpec);
         }
     }
 
@@ -337,7 +344,12 @@ public sealed class QueryRuntime
         var debugTrace = _developerMode ? new List<string>() : null;
         debugTrace?.Add($"Runtime start (streamed): plannerMaxIterations={_plannerMaxIterations}, timeoutSeconds={_timeoutSeconds}");
 
-        var cacheKey = new CompileCacheKey(kql, _catalog.CatalogVersion, _plannerMaxIterations, _defaultLimit, _policyEpoch, _compilerEpoch);
+        var (queryWithoutRender, renderSpec) = RenderDirectiveParser.Extract(kql);
+        if (renderSpec.IsFallback && !string.IsNullOrWhiteSpace(renderSpec.FallbackReason))
+        {
+            diagnostics.AddWarning(DiagnosticPhase.Translate, renderSpec.FallbackReason);
+        }
+        var cacheKey = new CompileCacheKey(queryWithoutRender, _catalog.CatalogVersion, _plannerMaxIterations, _defaultLimit, _policyEpoch, _compilerEpoch);
         string sql;
         string? plannerStats = null;
         string? sqlShapeStats = null;
@@ -354,10 +366,10 @@ public sealed class QueryRuntime
         else
         {
             var translator = new KustoToRelational(_catalog, diagnostics);
-            var relNode = translator.Translate(kql);
+            var relNode = translator.Translate(queryWithoutRender);
             if (diagnostics.HasErrors || relNode is null)
             {
-                return QueryStreamResult.FromDiagnostics(diagnostics, debugTrace);
+                return QueryStreamResult.FromDiagnostics(diagnostics, debugTrace, renderSpec);
             }
 
             var plannerDecision = DecidePlannerExecution(relNode);
@@ -405,17 +417,17 @@ public sealed class QueryRuntime
                 }
             }
 
-            return QueryStreamResult.FromData(columns, rowCount, _developerMode ? sql : null, plannerStats, sqlShapeStats, debugTrace, diagnostics);
+            return QueryStreamResult.FromData(columns, rowCount, _developerMode ? sql : null, plannerStats, sqlShapeStats, debugTrace, diagnostics, renderSpec);
         }
         catch (DuckDBException ex)
         {
             diagnostics.AddError(DiagnosticPhase.Execute, NormalizeDuckDbError(ex.Message), BuildDeveloperDetail(sql, ex.Message), code: QueryDiagnosticCodes.ExecuteDuckDbFailed);
-            return QueryStreamResult.FromDiagnostics(diagnostics, debugTrace);
+            return QueryStreamResult.FromDiagnostics(diagnostics, debugTrace, renderSpec);
         }
         catch (Exception ex)
         {
             diagnostics.AddError(DiagnosticPhase.Execute, "An internal error occurred while executing the query.", BuildDeveloperDetail(sql, $"{ex.GetType().Name}: {ex.Message}"), code: QueryDiagnosticCodes.ExecuteUnhandledFailed);
-            return QueryStreamResult.FromDiagnostics(diagnostics, debugTrace);
+            return QueryStreamResult.FromDiagnostics(diagnostics, debugTrace, renderSpec);
         }
     }
 
@@ -426,7 +438,8 @@ public sealed class QueryRuntime
         List<string>? debugTrace,
         string? plannerStatsJson,
         string? sqlShapeStatsJson,
-        string? emitterStatsJson)
+        string? emitterStatsJson,
+        RenderSpec renderSpec)
     {
         try
         {
@@ -452,7 +465,7 @@ public sealed class QueryRuntime
             {
                 debugTrace?.Add($"Emitter stats: {emitterStatsJson}");
             }
-            return QueryResult.FromData(columns, columnData, exposedSql, plannerStatsJson, sqlShapeStatsJson, debugTrace, diagnostics);
+            return QueryResult.FromData(columns, columnData, exposedSql, plannerStatsJson, sqlShapeStatsJson, debugTrace, diagnostics, renderSpec);
         }
         catch (DuckDBException ex)
         {
@@ -460,7 +473,7 @@ public sealed class QueryRuntime
                 NormalizeDuckDbError(ex.Message),
                 BuildDeveloperDetail(sql, ex.Message),
                 code: QueryDiagnosticCodes.ExecuteDuckDbFailed);
-            return QueryResult.FromDiagnostics(diagnostics, debugTrace);
+            return QueryResult.FromDiagnostics(diagnostics, debugTrace, renderSpec);
         }
         catch (Exception ex)
         {
@@ -468,7 +481,7 @@ public sealed class QueryRuntime
                 "An internal error occurred while executing the query.",
                 BuildDeveloperDetail(sql, $"{ex.GetType().Name}: {ex.Message}"),
                 code: QueryDiagnosticCodes.ExecuteUnhandledFailed);
-            return QueryResult.FromDiagnostics(diagnostics, debugTrace);
+            return QueryResult.FromDiagnostics(diagnostics, debugTrace, renderSpec);
         }
     }
 
@@ -763,6 +776,7 @@ public sealed class QueryResult
     public string? SqlShapeStatsJson { get; init; }
     public IReadOnlyList<string> DebugTrace { get; init; } = [];
     public DiagnosticBag Diagnostics { get; init; } = new();
+    public RenderSpec RenderSpec { get; init; } = RenderSpecDefaults.Table();
 
     public int RowCount => ColumnData.Count == 0 ? 0 : ColumnData[0].Count;
     public int ColumnCount => Columns.Count;
@@ -776,7 +790,8 @@ public sealed class QueryResult
         string? plannerStatsJson,
         string? sqlShapeStatsJson,
         List<string>? debugTrace,
-        DiagnosticBag diagnostics)
+        DiagnosticBag diagnostics,
+        RenderSpec renderSpec)
     {
         var readonlyColumnData = new IReadOnlyList<object?>[columnData.Length];
         for (var i = 0; i < columnData.Length; i++)
@@ -793,15 +808,17 @@ public sealed class QueryResult
             PlannerStatsJson = plannerStatsJson,
             SqlShapeStatsJson = sqlShapeStatsJson,
             DebugTrace = debugTrace ?? [],
-            Diagnostics = diagnostics
+            Diagnostics = diagnostics,
+            RenderSpec = renderSpec
         };
     }
 
-    public static QueryResult FromDiagnostics(DiagnosticBag diagnostics, List<string>? debugTrace = null) => new QueryResult
+    public static QueryResult FromDiagnostics(DiagnosticBag diagnostics, List<string>? debugTrace = null, RenderSpec? renderSpec = null) => new QueryResult
     {
         Success = false,
         DebugTrace = debugTrace ?? [],
-        Diagnostics = diagnostics
+        Diagnostics = diagnostics,
+        RenderSpec = renderSpec ?? RenderSpecDefaults.Table()
     };
 }
 
@@ -821,8 +838,9 @@ public sealed class QueryStreamResult
     public string? SqlShapeStatsJson { get; init; }
     public IReadOnlyList<string> DebugTrace { get; init; } = [];
     public DiagnosticBag Diagnostics { get; init; } = new();
+    public RenderSpec RenderSpec { get; init; } = RenderSpecDefaults.Table();
 
-    public static QueryStreamResult FromData(List<ResultColumn> columns, int rowCount, string? sql, string? plannerStatsJson, string? sqlShapeStatsJson, List<string>? debugTrace, DiagnosticBag diagnostics) => new()
+    public static QueryStreamResult FromData(List<ResultColumn> columns, int rowCount, string? sql, string? plannerStatsJson, string? sqlShapeStatsJson, List<string>? debugTrace, DiagnosticBag diagnostics, RenderSpec renderSpec) => new()
     {
         Success = true,
         Columns = columns,
@@ -831,14 +849,16 @@ public sealed class QueryStreamResult
         PlannerStatsJson = plannerStatsJson,
         SqlShapeStatsJson = sqlShapeStatsJson,
         DebugTrace = debugTrace ?? [],
-        Diagnostics = diagnostics
+        Diagnostics = diagnostics,
+        RenderSpec = renderSpec
     };
 
-    public static QueryStreamResult FromDiagnostics(DiagnosticBag diagnostics, List<string>? debugTrace = null) => new()
+    public static QueryStreamResult FromDiagnostics(DiagnosticBag diagnostics, List<string>? debugTrace = null, RenderSpec? renderSpec = null) => new()
     {
         Success = false,
         DebugTrace = debugTrace ?? [],
-        Diagnostics = diagnostics
+        Diagnostics = diagnostics,
+        RenderSpec = renderSpec ?? RenderSpecDefaults.Table()
     };
 }
 
@@ -853,6 +873,7 @@ public sealed class QueryTabularResult
     public string? SqlShapeStatsJson { get; init; }
     public IReadOnlyList<string> DebugTrace { get; init; } = [];
     public DiagnosticBag Diagnostics { get; init; } = new();
+    public RenderSpec RenderSpec { get; init; } = RenderSpecDefaults.Table();
 
     public static QueryTabularResult FromData(
         IReadOnlyList<string> columns,
@@ -862,7 +883,8 @@ public sealed class QueryTabularResult
         string? plannerStatsJson,
         string? sqlShapeStatsJson,
         IReadOnlyList<string>? debugTrace,
-        DiagnosticBag diagnostics) => new()
+        DiagnosticBag diagnostics,
+        RenderSpec renderSpec) => new()
         {
             Success = true,
             RowCount = rowCount,
@@ -872,13 +894,15 @@ public sealed class QueryTabularResult
             PlannerStatsJson = plannerStatsJson,
             SqlShapeStatsJson = sqlShapeStatsJson,
             DebugTrace = debugTrace ?? [],
-            Diagnostics = diagnostics
+            Diagnostics = diagnostics,
+            RenderSpec = renderSpec
         };
 
-    public static QueryTabularResult FromDiagnostics(DiagnosticBag diagnostics, IReadOnlyList<string>? debugTrace = null) => new()
+    public static QueryTabularResult FromDiagnostics(DiagnosticBag diagnostics, IReadOnlyList<string>? debugTrace = null, RenderSpec? renderSpec = null) => new()
     {
         Success = false,
         DebugTrace = debugTrace ?? [],
-        Diagnostics = diagnostics
+        Diagnostics = diagnostics,
+        RenderSpec = renderSpec ?? RenderSpecDefaults.Table()
     };
 }
