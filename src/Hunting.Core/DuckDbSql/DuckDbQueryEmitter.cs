@@ -1101,12 +1101,9 @@ public sealed partial class DuckDbQueryEmitter
     private static string RewriteAggregateAliasPredicate(string predicate, string projection)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (Match match in Regex.Matches(
-            projection,
-            @"(?<expr>[^,]+?)\s+AS\s+(?<alias>[A-Za-z_][A-Za-z0-9_]*)",
-            RegexOptions.IgnoreCase))
+        foreach (var item in ParseAliasedProjectionItems(projection))
         {
-            map[match.Groups["alias"].Value] = match.Groups["expr"].Value.Trim();
+            map[item.Alias] = item.Expression;
         }
 
         var rewritten = predicate;
@@ -1120,6 +1117,98 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         return rewritten;
+    }
+
+    private static IReadOnlyList<(string Alias, string Expression)> ParseAliasedProjectionItems(string projection)
+    {
+        var items = new List<(string Alias, string Expression)>();
+        var chunks = SplitTopLevelByComma(projection);
+        foreach (var chunk in chunks)
+        {
+            var candidate = chunk.Trim();
+            if (candidate.Length == 0)
+            {
+                continue;
+            }
+
+            var asIndex = candidate.LastIndexOf(" AS ", StringComparison.OrdinalIgnoreCase);
+            if (asIndex <= 0)
+            {
+                continue;
+            }
+
+            var expr = candidate[..asIndex].Trim();
+            var alias = candidate[(asIndex + 4)..].Trim();
+            if (!IsSimpleSqlIdentifier(alias))
+            {
+                continue;
+            }
+
+            items.Add((alias, expr));
+        }
+
+        return items;
+    }
+
+    private static List<string> SplitTopLevelByComma(string text)
+    {
+        var parts = new List<string>();
+        var start = 0;
+        var depth = 0;
+        var inSingle = false;
+        for (var i = 0; i < text.Length; i++)
+        {
+            var ch = text[i];
+            if (ch == '\'' && (i == 0 || text[i - 1] != '\\'))
+            {
+                inSingle = !inSingle;
+            }
+
+            if (inSingle)
+            {
+                continue;
+            }
+
+            if (ch == '(')
+            {
+                depth++;
+            }
+            else if (ch == ')' && depth > 0)
+            {
+                depth--;
+            }
+            else if (ch == ',' && depth == 0)
+            {
+                parts.Add(text[start..i]);
+                start = i + 1;
+            }
+        }
+
+        parts.Add(text[start..]);
+        return parts;
+    }
+
+    private static bool IsSimpleSqlIdentifier(string value)
+    {
+        if (value.Length == 0)
+        {
+            return false;
+        }
+
+        if (!(char.IsLetter(value[0]) || value[0] == '_'))
+        {
+            return false;
+        }
+
+        for (var i = 1; i < value.Length; i++)
+        {
+            if (!(char.IsLetterOrDigit(value[i]) || value[i] == '_'))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     #region Scan

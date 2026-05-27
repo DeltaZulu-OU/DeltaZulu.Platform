@@ -18,6 +18,7 @@ using Hunting.Core.Translation;
 /// </summary>
 public sealed class QueryRuntime
 {
+    private const int InitialRowCapacity = 256;
     private readonly ApprovedViewCatalog _catalog;
     private readonly DuckDbConnectionFactory _connectionFactory;
     private readonly int _defaultLimit;
@@ -167,13 +168,14 @@ public sealed class QueryRuntime
             }
 
             // Read rows
-            var rows = new List<object?[]>();
+            var rows = new List<object?[]>(InitialRowCapacity);
+            var typedReaders = BuildTypedReaders(reader);
             while (reader.Read())
             {
                 var row = new object?[reader.FieldCount];
                 for (var i = 0; i < reader.FieldCount; i++)
                 {
-                    row[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                    row[i] = typedReaders[i](reader, i);
                 }
                 rows.Add(row);
             }
@@ -232,13 +234,14 @@ public sealed class QueryRuntime
                 columns.Add(new ResultColumn(reader.GetName(i), reader.GetDataTypeName(i)));
             }
 
-            var rows = new List<object?[]>();
+            var rows = new List<object?[]>(InitialRowCapacity);
+            var typedReaders = BuildTypedReaders(reader);
             while (reader.Read())
             {
                 var row = new object?[reader.FieldCount];
                 for (var i = 0; i < reader.FieldCount; i++)
                 {
-                    row[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                    row[i] = typedReaders[i](reader, i);
                 }
 
                 rows.Add(row);
@@ -329,6 +332,28 @@ public sealed class QueryRuntime
         }
 
         return $"Query execution failed: {message}";
+    }
+
+    private static Func<DuckDBDataReader, int, object?>[] BuildTypedReaders(DuckDBDataReader reader)
+    {
+        var readers = new Func<DuckDBDataReader, int, object?>[reader.FieldCount];
+        for (var i = 0; i < reader.FieldCount; i++)
+        {
+            var fieldType = reader.GetFieldType(i);
+            readers[i] = fieldType == typeof(string) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetString(idx)
+                : fieldType == typeof(int) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetInt32(idx)
+                : fieldType == typeof(long) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetInt64(idx)
+                : fieldType == typeof(short) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetInt16(idx)
+                : fieldType == typeof(byte) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetByte(idx)
+                : fieldType == typeof(bool) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetBoolean(idx)
+                : fieldType == typeof(float) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetFloat(idx)
+                : fieldType == typeof(double) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetDouble(idx)
+                : fieldType == typeof(decimal) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetDecimal(idx)
+                : fieldType == typeof(DateTime) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetDateTime(idx)
+                : static (r, idx) => r.IsDBNull(idx) ? null : r.GetValue(idx);
+        }
+
+        return readers;
     }
 }
 

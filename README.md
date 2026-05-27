@@ -36,6 +36,9 @@ Current public schema families in code: `main.DeviceProcessEvents` and `main.Dev
 - Planner is now always enabled in the runtime execution path (no feature-flag gating).
 - Planner hot-path trimming is in progress: filter pushdown is intentionally kept to linear projection wrappers, and common-scalar hoisting is now threshold-gated to repeated complex expressions.
 - Runtime compile-cache v1 added in `QueryRuntime`: bounded in-memory cache for emitted SQL keyed by KQL + catalog version + planner/default-limit settings, reducing repeat parse/plan/emit cost while preserving freshness for hot ingest data.
+- Runtime result materialization now uses a typed-reader plan per column (string/numeric/bool/datetime fast paths with null-aware delegates) instead of unconditional `GetValue` calls for every cell.
+- Planner hot-path allocation trimming is in progress: several output-name paths now avoid LINQ `Concat(...).ToHashSet(...)` chains in favor of direct case-insensitive set population.
+- Emitter aggregate-alias predicate rewrite now parses projection aliases with a small structured parser (top-level comma split + `AS` alias extraction) before replacement, removing one regex-heavy projection parsing hotspot.
 
 - The repository currently includes:
   - `Hunting.Core`: translation, relational model, planner, catalog/policy, and DuckDB SQL emitter.
@@ -111,4 +114,4 @@ From the repository root:
 This project is licensed under the terms in [`LICENSE`](LICENSE).
 
 
-*Last updated: 2026-05-27 — continued hot-path optimization by adding compile-cache v1 (catalog-version invalidated) in QueryRuntime to reduce repeated compile overhead, with no construct-scope/parity change.*
+*Last updated: 2026-05-27 — continued hot-path optimization across runtime/planner/emitter paths: typed result readers in QueryRuntime, reduced planner output-name allocation churn, and structured aggregate-alias projection parsing in the emitter, with no construct-scope/parity change.*

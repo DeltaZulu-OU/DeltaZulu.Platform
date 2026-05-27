@@ -397,17 +397,40 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
 
         private static HashSet<string> OutputNames(RelNode node) => node switch
         {
-            ProjectNode p => p.Projections.Select(x => x.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase),
-            ExtendNode e => OutputNames(e.Input).Concat(e.Extensions.Select(x => x.Alias)).ToHashSet(StringComparer.OrdinalIgnoreCase),
-            AggregateNode a => a.Aggregates.Select(x => x.Alias).Concat(a.GroupBy.OfType<ColumnRef>().Select(c => c.Name)).ToHashSet(StringComparer.OrdinalIgnoreCase),
-            DistinctNode d => d.Projections.Select(x => x.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase),
+            ProjectNode p => ToCaseInsensitiveSet(p.Projections.Select(x => x.Alias)),
+            ExtendNode e => AddAliases(OutputNames(e.Input), e.Extensions.Select(x => x.Alias)),
+            AggregateNode a => AddAliases(
+                ToCaseInsensitiveSet(a.Aggregates.Select(x => x.Alias)),
+                a.GroupBy.OfType<ColumnRef>().Select(c => c.Name)),
+            DistinctNode d => ToCaseInsensitiveSet(d.Projections.Select(x => x.Alias)),
             FilterNode f => OutputNames(f.Input),
             SortNode s => OutputNames(s.Input),
             LimitNode l => OutputNames(l.Input),
             SampleNode s => OutputNames(s.Input),
-            JoinNode j => OutputNames(j.Left).Concat(OutputNames(j.Right)).ToHashSet(StringComparer.OrdinalIgnoreCase),
+            JoinNode j => AddAliases(OutputNames(j.Left), OutputNames(j.Right)),
             _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         };
+
+        private static HashSet<string> ToCaseInsensitiveSet(IEnumerable<string> source)
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in source)
+            {
+                set.Add(item);
+            }
+
+            return set;
+        }
+
+        private static HashSet<string> AddAliases(HashSet<string> set, IEnumerable<string> aliases)
+        {
+            foreach (var alias in aliases)
+            {
+                set.Add(alias);
+            }
+
+            return set;
+        }
 
         private static HashSet<string> JoinKeyRightNames(ScalarExpr pred)
         {

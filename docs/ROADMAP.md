@@ -10,6 +10,9 @@ security data.
 
 ## Recent updates
 
+- 2026-05-27: Implemented runtime typed row-reader planning in `QueryRuntime` (per-column null-aware primitive getters with fallback to `GetValue`) to reduce per-cell materialization overhead on large result sets.
+- 2026-05-27: Reduced planner allocation churn in `RelationalPlanner` output-name paths by replacing several LINQ `Concat(...).ToHashSet(...)` chains with direct case-insensitive set population helpers.
+- 2026-05-27: Replaced regex-based aggregate projection parsing in `DuckDbQueryEmitter` HAVING-alias rewrite with a structured top-level projection splitter + alias extractor to reduce regex-heavy SQL surgery on a hot rewrite path.
 - 2026-05-27: Added runtime compile-cache v1 in `QueryRuntime` (bounded cache keyed by KQL + catalog version + planner/default-limit settings) and catalog-version invalidation in `ApprovedViewCatalog` to cut repeat parse/plan/emit overhead without caching result rows.
 - 2026-05-27: Trimmed planner rewrite aggressiveness for hot-path stability: `FilterPushdownPass` remains intentionally linear-only (direct projection wrapper) and `CommonScalarHoistPass` now hoists only repeated complex expressions (threshold-gated), reducing speculative rewrite churn.
 - 2026-05-27: Planner is now always enabled in the active `QueryRuntime` execution path; feature-flag gating was removed from runtime wiring.
