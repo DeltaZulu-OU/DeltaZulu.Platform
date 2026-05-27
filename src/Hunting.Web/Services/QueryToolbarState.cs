@@ -71,9 +71,10 @@ public sealed partial class QueryToolbarState
             return false;
         }
 
+        var selectedTimeRange = GetSelectedTimeRange();
         var hasInlineTimeFilter = HasInlineTimeFilter(query);
         var hasInlineLimit = HasInlineLimit(query);
-        var hasUiTimeFilter = GetSelectedTimeRange() is not null;
+        var hasUiTimeFilter = selectedTimeRange is not null;
         var hasUiLimit = SelectedResultLimit.HasValue;
 
         if (hasUiTimeFilter && hasInlineTimeFilter)
@@ -88,14 +89,13 @@ public sealed partial class QueryToolbarState
             return false;
         }
 
-        effectiveQuery = ApplyTimeFilter(query);
+        effectiveQuery = ApplyTimeFilter(query, selectedTimeRange);
         effectiveQuery = ApplyResultLimit(effectiveQuery);
         return true;
     }
 
     private (DateTime From, DateTime? To)? GetSelectedTimeRange()
     {
-        var preset = TimeFilterPresets.FirstOrDefault(p => p.Key == SelectedTimeFilter);
         if (SelectedTimeFilter == "none")
         {
             return null;
@@ -118,6 +118,8 @@ public sealed partial class QueryToolbarState
             return (DateTime.SpecifyKind(from.Date, DateTimeKind.Utc), to is null ? null : DateTime.SpecifyKind(to.Value, DateTimeKind.Utc));
         }
 
+        var preset = TimeFilterPresets.FirstOrDefault(
+            p => string.Equals(p.Key, SelectedTimeFilter, StringComparison.OrdinalIgnoreCase));
         if (preset?.Span is null)
         {
             return null;
@@ -130,9 +132,8 @@ public sealed partial class QueryToolbarState
 
     private static bool HasInlineLimit(string query) => InlineLimitRegex().IsMatch(query);
 
-    private string ApplyTimeFilter(string query)
+    private string ApplyTimeFilter(string query, (DateTime From, DateTime? To)? range)
     {
-        var range = GetSelectedTimeRange();
         if (range is null)
         {
             return query;
