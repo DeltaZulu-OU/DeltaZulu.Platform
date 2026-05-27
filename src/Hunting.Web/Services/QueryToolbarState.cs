@@ -2,8 +2,11 @@ namespace Hunting.Web.Services;
 
 using System.Text.RegularExpressions;
 
-public sealed class QueryToolbarState
+public sealed partial class QueryToolbarState
 {
+    private const string SqlPrefix = "select";
+    private const int MaxQueryLength = 200_000;
+
     public string SelectedTimeFilter { get; set; } = "none";
     public DateTime? CustomFrom { get; set; }
     public DateTime? CustomTo { get; set; }
@@ -43,6 +46,30 @@ public sealed class QueryToolbarState
     {
         effectiveQuery = query;
         warning = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            warning = "Query cannot be empty.";
+            return false;
+        }
+
+        if (query.Length > MaxQueryLength)
+        {
+            warning = $"Query is too large ({query.Length} chars). Maximum supported length is {MaxQueryLength}.";
+            return false;
+        }
+
+        if (SelectedResultLimit.HasValue && SelectedResultLimit.Value <= 0)
+        {
+            warning = "Result limit must be a positive number.";
+            return false;
+        }
+
+        if (CustomFrom.HasValue && CustomTo.HasValue && CustomFrom.Value.Date > CustomTo.Value.Date)
+        {
+            warning = "Custom time range is invalid: From date must be on or before To date.";
+            return false;
+        }
 
         var hasInlineTimeFilter = HasInlineTimeFilter(query);
         var hasInlineLimit = HasInlineLimit(query);
@@ -99,14 +126,9 @@ public sealed class QueryToolbarState
         return (DateTime.UtcNow - preset.Span.Value, null);
     }
 
-    private static bool HasInlineTimeFilter(string query)
-        => Regex.IsMatch(
-            query,
-            @"\b(timestamp)\b.*\b(>=|<=|>|<|between)\b|\bwhere\b.*\b(timestamp)\b",
-            RegexOptions.IgnoreCase | RegexOptions.Singleline);
+    private static bool HasInlineTimeFilter(string query) => TimestampFilterRegex().IsMatch(query);
 
-    private static bool HasInlineLimit(string query)
-        => Regex.IsMatch(query, @"\b(take|limit|top)\s+\d+\b", RegexOptions.IgnoreCase);
+    private static bool HasInlineLimit(string query) => InlineLimitRegex().IsMatch(query);
 
     private string ApplyTimeFilter(string query)
     {
@@ -119,7 +141,7 @@ public sealed class QueryToolbarState
         var from = range.Value.From.ToString("yyyy-MM-dd HH:mm:ss");
         var to = range.Value.To?.ToString("yyyy-MM-dd HH:mm:ss");
 
-        if (query.TrimStart().StartsWith("select", StringComparison.OrdinalIgnoreCase))
+        if (IsSqlQuery(query))
         {
             var clause = to is null
                 ? $"Timestamp >= TIMESTAMP '{from}'"
@@ -143,13 +165,22 @@ public sealed class QueryToolbarState
             return query;
         }
 
-        if (query.TrimStart().StartsWith("select", StringComparison.OrdinalIgnoreCase))
+        if (IsSqlQuery(query))
         {
             return query + $" LIMIT {SelectedResultLimit.Value}";
         }
 
         return query + $"\n| take {SelectedResultLimit.Value}";
     }
+
+    private static bool IsSqlQuery(string query)
+        => query.TrimStart().StartsWith(SqlPrefix, StringComparison.OrdinalIgnoreCase);
+
+    [GeneratedRegex(@"\b(timestamp)\b.*\b(>=|<=|>|<|between)\b|\bwhere\b.*\b(timestamp)\b", RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.NonBacktracking, matchTimeoutMilliseconds: 250)]
+    private static partial Regex TimestampFilterRegex();
+
+    [GeneratedRegex(@"\b(take|limit|top)\s+\d+\b", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking, matchTimeoutMilliseconds: 250)]
+    private static partial Regex InlineLimitRegex();
 }
 
 public sealed record TimeFilterPreset(string Key, string Label, TimeSpan? Span);

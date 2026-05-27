@@ -7,7 +7,6 @@ public sealed class LanguageService : IAsyncDisposable
     private readonly IJSRuntime _jsRuntime;
     private readonly ILogger<LanguageService> _logger;
     private DotNetObjectReference<EditorCallbackBridge>? _callbackRef;
-    private EditorCallbackBridge? _callbackBridge;
     private string? _containerId;
 
     public LanguageService(IJSRuntime jsRuntime, ILogger<LanguageService> logger)
@@ -23,11 +22,7 @@ public sealed class LanguageService : IAsyncDisposable
         IReadOnlyList<KqlTableSchema> schema)
     {
         _containerId = containerId;
-        // Dispose any reference from a prior initialization before overwriting it,
-        // otherwise the previous DotNetObjectReference leaks for the circuit's life.
-        _callbackRef?.Dispose();
-        _callbackBridge = new EditorCallbackBridge(runCommand);
-        _callbackRef = DotNetObjectReference.Create(_callbackBridge);
+        ResetCallback(runCommand);
 
         await _jsRuntime.InvokeVoidAsync("huntingMonaco.registerKqlLanguage");
         var isReady = await _jsRuntime.InvokeAsync<bool>("huntingMonaco.isReady");
@@ -48,34 +43,37 @@ public sealed class LanguageService : IAsyncDisposable
 
     public async ValueTask SetEditorValueAsync(string value)
     {
-        try
-        {
-            await _jsRuntime.InvokeVoidAsync("huntingMonaco.setValue", _containerId, value);
-        }
-        catch (JSDisconnectedException)
-        {
-            _logger.LogDebug("Skipping Monaco setValue because JS runtime is disconnected.");
-        }
+        await TryInvokeVoidAsync("huntingMonaco.setValue", "setValue", _containerId, value);
     }
 
     public async ValueTask DisposeAsync()
     {
-        try
+        if (!string.IsNullOrWhiteSpace(_containerId))
         {
-            if (!string.IsNullOrWhiteSpace(_containerId))
-            {
-                await _jsRuntime.InvokeVoidAsync("huntingMonaco.dispose", _containerId);
-            }
-        }
-        catch (JSDisconnectedException)
-        {
-            _logger.LogDebug("Skipping Monaco dispose because JS runtime is disconnected.");
+            await TryInvokeVoidAsync("huntingMonaco.dispose", "dispose", _containerId);
         }
 
         _callbackRef?.Dispose();
         _callbackRef = null;
-        _callbackBridge = null;
         _containerId = null;
+    }
+
+    private void ResetCallback(Func<Task> runCommand)
+    {
+        _callbackRef?.Dispose();
+        _callbackRef = DotNetObjectReference.Create(new EditorCallbackBridge(runCommand));
+    }
+
+    private async ValueTask TryInvokeVoidAsync(string identifier, string operation, params object?[]? args)
+    {
+        try
+        {
+            await _jsRuntime.InvokeVoidAsync(identifier, args);
+        }
+        catch (JSDisconnectedException)
+        {
+            _logger.LogDebug("Skipping Monaco {Operation} because JS runtime is disconnected.", operation);
+        }
     }
 
     private sealed class EditorCallbackBridge
