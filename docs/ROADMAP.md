@@ -10,6 +10,7 @@ security data.
 
 ## Recent updates
 
+- 2026-05-27: Added runtime compile-cache v1 in `QueryRuntime` (bounded cache keyed by KQL + catalog version + planner/default-limit settings) and catalog-version invalidation in `ApprovedViewCatalog` to cut repeat parse/plan/emit overhead without caching result rows.
 - 2026-05-27: Trimmed planner rewrite aggressiveness for hot-path stability: `FilterPushdownPass` remains intentionally linear-only (direct projection wrapper) and `CommonScalarHoistPass` now hoists only repeated complex expressions (threshold-gated), reducing speculative rewrite churn.
 - 2026-05-27: Planner is now always enabled in the active `QueryRuntime` execution path; feature-flag gating was removed from runtime wiring.
 - 2026-05-27: Added emitter run-stat telemetry (cache invalidations, cache builds/lookups, stage add/remove counts) to developer-mode debug trace so future optimization patches have directly comparable measurements.

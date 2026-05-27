@@ -14,6 +14,22 @@ public sealed class ApprovedViewCatalog
     private readonly Dictionary<string, CanonicalViewDef> _views = new(StringComparer.OrdinalIgnoreCase);
     private GlobalState? _cachedGlobalState;
     private readonly Lock _gate = new();
+    private long _catalogVersion = 0;
+
+    /// <summary>
+    /// Monotonic catalog version incremented whenever canonical view registration changes.
+    /// Can be used by runtime compile caches to invalidate safely on schema changes.
+    /// </summary>
+    public long CatalogVersion
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _catalogVersion;
+            }
+        }
+    }
 
     /// <summary>
     /// All registered canonical views (main.* public hunting views).
@@ -29,6 +45,7 @@ public sealed class ApprovedViewCatalog
         {
             _views[view.Name] = view;
             _cachedGlobalState = null;
+            _catalogVersion++;
         }
     }
 

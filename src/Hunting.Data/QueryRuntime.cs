@@ -1,5 +1,6 @@
 namespace Hunting.Data;
 
+using System.Collections.Concurrent;
 using System.Text.Json;
 using DuckDB.NET.Data;
 using Hunting.Core.Catalog;
@@ -25,6 +26,10 @@ public sealed class QueryRuntime
     private readonly int _plannerMaxIterations;
     private readonly bool _includeSensitiveDeveloperDetail;
 
+    private readonly ConcurrentDictionary<CompileCacheKey, CompileCacheEntry> _compileCache = new();
+    private readonly ConcurrentQueue<CompileCacheKey> _compileCacheOrder = new();
+    private readonly int _compileCacheCapacity = 256;
+
     public QueryRuntime(
         ApprovedViewCatalog catalog,
         DuckDbConnectionFactory connectionFactory,
@@ -33,6 +38,7 @@ public sealed class QueryRuntime
         bool developerMode = false,
         bool includeSensitiveDeveloperDetail = false,
         int plannerMaxIterations = 3,
+        int compileCacheCapacity = 256,
         IRelationalPlanner? planner = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
@@ -52,6 +58,11 @@ public sealed class QueryRuntime
             throw new ArgumentOutOfRangeException(nameof(plannerMaxIterations), plannerMaxIterations, "Planner max iterations must be at least one.");
         }
 
+        if (compileCacheCapacity < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(compileCacheCapacity), compileCacheCapacity, "Compile cache capacity must be zero or greater.");
+        }
+
         _catalog = catalog;
         _connectionFactory = connectionFactory;
         _defaultLimit = defaultLimit;
@@ -60,6 +71,7 @@ public sealed class QueryRuntime
         _includeSensitiveDeveloperDetail = includeSensitiveDeveloperDetail;
         _planner = planner ?? new RelationalPlanner();
         _plannerMaxIterations = plannerMaxIterations;
+        _compileCacheCapacity = compileCacheCapacity;
     }
 
     private readonly bool _developerMode;
@@ -72,6 +84,13 @@ public sealed class QueryRuntime
         var diagnostics = new DiagnosticBag();
         var debugTrace = _developerMode ? new List<string>() : null;
         debugTrace?.Add($"Runtime start: plannerMaxIterations={_plannerMaxIterations}, timeoutSeconds={_timeoutSeconds}");
+
+        var cacheKey = new CompileCacheKey(kql, _catalog.CatalogVersion, _plannerMaxIterations, _defaultLimit);
+        if (_compileCacheCapacity > 0 && _compileCache.TryGetValue(cacheKey, out var cacheHit))
+        {
+            debugTrace?.Add($"Compile cache hit: catalogVersion={cacheKey.CatalogVersion}");
+            return ExecuteSql(cacheHit.Sql, diagnostics, debugTrace, plannerStatsJson: cacheHit.PlannerStatsJson, sqlShapeStatsJson: cacheHit.SqlShapeStatsJson, emitterStatsJson: cacheHit.EmitterStatsJson);
+        }
 
         // Phase 1: Parse + Translate
         var translator = new KustoToRelational(_catalog, diagnostics);
@@ -162,6 +181,13 @@ public sealed class QueryRuntime
             // GeneratedSql is only exposed in developer mode — SQL is an internal artifact
             var exposedSql = _developerMode ? sql : null;
             debugTrace?.Add($"Execute complete: rows={rows.Count}, columns={columns.Count}");
+            if (_compileCacheCapacity > 0)
+            {
+                var entry = new CompileCacheEntry(sql, plannerStats, sqlShapeStats, emitterStats);
+                RememberCompileCache(cacheKey, entry);
+                debugTrace?.Add("Compile cache store");
+            }
+
             return QueryResult.FromData(columns, rows, exposedSql, plannerStats, sqlShapeStats, debugTrace, diagnostics);
         }
         catch (DuckDBException ex)
@@ -181,6 +207,81 @@ public sealed class QueryRuntime
             return QueryResult.FromDiagnostics(diagnostics, debugTrace);
         }
     }
+
+    private QueryResult ExecuteSql(
+        string sql,
+        DiagnosticBag diagnostics,
+        List<string>? debugTrace,
+        string? plannerStatsJson,
+        string? sqlShapeStatsJson,
+        string? emitterStatsJson)
+    {
+        try
+        {
+            var conn = _connectionFactory.GetConnection();
+            debugTrace?.Add("Execute start");
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = sql;
+            cmd.CommandTimeout = _timeoutSeconds;
+
+            using var reader = cmd.ExecuteReader(System.Data.CommandBehavior.Default);
+
+            var columns = new List<ResultColumn>();
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                columns.Add(new ResultColumn(reader.GetName(i), reader.GetDataTypeName(i)));
+            }
+
+            var rows = new List<object?[]>();
+            while (reader.Read())
+            {
+                var row = new object?[reader.FieldCount];
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    row[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                }
+
+                rows.Add(row);
+            }
+
+            var exposedSql = _developerMode ? sql : null;
+            debugTrace?.Add($"Execute complete: rows={rows.Count}, columns={columns.Count}");
+            if (!string.IsNullOrWhiteSpace(emitterStatsJson))
+            {
+                debugTrace?.Add($"Emitter stats: {emitterStatsJson}");
+            }
+            return QueryResult.FromData(columns, rows, exposedSql, plannerStatsJson, sqlShapeStatsJson, debugTrace, diagnostics);
+        }
+        catch (DuckDBException ex)
+        {
+            diagnostics.AddError(DiagnosticPhase.Execute,
+                NormalizeDuckDbError(ex.Message),
+                BuildDeveloperDetail(sql, ex.Message),
+                code: QueryDiagnosticCodes.ExecuteDuckDbFailed);
+            return QueryResult.FromDiagnostics(diagnostics, debugTrace);
+        }
+        catch (Exception ex)
+        {
+            diagnostics.AddError(DiagnosticPhase.Execute,
+                "An internal error occurred while executing the query.",
+                BuildDeveloperDetail(sql, $"{ex.GetType().Name}: {ex.Message}"),
+                code: QueryDiagnosticCodes.ExecuteUnhandledFailed);
+            return QueryResult.FromDiagnostics(diagnostics, debugTrace);
+        }
+    }
+
+    private void RememberCompileCache(CompileCacheKey key, CompileCacheEntry entry)
+    {
+        _compileCache[key] = entry;
+        _compileCacheOrder.Enqueue(key);
+        while (_compileCache.Count > _compileCacheCapacity && _compileCacheOrder.TryDequeue(out var oldest))
+        {
+            _compileCache.TryRemove(oldest, out _);
+        }
+    }
+
+    private sealed record CompileCacheKey(string Kql, long CatalogVersion, int PlannerMaxIterations, int DefaultLimit);
+    private sealed record CompileCacheEntry(string Sql, string? PlannerStatsJson, string? SqlShapeStatsJson, string? EmitterStatsJson);
 
     private string BuildDeveloperDetail(string sql, string exceptionText)
     {
