@@ -1506,25 +1506,88 @@ public sealed partial class DuckDbQueryEmitter
         }
 
         var rightKeys = CollectRightJoinKeys(predicate);
-        rightPayloadColumns = rightCols
-            .Where(c => !rightKeys.Contains(c))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var payload = new List<string>(rightCols.Count);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var col in rightCols)
+        {
+            if (rightKeys.Contains(col) || !seen.Add(col))
+            {
+                continue;
+            }
+
+            payload.Add(col);
+        }
+
+        rightPayloadColumns = payload;
         return true;
     }
 
-    private static IReadOnlyList<string>? TryGetOutputColumns(RelNode node) => node switch
+    private static IReadOnlyList<string>? TryGetOutputColumns(RelNode node)
     {
-        ProjectNode p => p.Projections.Select(x => x.Alias).ToArray(),
-        AggregateNode a => a.GroupBy.OfType<ColumnRef>().Select(c => c.Name).Concat(a.Aggregates.Select(x => x.Alias)).ToArray(),
-        ExtendNode e => (TryGetOutputColumns(e.Input) ?? []).Concat(e.Extensions.Select(x => x.Alias)).ToArray(),
-        DistinctNode d => d.Projections.Select(x => x.Alias).ToArray(),
-        FilterNode f => TryGetOutputColumns(f.Input),
-        SortNode s => TryGetOutputColumns(s.Input),
-        LimitNode l => TryGetOutputColumns(l.Input),
-        SampleNode s => TryGetOutputColumns(s.Input),
-        _ => null
-    };
+        switch (node)
+        {
+            case ProjectNode p:
+            {
+                var cols = new List<string>(p.Projections.Count);
+                foreach (var projection in p.Projections)
+                {
+                    cols.Add(projection.Alias);
+                }
+
+                return cols;
+            }
+            case AggregateNode a:
+            {
+                var cols = new List<string>(a.GroupBy.Count + a.Aggregates.Count);
+                foreach (var group in a.GroupBy)
+                {
+                    if (group is ColumnRef c)
+                    {
+                        cols.Add(c.Name);
+                    }
+                }
+
+                foreach (var aggregate in a.Aggregates)
+                {
+                    cols.Add(aggregate.Alias);
+                }
+
+                return cols;
+            }
+            case ExtendNode e:
+            {
+                var input = TryGetOutputColumns(e.Input) ?? [];
+                var cols = new List<string>(input.Count + e.Extensions.Count);
+                cols.AddRange(input);
+                foreach (var extension in e.Extensions)
+                {
+                    cols.Add(extension.Alias);
+                }
+
+                return cols;
+            }
+            case DistinctNode d:
+            {
+                var cols = new List<string>(d.Projections.Count);
+                foreach (var projection in d.Projections)
+                {
+                    cols.Add(projection.Alias);
+                }
+
+                return cols;
+            }
+            case FilterNode f:
+                return TryGetOutputColumns(f.Input);
+            case SortNode s:
+                return TryGetOutputColumns(s.Input);
+            case LimitNode l:
+                return TryGetOutputColumns(l.Input);
+            case SampleNode s:
+                return TryGetOutputColumns(s.Input);
+            default:
+                return null;
+        }
+    }
 
     private static HashSet<string> CollectRightJoinKeys(ScalarExpr expr)
     {

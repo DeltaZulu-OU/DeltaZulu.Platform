@@ -599,4 +599,4 @@ commands. These operate on Kusto cluster state, not on data.
 
 ---
 
-*Last updated: 2026-05-27 — checklist status unchanged; planner rewrite policy trimmed for hot-path stability (linear-only filter pushdown + threshold-gated common-scalar hoist); no construct-scope/parity deltas.*
+*Last updated: 2026-05-27 — checklist status unchanged; planner/emitter hot-path allocation cleanup continued (targeted `ToArray()` removals), with no construct-scope/parity deltas.*

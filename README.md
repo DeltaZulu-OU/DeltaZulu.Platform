@@ -39,8 +39,9 @@ Current public schema families in code: `main.DeviceProcessEvents` and `main.Dev
 - Runtime compile-cache key now includes explicit policy/compiler epochs (in addition to KQL + catalog/planner/limit dimensions) to allow safe invalidation when policy or compile semantics change; `SetCompileEpochs(...)` can rotate epochs and flush compile cache explicitly at runtime.
 - Runtime now includes a streamed execution path (`ExecuteStreamed`) and the Blazor `QueryService` now executes through it by default with bounded UI materialization (`MaxMaterializedRows`) to avoid unbounded full-result buffering in the primary web path. Non-web callers can also bound buffered execution via `Execute(kql, maxRows)`, or use the new columnar `ExecuteTabular(...)` result contract to consume buffered data without `object[]` row arrays; tabular execution now populates columns directly during reader scan (no intermediate row-array materialization).
 - Runtime result materialization now uses a typed-reader plan per column (string/numeric/bool/datetime fast paths with null-aware delegates) instead of unconditional `GetValue` calls for every cell.
-- Planner hot-path allocation trimming is in progress: several output-name paths now avoid LINQ `Concat(...).ToHashSet(...)` chains in favor of direct case-insensitive set population, and column-remap/substitution now short-circuit when no relevant references exist to avoid unnecessary recursive rewrites., and lookup-owner rewrite copies now use loop-based array copy helpers instead of `ToArray()` snapshots in project/sort/extend/aggregate passes.
+- Planner hot-path allocation trimming is in progress: several output-name paths now avoid LINQ `Concat(...).ToHashSet(...)` chains in favor of direct case-insensitive set population, column-remap/substitution now short-circuit when no relevant references exist to avoid unnecessary recursive rewrites, and pass-stat materialization now uses loop-based list population instead of LINQ `ToArray()` snapshots.
 - Emitter aggregate-alias predicate rewrite now parses projection aliases with a small structured parser (top-level comma split + `AS` alias extraction) before replacement, removing one regex-heavy projection parsing hotspot; stage-reference counting now uses structured token scanning instead of regex matches.
+- Emitter output-column/projection helper paths now use loop-based list/set population instead of LINQ `ToArray()` in lookup payload and output-column discovery flows.
 
 - The repository currently includes:
   - `Hunting.Core`: translation, relational model, planner, catalog/policy, and DuckDB SQL emitter.
@@ -116,4 +117,4 @@ From the repository root:
 This project is licensed under the terms in [`LICENSE`](LICENSE).
 
 
-*Last updated: 2026-05-27 — continued hot-path optimization across runtime/planner/emitter paths: typed result readers in QueryRuntime, reduced planner output-name allocation churn, and structured aggregate-alias projection parsing in the emitter, with no construct-scope/parity change.*
+*Last updated: 2026-05-27 — continued hot-path optimization across runtime/planner/emitter paths: typed result readers in QueryRuntime, reduced planner/emitter allocation churn in projection-output helpers, and structured aggregate-alias projection parsing in the emitter, with no construct-scope/parity change.*

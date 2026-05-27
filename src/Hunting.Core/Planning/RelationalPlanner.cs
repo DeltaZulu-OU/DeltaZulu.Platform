@@ -94,9 +94,12 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             }
         }
 
-        var passStats = _passes
-            .Select(p => new PlannerPassStat(p.Name, passAgg[p.Name].attempted, passAgg[p.Name].applied))
-            .ToArray();
+        var passStats = new List<PlannerPassStat>(_passes.Count);
+        foreach (var pass in _passes)
+        {
+            var stat = passAgg[pass.Name];
+            passStats.Add(new PlannerPassStat(pass.Name, stat.attempted, stat.applied));
+        }
 
         LastRunStats = new PlannerRunStats(
             Iterations: iterations,

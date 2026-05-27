@@ -310,4 +310,4 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 | DuckDB connection in Blazor Server | `DuckDbConnectionFactory` + `QueryService` serialization | ✅ Implemented |
 ---
 
-*Last updated: 2026-05-27 — planner rewrite aggressiveness trimmed (linear-only filter pushdown and threshold-gated common-scalar hoist) as part of hot-path optimization, with no phase/construct scope change.*
+*Last updated: 2026-05-27 — planner and emitter allocation cleanup continued (loop-based pass-stat/output-column materialization replacing select `ToArray()` paths), with no phase/construct scope change.*
