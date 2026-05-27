@@ -14,7 +14,7 @@ public static class MockDataSeeder
     /// hunting scenario: normal activity, lateral movement, credential
     /// dumping, and persistence.
     /// </summary>
-    public static string GetSeedSql() =>
+    public static string GetProcessSeedSql() =>
         """
         INSERT INTO bronze.windows_event_json (ingest_time, source_type, provider, event_id, computer, event_data, raw_text) VALUES
         -- Normal user activity
@@ -131,7 +131,7 @@ public static class MockDataSeeder
     /// Covers normal browsing, C2 beaconing, lateral movement, DNS lookup patterns,
     /// and known-bad port connections.
     /// </summary>
-    public static string GetNetworkSeedSql() =>
+    public static string GetNetworkSessionSeedSql() =>
         """
         INSERT INTO bronze.windows_event_json (ingest_time, source_type, provider, event_id, computer, event_data, raw_text) VALUES
         -- Normal browsing

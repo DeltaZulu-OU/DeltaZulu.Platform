@@ -36,7 +36,7 @@ public sealed class SchemaPipelineTests
         _applier.ApplyStatements(ddl);
 
         // Seed mock data
-        _applier.ExecuteRaw(MockDataSeeder.GetSeedSql());
+        _applier.ExecuteRaw(MockDataSeeder.GetProcessSeedSql());
     }
 
     [ClassCleanup]

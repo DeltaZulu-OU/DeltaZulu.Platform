@@ -30,6 +30,8 @@ MVP-ready parity = `[x] + [m]` = **222 / 319 (69.6%)**.
 
 Current public schema families in code include event-family surfaces `golden.ProcessEvents` and `golden.NetworkSessions`, with transitional compatibility aliases `golden.DeviceProcessEvents` and `golden.DeviceNetworkEvents`.
 
+- Mock seeding and UI sample queries now default to the event-family tables (`ProcessEvents`, `NetworkSessions`) while compatibility aliases remain registered for legacy queries.
+
 - Hot-path latency review and optimization plan is documented in `docs/HOTPATH-LATENCY-REVIEW.md`.
 - Emitter hot-path optimization is in progress: stage-name index and reference-count caches were added to reduce repeated stage scans during SQL-shape rewrites.
 - Developer-mode debug trace now includes per-query emitter cache/rewrite counters to support optimization benchmarking across future patches.

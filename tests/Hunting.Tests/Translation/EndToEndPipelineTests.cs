@@ -34,7 +34,7 @@ public sealed class EndToEndPipelineTests
             parserViews: [DeviceProcessEventsSchema.SysmonProcessCreate],
             canonicalViews: [DeviceProcessEventsSchema.View]);
         applier.ApplyStatements(ddl);
-        applier.ExecuteRaw(MockDataSeeder.GetSeedSql());
+        applier.ExecuteRaw(MockDataSeeder.GetProcessSeedSql());
 
         // Build runtime
         var catalog = new ApprovedViewCatalog();

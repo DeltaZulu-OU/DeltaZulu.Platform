@@ -33,21 +33,10 @@ public static class DeviceProcessEventsSchema
     /// </summary>
     public static readonly CanonicalViewDef View = new(
         Schema: "golden",
-        Name: "DeviceProcessEvents",
-        ParserViews: ["silver.v_process_sysmon_create"],
-        Columns: Columns,
-        Description: "Process creation and related events across sources");
-
-    /// <summary>
-    /// MVP event-family Golden surface (ASIM-style composition semantics with project naming).
-    /// Maintained alongside Device* transitional names during migration.
-    /// </summary>
-    public static readonly CanonicalViewDef ProcessEventsView = new(
-        Schema: "golden",
         Name: "ProcessEvents",
         ParserViews: ["silver.v_process_sysmon_create"],
         Columns: Columns,
-        Description: "Operator-facing process event-family view");
+        Description: "Process creation and related events across sources");
 
     // ─── Raw table ──────────────────────────────────────────────────────
 

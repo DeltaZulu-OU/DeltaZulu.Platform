@@ -48,21 +48,10 @@ public static class DeviceNetworkEventsSchema
 
     public static readonly CanonicalViewDef View = new(
         Schema: "golden",
-        Name: "DeviceNetworkEvents",
-        ParserViews: ["silver.v_network_sysmon_connect"],
-        Columns: Columns,
-        Description: "Network connection events from all configured sources");
-
-    /// <summary>
-    /// MVP event-family Golden surface (ASIM-style composition semantics with project naming).
-    /// Maintained alongside Device* transitional names during migration.
-    /// </summary>
-    public static readonly CanonicalViewDef NetworkSessionsView = new(
-        Schema: "golden",
         Name: "NetworkSessions",
         ParserViews: ["silver.v_network_sysmon_connect"],
         Columns: Columns,
-        Description: "Operator-facing network session event-family view");
+        Description: "Network connection events from all configured sources");
 
     public static readonly ParserViewDef SysmonNetworkConnect = new(
         Schema: "silver",

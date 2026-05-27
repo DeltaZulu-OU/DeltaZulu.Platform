@@ -89,9 +89,9 @@ static async Task BootstrapSchemaAsync(WebApplication app)
         var rowCount = applier.QueryScalar("SELECT count(*) FROM bronze.windows_event_json");
         if (rowCount == 0)
         {
-            applier.ExecuteRaw(MockDataSeeder.GetSeedSql());
-            applier.ExecuteRaw(MockDataSeeder.GetNetworkSeedSql());
-            app.Logger.LogInformation("Mock data seeded: process and network events inserted");
+            applier.ExecuteRaw(MockDataSeeder.GetProcessSeedSql());
+            applier.ExecuteRaw(MockDataSeeder.GetNetworkSessionSeedSql());
+            app.Logger.LogInformation("Mock data seeded for medallion event families: ProcessEvents and NetworkSessions");
         }
     });
 }

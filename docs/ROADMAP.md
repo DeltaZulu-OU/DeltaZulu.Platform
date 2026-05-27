@@ -10,6 +10,7 @@ security data.
 
 ## Recent updates
 
+- 2026-05-27: Updated mock-seeder and Blazor sample-query defaults to event-family medallion surfaces (`ProcessEvents`, `NetworkSessions`) while keeping Device* compatibility aliases registered.
 - 2026-05-27: ADR 0008 updated: MVP Golden contracts are explicitly ASIM-shaped bootstrap contracts (provisional/partial), with post-MVP schema-by-schema retain/adapt/diverge governance.
 - 2026-05-27: Updated `ExecuteTabular(...)` to populate `QueryTabularResult.ColumnData` directly during reader scan via the streamed callback path, removing intermediate row-array materialization in tabular execution.
 - 2026-05-27: Migrated `QueryResult` to a columnar-first contract (`ColumnData` + `GetValue(row, col)`), updating buffered runtime and Blazor query-service/UI materialization paths to remove `IReadOnlyList<object?[]>` row-array dependency.

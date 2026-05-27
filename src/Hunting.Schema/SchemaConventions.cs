@@ -24,8 +24,6 @@ public static class SchemaConventions
 
     public static IReadOnlyList<CanonicalViewDef> CanonicalViews =>
     [
-        DeviceProcessEventsSchema.ProcessEventsView,
-        DeviceNetworkEventsSchema.NetworkSessionsView,
         DeviceProcessEventsSchema.View,
         DeviceNetworkEventsSchema.View
     ];
