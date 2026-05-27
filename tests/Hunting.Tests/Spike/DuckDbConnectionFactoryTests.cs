@@ -11,6 +11,8 @@ public sealed class DuckDbConnectionFactoryTests
     {
         using var factory = new DuckDbConnectionFactory("DataSource=:memory:");
         using var cmd = factory.GetConnection().CreateCommand();
+        cmd.CommandText = "INSTALL inet;LOAD inet;";
+        cmd.ExecuteNonQuery();
         cmd.CommandText = "SELECT host('10.1.2.3/24'::INET)";
         var host = cmd.ExecuteScalar()?.ToString();
 

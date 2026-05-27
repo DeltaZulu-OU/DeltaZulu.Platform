@@ -29,7 +29,7 @@ public sealed class DuckDbConnectionFactory : IDisposable
     {
         _connectionString = connectionString;
         _startupSql = startupSql ?? [
-            "LOAD inet"];
+            "INSTALL inet;LOAD inet;"];
     }
 
     /// <summary>
