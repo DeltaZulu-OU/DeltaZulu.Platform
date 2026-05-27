@@ -754,6 +754,25 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
         AssertSqlContains(sql, "COALESCE(DeviceName, 'unknown')");
     }
 
+    [TestMethod]
+    [Description("New trivial mappings enforce argument counts")]
+    public void Func_TrivialMappings_InvalidArity_Rejected()
+    {
+        var node = new ProjectNode(
+            new ScanNode("DeviceProcessEvents"),
+            [
+                new ProjectionExpr("a", new FunctionCall("strcat_array", [new ColumnRef("Tags")])),
+                new ProjectionExpr("b", new FunctionCall("bag_keys", [new ColumnRef("AdditionalFields"), new LiteralScalar("extra", LiteralKind.String)])),
+                new ProjectionExpr("c", new FunctionCall("bag_has_key", [new ColumnRef("AdditionalFields")])),
+                new ProjectionExpr("d", new FunctionCall("bag_merge", [new ColumnRef("A")])),
+                new ProjectionExpr("e", new FunctionCall("array_length", [])),
+                new ProjectionExpr("f", new FunctionCall("exp2", [])),
+                new ProjectionExpr("g", new FunctionCall("exp10", [new LiteralScalar(1, LiteralKind.Int), new LiteralScalar(2, LiteralKind.Int)]))
+            ]);
+
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => _emitter.Emit(node));
+    }
+
     // ─── StarExpr ───────────────────────────────────────────────────
 
     [TestMethod]

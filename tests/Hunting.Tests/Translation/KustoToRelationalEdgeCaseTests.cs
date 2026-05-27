@@ -465,6 +465,26 @@ public sealed class KustoToRelationalEdgeCaseTests
         Assert.AreEqual(5, limit!.Count);
     }
 
+    [TestMethod]
+    [Description("Trivial function batch invalid arity is rejected with diagnostics")]
+    public void Functions_TrivialBatch_InvalidArity()
+    {
+        var (_, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | extend
+                A = strcat_array(Tags),
+                B = bag_keys(AdditionalFields, "extra"),
+                C = bag_has_key(AdditionalFields),
+                D = bag_merge(AdditionalFields),
+                E = array_length(),
+                F = exp2(),
+                G = exp10(1, 2)
+            """);
+
+        Assert.IsTrue(diag.HasErrors, "invalid function arity should produce diagnostics");
+    }
+
     // ─── Whitespace and formatting edge cases ───────────────────────
 
     [TestMethod]

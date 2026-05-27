@@ -1119,6 +1119,39 @@ public sealed class KustoToRelational
 
     private static void ValidateFunctionArguments(string name, IReadOnlyList<ScalarExpr> args)
     {
+        static void RequireCount(string fnName, IReadOnlyList<ScalarExpr> fnArgs, int expected)
+        {
+            if (fnArgs.Count != expected)
+            {
+                throw new NotSupportedException($"{fnName}() expects exactly {expected} argument(s).");
+            }
+        }
+
+        switch (name.ToLowerInvariant())
+        {
+            case "strcat_array":
+                RequireCount("strcat_array", args, 2);
+                return;
+            case "bag_keys":
+                RequireCount("bag_keys", args, 1);
+                return;
+            case "bag_has_key":
+                RequireCount("bag_has_key", args, 2);
+                return;
+            case "bag_merge":
+                RequireCount("bag_merge", args, 2);
+                return;
+            case "array_length":
+                RequireCount("array_length", args, 1);
+                return;
+            case "exp2":
+                RequireCount("exp2", args, 1);
+                return;
+            case "exp10":
+                RequireCount("exp10", args, 1);
+                return;
+        }
+
         if (!name.Equals("extract", StringComparison.OrdinalIgnoreCase))
         {
             return;

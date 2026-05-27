@@ -48,7 +48,7 @@ public sealed class KustoToRelationalTests
         return (T)exp;
     }
 
-    // ─── Day 1: ScanNode + LimitNode ────────────────────────────────
+    // ─── ScanNode + LimitNode ────────────────────────────────
 
     [TestMethod]
     [Description("Bare table reference → ScanNode")]
@@ -71,7 +71,7 @@ public sealed class KustoToRelationalTests
         AssertIs<ScanNode>(limit.Input);
     }
 
-    // ─── Day 2: FilterNode + scalar expressions ─────────────────────
+    // ─── FilterNode + scalar expressions ─────────────────────
 
     [TestMethod]
     [Description("where with string equality → FilterNode")]
@@ -109,7 +109,7 @@ public sealed class KustoToRelationalTests
         Assert.AreEqual(ScalarBinaryOp.And, and.Op);
     }
 
-    // ─── Day 3: ProjectNode + SortNode ──────────────────────────────
+    // ─── ProjectNode + SortNode ──────────────────────────────
 
     [TestMethod]
     [Description("project selecting named columns")]
@@ -135,7 +135,7 @@ public sealed class KustoToRelationalTests
             "KQL default sort direction is DESC");
     }
 
-    // ─── Day 4: ExtendNode ──────────────────────────────────────────
+    // ─── ExtendNode ──────────────────────────────────────────
 
     [TestMethod]
     [Description("extend adding a computed column")]
@@ -213,7 +213,28 @@ public sealed class KustoToRelationalTests
         Assert.HasCount(4, fn.Args);
     }
 
-    // ─── Day 5: AggregateNode ───────────────────────────────────────
+    [TestMethod]
+    [Description("Trivial function batch translates as scalar function calls with expected arity")]
+    public void Extend_TrivialFunctionBatch_ValidArity()
+    {
+        var (result, diag) = Translate(
+            """
+            DeviceProcessEvents
+            | extend
+                Arr = strcat_array(split(FileName, ","), ","),
+                Keys = bag_keys(AdditionalFields),
+                HasUser = bag_has_key(AdditionalFields, "User"),
+                Merged = bag_merge(AdditionalFields, AdditionalFields),
+                Len = array_length(split(FileName, ",")),
+                E2 = exp2(3),
+                E10 = exp10(2)
+            """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var ext = AssertIs<ExtendNode>(result);
+        Assert.HasCount(7, ext.Extensions);
+    }
+
+    // ─── AggregateNode ───────────────────────────────────────
 
     [TestMethod]
     [Description("summarize count() by column")]
@@ -238,7 +259,7 @@ public sealed class KustoToRelationalTests
         Assert.HasCount(2, agg.Aggregates);
     }
 
-    // ─── Day 6: LetBindingNode ──────────────────────────────────────
+    // ─── LetBindingNode ──────────────────────────────────────
 
     [TestMethod]
     [Description("scalar let binding")]
@@ -551,7 +572,7 @@ public sealed class KustoToRelationalTests
         var sample = AssertIs<SampleNode>(result);
         Assert.AreEqual(5, sample.Count);
         var distinct = AssertIs<DistinctNode>(sample.Input);
-        Assert.AreEqual(1, distinct.Projections.Count);
+        Assert.HasCount(1, distinct.Projections);
         var col = AssertIs<ColumnRef>(distinct.Projections[0].Expression);
         Assert.AreEqual("FileName", col.Name);
     }

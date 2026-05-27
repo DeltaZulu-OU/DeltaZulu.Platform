@@ -10,6 +10,7 @@ security data.
 
 ## Recent updates
 
+- 2026-05-27: Promoted seven trivial emitter-backed functions to MVP coverage (`strcat_array`, `bag_keys`, `bag_has_key`, `bag_merge`, `array_length`, `exp2`, `exp10`), increasing checklist MVP-ready parity to 215/319 (67.4%).
 - 2026-05-27: Query telemetry visibility improved — developer-mode `debugTrace[]` is now logged on successful query execution paths as well as failures to support optimization work.
 
 ## Phase 0 — Gate Spike + Scaffolding ✅ COMPLETE

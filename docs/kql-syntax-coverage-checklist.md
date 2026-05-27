@@ -355,14 +355,14 @@ approximation diagnostic, or reject.
 - [x] `tostring(dynamic_col)` → `CAST(dynamic_col AS VARCHAR)`
 - [ ] Dynamic member access — `d.key` → `json_extract(d, '$.key')` — *complexity: AST dot-access → JSON path rewrite*`
 - [ ] Dynamic array index — `d[0]` → `json_extract(d, '$[0]')` — *dependency: depends on dynamic member access*`
-- [ ] `bag_keys(d)` → `json_keys(d)` — *frequency*
-- [ ] `bag_has_key(d, key)` → `json_extract(d, key) IS NOT NULL` — *frequency*
-- [ ] `bag_merge(d1, d2)` → `json_merge_patch(d1, d2)` — *frequency*
+- [x] `bag_keys(d)` → `json_keys(d)`
+- [x] `bag_has_key(d, key)` → `json_extract(d, key) IS NOT NULL`
+- [x] `bag_merge(d1, d2)` → `json_merge_patch(d1, d2)`
 - [ ] `bag_remove_keys(d, keys)` — no direct DuckDB equivalent — *complexity: requires iterative key removal*
 - [ ] `bag_pack(k1, v1, k2, v2, ...)` — construct JSON object — *frequency*
 - [ ] `pack(k1, v1, ...)` — alias for bag_pack — *frequency*
 - [ ] `pack_all()` — pack all columns into dynamic — *complexity: requires schema introspection at emission time*
-- [ ] `array_length(d)` → `json_array_length(d)` or `length(d)` — *frequency*
+- [x] `array_length(d)` → `json_array_length(d)` or `length(d)`
 - [ ] `array_concat(a, b)` → `list_concat(a, b)` — *frequency*
 - [ ] `array_slice(a, start, end)` → `list_slice(a, start, end)` — *frequency*
 - [ ] `array_sort_asc(a)` / `array_sort_desc(a)` → `list_sort(a, ...)` — *frequency*
@@ -386,8 +386,8 @@ approximation diagnostic, or reject.
 - [x] `pow(x, y)` → `power(x, y)`
 - [x] `sqrt(x)` → `sqrt(x)`
 - [x] `exp(x)` → `exp(x)`
-- [ ] `exp2(x)` → `power(2, x)` — *frequency*
-- [ ] `exp10(x)` → `power(10, x)` — *frequency*
+- [x] `exp2(x)` → `power(2, x)`
+- [x] `exp10(x)` → `power(10, x)`
 - [x] `sign(x)` → `sign(x)`
 - [x] `pi()` → `pi()`
 - [ ] `rand()` → `random()` — *frequency*
@@ -410,7 +410,7 @@ approximation diagnostic, or reject.
 
 ### 4.8 Special / Miscellaneous Functions
 
-- [ ] `strcat_array(a, delimiter)` → `array_to_string(a, delimiter)` — *frequency*
+- [x] `strcat_array(a, delimiter)` → `array_to_string(a, delimiter)`
 - [ ] `format_bytes(n)` — human-readable byte size — *frequency*
 - [ ] `format_timespan(ts, format)` — timespan formatting — *format: needs specifier table*
 
@@ -489,25 +489,25 @@ approximation diagnostic, or reject.
 
 | Status | Count | Meaning |
 |--------|------:|---------|
-| `[x]` MVP | 200 | Direct translation to DuckDB SQL |
+| `[x]` MVP | 213 | Direct translation to DuckDB SQL |
 | `[m]` Metadata | 2 | Side-channel only, no SQL emitted |
 | `[B]` Blocked | 3 | Deliberately rejected to prevent silent semantic change |
-| `[ ]` Deferred | 114 | Post-MVP, reason annotated |
+| `[ ]` Deferred | 101 | Post-MVP, reason annotated |
 | **In scope** | **319** | |
 | N/A (out of scope) | N/A | Listed in Section 10 (not tracked as checklist rows) |
 
-MVP-ready = `[x]` + `[m]` = **202 / 319 (63.3%)**
+MVP-ready = `[x]` + `[m]` = **215 / 319 (67.4%)**
 
 ### Deferred by reason
 
 | Reason | Count | Meaning |
 |--------|------:|---------|
-| *frequency* | 39 | Valid translation exists but rare in hunting queries |
+| *frequency* | 26 | Valid translation exists but rare in hunting queries |
 | *complexity* | 49 | Significant implementation effort or no DuckDB equivalent |
 | *dependency* | 8 | Depends on another deferred capability |
 | *format* | 4 | Requires format/specifier translation tables |
 | *uncategorized* | 14 | Deferred without an explicit reason tag |
-| **Total deferred** | **114** | |
+| **Total deferred** | **101** | |
 
 ### Blocked items (3 total)
 

@@ -20,13 +20,13 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 
 | Feature parity status (in scope only) | Count | Percent of in-scope total |
 |---|---:|---:|
-| MVP translated (`[x]`) | 200 | 62.7% |
+| MVP translated (`[x]`) | 213 | 66.8% |
 | Metadata-only (`[m]`) | 2 | 0.6% |
 | Blocked for semantic safety (`[B]`) | 3 | 0.9% |
-| Deferred (`[ ]`) | 114 | 35.7% |
+| Deferred (`[ ]`) | 101 | 31.7% |
 | **Total in-scope constructs** | **319** | **100%** |
 
-MVP-ready parity = `[x] + [m]` = **202 / 319 (63.3%)**.
+MVP-ready parity = `[x] + [m]` = **215 / 319 (67.4%)**.
 
 Current public schema families in code: `main.DeviceProcessEvents` and `main.DeviceNetworkEvents`.
 
@@ -104,4 +104,4 @@ From the repository root:
 This project is licensed under the terms in [`LICENSE`](LICENSE).
 
 
-*Last updated: 2026-05-27 — status aligned with roadmap/architecture (Phase 4 complete; Phase 5 complete), with substantially expanded mock seed coverage to improve UI sample-query density.*
+*Last updated: 2026-05-27 — parity snapshot refreshed after promoting trivial emitter-backed mappings (`strcat_array`, `bag_keys`, `bag_has_key`, `bag_merge`, `array_length`, `exp2`, `exp10`) to MVP.*
