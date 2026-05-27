@@ -1499,7 +1499,7 @@ public sealed partial class DuckDbQueryEmitter
             "trim_start" => $"regexp_replace({args[1]}, concat('^(', {args[0]}, ')'), '')",
             "trim_end" => $"regexp_replace({args[1]}, concat('(', {args[0]}, ')$'), '')",
             "extract" => $"COALESCE(regexp_extract({args[2]}, {args[0]}, CAST({args[1]} AS INTEGER)), '')",
-            "parse_path" => $"struct_pack(root := regexp_extract({args[0]}, '^([A-Za-z]:)', 1), directory := regexp_replace({args[0]}, '[^\\\\/]+$', ''), filename := regexp_extract({args[0]}, '([^\\\\/]+)$', 1), extension := regexp_extract({args[0]}, '\\\\.([^\\\\/.]+)$', 1))",
+            "parse_path" => $"to_json(struct_pack(root := regexp_extract({args[0]}, '^([A-Za-z]:)', 1), directory := regexp_replace({args[0]}, '[^\\\\/]+$', ''), filename := regexp_extract({args[0]}, '([^\\\\/]+)$', 1), extension := regexp_extract({args[0]}, '\\\\.([^\\\\/.]+)$', 1)))",
 
             // DateTime functions
             "ago" => EmitAgo(args),

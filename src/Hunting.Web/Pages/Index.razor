@@ -131,7 +131,22 @@
                                 @for (int i = 0; i < row.Length; i++)
                                 {
                                     var cellIndex = i;
-                                    <td class="hunt-td" @onclick="() => OpenCellDrawer(_result.Columns[cellIndex].Name, row[cellIndex])">@FormatCell(row[cellIndex])</td>
+                                    var cellValue = row[cellIndex];
+                                    var hasDrawer = ShouldShowCellDrawerButton(cellValue);
+                                    <td class="hunt-td">
+                                        <div class="hunt-cell-content">
+                                            @if (hasDrawer)
+                                            {
+                                                <button class="hunt-cell-chevron"
+                                                        @onclick:stopPropagation="true"
+                                                        @onclick="() => OpenCellDrawer(_result.Columns[cellIndex].Name, cellValue, true)"
+                                                        aria-label="Open full cell content">
+                                                    &gt;
+                                                </button>
+                                            }
+                                            <span class="hunt-cell-text">@FormatCell(cellValue)</span>
+                                        </div>
+                                    </td>
                                 }
                             </tr>
                         }
@@ -174,7 +189,7 @@
             <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default" Size="Size.Small" OnClick="CloseDrawer" />
         </div>
         <div class="hunt-drawer-body">
-            @if (_drawerMode == DrawerMode.Sql)
+            @if (_drawerMode == DrawerMode.Sql || _drawerMode == DrawerMode.Json)
             {
                 <div class="hunt-sql-snippet">
                     <button class="hunt-btn hunt-btn-copy" @onclick="CopySqlToClipboard">Copy</button>
@@ -199,7 +214,7 @@
     private bool _showDrawer;
     private DrawerMode _drawerMode = DrawerMode.None;
     private string _drawerTitle = "Details";
-    private string _drawerTypeLabel = "";
+    private string _drawerTypeLabel = "You can copy this snippet to your clipboard.";
     private string _drawerContent = "";
     private string _drawerSqlHtml = "";
     private bool _showSql;
@@ -270,27 +285,47 @@
         if (_result?.GeneratedSql is not string sql) return;
         _drawerMode = DrawerMode.Sql;
         _drawerTitle = "Generated SQL";
-        _drawerTypeLabel = "Beautified and syntax-highlighted";
         _drawerSqlHtml = HighlightSql(BeautifySql(sql));
         _showDrawer = true;
     }
 
     private async Task CopySqlToClipboard()
     {
-        if (_result?.GeneratedSql is not string sql) return;
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", sql);
-        Snackbar.Add("SQL copied to clipboard.", Severity.Success);
+        string? text = _drawerMode switch
+        {
+            DrawerMode.Sql => _result?.GeneratedSql,
+            DrawerMode.Json => _drawerContent,
+            _ => null
+        };
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        var label = _drawerMode == DrawerMode.Json ? "JSON" : "SQL";
+        Snackbar.Add($"{label} copied to clipboard.", Severity.Success);
     }
 
-    private void OpenCellDrawer(string columnName, object? value)
+    private void OpenCellDrawer(string columnName, object? value, bool forceOpen = false)
     {
-        var text = value?.ToString() ?? "";
-        if (string.IsNullOrWhiteSpace(text) || text.Length <= 200) return;
+        if (!forceOpen) return;
 
-        _drawerMode = DrawerMode.Content;
+        var text = value?.ToString() ?? "";
+        if (string.IsNullOrWhiteSpace(text)) return;
+
         _drawerTitle = $"{columnName} details";
         _drawerTypeLabel = DetectDataTypeLabel(text);
-        _drawerContent = text;
+        if (TryBeautifyJson(text, out var beautifiedJson))
+        {
+            _drawerMode = DrawerMode.Json;
+            _drawerContent = beautifiedJson;
+            _drawerSqlHtml = HighlightJson(beautifiedJson);
+        }
+        else
+        {
+            _drawerMode = DrawerMode.Content;
+            _drawerContent = text;
+            _drawerSqlHtml = "";
+        }
+
         _showDrawer = true;
     }
 
@@ -371,6 +406,21 @@
         return s.Length > 200 ? s[..200] + "…" : s;
     }
 
+    private static bool ShouldShowCellDrawerButton(object? value)
+    {
+        var text = value?.ToString() ?? "";
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var trimmed = text.TrimStart();
+        var looksStructured = (trimmed.StartsWith("{") && trimmed.EndsWith("}")) ||
+                              (trimmed.StartsWith("[") && trimmed.EndsWith("]"));
+
+        return looksStructured || text.Length > 160;
+    }
+
     private async Task Clear()
     {
         _kql = string.Empty;
@@ -437,6 +487,46 @@
         return encoded;
     }
 
+    private static bool TryBeautifyJson(string text, out string beautified)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(text);
+            beautified = System.Text.Json.JsonSerializer.Serialize(doc.RootElement, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+            return true;
+        }
+        catch
+        {
+            beautified = string.Empty;
+            return false;
+        }
+    }
+
+    private static string HighlightJson(string json)
+    {
+        var encoded = System.Net.WebUtility.HtmlEncode(json);
+        encoded = System.Text.RegularExpressions.Regex.Replace(
+            encoded,
+            "\"([^\"\\\\]|\\\\.)*\"(?=\\s*:)",
+            "<span class=\"json-key\">$0</span>");
+        encoded = System.Text.RegularExpressions.Regex.Replace(
+            encoded,
+            ":\\s*\"([^\"\\\\]|\\\\.)*\"",
+            m => $": <span class=\"json-string\">{m.Value[2..]}</span>");
+        encoded = System.Text.RegularExpressions.Regex.Replace(
+            encoded,
+            "\\b(-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b",
+            "<span class=\"json-number\">$1</span>");
+        encoded = System.Text.RegularExpressions.Regex.Replace(
+            encoded,
+            "\\b(true|false|null)\\b",
+            "<span class=\"json-literal\">$1</span>");
+        return encoded;
+    }
+
     private static string DetectDataTypeLabel(string text)
     {
         var trimmed = text.TrimStart();
@@ -448,6 +538,7 @@
     {
         None,
         Sql,
+        Json,
         Content
     }
 

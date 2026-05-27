@@ -290,4 +290,4 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 | DuckDB connection in Blazor Server | `DuckDbConnectionFactory` + `QueryService` serialization | ✅ Implemented |
 ---
 
-*Last updated: 2026-05-27 — documentation aligned to current implementation state (Phase 4 complete; Phase 5 complete, incl. projected lookup-join collapse), with substantially expanded mock seed scenarios to improve sample-query signal density in the UI.*
+*Last updated: 2026-05-27 — documentation aligned to current implementation state (Phase 4 complete; Phase 5 complete, incl. projected lookup-join collapse), with parse_path dynamic output normalized to JSON text and long/structured grid cells now using inline chevron affordance where the heuristic controls chevron visibility (drawer open remains explicit click action); substantially expanded mock seed scenarios continue to improve sample-query signal density in the UI.*

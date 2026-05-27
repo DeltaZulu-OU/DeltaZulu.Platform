@@ -416,6 +416,23 @@ html, body {
     padding-top: 38px;
 }
 
+.json-key {
+    color: #ffab70;
+}
+
+.json-string {
+    color: #a5d6ff;
+}
+
+.json-number {
+    color: #79c0ff;
+}
+
+.json-literal {
+    color: #d2a8ff;
+    font-weight: 600;
+}
+
 .sql-keyword {
     color: #ff7b72;
     font-weight: 700;
@@ -464,9 +481,39 @@ html, body {
     white-space: nowrap;
 }
 
-    .hunt-th:hover {
-        color: var(--text-main);
-    }
+.hunt-th:hover {
+    color: var(--text-main);
+}
+
+.hunt-cell-content {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hunt-cell-chevron {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    border-radius: 4px;
+    width: 18px;
+    height: 18px;
+    line-height: 14px;
+    padding: 0;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    flex: 0 0 auto;
+}
+
+.hunt-cell-chevron:hover {
+    color: var(--text-main);
+    border-color: var(--text-dim);
+}
+
+.hunt-cell-text {
+    min-width: 0;
+}
 
 .hunt-tr {
     border-bottom: 1px solid var(--border);

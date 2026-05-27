@@ -280,7 +280,7 @@ public sealed partial class DuckDbQueryEmitterTests
         var sql = _emitter.Emit(node);
         AssertSqlContains(sql, "regexp_replace(FolderPath, concat('^(', '\\\\+', ')'), '')");
         AssertSqlContains(sql, "regexp_replace(FolderPath, concat('(', '\\\\+', ')$'), '')");
-        AssertSqlContains(sql, "struct_pack(");
+        AssertSqlContains(sql, "to_json(struct_pack(");
         AssertSqlContains(sql, "to_base64(CAST(FileName AS BLOB))");
         AssertSqlContains(sql, "CAST(from_base64('YQ==') AS VARCHAR)");
 

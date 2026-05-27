@@ -13,6 +13,9 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 - Phase 5 (Planner v1 + emitter SQL-shape simplification) is complete.
 - End-to-end pipeline coverage currently includes 17 hunting scenarios in `EndToEndPipelineTests`.
 - Developer-mode query debug trace is now logged on successful executions (not only failures) to support optimization telemetry.
+- `parse_path()` output is now emitted as JSON text so dynamic path components render as readable strings in the UI/results grid.
+- Long/structured result cells now show an inline chevron affordance that opens the right-side drawer with beautified, syntax-highlighted JSON content when applicable.
+- The long/structured cell heuristic controls **chevron visibility only**; opening the drawer is an explicit chevron action.
 - Feature parity snapshot (from `docs/kql-syntax-coverage-checklist.md`) now uses an in-scope-only statistics table (out-of-scope constructs excluded):
 
 | Feature parity status (in scope only) | Count | Percent of in-scope total |

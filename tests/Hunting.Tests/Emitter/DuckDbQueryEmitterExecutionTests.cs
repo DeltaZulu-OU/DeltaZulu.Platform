@@ -118,6 +118,19 @@ public sealed class DuckDbQueryEmitterExecutionTests
         }
     }
 
+    private object? ExecuteFirstValue(string sql)
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = sql;
+        using var reader = cmd.ExecuteReader();
+        if (!reader.Read())
+        {
+            return null;
+        }
+
+        return reader.IsDBNull(0) ? null : reader.GetValue(0);
+    }
+
     // ─── Core operators execute ─────────────────────────────────────
 
     [TestMethod]
@@ -297,6 +310,9 @@ public sealed class DuckDbQueryEmitterExecutionTests
             new ScanNode("DeviceProcessEvents"),
             [new ProjectionExpr("parsed", new FunctionCall("parse_path", [new ColumnRef("FolderPath")]))]);
         AssertExecutes(parsePathNode, expectedMinRows: 1);
+        var parsePathSql = _emitter.Emit(new ProjectNode(parsePathNode, [new ProjectionExpr("parsed", new ColumnRef("parsed"))]));
+        var parsed = ExecuteFirstValue(parsePathSql);
+        Assert.IsInstanceOfType<string>(parsed, "parse_path should emit JSON text, not a structured CLR object.");
 
         var percentileNode = new AggregateNode(
             new ScanNode("DeviceProcessEvents"),

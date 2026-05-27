@@ -256,7 +256,7 @@ approximation diagnostic, or reject.
 - [x] `reverse(s)` → `reverse(s)`
 - [ ] `parse_url(url)` — URL component extraction — *complexity: returns dynamic object*
 - [ ] `parse_urlquery(query)` — query parameter extraction — *dependency: depends on parse_url*
-- [x] `parse_path(path)` — file path parsing — minimal `struct_pack(root,directory,filename,extension)` mapping
+- [x] `parse_path(path)` — file path parsing — emits JSON text from `to_json(struct_pack(root,directory,filename,extension))` for stable dynamic-string rendering
 - [x] `parse_ipv4(ip)` — IP address parsing — dotted-quad to bigint with validation
 - [ ] `parse_ipv6(ip)` — IPv6 parsing — *frequency*
 - [ ] `ipv4_compare(a, b)` — IP comparison — *complexity: requires integer conversion*
@@ -599,4 +599,4 @@ commands. These operate on Kusto cluster state, not on data.
 
 ---
 
-*Last updated: 2026-05-27 — Coverage checklist re-validated against current translator/emitter capabilities (including sample-distinct, percentile, trim_start/trim_end, base64 encode/decode, and parse_path), with no construct-scope change from mock-seed data expansion.*
+*Last updated: 2026-05-27 — Coverage checklist re-validated against current translator/emitter capabilities (including sample-distinct, percentile, trim_start/trim_end, base64 encode/decode, and parse_path JSON-string emission), with no construct-scope change; UI result-cell drawer UX remains presentation-only (heuristic drives chevron visibility, explicit click opens drawer).*
