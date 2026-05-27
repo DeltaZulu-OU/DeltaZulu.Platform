@@ -599,4 +599,4 @@ commands. These operate on Kusto cluster state, not on data.
 
 ---
 
-*Last updated: 2026-05-27 — Coverage checklist re-validated against current translator/emitter capabilities (including sample-distinct, percentile, trim_start/trim_end, base64 encode/decode, and parse_path).*
+*Last updated: 2026-05-27 — Coverage checklist re-validated against current translator/emitter capabilities (including sample-distinct, percentile, trim_start/trim_end, base64 encode/decode, and parse_path), with no construct-scope change from mock-seed data expansion.*

@@ -101,4 +101,4 @@ From the repository root:
 This project is licensed under the terms in [`LICENSE`](LICENSE).
 
 
-*Last updated: 2026-05-27 — status aligned with roadmap/architecture (Phase 4 complete; Phase 5 complete).*
+*Last updated: 2026-05-27 — status aligned with roadmap/architecture (Phase 4 complete; Phase 5 complete), with substantially expanded mock seed coverage to improve UI sample-query density.*

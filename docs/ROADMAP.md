@@ -290,4 +290,4 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 | DuckDB connection in Blazor Server | `DuckDbConnectionFactory` + `QueryService` serialization | ✅ Implemented |
 ---
 
-*Last updated: 2026-05-27 — documentation aligned to current implementation state (Phase 4 complete; Phase 5 complete, incl. projected lookup-join collapse).*
+*Last updated: 2026-05-27 — documentation aligned to current implementation state (Phase 4 complete; Phase 5 complete, incl. projected lookup-join collapse), with substantially expanded mock seed scenarios to improve sample-query signal density in the UI.*
