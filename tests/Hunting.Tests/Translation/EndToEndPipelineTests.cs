@@ -164,6 +164,18 @@ public sealed class EndToEndPipelineTests
         Assert.IsTrue(capturing.LastContext?.Enabled);
     }
 
+    [TestMethod]
+    [Description("Runtime constructor rejects invalid guardrail parameters")]
+    public void RuntimeCtor_InvalidParameters_Throw()
+    {
+        var catalog = new ApprovedViewCatalog();
+        catalog.Register(DeviceProcessEventsSchema.View);
+
+        Assert.ThrowsException<ArgumentOutOfRangeException>(() => new QueryRuntime(catalog, _factory, defaultLimit: 0));
+        Assert.ThrowsException<ArgumentOutOfRangeException>(() => new QueryRuntime(catalog, _factory, timeoutSeconds: 0));
+        Assert.ThrowsException<ArgumentOutOfRangeException>(() => new QueryRuntime(catalog, _factory, plannerMaxIterations: 0));
+    }
+
     // ─── Hunting scenarios ──────────────────────────────────────────
 
     [TestMethod]

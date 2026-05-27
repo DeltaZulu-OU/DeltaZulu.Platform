@@ -31,6 +31,7 @@ public enum DiagnosticSeverity
 public sealed record QueryDiagnostic(
     DiagnosticSeverity Severity,
     DiagnosticPhase Phase,
+    string Code,
     string Message,
     string? DeveloperDetail = null,
     int? TextStart = null,
@@ -60,9 +61,18 @@ public sealed class DiagnosticBag
 
     public void Add(QueryDiagnostic diagnostic) => _items.Add(diagnostic);
 
-    public void AddError(DiagnosticPhase phase, string message, string? detail = null, int? start = null, int? length = null)
-        => _items.Add(new(DiagnosticSeverity.Error, phase, message, detail, start, length));
+    public void AddError(DiagnosticPhase phase, string message, string? detail = null, int? start = null, int? length = null, string code = QueryDiagnosticCodes.Unspecified)
+        => _items.Add(new(DiagnosticSeverity.Error, phase, code, message, detail, start, length));
 
-    public void AddWarning(DiagnosticPhase phase, string message, string? detail = null)
-        => _items.Add(new(DiagnosticSeverity.Warning, phase, message, detail));
+    public void AddWarning(DiagnosticPhase phase, string message, string? detail = null, string code = QueryDiagnosticCodes.Unspecified)
+        => _items.Add(new(DiagnosticSeverity.Warning, phase, code, message, detail));
+}
+
+public static class QueryDiagnosticCodes
+{
+    public const string Unspecified = "GEN000";
+    public const string PlannerFailed = "EMIT1001";
+    public const string SqlEmitFailed = "EMIT1002";
+    public const string ExecuteDuckDbFailed = "EXEC1001";
+    public const string ExecuteUnhandledFailed = "EXEC1002";
 }

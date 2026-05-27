@@ -24,6 +24,7 @@ public sealed class QueryRuntime
     private readonly bool _plannerEnabled;
     private readonly IRelationalPlanner _planner;
     private readonly int _plannerMaxIterations;
+    private readonly bool _includeSensitiveDeveloperDetail;
 
     public QueryRuntime(
         ApprovedViewCatalog catalog,
@@ -31,15 +32,34 @@ public sealed class QueryRuntime
         int defaultLimit = 10_000,
         int timeoutSeconds = 30,
         bool developerMode = false,
+        bool includeSensitiveDeveloperDetail = false,
         bool plannerEnabled = false,
         int plannerMaxIterations = 3,
         IRelationalPlanner? planner = null)
     {
+        ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(connectionFactory);
+        if (defaultLimit <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(defaultLimit), defaultLimit, "Default limit must be greater than zero.");
+        }
+
+        if (timeoutSeconds <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(timeoutSeconds), timeoutSeconds, "Timeout must be greater than zero.");
+        }
+
+        if (plannerMaxIterations < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(plannerMaxIterations), plannerMaxIterations, "Planner max iterations must be at least one.");
+        }
+
         _catalog = catalog;
         _connectionFactory = connectionFactory;
         _defaultLimit = defaultLimit;
         _timeoutSeconds = timeoutSeconds;
         _developerMode = developerMode;
+        _includeSensitiveDeveloperDetail = includeSensitiveDeveloperDetail;
         _plannerEnabled = plannerEnabled;
         _planner = planner ?? new RelationalPlanner();
         _plannerMaxIterations = plannerMaxIterations;
@@ -78,7 +98,8 @@ public sealed class QueryRuntime
             {
                 diagnostics.AddError(DiagnosticPhase.Emit,
                     "Failed during logical planning stage.",
-                    ex.Message);
+                    ex.Message,
+                    code: QueryDiagnosticCodes.PlannerFailed);
                 return QueryResult.FromDiagnostics(diagnostics, debugTrace);
             }
         }
@@ -101,7 +122,8 @@ public sealed class QueryRuntime
         {
             diagnostics.AddError(DiagnosticPhase.Emit,
                 "Failed to generate SQL from query model.",
-                ex.Message);
+                ex.Message,
+                code: QueryDiagnosticCodes.SqlEmitFailed);
             return QueryResult.FromDiagnostics(diagnostics, debugTrace);
         }
 
@@ -146,16 +168,33 @@ public sealed class QueryRuntime
         {
             diagnostics.AddError(DiagnosticPhase.Execute,
                 NormalizeDuckDbError(ex.Message),
-                $"SQL: {sql}\nException: {ex.Message}");
+                BuildDeveloperDetail(sql, ex.Message),
+                code: QueryDiagnosticCodes.ExecuteDuckDbFailed);
             return QueryResult.FromDiagnostics(diagnostics, debugTrace);
         }
         catch (Exception ex)
         {
             diagnostics.AddError(DiagnosticPhase.Execute,
                 "An internal error occurred while executing the query.",
-                $"SQL: {sql}\nException: {ex.GetType().Name}: {ex.Message}");
+                BuildDeveloperDetail(sql, $"{ex.GetType().Name}: {ex.Message}"),
+                code: QueryDiagnosticCodes.ExecuteUnhandledFailed);
             return QueryResult.FromDiagnostics(diagnostics, debugTrace);
         }
+    }
+
+    private string BuildDeveloperDetail(string sql, string exceptionText)
+    {
+        if (!_developerMode)
+        {
+            return "Developer detail is disabled.";
+        }
+
+        if (_includeSensitiveDeveloperDetail)
+        {
+            return $"SQL: {sql}\nException: {exceptionText}";
+        }
+
+        return $"SQL length: {sql.Length}\nException: {exceptionText}";
     }
 
     /// <summary>

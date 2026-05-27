@@ -123,6 +123,10 @@ Wire `QueryRuntime` into Blazor Server dependency injection. Register
 `ApprovedViewCatalog`, `DuckDbConnectionFactory`, `SchemaApplier`, `QueryRuntime` in
 `Program.cs`. Apply schema and seed mock data on startup.
 
+`QueryRuntime` now enforces constructor argument validation (`defaultLimit > 0`,
+`timeoutSeconds > 0`, `plannerMaxIterations >= 1`) and introduces stable runtime diagnostic
+codes for planner/emit/execute failure branches.
+
 ### 3b. Monaco editor integration
 Embed Monaco editor via Blazor Server JS interop. Wire "Run" button to call
 `QueryRuntime.Execute(kql)` and display `QueryDiagnostic` errors inline.
