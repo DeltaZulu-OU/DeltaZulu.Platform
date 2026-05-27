@@ -6,6 +6,7 @@ using DuckDB.NET.Data;
 using Hunting.Core.Catalog;
 using Hunting.Core.DuckDbSql;
 using Hunting.Core.Planning;
+using Hunting.Core.QueryModel;
 using Hunting.Core.Policy;
 using Hunting.Core.Translation;
 
@@ -25,6 +26,9 @@ public sealed class QueryRuntime
     private readonly IRelationalPlanner _planner;
     private readonly int _plannerMaxIterations;
     private readonly bool _includeSensitiveDeveloperDetail;
+    private readonly bool _plannerGatewayEnabled;
+    private readonly long _plannerGatewayMaxEstimatedRows;
+    private readonly int _plannerGatewayJoinComplexityThreshold;
 
     private readonly ConcurrentDictionary<CompileCacheKey, CompileCacheEntry> _compileCache = new();
     private readonly ConcurrentQueue<CompileCacheKey> _compileCacheOrder = new();
@@ -43,7 +47,10 @@ public sealed class QueryRuntime
         int compileCacheCapacity = 256,
         long policyEpoch = 1,
         long compilerEpoch = 1,
-        IRelationalPlanner? planner = null)
+        IRelationalPlanner? planner = null,
+        bool plannerGatewayEnabled = false,
+        long plannerGatewayMaxEstimatedRows = 50_000,
+        int plannerGatewayJoinComplexityThreshold = 2)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(connectionFactory);
@@ -68,6 +75,17 @@ public sealed class QueryRuntime
         }
 
 
+
+        if (plannerGatewayMaxEstimatedRows < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(plannerGatewayMaxEstimatedRows), plannerGatewayMaxEstimatedRows, "Planner gateway estimated-row threshold must be zero or greater.");
+        }
+
+        if (plannerGatewayJoinComplexityThreshold < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(plannerGatewayJoinComplexityThreshold), plannerGatewayJoinComplexityThreshold, "Planner gateway join complexity threshold must be zero or greater.");
+        }
+
         if (policyEpoch < 1)
         {
             throw new ArgumentOutOfRangeException(nameof(policyEpoch), policyEpoch, "Policy epoch must be at least one.");
@@ -85,6 +103,9 @@ public sealed class QueryRuntime
         _includeSensitiveDeveloperDetail = includeSensitiveDeveloperDetail;
         _planner = planner ?? new RelationalPlanner();
         _plannerMaxIterations = plannerMaxIterations;
+        _plannerGatewayEnabled = plannerGatewayEnabled;
+        _plannerGatewayMaxEstimatedRows = plannerGatewayMaxEstimatedRows;
+        _plannerGatewayJoinComplexityThreshold = plannerGatewayJoinComplexityThreshold;
         _compileCacheCapacity = compileCacheCapacity;
         _policyEpoch = policyEpoch;
         _compilerEpoch = compilerEpoch;
@@ -200,8 +221,17 @@ public sealed class QueryRuntime
         // Phase 2: Optional logical planning
         try
         {
-            relNode = _planner.Plan(relNode, new PlannerContext(Enabled: true, MaxIterations: _plannerMaxIterations));
-            debugTrace?.Add($"Planner complete: relNode={relNode.GetType().Name}");
+            var plannerDecision = DecidePlannerExecution(relNode);
+            debugTrace?.Add($"Planner gateway: decision={plannerDecision.Decision}, reason={plannerDecision.Reason}, joinCount={plannerDecision.JoinCount}, estimatedRows={plannerDecision.EstimatedRows?.ToString() ?? "unknown"}");
+            if (plannerDecision.Decision == "run")
+            {
+                relNode = _planner.Plan(relNode, new PlannerContext(Enabled: true, MaxIterations: _plannerMaxIterations));
+                debugTrace?.Add($"Planner complete: relNode={relNode.GetType().Name}");
+            }
+            else
+            {
+                debugTrace?.Add("Planner bypassed by gateway");
+            }
         }
         catch (Exception ex)
         {
@@ -266,7 +296,7 @@ public sealed class QueryRuntime
 
             // GeneratedSql is only exposed in developer mode — SQL is an internal artifact
             var exposedSql = _developerMode ? sql : null;
-            debugTrace?.Add($"Execute complete: rows={rows.Count}, columns={columns.Count}");
+            debugTrace?.Add($"Execute complete: rows={(columnData.Length == 0 ? 0 : columnData[0].Count)}, columns={columns.Count}");
             if (_compileCacheCapacity > 0)
             {
                 var entry = new CompileCacheEntry(sql, plannerStats, sqlShapeStats, emitterStats);
@@ -330,8 +360,13 @@ public sealed class QueryRuntime
                 return QueryStreamResult.FromDiagnostics(diagnostics, debugTrace);
             }
 
-            relNode = _planner.Plan(relNode, new PlannerContext(Enabled: true, MaxIterations: _plannerMaxIterations));
-            if (_developerMode && _planner is IPlannerTelemetry telemetry && telemetry.LastRunStats is not null)
+            var plannerDecision = DecidePlannerExecution(relNode);
+            debugTrace?.Add($"Planner gateway: decision={plannerDecision.Decision}, reason={plannerDecision.Reason}, joinCount={plannerDecision.JoinCount}, estimatedRows={plannerDecision.EstimatedRows?.ToString() ?? "unknown"}");
+            if (plannerDecision.Decision == "run")
+            {
+                relNode = _planner.Plan(relNode, new PlannerContext(Enabled: true, MaxIterations: _plannerMaxIterations));
+            }
+            if (_developerMode && plannerDecision.Decision == "run" && _planner is IPlannerTelemetry telemetry && telemetry.LastRunStats is not null)
             {
                 plannerStats = JsonSerializer.Serialize(telemetry.LastRunStats);
             }
@@ -412,7 +447,7 @@ public sealed class QueryRuntime
             var columnData = ReadAllColumns(reader, maxRows);
 
             var exposedSql = _developerMode ? sql : null;
-            debugTrace?.Add($"Execute complete: rows={rows.Count}, columns={columns.Count}");
+            debugTrace?.Add($"Execute complete: rows={(columnData.Length == 0 ? 0 : columnData[0].Count)}, columns={columns.Count}");
             if (!string.IsNullOrWhiteSpace(emitterStatsJson))
             {
                 debugTrace?.Add($"Emitter stats: {emitterStatsJson}");
@@ -519,6 +554,178 @@ public sealed class QueryRuntime
 
         return columns;
     }
+
+
+
+    private PlannerGatewayDecision DecidePlannerExecution(RelNode root)
+    {
+        if (!_plannerGatewayEnabled)
+        {
+            return new PlannerGatewayDecision("run", "gateway_disabled", null, CountJoins(root));
+        }
+
+        var joinCount = CountJoins(root);
+        if (joinCount > _plannerGatewayJoinComplexityThreshold)
+        {
+            return new PlannerGatewayDecision("run", "join_complexity", null, joinCount);
+        }
+
+        if (IsSimpleShape(root))
+        {
+            return new PlannerGatewayDecision("bypass", "simple_shape", null, joinCount);
+        }
+
+        if (!TryEstimateReferencedVolume(root, out var estimatedRows))
+        {
+            return new PlannerGatewayDecision("run", "estimate_failed", null, joinCount);
+        }
+
+        return estimatedRows <= _plannerGatewayMaxEstimatedRows
+            ? new PlannerGatewayDecision("bypass", "middle_shape_below_threshold", estimatedRows, joinCount)
+            : new PlannerGatewayDecision("run", "middle_shape_above_threshold", estimatedRows, joinCount);
+    }
+
+    private bool TryEstimateReferencedVolume(RelNode root, out long estimatedRows)
+    {
+        estimatedRows = 0;
+        var viewNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        CollectViewNames(root, viewNames);
+        if (viewNames.Count == 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            var conn = _connectionFactory.GetConnection();
+            using var cmd = conn.CreateCommand();
+            foreach (var viewName in viewNames)
+            {
+                cmd.CommandText = $"SELECT COUNT(*) FROM {viewName}";
+                var raw = cmd.ExecuteScalar();
+                if (raw is null || raw is DBNull)
+                {
+                    return false;
+                }
+
+                estimatedRows += Convert.ToInt64(raw);
+            }
+
+            return true;
+        }
+        catch
+        {
+            estimatedRows = 0;
+            return false;
+        }
+    }
+
+    private static bool IsSimpleShape(RelNode node) => node switch
+    {
+        ScanNode => true,
+        FilterNode f => IsSimpleShape(f.Input) && IsSimpleScalar(f.Predicate),
+        ProjectNode p => IsSimpleShape(p.Input) && AreSimpleProjections(p.Projections),
+        ExtendNode e => IsSimpleShape(e.Input) && AreSimpleProjections(e.Extensions),
+        SortNode s => IsSimpleShape(s.Input) && AreSimpleSorts(s.Sorts),
+        LimitNode l => IsSimpleShape(l.Input),
+        SampleNode s => IsSimpleShape(s.Input),
+        _ => false
+    };
+
+    private static bool AreSimpleProjections(IReadOnlyList<ProjectionExpr> projections)
+    {
+        foreach (var projection in projections)
+        {
+            if (!IsSimpleScalar(projection.Expression))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool AreSimpleSorts(IReadOnlyList<SortExpr> sorts)
+    {
+        foreach (var sort in sorts)
+        {
+            if (!IsSimpleScalar(sort.Expression))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsSimpleScalar(ScalarExpr expr) => expr switch
+    {
+        ColumnRef => true,
+        LiteralScalar => true,
+        StarExpr => true,
+        BinaryScalar b => IsSimpleScalar(b.Left) && IsSimpleScalar(b.Right),
+        UnaryScalar u => IsSimpleScalar(u.Operand),
+        _ => false
+    };
+
+    private static int CountJoins(RelNode node) => node switch
+    {
+        JoinNode j => 1 + CountJoins(j.Left) + CountJoins(j.Right),
+        FilterNode f => CountJoins(f.Input),
+        ProjectNode p => CountJoins(p.Input),
+        ExtendNode e => CountJoins(e.Input),
+        AggregateNode a => CountJoins(a.Input),
+        SortNode s => CountJoins(s.Input),
+        LimitNode l => CountJoins(l.Input),
+        SampleNode s => CountJoins(s.Input),
+        DistinctNode d => CountJoins(d.Input),
+        LetBindingNode l => (l.TabularValue is null ? 0 : CountJoins(l.TabularValue)) + CountJoins(l.Body),
+        _ => 0
+    };
+
+    private static void CollectViewNames(RelNode node, HashSet<string> views)
+    {
+        switch (node)
+        {
+            case ScanNode scan:
+                views.Add(scan.ViewName);
+                break;
+            case JoinNode join:
+                CollectViewNames(join.Left, views);
+                CollectViewNames(join.Right, views);
+                break;
+            case FilterNode f:
+                CollectViewNames(f.Input, views);
+                break;
+            case ProjectNode p:
+                CollectViewNames(p.Input, views);
+                break;
+            case ExtendNode e:
+                CollectViewNames(e.Input, views);
+                break;
+            case AggregateNode a:
+                CollectViewNames(a.Input, views);
+                break;
+            case SortNode s:
+                CollectViewNames(s.Input, views);
+                break;
+            case LimitNode l:
+                CollectViewNames(l.Input, views);
+                break;
+            case SampleNode s:
+                CollectViewNames(s.Input, views);
+                break;
+            case DistinctNode d:
+                CollectViewNames(d.Input, views);
+                break;
+            case LetBindingNode l:
+                if (l.TabularValue is not null) CollectViewNames(l.TabularValue, views);
+                CollectViewNames(l.Body, views);
+                break;
+        }
+    }
+
+    private sealed record PlannerGatewayDecision(string Decision, string Reason, long? EstimatedRows, int JoinCount);
 
     private static Func<DuckDBDataReader, int, object?>[] BuildTypedReaders(DuckDBDataReader reader)
     {

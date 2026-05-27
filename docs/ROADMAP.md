@@ -34,6 +34,8 @@ security data.
 - 2026-05-27: Promoted seven trivial emitter-backed functions to MVP coverage (`strcat_array`, `bag_keys`, `bag_has_key`, `bag_merge`, `array_length`, `exp2`, `exp10`), increasing checklist MVP-ready parity to 215/319 (67.4%).
 - 2026-05-27: Query telemetry visibility improved — developer-mode `debugTrace[]` is now logged on successful query execution paths as well as failures to support optimization work.
 
+- 2026-05-27: Proposed ADR 0011 to add a pre-planner fast-path gateway in `QueryRuntime` with conservative structural gating and a 50,000 estimated-row data-volume threshold for middle-shape plans.
+
 ## Phase 0 — Gate Spike + Scaffolding ✅ COMPLETE
 
 **Objective:** Eliminate the last open technical risk and establish the project skeleton.
@@ -275,7 +277,7 @@ Ordered by hunting-workflow impact:
 2. Dynamic member access (`d.key`, `d[0]`) — JSON path emission
 3. `format_datetime` — Kusto-to-strftime format string translation
 4. `has_any` / `has_all` — OR/AND chain of regex word-boundary matches
-5. Planner v2 relational optimizations — safer pushdown expansion, join/aggregation rewrites, improved CSE, and SQL-shape reduction with parity tests
+5. Planner admission + v2 relational optimizations — implement ADR 0011 fast-path gateway (50k starter threshold), then expand safer pushdown/join/aggregation rewrites, improved CSE, and SQL-shape reduction with parity tests
 6. Monaco language-service quality improvements (advanced semantics + richer diagnostics)
 7. One-off schema bootstrap import + generic model alignment — optional ASIM/Sentinel starter import, then provider-agnostic table/view modeling
 8. Quack protocol migration — concurrent access + server-side query authorization
@@ -291,6 +293,7 @@ ADR references:
 - `docs/adr/0008-use-medallion-schemas-with-principle-driven-contracts.md`
 - `docs/adr/0009-multi-dialect-backend-architecture.md`
 - `docs/adr/0010-render-poc-subset-with-vizor-echarts.md`
+- `docs/adr/0011-add-relational-planner-fast-path-gateway.md`
 
 ## Post-POC / Future Challenges
 
@@ -312,4 +315,4 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 | DuckDB connection in Blazor Server | `DuckDbConnectionFactory` + `QueryService` serialization | ✅ Implemented |
 ---
 
-*Last updated: 2026-05-27 — planner/emitter/runtime allocation cleanup continued (including emitter `in` emission and QueryResult columnar-contract migration), with no phase/construct scope change.*
+*Last updated: 2026-05-27 — planner fast-path gateway (ADR 0011) introduced in runtime with configurable structural/volume admission controls and decision telemetry.*
