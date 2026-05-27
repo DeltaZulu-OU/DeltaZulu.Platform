@@ -234,6 +234,27 @@ public sealed class KustoToRelationalTests
         Assert.HasCount(7, ext.Extensions);
     }
 
+    
+    [TestMethod]
+    public void Filter_Between_Translates()
+    {
+        var (result, diag) = Translate("DeviceProcessEvents | where ProcessId between (1 .. 5)");
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var filter = AssertIs<FilterNode>(result);
+        var and = AssertIs<BinaryScalar>(filter.Predicate);
+        Assert.AreEqual(ScalarBinaryOp.And, and.Op);
+    }
+
+    [TestMethod]
+    public void Print_TabularFunction_Translates()
+    {
+        var (result, diag) = Translate("print X=1, Y='a'");
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var proj = AssertIs<ProjectNode>(result);
+        Assert.IsInstanceOfType<SingletonRowNode>(proj.Input);
+        Assert.AreEqual(2, proj.Projections.Count);
+    }
+
     // ─── AggregateNode ───────────────────────────────────────
 
     [TestMethod]

@@ -20,13 +20,13 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 
 | Feature parity status (in scope only) | Count | Percent of in-scope total |
 |---|---:|---:|
-| MVP translated (`[x]`) | 213 | 66.8% |
+| MVP translated (`[x]`) | 220 | 69.0% |
 | Metadata-only (`[m]`) | 2 | 0.6% |
 | Blocked for semantic safety (`[B]`) | 3 | 0.9% |
-| Deferred (`[ ]`) | 101 | 31.7% |
+| Deferred (`[ ]`) | 94 | 29.5% |
 | **Total in-scope constructs** | **319** | **100%** |
 
-MVP-ready parity = `[x] + [m]` = **215 / 319 (67.4%)**.
+MVP-ready parity = `[x] + [m]` = **222 / 319 (69.6%)**.
 
 Current public schema families in code: `main.DeviceProcessEvents` and `main.DeviceNetworkEvents`.
 

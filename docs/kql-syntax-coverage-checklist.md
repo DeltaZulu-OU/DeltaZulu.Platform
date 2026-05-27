@@ -44,7 +44,7 @@ approximation diagnostic, or reject.
 - [x] `count` — shorthand for `summarize count()` → `SELECT count(*) AS Count`
 - [x] `distinct` — emits `SELECT DISTINCT` over explicit projected columns
 - [x] `top` — sort + take combined → `ORDER BY ... LIMIT`
-- [ ] `print` — *deferred: not yet implemented in translator*
+- [x] `print` — single-row projection source (`SELECT expr AS alias` without table input)
 - [ ] `datatable` — *deferred: not yet implemented in translator*
 - [ ] `range` — generated series → `SELECT x FROM range(start, stop+1, step) AS t(x)` — *complexity: endpoint semantics differ between KQL and DuckDB*
 - [ ] `top-nested` — hierarchical top-N — *complexity: recursive aggregation*
@@ -170,8 +170,8 @@ approximation diagnostic, or reject.
 - [x] `<` / `<=` / `>` / `>=` — ordered comparison
 - [x] `=~` — case-insensitive equality → `lower(a) = lower(b)` (divergence register)
 - [x] `!~` — case-insensitive inequality → `lower(a) != lower(b)` (divergence register)
-- [ ] `between(low .. high)` — *deferred: not yet implemented in scalar translator*
-- [ ] `!between(low .. high)` — *deferred: not yet implemented in scalar translator*
+- [x] `between(low .. high)` — `x >= low AND x <= high` — *deferred: not yet implemented in scalar translator*
+- [x] `!between(low .. high)` — `NOT(x >= low AND x <= high)` — *deferred: not yet implemented in scalar translator*
 - [ ] `in (list)` — *deferred: requires ListScalar IR node; current model cannot represent list literals*
 - [ ] `!in (list)` — *deferred: requires ListScalar IR node*
 - [ ] `in~ (list)` — case-insensitive set membership → `lower(x) IN (lower(v1), ...)` — *frequency*
@@ -390,9 +390,9 @@ approximation diagnostic, or reject.
 - [x] `exp10(x)` → `power(10, x)`
 - [x] `sign(x)` → `sign(x)`
 - [x] `pi()` → `pi()`
-- [ ] `rand()` → `random()` — *frequency*
-- [ ] `rand(n)` → `setseed(n); random()` — *frequency*
-- [ ] `cos(x)` / `sin(x)` / `tan(x)` / `acos(x)` / `asin(x)` / `atan(x)` / `atan2(y, x)` — *frequency*
+- [x] `rand()` → `random()`
+- [x] `rand(n)` → seeded pseudo-random expression (setseed-compatible approximation)
+- [x] `cos(x)` / `sin(x)` / `tan(x)` / `acos(x)` / `asin(x)` / `atan(x)` / `atan2(y, x)`
 - [x] `isnan(x)` → `isnan(x)`
 - [x] `isinf(x)` → `isinf(x)`
 - [ ] `beta_cdf(x, a, b)` — statistical CDF — *complexity: no DuckDB equivalent*
@@ -411,7 +411,7 @@ approximation diagnostic, or reject.
 ### 4.8 Special / Miscellaneous Functions
 
 - [x] `strcat_array(a, delimiter)` → `array_to_string(a, delimiter)`
-- [ ] `format_bytes(n)` — human-readable byte size — *frequency*
+- [x] `format_bytes(n)` — human-readable byte size (B/KB/MB/GB)
 - [ ] `format_timespan(ts, format)` — timespan formatting — *format: needs specifier table*
 
 ---

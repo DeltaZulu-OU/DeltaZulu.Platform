@@ -316,3 +316,6 @@ Planner strategy has been implemented in Phase 5. Future enhancements should be 
 ---
 
 *Last updated: 2026-05-27 — planner fast-path gateway (ADR 0011) introduced in runtime with configurable structural/volume admission controls and decision telemetry.*
+
+
+- 2026-05-27: Completed low-risk scalar/operator tranche: `between`/`!between`, `print`, `rand`, trig family, and `format_bytes`; checklist and tests updated.

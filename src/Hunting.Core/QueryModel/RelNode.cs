@@ -6,6 +6,8 @@ public abstract record RelNode;
 
 public sealed record ScanNode(string ViewName) : RelNode;
 
+public sealed record SingletonRowNode() : RelNode;
+
 public sealed record FilterNode(RelNode Input, ScalarExpr Predicate) : RelNode;
 
 public sealed record ProjectNode(RelNode Input, IReadOnlyList<ProjectionExpr> Projections) : RelNode;

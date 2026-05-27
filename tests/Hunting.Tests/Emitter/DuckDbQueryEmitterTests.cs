@@ -250,6 +250,26 @@ public sealed partial class DuckDbQueryEmitterTests
         AssertSqlContains(sql, "power(10, 2) AS e10");
     }
 
+
+    [TestMethod]
+    public void Emit_Func_RandTrigFormatBytes()
+    {
+        var node = new ProjectNode(
+            new SingletonRowNode(),
+            [
+                new ProjectionExpr("r", new FunctionCall("rand", [])),
+                new ProjectionExpr("c", new FunctionCall("cos", [new LiteralScalar(0, LiteralKind.Int)])),
+                new ProjectionExpr("s", new FunctionCall("sin", [new LiteralScalar(0, LiteralKind.Int)])),
+                new ProjectionExpr("fb", new FunctionCall("format_bytes", [new LiteralScalar(2048, LiteralKind.Int)]))
+            ]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "random() AS r");
+        AssertSqlContains(sql, "cos(0) AS c");
+        AssertSqlContains(sql, "sin(0) AS s");
+        AssertSqlContains(sql, "KB");
+    }
+
     [TestMethod]
     [Description("sample-distinct emits DISTINCT stage then sample stage")]
     public void Emit_SampleDistinct()

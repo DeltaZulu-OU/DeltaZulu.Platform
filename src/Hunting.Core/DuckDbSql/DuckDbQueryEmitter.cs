@@ -348,6 +348,7 @@ public sealed partial class DuckDbQueryEmitter
         SampleNode sample => EmitSample(sample),
         DistinctNode dist => EmitDistinct(dist),
         JoinNode join => EmitJoin(join),
+        SingletonRowNode single => EmitSingleton(single),
         LetBindingNode let_ => EmitLet(let_),
         _ => throw new NotSupportedException($"Unsupported RelNode type: {node.GetType().Name}")
     };
@@ -1612,6 +1613,14 @@ public sealed partial class DuckDbQueryEmitter
     }
 
     #endregion Join
+
+    private (string Source, string? Columns) EmitSingleton(SingletonRowNode _)
+    {
+        var stage = NextStage();
+        AddStage(stage, "SELECT 1 AS __seed");
+        return (stage, "__seed");
+    }
+
     #region Let
 
     private (string Source, string? Columns) EmitLet(LetBindingNode let_)
@@ -1901,6 +1910,15 @@ to_json(
             "exp10" => $"power(10, {args[0]})",
             "sign" => $"sign({args[0]})",
             "pi" => "pi()",
+            "rand" => args.Count switch { 0 => "random()", 1 => $"setseed({args[0]}) + (random()*0)", _ => throw new NotSupportedException("rand() expects 0 or 1 argument.") },
+            "cos" => $"cos({args[0]})",
+            "sin" => $"sin({args[0]})",
+            "tan" => $"tan({args[0]})",
+            "acos" => $"acos({args[0]})",
+            "asin" => $"asin({args[0]})",
+            "atan" => $"atan({args[0]})",
+            "atan2" => $"atan2({args[0]}, {args[1]})",
+            "format_bytes" => $"CASE WHEN {args[0]} IS NULL THEN NULL WHEN abs({args[0]}) < 1024 THEN concat(CAST(round({args[0]}, 0) AS BIGINT), ' B') WHEN abs({args[0]}) < 1048576 THEN concat(CAST(round({args[0]}/1024.0, 2) AS DOUBLE), ' KB') WHEN abs({args[0]}) < 1073741824 THEN concat(CAST(round({args[0]}/1048576.0, 2) AS DOUBLE), ' MB') ELSE concat(CAST(round({args[0]}/1073741824.0, 2) AS DOUBLE), ' GB') END",
 
             // Aggregation (when used inside AggregateNode projections)
             "count" => args.Count == 0 ? "count(*)" : $"count({args[0]})",

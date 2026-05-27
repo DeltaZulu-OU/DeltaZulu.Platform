@@ -444,6 +444,7 @@ public sealed class KustoToRelational
         NameReference name => TranslateTableRef(name),
         PathExpression path => TranslateTableRefExpression(path),
         FunctionCallExpression fn => TranslateTabularFunction(fn),
+        PrintOperator print => TranslatePrint(print),
         ParenthesizedExpression paren => TranslateExpression(paren.Expression),
         _ => Reject(expr, $"Unsupported tabular expression: {expr.Kind}")
     };
@@ -504,9 +505,45 @@ public sealed class KustoToRelational
         return new ScanNode(tableName);
     }
 
+
+    private RelNode? TranslatePrint(PrintOperator print)
+    {
+        var projections = new List<ProjectionExpr>();
+        foreach (var elem in print.Expressions)
+        {
+            projections.Add(TranslateProjectionExpr(UnwrapSeparated(elem)));
+        }
+
+        if (projections.Count == 0)
+        {
+            _diagnostics.AddError(DiagnosticPhase.Translate, "print requires at least one expression.");
+            return null;
+        }
+
+        return new ProjectNode(new SingletonRowNode(), projections);
+    }
+
     private RelNode? TranslateTabularFunction(FunctionCallExpression fn)
     {
         var name = fn.Name.SimpleName;
+        if (name.Equals("print", StringComparison.OrdinalIgnoreCase))
+        {
+            var projections = new List<ProjectionExpr>();
+            foreach (var elem in fn.ArgumentList.Expressions)
+            {
+                var expr = UnwrapSeparated(elem);
+                projections.Add(TranslateProjectionExpr(expr));
+            }
+
+            if (projections.Count == 0)
+            {
+                _diagnostics.AddError(DiagnosticPhase.Translate, "print requires at least one expression.");
+                return null;
+            }
+
+            return new ProjectNode(new SingletonRowNode(), projections);
+        }
+
         _diagnostics.AddError(DiagnosticPhase.Translate,
             $"Tabular function '{name}' is not supported as a query source.");
         return null;
@@ -534,6 +571,7 @@ public sealed class KustoToRelational
         JoinOperator join => TranslateJoin(join, input),
         LookupOperator lookup => TranslateLookup(lookup, input),
         SerializeOperator => input,
+        PrintOperator print => TranslatePrint(print),
         _ => Reject(op, $"Unsupported operator: {op.Kind}")
     };
 
@@ -857,7 +895,15 @@ public sealed class KustoToRelational
         }
     }
 
-    private ScalarExpr TranslateScalarCore(Expression expr) => expr switch
+    private ScalarExpr TranslateScalarCore(Expression expr)
+    {
+        var between = TryTranslateBetweenExpression(expr);
+        if (between is not null)
+        {
+            return between;
+        }
+
+        return expr switch
     {
         InExpression inExpr => TranslateInExpression(inExpr),
         LiteralExpression lit => TranslateLiteral(lit),
@@ -872,6 +918,36 @@ public sealed class KustoToRelational
         _ => throw new NotSupportedException(
             $"Unsupported scalar expression: {expr.Kind} ({expr.GetType().Name})")
     };
+    }
+
+
+    private ScalarExpr? TryTranslateBetweenExpression(Expression expr)
+    {
+        var kind = expr.Kind.ToString();
+        if (!kind.Contains("Between", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var parts = expr.GetDescendants<Expression>().ToList();
+        if (parts.Count < 3)
+        {
+            throw new NotSupportedException("between requires value, lower bound, and upper bound.");
+        }
+
+        var value = TranslateScalarExpr(parts[0]);
+        var lower = TranslateScalarExpr(parts[1]);
+        var upper = TranslateScalarExpr(parts[2]);
+
+        var betweenExpr = new BinaryScalar(
+            new BinaryScalar(value, ScalarBinaryOp.Gte, lower),
+            ScalarBinaryOp.And,
+            new BinaryScalar(value, ScalarBinaryOp.Lte, upper));
+
+        return kind.StartsWith("Not", StringComparison.OrdinalIgnoreCase)
+            ? new UnaryScalar(ScalarUnaryOp.Not, betweenExpr)
+            : betweenExpr;
+    }
 
     private ScalarExpr? TryTranslateScalar(Expression expr)
     {
