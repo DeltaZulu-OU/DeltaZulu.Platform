@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.5" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.8" />
     <PackageReference Include="MudBlazor" Version="9.5.0" />
     <PackageReference Include="Vizor.ECharts" Version="0.9.7" />
   </ItemGroup>
