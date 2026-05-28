@@ -10,6 +10,14 @@ security data.
 
 ## Recent updates
 
+- 2026-05-28: Fixed dashboard shell composition after app-bar migration by switching to non-fixed `MudAppBar` flow and flex-based content sizing, restoring coherent sidebar/main panel layout.
+
+- 2026-05-28: Replaced custom top header markup with a MudBlazor-native app bar (`MudAppBar` + `MudIconButton`) in `Hunting.Web` for consistent shell navigation styling/behavior.
+
+- 2026-05-27: Refactored SQLite settings persistence flow for simplicity/maintainability (shared SQL constants/helpers in store, explicit normalization helpers in state) with no functional change.
+
+- 2026-05-27: Persisted `/settings` defaults (time filter + item limit) to a local SQLite database (`settings.db`) through a new `UserSettingsStore`; settings now survive app restarts and are loaded into per-circuit state on page initialization.
+
 - 2026-05-28: Hardened Monaco bootstrap retry behavior to preserve cached editor query text across re-initialization attempts/failures, preventing transient initialization faults from clearing analyst-entered KQL.
 - 2026-05-28: Refactored render chart-data shaping from `Hunting.Web` into `Hunting.Data.Render` (`RenderChartBuilder` + `RenderChartModel`) so UI concerns are limited to chart option compilation and tab caching.
 - 2026-05-28: Expanded Render host sizing fix to bind both measured width and measured height into `Vizor.ECharts.EChart`, so charts fill the tab panel instead of staying capped at a fixed 320px height.

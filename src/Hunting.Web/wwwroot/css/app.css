@@ -37,11 +37,35 @@ html, body {
     font-size: 14px;
 }
 
-/* ─── Shell layout ──────────────────────────────────────────────────────── */
+/* ─── App + shell layout ───────────────────────────────────────────────── */
+.hunt-app {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.hunt-topbar {
+    background: var(--bg-sidebar) !important;
+    border-bottom: 1px solid var(--border);
+    min-height: 52px !important;
+    padding: 0 16px;
+}
+
+.hunt-brand {
+    color: var(--text-head);
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: lowercase;
+    letter-spacing: .02em;
+}
+
 .hunt-shell {
     display: grid;
     grid-template-columns: 240px 1fr;
-    height: 100vh;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow: hidden;
 }
 
@@ -54,15 +78,8 @@ html, body {
     overflow-y: auto;
 }
 
-.hunt-logo {
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-}
-
-.hunt-logo-text {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-head);
+.hunt-settings-link {
+    color: var(--text-main) !important;
 }
 
 /* ─── Schema browser ────────────────────────────────────────────────────── */
@@ -173,6 +190,7 @@ html, body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-width: 0;
 }
 
 .hunt-page {

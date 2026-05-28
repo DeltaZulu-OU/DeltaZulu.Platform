@@ -430,8 +430,9 @@
         }
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        await UserSettings.EnsureLoadedAsync();
         _toolbar.SelectedTimeFilter = UserSettings.DefaultTimeFilter;
         _toolbar.SelectedResultLimit = UserSettings.DefaultResultLimit;
         EditorBus.InsertRequested += HandleInsertRequested;

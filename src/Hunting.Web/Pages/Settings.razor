@@ -12,7 +12,7 @@
         <h2 id="default-time-heading">Default time filter</h2>
         <p class="settings-help">Select the pre-applied time range for new query sessions.</p>
 
-        <InputRadioGroup @bind-Value="UserSettings.DefaultTimeFilter" Name="default-time" class="settings-grid">
+        <InputRadioGroup @bind-Value="UserSettings.DefaultTimeFilter" @bind-Value:after="PersistSettingsAsync" Name="default-time" class="settings-grid">
             @foreach (var preset in UserSettings.AvailableTimeFilters)
             {
                 <label class="settings-option" for="time-@preset.Key">
@@ -28,7 +28,7 @@
         <p class="settings-help">Choose a result cap that is applied unless your query specifies a limit.</p>
         <div class="settings-field-row">
             <label for="default-limit">Items per query</label>
-            <select id="default-limit" class="settings-select" @bind="SelectedDefaultLimitValue">
+            <select id="default-limit" class="settings-select" @bind="SelectedDefaultLimitValue" @bind:after="PersistSettingsAsync">
                 @foreach (var opt in UserSettings.AvailableResultLimits)
                 {
                     <option value="@(opt?.ToString() ?? string.Empty)">@(opt is null ? "None" : opt.Value.ToString())</option>
@@ -38,14 +38,24 @@
     </section>
 
     <footer class="settings-footer-note">
-        <span>These are lightweight defaults for now and will evolve into richer preferences later.</span>
+        <span>These settings are persisted in a local SQLite store for this environment.</span>
     </footer>
 </div>
 
 @code {
+    protected override async Task OnInitializedAsync()
+    {
+        await UserSettings.EnsureLoadedAsync();
+    }
+
     private string SelectedDefaultLimitValue
     {
         get => UserSettings.DefaultResultLimit?.ToString() ?? string.Empty;
         set => UserSettings.DefaultResultLimit = int.TryParse(value, out var parsed) ? parsed : null;
+    }
+
+    private Task PersistSettingsAsync()
+    {
+        return UserSettings.SaveAsync();
     }
 }

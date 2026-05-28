@@ -1,23 +1,28 @@
 @inherits LayoutComponentBase
 @namespace Hunting.Web.Shared
 
-<div class="hunt-shell">
-    <aside class="hunt-sidebar">
-        <div class="hunt-logo">
-            <span class="hunt-logo-text">🔍 Hunting Workbench</span>
-        </div>
+<div class="hunt-app">
+    <MudAppBar Dense="true" Fixed="false" Elevation="1" Class="hunt-topbar">
+        <NavLink href="/" Match="NavLinkMatch.All" class="hunt-brand">classified</NavLink>
+        <MudSpacer />
+        <MudIconButton
+            Icon="@Icons.Material.Filled.Settings"
+            Color="Color.Inherit"
+            Size="Size.Medium"
+            Href="/settings"
+            AriaLabel="Settings"
+            Class="hunt-settings-link" />
+    </MudAppBar>
 
-        <nav class="hunt-nav">
-            <NavLink href="/" Match="NavLinkMatch.All" class="hunt-nav-link">Hunt</NavLink>
-            <NavLink href="/settings" class="hunt-nav-link">Settings</NavLink>
-        </nav>
+    <div class="hunt-shell">
+        <aside class="hunt-sidebar">
+            <SchemaBrowser />
+        </aside>
 
-        <SchemaBrowser />
-    </aside>
-
-    <main class="hunt-main">
-        @Body
-    </main>
+        <main class="hunt-main">
+            @Body
+        </main>
+    </div>
 </div>
 
 <MudSnackbarProvider />

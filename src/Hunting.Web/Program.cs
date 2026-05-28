@@ -45,6 +45,7 @@ builder.Services.AddSingleton<QueryService>();
 // Per-circuit channel bridging the layout sidebar to the editor page
 builder.Services.AddScoped<EditorBus>();
 builder.Services.AddScoped<LanguageService>();
+builder.Services.AddSingleton<UserSettingsStore>();
 builder.Services.AddScoped<UserSettingsState>();
 builder.Services.AddScoped<Hunting.Data.Render.RenderChartBuilder>();
 builder.Services.AddScoped<RenderChartService>();
@@ -54,6 +55,7 @@ var app = builder.Build();
 // ─── Schema bootstrap ─────────────────────────────────────────────────────────
 
 await BootstrapSchemaAsync(app);
+await BootstrapSettingsStoreAsync(app);
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
@@ -96,4 +98,11 @@ static async Task BootstrapSchemaAsync(WebApplication app)
             app.Logger.LogInformation("Mock data seeded for medallion event families: ProcessEvents and NetworkSessions");
         }
     });
+}
+
+static async Task BootstrapSettingsStoreAsync(WebApplication app)
+{
+    var store = app.Services.GetRequiredService<UserSettingsStore>();
+    await store.EnsureInitializedAsync();
+    app.Logger.LogInformation("Settings store initialized (SQLite)");
 }

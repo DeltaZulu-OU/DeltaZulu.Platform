@@ -4,7 +4,7 @@
 @inject Hunting.Web.Services.EditorBus EditorBus
 
 <nav class="schema-browser">
-    <div class="schema-browser-header">Tables</div>
+    <div class="schema-browser-header">Schema</div>
 
     @foreach (var (name, view) in Catalog.Views.OrderBy(kv => kv.Key))
     {

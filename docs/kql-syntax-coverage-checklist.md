@@ -2,6 +2,11 @@
 
 Authoritative translation reference: `docs/KQL-to-DuckDB-translation-spec.md`
 
+_Note (2026-05-27): Settings persistence moved to SQLite storage in `Hunting.Web` and was later refactored for clarity; no KQL construct coverage state changed in these updates._
+
+_Note (2026-05-28): The shell header was migrated to MudBlazor `MudAppBar`/`MudIconButton`; this is a UI composition change only and does not affect KQL syntax coverage._
+_Note (2026-05-28): Dashboard shell sizing/flow was adjusted after app-bar migration to fix panel layout coherence; this is a UI-only change and does not affect KQL coverage._
+
 Note (2026-05-28): Monaco editor UX was patched so terminal `render` completions insert suffixes correctly after `| render`; this is an editor integration fix only and does not change syntax coverage counts.
 
 ## Status labels
