@@ -1,6 +1,17 @@
 namespace Hunting.Core.Render;
 
-public enum RenderKind { Table, Card, Timechart, Linechart, Barchart, Columnchart, Piechart }
+public enum RenderKind
+{
+    Table,
+    Card,
+    Timechart,
+    Linechart,
+    Barchart,
+    Columnchart,
+    Piechart,
+    Areachart,
+    Scatterchart
+}
 
 public sealed record RenderSpec(RenderKind Kind, string? Title, string? XColumn, IReadOnlyList<string> YColumns, string? Series, string? Legend, bool IsStacked, bool IsFallback, string? FallbackReason);
 

@@ -5,6 +5,9 @@ public sealed record ResolvedRenderPlan(
     string? Title,
     string? XColumn,
     IReadOnlyList<string> YColumns,
+    string? SeriesColumn,
+    string? Legend,
+    bool IsStacked,
     bool IsFallback,
     string? FallbackReason);
 
@@ -24,7 +27,7 @@ public sealed class RenderResolver
     {
         if (spec.Kind == RenderKind.Table)
         {
-            return new ResolvedRenderPlan(RenderKind.Table, spec.Title, null, [], spec.IsFallback, spec.FallbackReason);
+            return new ResolvedRenderPlan(RenderKind.Table, spec.Title, null, [], null, null, false, spec.IsFallback, spec.FallbackReason);
         }
 
         var nameMap = schema.ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
@@ -41,11 +44,22 @@ public sealed class RenderResolver
             return Fallback("Unable to resolve ycolumns for render.", spec);
         }
 
-        return new ResolvedRenderPlan(spec.Kind, spec.Title, xColumn, yColumns, false, null);
+        var seriesColumn = ResolveSeriesColumn(spec, nameMap);
+        return new ResolvedRenderPlan(spec.Kind, spec.Title, xColumn, yColumns, seriesColumn, spec.Legend, spec.IsStacked, false, null);
     }
 
     private static ResolvedRenderPlan Fallback(string reason, RenderSpec spec)
-        => new(RenderKind.Table, spec.Title, null, [], true, reason);
+        => new(RenderKind.Table, spec.Title, null, [], null, null, false, true, reason);
+
+    private static string? ResolveSeriesColumn(RenderSpec spec, IReadOnlyDictionary<string, (string Name, string TypeName)> nameMap)
+    {
+        if (string.IsNullOrWhiteSpace(spec.Series))
+        {
+            return null;
+        }
+
+        return nameMap.TryGetValue(spec.Series, out var resolved) ? resolved.Name : null;
+    }
 
     private static string? ResolveXColumn(RenderSpec spec, IReadOnlyList<(string Name, string TypeName)> schema, Dictionary<string, (string Name, string TypeName)> nameMap)
     {

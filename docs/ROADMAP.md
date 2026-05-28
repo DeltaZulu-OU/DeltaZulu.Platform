@@ -10,7 +10,9 @@ security data.
 
 ## Recent updates
 
-- 2026-05-27: Render R1/R2 baseline implemented in runtime: terminal-only render parsing/diagnostics and resolver defaults/type validation with table fallback; UI chart adapter remains pending for R3.
+- 2026-05-27: Render R3 subset implemented in Blazor Render tab: resolved line/time and bar/column render specs now draw in-app SVG charts with diagnostics-first table fallback when resolution fails.
+
+- 2026-05-27: Render track moved into explicit POC→MVP delivery order with R0–R5 milestones; runtime/UI render implementation remains pending and table-first behavior is still the current state.
 
 - 2026-05-27: Render track reordered into POC/MVP sequence with explicit R0–R5 milestones; checklist/runtime status now reflects that prior metadata-sidecar behavior is reverted and render remains deferred until the new track is implemented.
 - 2026-05-27: Documentation synchronization pass: aligned architecture/roadmap/checklist/README with implemented `golden.*` surface, planner-in-runtime behavior, current ADR statuses, and explicit future tracks from proposed ADRs (Quartz scheduling, multi-backend routing, render sidecar, and time-series blueprint).
@@ -115,7 +117,11 @@ security data.
 - no stacked/multi-axis yet.
 
 **Exit criteria:**
-- End-to-end UI verification for visible chart on happy-path query.
+- UI render tab now draws an in-app chart for happy-path resolved render specs (`timechart`, `linechart`, `areachart`, `scatterchart`, `barchart`, `columnchart`, `piechart`, and `card`).
+- `kind=stacked` now renders stacked output for `barchart`, `columnchart`, and `areachart`.
+- `legend=hidden|hide|none|off` now suppresses chart legend rendering in the UI adapter path.
+- `series=<column>` now groups rows into multi-series chart output using the specified result column.
+- Oversized render outputs are now downsampled to bounded points with an explicit in-UI degraded-render warning.
 - Warning/fallback behavior verified for invalid mappings.
 
 ### Phase R4 — Expand supported kinds/properties safely
@@ -398,7 +404,7 @@ Ordered by hunting-workflow impact:
 9. Scheduled query runner (Quartz) with DB-backed saved queries, schedule management, dashboard-adjacent UI, and run-history visibility (ADR 0007)
 10. Medallion schema transition (ADR 0008): introduce `bronze`/`silver`/`golden`, set `golden` default visibility, and enforce Golden-only binding in operator workflows
 11. Multi-dialect backend architecture (ADR 0009): backend contracts + workload routing for DuckDB scheduled/historical and future Proton/Arroyo realtime execution
-12. KQL `render` POC subset (ADR 0010): terminal render sidecar + Vizor.ECharts adapter with table fallback diagnostics
+12. KQL `render` implementation track (ADR 0010 / roadmap R0–R5): terminal parser + resolver + Vizor.ECharts adapter with diagnostics-first fallback behavior
 
 ---
 

@@ -21,12 +21,12 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 | Feature parity status (in scope only) | Count | Percent of in-scope total |
 |---|---:|---:|
 | MVP translated (`[x]`) | 220 | 69.0% |
-| Metadata-only (`[m]`) | 1 | 0.3% |
+| Metadata-only (`[m]`) | 0 | 0.0% |
 | Blocked for semantic safety (`[B]`) | 3 | 0.9% |
-| Deferred (`[ ]`) | 95 | 29.8% |
+| Deferred (`[ ]`) | 96 | 30.1% |
 | **Total in-scope constructs** | **319** | **100%** |
 
-MVP-ready parity = `[x] + [m]` = **221 / 319 (69.3%)**.
+MVP-ready parity = `[x] + [m]` = **220 / 319 (69.0%)**.
 
 Current public schema families in code include event-family surfaces `golden.ProcessEvents` and `golden.NetworkSessions`, with transitional compatibility aliases `golden.DeviceProcessEvents` and `golden.DeviceNetworkEvents`.
 
@@ -47,7 +47,7 @@ Current public schema families in code include event-family surfaces `golden.Pro
 - Emitter output-column/projection helper paths now use loop-based list/set population instead of LINQ `ToArray()` in lookup payload and output-column discovery flows.
 - Emitter `in`/`!in` list emission no longer snapshots scalar item SQL with LINQ `ToArray()` before `string.Join`, trimming one more allocation hotspot on expression emission paths.
 - Runtime `QueryResult` is now columnar-first (`ColumnData` + `GetValue(row, col)`) and buffered/runtime/web materialization paths were migrated off `IReadOnlyList<object?[]>` row-array contracts.
-- Render implementation is tracked as a dedicated roadmap stream (`docs/ROADMAP.md`, phases R0–R5). Current runtime/UI behavior should be treated as table-first until that track lands.
+- Render implementation is tracked as a dedicated roadmap stream (`docs/ROADMAP.md`, phases R0–R5). The Render tab now draws subset charts for resolved `timechart`/`linechart`/`areachart`/`scatterchart`/`barchart`/`columnchart`/`piechart`/`card` specs, supports `kind=stacked` on bar/column/area chart families, `legend=hidden|hide|none|off` legend suppression, and `series=<column>` grouping for multi-series rendering, applies point downsampling on oversized charts with explicit degrade warnings, and falls back to table with warning messaging when resolution fails.
 - DuckDB connection initialization now loads the packaged core `inet` extension by default to enable pragmatic IP/CIDR-native function mappings without adding a community-extension dependency.
 - The repository currently includes:
   - `Hunting.Core`: translation, relational model, planner, catalog/policy, and DuckDB SQL emitter.

@@ -560,6 +560,101 @@ public sealed class EndToEndPipelineTests
         Assert.AreEqual("DeviceName", tabular.RenderSpec.XColumn);
     }
 
+    [TestMethod]
+    [Description("Additional supported render kinds are accepted and preserved as sidecar metadata")]
+    public void Runtime_RenderDirective_AreaAndScatter_Accepted()
+    {
+        var area = _runtime.Execute(
+            "ProcessEvents | project Timestamp, ProcessId | take 4 | render areachart xcolumn=Timestamp ycolumns=ProcessId");
+        AssertSuccess(area);
+        Assert.AreEqual(RenderKind.Areachart, area.RenderSpec.Kind);
+
+        var scatter = _runtime.Execute(
+            "ProcessEvents | project DeviceName, ProcessId | take 4 | render scatterchart xcolumn=DeviceName ycolumns=ProcessId");
+        AssertSuccess(scatter);
+        Assert.AreEqual(RenderKind.Scatterchart, scatter.RenderSpec.Kind);
+    }
+
+    [TestMethod]
+    [Description("KQL render with-properties syntax is parsed and preserved")]
+    public void Runtime_RenderDirective_WithClauseSyntax_Parsed()
+    {
+        var result = _runtime.Execute(
+            "ProcessEvents | project Timestamp, ProcessId | take 4 | render timechart with (xcolumn=Timestamp, ycolumns=ProcessId, title='Trend');");
+
+        AssertSuccess(result);
+        Assert.AreEqual(RenderKind.Timechart, result.RenderSpec.Kind);
+        Assert.AreEqual("Timestamp", result.RenderSpec.XColumn);
+        Assert.AreEqual("ProcessId", result.RenderSpec.YColumns[0]);
+        Assert.AreEqual("Trend", result.RenderSpec.Title);
+    }
+
+    [TestMethod]
+    [Description("Render kind=stacked property is captured in sidecar metadata")]
+    public void Runtime_RenderDirective_StackedKind_Captured()
+    {
+        var result = _runtime.Execute(
+            "ProcessEvents | project DeviceName, ProcessId | take 4 | render columnchart with (xcolumn=DeviceName, ycolumns=ProcessId, kind=stacked)");
+
+        AssertSuccess(result);
+        Assert.AreEqual(RenderKind.Columnchart, result.RenderSpec.Kind);
+        Assert.IsTrue(result.RenderSpec.IsStacked);
+    }
+
+    [TestMethod]
+    [Description("Render legend property is captured from with-clause metadata")]
+    public void Runtime_RenderDirective_LegendProperty_Captured()
+    {
+        var result = _runtime.Execute(
+            "ProcessEvents | project DeviceName, ProcessId | take 4 | render barchart with (xcolumn=DeviceName, ycolumns=ProcessId, legend=hidden)");
+
+        AssertSuccess(result);
+        Assert.AreEqual(RenderKind.Barchart, result.RenderSpec.Kind);
+        Assert.AreEqual("hidden", result.RenderSpec.Legend);
+    }
+
+    [TestMethod]
+    [Description("Render series property is captured from with-clause metadata")]
+    public void Runtime_RenderDirective_SeriesProperty_Captured()
+    {
+        var result = _runtime.Execute(
+            "ProcessEvents | project DeviceName, ProcessId, AccountName | take 4 | render columnchart with (xcolumn=DeviceName, ycolumns=ProcessId, series=AccountName)");
+
+        AssertSuccess(result);
+        Assert.AreEqual(RenderKind.Columnchart, result.RenderSpec.Kind);
+        Assert.AreEqual("AccountName", result.RenderSpec.Series);
+    }
+
+    [TestMethod]
+    [Description("Render with-clause supports terminal semicolon and keeps relational semantics unchanged")]
+    public void Runtime_RenderDirective_WithClauseSemicolon_RelationalParity()
+    {
+        const string baseQuery = "ProcessEvents | project DeviceName, ProcessId | take 5";
+        var withoutRender = _runtime.Execute(baseQuery);
+        var withRender = _runtime.Execute($"{baseQuery} | render columnchart with (xcolumn=DeviceName, ycolumns=ProcessId);");
+
+        AssertSuccess(withoutRender);
+        AssertSuccess(withRender);
+        Assert.AreEqual(withoutRender.RowCount, withRender.RowCount);
+        Assert.AreEqual(withoutRender.ColumnCount, withRender.ColumnCount);
+        Assert.AreEqual(RenderKind.Columnchart, withRender.RenderSpec.Kind);
+    }
+
+    [TestMethod]
+    [Description("Malformed render with-clause property falls back to table with warning diagnostics")]
+    public void Runtime_RenderDirective_WithClauseMalformedProperty_WarnsAndFallsBack()
+    {
+        var result = _runtime.Execute(
+            "ProcessEvents | project DeviceName, ProcessId | take 5 | render columnchart with (xcolumn=DeviceName, ycolumns)");
+
+        AssertSuccess(result);
+        Assert.AreEqual(RenderKind.Table, result.RenderSpec.Kind);
+        Assert.IsTrue(result.RenderSpec.IsFallback);
+        Assert.IsTrue(result.Diagnostics.All.Any(d =>
+            d.Severity == Hunting.Core.Policy.DiagnosticSeverity.Warning &&
+            d.Message.Contains("Malformed render property", StringComparison.OrdinalIgnoreCase)));
+    }
+
     // ─── Helpers ────────────────────────────────────────────────────
 
     private static void AssertSuccess(QueryResult result) => Assert.IsTrue(result.Success,

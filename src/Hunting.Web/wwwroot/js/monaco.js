@@ -42,6 +42,10 @@ const registerKqlLanguage = async () => {
         'by', 'join', 'on', 'kind', 'lookup', 'sort', 'order', 'asc', 'desc',
         'count', 'distinct', 'render', 'fork', 'union', 'mv-expand'
     ];
+
+    const renderKinds = [
+        'table', 'timechart', 'linechart', 'barchart', 'columnchart', 'piechart', 'areachart', 'scatterchart'
+    ];
     const operators = [
         '==', '!=', '=~', '!~', '>', '<', '>=', '<=', 'contains', 'contains_cs',
         '!contains', 'startswith', 'endswith', 'has', 'has_cs', 'and', 'or'
@@ -139,13 +143,61 @@ const registerKqlLanguage = async () => {
                     range
                 })));
 
+            const renderKindSuggestions = renderKinds.map((kind) => ({
+                label: `render ${kind}`,
+                kind: monaco.languages.CompletionItemKind.EnumMember,
+                insertText: `render ${kind}`,
+                detail: 'Render kind',
+                range
+            }));
+
+            const renderSnippetSuggestions = [
+                {
+                    label: 'render linechart',
+                    kind: monaco.languages.CompletionItemKind.Snippet,
+                    insertText: 'render linechart xcolumn=${1:Timestamp} ycolumns=${2:Count} title="${3:Line chart}"',
+                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    range
+                },
+                {
+                    label: 'render barchart',
+                    kind: monaco.languages.CompletionItemKind.Snippet,
+                    insertText: 'render barchart xcolumn=${1:Category} ycolumns=${2:Count} title="${3:Bar chart}"',
+                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    range
+                },
+                {
+                    label: 'render piechart',
+                    kind: monaco.languages.CompletionItemKind.Snippet,
+                    insertText: 'render piechart xcolumn=${1:Category} ycolumns=${2:Count} title="${3:Pie chart}"',
+                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    range
+                },
+                {
+                    label: 'render areachart',
+                    kind: monaco.languages.CompletionItemKind.Snippet,
+                    insertText: 'render areachart xcolumn=${1:Timestamp} ycolumns=${2:Count} title="${3:Area chart}"',
+                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    range
+                },
+                {
+                    label: 'render scatterchart',
+                    kind: monaco.languages.CompletionItemKind.Snippet,
+                    insertText: 'render scatterchart xcolumn=${1:Category} ycolumns=${2:Count} title="${3:Scatter chart}"',
+                    insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    range
+                }
+            ];
+
             return {
                 suggestions: [
                     ...keywordSuggestions,
                     ...operatorSuggestions,
                     ...snippetSuggestions,
+                    ...renderSnippetSuggestions,
                     ...tableSuggestions,
-                    ...columnSuggestions
+                    ...columnSuggestions,
+                    ...renderKindSuggestions
                 ]
             };
         }

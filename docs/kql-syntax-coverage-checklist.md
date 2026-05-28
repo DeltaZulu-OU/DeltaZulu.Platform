@@ -5,7 +5,7 @@ Authoritative translation reference: `docs/KQL-to-DuckDB-translation-spec.md`
 ## Status labels
 
 - `[x]` — **MVP**: direct translation to DuckDB SQL, status `exact` or `equivalent_with_caveat`
-- `[m]` — **Metadata-only**: no SQL emitted; captured as side-channel data (e.g., `render`)
+- `[m]` — **Metadata-only**: no SQL emitted; captured as side-channel data (reserved for explicitly shipped metadata-only paths)
 - `[B]` — **Blocked**: could be translated but deliberately refused because doing so would silently change detection semantics. Only items where wrong SQL is worse than no SQL.
 
 Deferred items carry an inline reason:
@@ -113,7 +113,7 @@ approximation diagnostic, or reject.
 
 ### 1.9 Rendering and Visualization
 
-- [m] `render` — *R1 parser+policy + R2 resolver baseline: terminal-only parsing with diagnostics and table fallback; chart adapter remains pending until R3*
+- [m] `render` — *R1/R2/R3 subset shipped: terminal parser + resolver + UI chart adapter (`timechart`,`linechart`,`areachart`,`scatterchart`,`barchart`,`columnchart`,`piechart`,`card`) with diagnostics-first fallback-to-table for invalid mappings; supports both `render kind key=value ...` and `render kind with (...)` syntax; `kind=stacked` supported for bar/column/area families; `legend=hidden|hide|none|off` supported; `series=<column>` grouping supported; oversized charts are downsampled with explicit degrade warning*
 
 ### 1.10 Search and Find
 
@@ -479,7 +479,7 @@ approximation diagnostic, or reject.
 
 - [x] Implicit `LIMIT` injection when user query omits one (configurable safety cap)
 - [x] Column ordering matches `project` or canonical view definition
-- [m] `render` hint → metadata-only (see Section 1.9)
+- [m] `render` hint → metadata + render sidecar consumed by UI chart adapter subset (see Section 1.9)
 - [ ] `getschema` — return schema metadata instead of data — *frequency*
 
 ---
@@ -491,13 +491,13 @@ approximation diagnostic, or reject.
 | Status | Count | Meaning |
 |--------|------:|---------|
 | `[x]` MVP | 213 | Direct translation to DuckDB SQL |
-| `[m]` Metadata | 2 | Side-channel only, no SQL emitted |
+| `[m]` Metadata | 3 | Side-channel only, no SQL emitted |
 | `[B]` Blocked | 3 | Deliberately rejected to prevent silent semantic change |
 | `[ ]` Deferred | 101 | Post-MVP, reason annotated |
 | **In scope** | **319** | |
 | N/A (out of scope) | N/A | Listed in Section 10 (not tracked as checklist rows) |
 
-MVP-ready = `[x]` + `[m]` = **215 / 319 (67.4%)**
+MVP-ready = `[x]` + `[m]` = **216 / 319 (67.7%)**
 
 ### Deferred by reason
 

@@ -7,7 +7,7 @@ internal static partial class RenderDirectiveParser
 {
     private static readonly HashSet<string> SupportedKinds = new(StringComparer.OrdinalIgnoreCase)
     {
-        "table", "card", "timechart", "linechart", "barchart", "columnchart", "piechart"
+        "table", "card", "timechart", "linechart", "barchart", "columnchart", "piechart", "areachart", "scatterchart"
     };
 
     public static (string QueryWithoutRender, RenderSpec Spec) Extract(string kql)
@@ -27,7 +27,7 @@ internal static partial class RenderDirectiveParser
             return (strippedUnsupported, RenderSpecDefaults.Table($"Unsupported render kind '{kindRaw}'."));
         }
 
-        var (properties, malformedProperty) = ParseProperties(match.Groups["props"].Value);
+        var (properties, malformedProperty) = ParseProperties(match.Groups["props"].Value, match.Groups["withProps"].Value);
         if (malformedProperty is not null)
         {
             var strippedMalformed = kql[..match.Index].TrimEnd();
@@ -59,26 +59,41 @@ internal static partial class RenderDirectiveParser
         "barchart" => RenderKind.Barchart,
         "columnchart" => RenderKind.Columnchart,
         "piechart" => RenderKind.Piechart,
+        "areachart" => RenderKind.Areachart,
+        "scatterchart" => RenderKind.Scatterchart,
         _ => RenderKind.Table
     };
 
-    private static (Dictionary<string, string> Properties, string? MalformedProperty) ParseProperties(string input)
+    private static (Dictionary<string, string> Properties, string? MalformedProperty) ParseProperties(string legacyInput, string withInput)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrWhiteSpace(input))
+        if (string.IsNullOrWhiteSpace(legacyInput) && string.IsNullOrWhiteSpace(withInput))
         {
             return (map, null);
         }
 
-        foreach (Match propertyMatch in PropertyRegex().Matches(input))
+        foreach (Match propertyMatch in LegacyPropertyRegex().Matches(legacyInput))
         {
             var key = propertyMatch.Groups["key"].Value;
             var rawValue = propertyMatch.Groups["value"].Value;
             map[key] = rawValue.Trim('"', '\'');
         }
 
-        var remainder = PropertyRegex().Replace(input, string.Empty).Trim();
-        return string.IsNullOrWhiteSpace(remainder) ? (map, null) : (map, remainder);
+        var legacyRemainder = LegacyPropertyRegex().Replace(legacyInput, string.Empty).Trim();
+        if (!string.IsNullOrWhiteSpace(legacyRemainder))
+        {
+            return (map, legacyRemainder);
+        }
+
+        foreach (Match propertyMatch in WithPropertyRegex().Matches(withInput))
+        {
+            var key = propertyMatch.Groups["key"].Value;
+            var rawValue = propertyMatch.Groups["value"].Value;
+            map[key] = rawValue.Trim('"', '\'');
+        }
+
+        var withRemainder = WithPropertyRegex().Replace(withInput, string.Empty).Trim().Trim(',');
+        return string.IsNullOrWhiteSpace(withRemainder) ? (map, null) : (map, withRemainder);
     }
 
     private static bool ContainsRenderToken(string kql)
@@ -92,9 +107,12 @@ internal static partial class RenderDirectiveParser
             ? []
             : csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-    [GeneratedRegex(@"\|\s*render\s+(?<kind>[A-Za-z][A-Za-z0-9_-]*)(?<props>(?:\s+[A-Za-z][A-Za-z0-9_-]*\s*=\s*(?:'(?:\\.|[^'\\])*'|""(?:\\.|[^""\\])*""|[^\s|;]+))*)\s*$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\|\s*render\s+(?<kind>[A-Za-z][A-Za-z0-9_-]*)(?:(?<props>(?:\s+[A-Za-z][A-Za-z0-9_-]*\s*=\s*(?:'(?:\\.|[^'\\])*'|""(?:\\.|[^""\\])*""|[^\s|;]+))*))?(?:\s+with\s*\((?<withProps>[^)]*)\))?\s*;?\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex RenderRegex();
 
     [GeneratedRegex(@"\s+(?<key>[A-Za-z][A-Za-z0-9_-]*)\s*=\s*(?<value>'(?:\\.|[^'\\])*'|""(?:\\.|[^""\\])*""|[^\s|;]+)")]
-    private static partial Regex PropertyRegex();
+    private static partial Regex LegacyPropertyRegex();
+
+    [GeneratedRegex(@"(?:^|,)\s*(?<key>[A-Za-z][A-Za-z0-9_-]*)\s*=\s*(?<value>'(?:\\.|[^'\\])*'|""(?:\\.|[^""\\])*""|[^,\s][^,]*)\s*", RegexOptions.IgnoreCase)]
+    private static partial Regex WithPropertyRegex();
 }

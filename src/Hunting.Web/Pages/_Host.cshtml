@@ -13,16 +13,17 @@
     <link rel="stylesheet" href="_content/MudBlazor/MudBlazor.min.css" />
 </head>
 <body>
-    <component type="typeof(Hunting.Web.App)" render-mode="ServerPrerendered" />
+    <component type="typeof(Hunting.Web.App)" render-mode="Server" />
     <div id="blazor-error-ui">
         An unhandled error has occurred.
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
     <script src="~/js/monaco.js" asp-append-version="true"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="_framework/blazor.server.js" autostart="false"></script>
+    <!-- Load Vizor bundle which includes echarts -->
+    <script src="_content/Vizor.ECharts/js/vizor-echarts-bundle-min.js"></script>
     <script>
         Blazor.start();
     </script>
