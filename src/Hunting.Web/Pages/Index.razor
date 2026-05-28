@@ -213,7 +213,7 @@
                                 }
                             }
                         </div>
-                        @if (!(chart?.CanRender ?? false) || !Hunting.Web.Services.RenderChartService.IsLegendHidden(chart))
+                        @if (!(chart?.CanRender ?? false) || Hunting.Web.Services.RenderChartService.ShowLegend(chart))
                         {
                             <div class="hunt-render-legend">
                                 @foreach (var series in chart?.Series ?? [])

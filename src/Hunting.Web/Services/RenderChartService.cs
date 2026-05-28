@@ -89,7 +89,7 @@ public sealed class RenderChartService
             return new ChartOptions();
         }
 
-        var showLegend = !IsLegendHidden(chart);
+        var showLegend = ShowLegend(chart);
         var series = new List<ISeries>();
 
         foreach (var s in chart.Series)
@@ -146,7 +146,7 @@ public sealed class RenderChartService
     /// <summary>
     /// Determines whether the legend should be hidden based on the chart model.
     /// </summary>
-    public static bool IsLegendHidden(RenderChartModel chart)
+    public static bool ShowLegend(RenderChartModel chart)
     {
         var legendValue = chart.Legend?.Trim().ToLowerInvariant();
         return legendValue is "hidden" or "hide" or "none" or "off";
