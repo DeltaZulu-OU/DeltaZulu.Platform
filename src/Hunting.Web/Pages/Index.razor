@@ -289,6 +289,7 @@
     private int _lastMeasuredChartWidthPx;
     private int _lastMeasuredChartHeightPx;
     private bool _editorInitialized;
+    private string _cachedEditorText = string.Empty;
 
 
     private string SelectedResultLimitValue
@@ -300,6 +301,7 @@
     private async Task RunQuery()
     {
         _kql = await LanguageService.GetEditorValueAsync();
+        _cachedEditorText = _kql;
         if (_running || string.IsNullOrWhiteSpace(_kql)) return;
 
         _cts.Cancel();
@@ -438,6 +440,7 @@
     private void HandleInsertRequested(string text)
     {
         _kql = text;
+        _cachedEditorText = text;
         _ = InvokeAsync(async () =>
         {
             await LanguageService.SetEditorValueAsync(text);
@@ -528,6 +531,7 @@
     private async Task Clear()
     {
         _kql = string.Empty;
+        _cachedEditorText = string.Empty;
         _result = null;
         _diagnostics = [];
         _showDrawer = false;
@@ -648,6 +652,9 @@
         Content
     }
 
+    private const int EditorInitializationMaxAttempts = 3;
+    private static readonly TimeSpan EditorInitializationRetryDelay = TimeSpan.FromMilliseconds(250);
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!_editorInitialized)
@@ -658,7 +665,13 @@
                     v.Columns.Select(c => c.Name).ToArray()))
                 .ToArray();
 
-            await LanguageService.InitializeKqlEditorAsync("kql-editor", _kql, RunQuery, schema);
+            var editorSeed = await GetCachedEditorTextForInitializationAsync();
+            var initialized = await TryInitializeEditorAsync(schema, editorSeed);
+            if (!initialized)
+            {
+                return;
+            }
+
             _editorInitialized = true;
         }
 
@@ -683,6 +696,57 @@
         _chartHeight = $"{heightPx}px";
         _chartRenderKey++;
         StateHasChanged();
+    }
+
+    private async Task<string> GetCachedEditorTextForInitializationAsync()
+    {
+        if (_editorInitialized)
+        {
+            try
+            {
+                var currentValue = await LanguageService.GetEditorValueAsync();
+                if (!string.IsNullOrEmpty(currentValue))
+                {
+                    _cachedEditorText = currentValue;
+                    _kql = currentValue;
+                }
+            }
+            catch
+            {
+                // Keep existing cache if interop is unavailable; init retry path handles surfacing failures.
+            }
+        }
+
+        return string.IsNullOrEmpty(_cachedEditorText) ? _kql : _cachedEditorText;
+    }
+
+    private async Task<bool> TryInitializeEditorAsync(
+        IReadOnlyList<Hunting.Web.Services.KqlTableSchema> schema,
+        string initialValue)
+    {
+        Exception? lastException = null;
+
+        for (var attempt = 1; attempt <= EditorInitializationMaxAttempts; attempt++)
+        {
+            try
+            {
+                await LanguageService.InitializeKqlEditorAsync("kql-editor", initialValue, RunQuery, schema);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                if (attempt < EditorInitializationMaxAttempts)
+                {
+                    await Task.Delay(EditorInitializationRetryDelay);
+                }
+            }
+        }
+
+        Snackbar.Add(
+            $"Could not initialize the KQL editor after {EditorInitializationMaxAttempts} attempts. {lastException?.Message}",
+            Severity.Error);
+        return false;
     }
 
     public async ValueTask DisposeAsync()

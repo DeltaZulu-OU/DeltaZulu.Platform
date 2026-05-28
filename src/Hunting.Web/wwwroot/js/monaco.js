@@ -229,7 +229,9 @@ window.huntingMonaco = {
         const container = document.getElementById(containerId);
         if (!container) return;
 
+        let preservedValue = '';
         if (window.huntingMonaco._editors[containerId]) {
+            preservedValue = window.huntingMonaco._editors[containerId].getValue?.() ?? '';
             window.huntingMonaco._editors[containerId].dispose();
             delete window.huntingMonaco._editors[containerId];
         }
@@ -237,7 +239,7 @@ window.huntingMonaco = {
         const editor = monaco.editor.create(container, {
             language: 'kql',
             theme: 'vs-dark',
-            value: initialValue ?? '',
+            value: preservedValue || initialValue || '',
             automaticLayout: true,
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
