@@ -259,6 +259,11 @@ window.huntingMonaco = {
     },
     getValue: (containerId) => window.huntingMonaco._editors[containerId]?.getValue() ?? '',
     setValue: (containerId, value) => window.huntingMonaco._editors[containerId]?.setValue(value ?? ''),
+    layout: (containerId) => {
+        const editor = window.huntingMonaco._editors[containerId];
+        if (!editor) return;
+        editor.layout();
+    },
     dispose: (containerId) => {
         const editor = window.huntingMonaco._editors[containerId];
         if (!editor) return;

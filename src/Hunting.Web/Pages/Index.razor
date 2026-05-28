@@ -12,9 +12,9 @@
 
 
 <div class="hunt-page">
-<div class="hunt-page-content">
+<div class="hunt-page-content" id="hunt-page-content">
     <!-- ─── Editor panel ──────────────────────────────────────────────────────── -->
-    <section class="hunt-editor-panel">
+    <section class="hunt-editor-panel" id="hunt-editor-panel">
         <div class="hunt-editor-toolbar">
             <span class="hunt-editor-label">KQL Query</span>
             <div class="hunt-toolbar-actions">
@@ -79,7 +79,9 @@
     </section>
 
     <!-- ─── Results panel ───────────────────────────────────────── -->
-    <section class="hunt-results-panel">
+    <div class="hunt-panel-splitter" id="hunt-panel-splitter" role="separator" aria-orientation="horizontal" aria-label="Resize editor and results panels"></div>
+
+    <section class="hunt-results-panel" id="hunt-results-panel">
         <div class="hunt-results-toolbar">
             <span class="hunt-results-label">
                 @if (_result is not null && _result.Success)
@@ -658,6 +660,13 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        await JS.InvokeVoidAsync(
+            "huntingLayout.initVerticalSplitter",
+            "hunt-page-content",
+            "hunt-editor-panel",
+            "hunt-results-panel",
+            "hunt-panel-splitter");
+
         if (!_editorInitialized)
         {
             var schema = Catalog.Views.Values

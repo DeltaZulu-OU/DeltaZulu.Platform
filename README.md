@@ -58,6 +58,7 @@ Current public schema families in code include event-family surfaces `golden.Pro
 - Render host compatibility fix: removed unsupported `class` parameter usage on `Vizor.ECharts.EChart` and moved sizing hook to a wrapper element to avoid Blazor `InvalidOperationException` circuit crashes while preserving chart sizing behavior.
 - Render SVG null-dimension fix: `Vizor.ECharts.EChart` now receives explicit height and host-measured pixel width so the generated `<svg>` never gets `width="null"` / `height="null"` in Blazor render-tab hosting.
 - Render sizing correction: chart width **and height** are now measured from the actual tab host element via JS interop and passed to `Vizor.ECharts.EChart` as pixel dimensions, preventing both `100px` fallback sizing and short 320px-only chart occupancy in tall render panels.
+- Hunt workspace vertical panels are now user-resizable via a draggable splitter between the Monaco editor section and results tabs section.
 - Monaco render autocomplete now avoids duplicate `render` token insertion when completing chart kinds/snippets after typing `| render`, and render-kind/template suggestions no longer appear as confusing duplicate labels.
 - Monaco editor bootstrap now preserves cached query text across editor re-initialization attempts and retry/failure paths, so transient init errors do not wipe analyst query text.
 - DuckDB connection initialization now loads the packaged core `inet` extension by default to enable pragmatic IP/CIDR-native function mappings without adding a community-extension dependency.

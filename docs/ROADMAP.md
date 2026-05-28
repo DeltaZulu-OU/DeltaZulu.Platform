@@ -163,7 +163,8 @@ security data.
 - Bound rendered chart points (decimation/downsampling for large results),
 - explicit degraded-render warnings,
 - chart empty-state and schema-mismatch messaging,
-- telemetry counters (render kind usage, fallback frequency, resolver failures).
+- telemetry counters (render kind usage, fallback frequency, resolver failures),
+- workspace panel resizing affordances so analysts can re-balance editor vs. results space per workflow.
 
 ### Suggested delivery order
 
