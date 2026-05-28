@@ -327,6 +327,15 @@
                 _result = await QueryService.ExecuteAsync(effectiveQuery, _cts.Token);
                 _diagnostics = _result.Diagnostics.All.ToList();
                 RenderChartService.RebuildCache(_result);
+                if (RenderChartService.LastErrorMessage is { } renderErrorMessage)
+                {
+                    _diagnostics.Add(new Hunting.Core.Policy.QueryDiagnostic(
+                        Hunting.Core.Policy.DiagnosticSeverity.Error,
+                        Hunting.Core.Policy.DiagnosticPhase.Policy,
+                        QueryDiagnosticCodes.Unspecified,
+                        renderErrorMessage));
+                }
+
                 _chartRenderKey++;
 
                 if (!HasRenderOutput)
@@ -355,7 +364,6 @@
         {
             sw.Stop();
             _elapsed = sw.Elapsed;
-            ShowQueryDurationSnackbar(_elapsed);
             _running = false;
         }
     }
@@ -380,8 +388,6 @@
         if (string.IsNullOrWhiteSpace(text)) return;
 
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
-        var label = _drawerMode == DrawerMode.Json ? "JSON" : "SQL";
-        Snackbar.Add($"{label} copied to clipboard.", Severity.Success);
     }
 
     private void OpenCellDrawer(string columnName, object? value, bool forceOpen = false)
@@ -410,27 +416,6 @@
     }
 
     private void CloseDrawer() => _showDrawer = false;
-
-    private void ShowQueryDurationSnackbar(TimeSpan elapsed)
-    {
-        var key = $"query-time-{Guid.NewGuid():N}";
-        var message = $"Query completed in {elapsed.TotalMilliseconds:F0} ms";
-
-        Snackbar.Add(message, Severity.Info, options =>
-        {
-            options.VisibleStateDuration = 3_000;
-            options.HideTransitionDuration = 150;
-            options.ShowTransitionDuration = 150;
-        }, key);
-
-        _snackbarKeys.Enqueue(key);
-
-        while (_snackbarKeys.Count > 3)
-        {
-            var oldestKey = _snackbarKeys.Dequeue();
-            Snackbar.RemoveByKey(oldestKey);
-        }
-    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -487,7 +472,9 @@
         => _result is not null
            && _result.Success
            && _result.RenderSpec.Kind != Hunting.Core.Render.RenderKind.Table
-           && !_result.RenderSpec.IsFallback;
+           && !_result.RenderSpec.IsFallback
+           && RenderChartService.CachedChart?.CanRender == true
+           && RenderChartService.CachedChartOptions is not null;
 
     private void SelectTab(ResultTab tab)
     {

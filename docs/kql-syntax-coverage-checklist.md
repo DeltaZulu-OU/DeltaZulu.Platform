@@ -122,6 +122,7 @@ approximation diagnostic, or reject.
 
 - [m] `render` — *R1/R2/R3 subset shipped: terminal parser + resolver + UI chart adapter (`timechart`,`linechart`,`areachart`,`scatterchart`,`barchart`,`columnchart`,`piechart`,`card`) with diagnostics-first fallback-to-table for invalid mappings; supports both `render kind key=value ...` and `render kind with (...)` syntax; `kind=stacked` supported for bar/column/area families; `legend=hidden|hide|none|off` supported; `series=<column>` grouping supported; oversized charts are downsampled with explicit degrade warning*
   - Note: chart-data shaping workload now lives in `Hunting.Data.Render.RenderChartBuilder`; Web layer retains visualization adapter/UI concerns only.
+  - 2026-05-28 note: unsupported UI chart adapter kinds now fail closed with a red UI error and disabled Render tab (no Blazor circuit crash) while retaining subset-only chart support.
 
 ### 1.10 Search and Find
 

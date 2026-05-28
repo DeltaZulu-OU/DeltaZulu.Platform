@@ -14,6 +14,7 @@ public sealed class RenderChartService
     private readonly RenderChartBuilder _renderChartBuilder;
     private RenderChartModel? _cachedChart;
     private ChartOptions? _cachedChartOptions;
+    private string? _lastErrorMessage;
 
     public RenderChartService(RenderChartBuilder renderChartBuilder)
     {
@@ -31,12 +32,28 @@ public sealed class RenderChartService
     public ChartOptions? CachedChartOptions => _cachedChartOptions;
 
     /// <summary>
+    /// Gets the last chart adapter error message. Returns null when chart options were built successfully.
+    /// </summary>
+    public string? LastErrorMessage => _lastErrorMessage;
+
+    /// <summary>
     /// Rebuilds the chart cache from the given query result.
     /// </summary>
     public void RebuildCache(QueryResult? result)
     {
+        _lastErrorMessage = null;
         _cachedChart = BuildChart(result);
-        _cachedChartOptions = BuildChartOptions(_cachedChart);
+
+        try
+        {
+            _cachedChartOptions = BuildChartOptions(_cachedChart);
+        }
+        catch (NotSupportedException ex)
+        {
+            _lastErrorMessage = ex.Message;
+            _cachedChart = null;
+            _cachedChartOptions = null;
+        }
     }
 
     /// <summary>
@@ -46,6 +63,7 @@ public sealed class RenderChartService
     {
         _cachedChart = null;
         _cachedChartOptions = null;
+        _lastErrorMessage = null;
     }
 
     /// <summary>
@@ -66,6 +84,11 @@ public sealed class RenderChartService
     /// </summary>
     private static ChartOptions BuildChartOptions(RenderChartModel chart)
     {
+        if (!chart.CanRender)
+        {
+            return new ChartOptions();
+        }
+
         var showLegend = !IsLegendHidden(chart);
         var series = new List<ISeries>();
 
@@ -101,7 +124,7 @@ public sealed class RenderChartService
                     break;
                 case RenderKind.Card:
                 default:
-                    throw new NotImplementedException($"Unsupported render chart kind '{chart.Kind}' for chart adapter.");
+                    throw new NotSupportedException($"Render kind '{chart.Kind}' is not yet supported in the chart adapter.");
             }
         }
 
