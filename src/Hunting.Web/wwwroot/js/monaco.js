@@ -88,6 +88,8 @@ const registerKqlLanguage = async () => {
         triggerCharacters: ['|', ' ', '.'],
         provideCompletionItems: (model, position) => {
             const word = model.getWordUntilPosition(position);
+            const linePrefix = model.getLineContent(position.lineNumber).slice(0, position.column - 1);
+            const afterRender = /\|\s*render\s+[A-Za-z0-9_-]*$/i.test(linePrefix);
             const range = {
                 startLineNumber: position.lineNumber,
                 endLineNumber: position.lineNumber,
@@ -144,46 +146,56 @@ const registerKqlLanguage = async () => {
                 })));
 
             const renderKindSuggestions = renderKinds.map((kind) => ({
-                label: `render ${kind}`,
+                label: kind,
                 kind: monaco.languages.CompletionItemKind.EnumMember,
-                insertText: `render ${kind}`,
+                insertText: afterRender ? kind : `render ${kind}`,
                 detail: 'Render kind',
                 range
             }));
 
             const renderSnippetSuggestions = [
                 {
-                    label: 'render linechart',
+                    label: 'linechart template',
                     kind: monaco.languages.CompletionItemKind.Snippet,
-                    insertText: 'render linechart xcolumn=${1:Timestamp} ycolumns=${2:Count} title="${3:Line chart}"',
+                    insertText: afterRender
+                        ? 'linechart xcolumn=${1:Timestamp} ycolumns=${2:Count} title="${3:Line chart}"'
+                        : 'render linechart xcolumn=${1:Timestamp} ycolumns=${2:Count} title="${3:Line chart}"',
                     insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
                     range
                 },
                 {
-                    label: 'render barchart',
+                    label: 'barchart template',
                     kind: monaco.languages.CompletionItemKind.Snippet,
-                    insertText: 'render barchart xcolumn=${1:Category} ycolumns=${2:Count} title="${3:Bar chart}"',
+                    insertText: afterRender
+                        ? 'barchart xcolumn=${1:Category} ycolumns=${2:Count} title="${3:Bar chart}"'
+                        : 'render barchart xcolumn=${1:Category} ycolumns=${2:Count} title="${3:Bar chart}"',
                     insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
                     range
                 },
                 {
-                    label: 'render piechart',
+                    label: 'piechart template',
                     kind: monaco.languages.CompletionItemKind.Snippet,
-                    insertText: 'render piechart xcolumn=${1:Category} ycolumns=${2:Count} title="${3:Pie chart}"',
+                    insertText: afterRender
+                        ? 'piechart xcolumn=${1:Category} ycolumns=${2:Count} title="${3:Pie chart}"'
+                        : 'render piechart xcolumn=${1:Category} ycolumns=${2:Count} title="${3:Pie chart}"',
                     insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
                     range
                 },
                 {
-                    label: 'render areachart',
+                    label: 'areachart template',
                     kind: monaco.languages.CompletionItemKind.Snippet,
-                    insertText: 'render areachart xcolumn=${1:Timestamp} ycolumns=${2:Count} title="${3:Area chart}"',
+                    insertText: afterRender
+                        ? 'areachart xcolumn=${1:Timestamp} ycolumns=${2:Count} title="${3:Area chart}"'
+                        : 'render areachart xcolumn=${1:Timestamp} ycolumns=${2:Count} title="${3:Area chart}"',
                     insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
                     range
                 },
                 {
-                    label: 'render scatterchart',
+                    label: 'scatterchart template',
                     kind: monaco.languages.CompletionItemKind.Snippet,
-                    insertText: 'render scatterchart xcolumn=${1:Category} ycolumns=${2:Count} title="${3:Scatter chart}"',
+                    insertText: afterRender
+                        ? 'scatterchart xcolumn=${1:Category} ycolumns=${2:Count} title="${3:Scatter chart}"'
+                        : 'render scatterchart xcolumn=${1:Category} ycolumns=${2:Count} title="${3:Scatter chart}"',
                     insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
                     range
                 }

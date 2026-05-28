@@ -2,6 +2,8 @@
 
 Authoritative translation reference: `docs/KQL-to-DuckDB-translation-spec.md`
 
+Note (2026-05-28): Monaco editor UX was patched so terminal `render` completions insert suffixes correctly after `| render`; this is an editor integration fix only and does not change syntax coverage counts.
+
 ## Status labels
 
 - `[x]` — **MVP**: direct translation to DuckDB SQL, status `exact` or `equivalent_with_caveat`

@@ -406,7 +406,7 @@ Ordered by hunting-workflow impact:
 3. `format_datetime` — Kusto-to-strftime format string translation
 4. `has_any` / `has_all` — OR/AND chain of regex word-boundary matches
 5. Planner admission + v2 relational optimizations — implement ADR 0011 fast-path gateway (50k starter threshold), then expand safer pushdown/join/aggregation rewrites, improved CSE, and SQL-shape reduction with parity tests
-6. Monaco language-service quality improvements (advanced semantics + richer diagnostics)
+6. Monaco language-service quality improvements (advanced semantics + richer diagnostics; latest fix: render autocomplete now inserts kind/snippet suffixes correctly after `| render` and uses distinct labels for kind vs template entries)
 7. One-off schema bootstrap import + generic model alignment — optional ASIM/Sentinel starter import, then provider-agnostic table/view modeling
 8. Quack protocol migration — concurrent access + server-side query authorization
 9. Scheduled query runner (Quartz) with DB-backed saved queries, schedule management, dashboard-adjacent UI, and run-history visibility (ADR 0007)
