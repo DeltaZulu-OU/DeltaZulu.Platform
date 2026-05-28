@@ -1,6 +1,7 @@
 namespace Hunting.Web.Services;
 
 using Hunting.Core.Render;
+using Hunting.Data.Render;
 using Hunting.Data;
 using Vizor.ECharts;
 
@@ -10,13 +11,13 @@ using Vizor.ECharts;
 /// </summary>
 public sealed class RenderChartService
 {
-    private readonly RenderChartAdapter _renderChartAdapter;
+    private readonly RenderChartBuilder _renderChartBuilder;
     private RenderChartModel? _cachedChart;
     private ChartOptions? _cachedChartOptions;
 
-    public RenderChartService(RenderChartAdapter renderChartAdapter)
+    public RenderChartService(RenderChartBuilder renderChartBuilder)
     {
-        _renderChartAdapter = renderChartAdapter ?? throw new ArgumentNullException(nameof(renderChartAdapter));
+        _renderChartBuilder = renderChartBuilder ?? throw new ArgumentNullException(nameof(renderChartBuilder));
     }
 
     /// <summary>
@@ -57,7 +58,7 @@ public sealed class RenderChartService
             return new RenderChartModel(false, "No render data.", string.Empty, string.Empty, null, [], [], 0, 1, null, false, RenderKind.Table);
         }
 
-        return _renderChartAdapter.Build(result);
+        return _renderChartBuilder.Build(result);
     }
 
     /// <summary>

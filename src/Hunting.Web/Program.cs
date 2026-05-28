@@ -46,7 +46,7 @@ builder.Services.AddSingleton<QueryService>();
 builder.Services.AddScoped<EditorBus>();
 builder.Services.AddScoped<LanguageService>();
 builder.Services.AddScoped<UserSettingsState>();
-builder.Services.AddScoped<RenderChartAdapter>();
+builder.Services.AddScoped<Hunting.Data.Render.RenderChartBuilder>();
 builder.Services.AddScoped<RenderChartService>();
 
 var app = builder.Build();

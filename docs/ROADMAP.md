@@ -10,6 +10,7 @@ security data.
 
 ## Recent updates
 
+- 2026-05-28: Refactored render chart-data shaping from `Hunting.Web` into `Hunting.Data.Render` (`RenderChartBuilder` + `RenderChartModel`) so UI concerns are limited to chart option compilation and tab caching.
 - 2026-05-28: Expanded Render host sizing fix to bind both measured width and measured height into `Vizor.ECharts.EChart`, so charts fill the tab panel instead of staying capped at a fixed 320px height.
 - 2026-05-28: Corrected Render-tab chart sizing by measuring actual host width at runtime and binding pixel width to `Vizor.ECharts.EChart`, eliminating the observed 100px-wide chart fallback in tab layouts.
 - 2026-05-28: Fixed Vizor.ECharts SVG null-size browser errors in the Render tab by providing explicit `EChart` dimensions (`Width="100%"`, `Height="320px"`) so emitted chart `<svg>` attributes are never `null`.

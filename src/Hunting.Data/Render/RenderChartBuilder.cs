@@ -1,32 +1,21 @@
-namespace Hunting.Web.Services;
+namespace Hunting.Data.Render;
 
 using Hunting.Core.Render;
-using Hunting.Data;
 
-public sealed record RenderSeries(string Name, IReadOnlyList<double> Values, string Color);
 
-public sealed record RenderChartModel(
-    bool CanRender,
-    string Message,
-    string Warning,
-    string XColumn,
-    string? SeriesColumn,
-    IReadOnlyList<string> XLabels,
-    IReadOnlyList<RenderSeries> Series,
-    double YMin,
-    double YMax,
-    string? Legend,
-    bool IsStacked,
-    RenderKind Kind);
-
-public sealed class RenderChartAdapter
+public sealed class RenderChartBuilder
 {
     private static readonly string[] Palette = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#06B6D4"];
     private const int MaxChartPoints = 500;
     private readonly RenderResolver _resolver = new();
 
-    public RenderChartModel Build(QueryResult result)
+    public RenderChartModel Build(QueryResult? result)
     {
+        if (result is null)
+        {
+            return new RenderChartModel(false, "No render data.", string.Empty, string.Empty, null, [], [], 0, 1, null, false, RenderKind.Table);
+        }
+
         var schema = result.Columns.Select(c => (c.Name, c.TypeName)).ToArray();
         var plan = _resolver.Resolve(result.RenderSpec, schema);
         if (plan.IsFallback || plan.Kind == RenderKind.Table || string.IsNullOrWhiteSpace(plan.XColumn) || plan.YColumns.Count == 0)
@@ -40,8 +29,8 @@ public sealed class RenderChartAdapter
             return BuildFallback("X column was not found in results.");
         }
 
-        var yIndexes = plan.YColumns.Select(y => (Name: y, Index: GetColumnIndex(result, y))).Where(x => x.Index >= 0).ToArray();
-        if (yIndexes.Length == 0)
+        var yIndexes = plan.YColumns.Select(y => (Name: y, Index: GetColumnIndex(result, y))).Where(x => x.Index >= 0).ToList();
+        if (yIndexes.Count == 0)
         {
             return BuildFallback("No numeric Y columns could be rendered.");
         }
@@ -55,7 +44,7 @@ public sealed class RenderChartAdapter
     private static RenderChartModel BuildFallback(string message)
         => new(false, message, string.Empty, string.Empty, null, [], [], 0, 1, null, false, RenderKind.Table);
 
-    private RenderChartModel BuildPlainModel(QueryResult result, ResolvedRenderPlan plan, int xIndex, IReadOnlyList<(string Name, int Index)> yIndexes)
+    private RenderChartModel BuildPlainModel(QueryResult result, ResolvedRenderPlan plan, int xIndex, List<(string Name, int Index)> yIndexes)
     {
         var labels = new List<string>(result.RowCount);
         var seriesValues = yIndexes.ToDictionary(x => x.Name, _ => new List<double>(result.RowCount), StringComparer.OrdinalIgnoreCase);
@@ -68,11 +57,11 @@ public sealed class RenderChartAdapter
             }
         }
 
-        var series = yIndexes.Select((y, i) => new RenderSeries(y.Name, seriesValues[y.Name], Palette[i % Palette.Length])).ToArray();
+        var series = yIndexes.Select((y, i) => new RenderSeries(y.Name, seriesValues[y.Name], Palette[i % Palette.Length])).ToList();
         return BuildFinalModel(plan, labels, series);
     }
 
-    private RenderChartModel BuildGroupedModel(QueryResult result, ResolvedRenderPlan plan, int xIndex, int seriesIndex, IReadOnlyList<(string Name, int Index)> yIndexes)
+    private RenderChartModel BuildGroupedModel(QueryResult result, ResolvedRenderPlan plan, int xIndex, int seriesIndex, List<(string Name, int Index)> yIndexes)
     {
         var labels = new List<string>();
         var labelMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -128,19 +117,15 @@ public sealed class RenderChartAdapter
         return BuildFinalModel(plan, labels, series);
     }
 
-    private static RenderChartModel BuildFinalModel(ResolvedRenderPlan plan, IReadOnlyList<string> labels, IReadOnlyList<RenderSeries> series)
+    private static RenderChartModel BuildFinalModel(ResolvedRenderPlan plan, List<string> labels, List<RenderSeries> series)
     {
-        ArgumentNullException.ThrowIfNull(plan);
-        ArgumentNullException.ThrowIfNull(labels);
-        ArgumentNullException.ThrowIfNull(series);
-
         var warning = string.Empty;
         if (labels.Count > MaxChartPoints)
         {
-            var (Labels, Series, OriginalCount) = Downsample(labels, series, MaxChartPoints);
-            labels = Labels;
-            series = Series;
-            warning = $"Render degraded due to size: sampled to {MaxChartPoints} points from {OriginalCount}.";
+            var (sampledLabels, sampledSeries, originalCount) = Downsample(labels, series, MaxChartPoints);
+            labels = sampledLabels;
+            series = sampledSeries;
+            warning = $"Render degraded due to size: sampled to {MaxChartPoints} points from {originalCount}.";
         }
 
         var allValues = series.SelectMany(v => v.Values).ToArray();
@@ -154,10 +139,7 @@ public sealed class RenderChartAdapter
         return new RenderChartModel(true, string.Empty, warning, plan.XColumn!, plan.SeriesColumn, labels, series, min, max, plan.Legend, plan.IsStacked, plan.Kind);
     }
 
-    private static (IReadOnlyList<string> Labels, IReadOnlyList<RenderSeries> Series, int OriginalCount) Downsample(
-        IReadOnlyList<string> labels,
-        IReadOnlyList<RenderSeries> series,
-        int maxPoints)
+    private static (List<string> Labels, List<RenderSeries> Series, int OriginalCount) Downsample(List<string> labels, List<RenderSeries> series, int maxPoints)
     {
         if (labels.Count <= maxPoints)
         {
@@ -171,12 +153,9 @@ public sealed class RenderChartAdapter
             indexes.Add((int)Math.Round(i * step));
         }
 
-        var sampledLabels = indexes.Select(i => labels[Math.Min(i, labels.Count - 1)]).ToArray();
+        var sampledLabels = indexes.Select(i => labels[Math.Min(i, labels.Count - 1)]).ToList();
         var sampledSeries = series.Select(s =>
-            new RenderSeries(
-                s.Name,
-                indexes.Select(i => s.Values[Math.Min(i, s.Values.Count - 1)]).ToArray(),
-                s.Color)).ToArray();
+            new RenderSeries(s.Name, indexes.Select(i => s.Values[Math.Min(i, s.Values.Count - 1)]).ToList(), s.Color)).ToList();
 
         return (sampledLabels, sampledSeries, labels.Count);
     }
@@ -195,19 +174,13 @@ public sealed class RenderChartAdapter
     }
 
     private static string FormatXLabel(object? value)
-    {
-        if (value is null)
+        => value switch
         {
-            return "(null)";
-        }
-
-        return value switch
-        {
+            null => "(null)",
             DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss"),
             DateTimeOffset dto => dto.ToString("yyyy-MM-dd HH:mm:ss"),
             _ => value.ToString() ?? string.Empty
         };
-    }
 
     private static double ToDouble(object? value)
     {
@@ -218,17 +191,17 @@ public sealed class RenderChartAdapter
 
         return value switch
         {
-            byte v => v,
-            sbyte v => v,
-            short v => v,
-            ushort v => v,
-            int v => v,
-            uint v => v,
-            long v => v,
-            ulong v => v,
-            float v => v,
-            double v => v,
-            decimal v => (double)v,
+            byte b => b,
+            sbyte sb => sb,
+            short s => s,
+            ushort us => us,
+            int i => i,
+            uint ui => ui,
+            long l => l,
+            ulong ul => ul,
+            float f => f,
+            double d => d,
+            decimal m => (double)m,
             _ => double.TryParse(value.ToString(), out var parsed) ? parsed : 0
         };
     }
