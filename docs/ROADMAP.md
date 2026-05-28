@@ -10,6 +10,13 @@ security data.
 
 ## Recent updates
 
+- 2026-05-28: Expanded Render host sizing fix to bind both measured width and measured height into `Vizor.ECharts.EChart`, so charts fill the tab panel instead of staying capped at a fixed 320px height.
+- 2026-05-28: Corrected Render-tab chart sizing by measuring actual host width at runtime and binding pixel width to `Vizor.ECharts.EChart`, eliminating the observed 100px-wide chart fallback in tab layouts.
+- 2026-05-28: Fixed Vizor.ECharts SVG null-size browser errors in the Render tab by providing explicit `EChart` dimensions (`Width="100%"`, `Height="320px"`) so emitted chart `<svg>` attributes are never `null`.
+- 2026-05-28: Render tab lifecycle hardened to reduce Blazor disposed-render faults by instantiating the EChart host only when the Render tab is active and forcing fresh chart component keys on cache rebuild/clear transitions.
+- 2026-05-28: Render host CSS now enforces `!important` width/height on the EChart element to override inline 100x100 defaults observed in-browser for tabbed render output.
+- 2026-05-28: Fixed Vizor.ECharts component parameter mismatch by removing unsupported `class` assignment from `EChart` and moving chart sizing class to a wrapper element, preventing `InvalidOperationException` render-circuit faults.
+- 2026-05-28: Render chart host sizing adjusted to CSS-driven fill behavior in `Hunting.Web` (removed explicit EChart width/height parameters that were resulting in 100x100 canvases in the tab layout).
 - 2026-05-27: Render R3 subset implemented in Blazor Render tab: resolved line/time and bar/column render specs now draw in-app SVG charts with diagnostics-first table fallback when resolution fails.
 
 - 2026-05-27: Render track moved into explicit POC→MVP delivery order with R0–R5 milestones; runtime/UI render implementation remains pending and table-first behavior is still the current state.

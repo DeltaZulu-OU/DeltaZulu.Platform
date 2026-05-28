@@ -112,13 +112,15 @@
 
         @if (_result?.Success == true && _result.RowCount > 0)
         {
-            <div class="hunt-results-tabs">
-                <button class="hunt-btn @GetTabButtonClass(ResultTab.Table)" @onclick="() => SelectTab(ResultTab.Table)">Table</button>
-                <button class="hunt-btn @GetTabButtonClass(ResultTab.Render)" @onclick="() => SelectTab(ResultTab.Render)">Render</button>
+            <div class="hunt-results-tabs" role="tablist" aria-label="Result views">
+                <button class="hunt-btn hunt-tab-button @GetTabButtonClass(ResultTab.Table)" role="tab" aria-selected="@(_activeTab == ResultTab.Table)" aria-controls="results-table-panel" id="results-table-tab" @onclick="() => SelectTab(ResultTab.Table)">Table</button>
+                <button class="hunt-btn hunt-tab-button @GetTabButtonClass(ResultTab.Render)" role="tab" aria-selected="@(_activeTab == ResultTab.Render)" aria-controls="results-render-panel" id="results-render-tab" disabled="@(!HasRenderOutput)" @onclick="() => SelectTab(ResultTab.Render)">Render</button>
             </div>
 
             <div class="hunt-results-content">
-                <div class="hunt-tab-content @(_activeTab == ResultTab.Table ? "hunt-tab-active-content" : "hunt-tab-hidden")">
+                @if (_activeTab == ResultTab.Table)
+                {
+                <div id="results-table-panel" role="tabpanel" aria-labelledby="results-table-tab" class="hunt-tab-content hunt-tab-active-content">
                     <div class="hunt-table-wrapper">
                         <table class="hunt-table">
                             <thead>
@@ -180,8 +182,11 @@
                         </div>
                     }
                 </div>
+                }
 
-                <div class="hunt-tab-content @(_activeTab == ResultTab.Render ? "hunt-tab-active-content" : "hunt-tab-hidden")">
+                @if (_activeTab == ResultTab.Render)
+                {
+                <div id="results-render-panel" role="tabpanel" aria-labelledby="results-render-tab" class="hunt-tab-content hunt-tab-active-content">
                     <div class="hunt-render-panel">
                         @{ var chart = RenderChartService.CachedChart; }
                         <h4>@(string.IsNullOrWhiteSpace(_result.RenderSpec.Title) ? "Render" : _result.RenderSpec.Title)</h4>
@@ -194,7 +199,12 @@
                             else
                             {
                                 <div class="hunt-chart-wrapper">
-                                    <Vizor.ECharts.EChart Options="@RenderChartService.CachedChartOptions" Width="100%" Height="100%" />
+                                    @if (RenderChartService.CachedChartOptions is { } chartOptions)
+                                    {
+                                        <div class="hunt-echart" @ref="_chartHost">
+                                            <Vizor.ECharts.EChart @key="_chartRenderKey" Width="@_chartWidth" Height="@_chartHeight" Options="@chartOptions" />
+                                        </div>
+                                    }
                                 </div>
                                 @if (!string.IsNullOrWhiteSpace(chart?.Warning))
                                 {
@@ -213,6 +223,7 @@
                         }
                     </div>
                 </div>
+                }
             </div>
         }
         else if (_result?.Success == true && _result.RowCount == 0)
@@ -272,6 +283,13 @@
     private int TotalPages => ((_result?.RowCount ?? 0) + _pageSize - 1) / _pageSize;
     private CancellationTokenSource _cts = new();
     private readonly Queue<string> _snackbarKeys = new();
+    private int _chartRenderKey;
+    private ElementReference _chartHost;
+    private string _chartWidth = "320px";
+    private string _chartHeight = "320px";
+    private int _lastMeasuredChartWidthPx;
+    private int _lastMeasuredChartHeightPx;
+    private bool _editorInitialized;
 
 
     private string SelectedResultLimitValue
@@ -306,9 +324,13 @@
                 _result = await QueryService.ExecuteAsync(effectiveQuery, _cts.Token);
                 _diagnostics = _result.Diagnostics.All.ToList();
                 RenderChartService.RebuildCache(_result);
+                _chartRenderKey++;
 
-                // If chart can render, switch to render tab automatically
-                if (_result.Success && _result.RowCount > 0 && RenderChartService.CachedChart?.CanRender == true)
+                if (!HasRenderOutput)
+                {
+                    _activeTab = ResultTab.Table;
+                }
+                else if (_result.Success && _result.RowCount > 0 && RenderChartService.CachedChart?.CanRender == true)
                 {
                     _activeTab = ResultTab.Render;
                 }
@@ -456,7 +478,21 @@
         return rowIndexes.Skip(_page * _pageSize).Take(_pageSize);
     }
 
-    private void SelectTab(ResultTab tab) => _activeTab = tab;
+    private bool HasRenderOutput
+        => _result is not null
+           && _result.Success
+           && _result.RenderSpec.Kind != Hunting.Core.Render.RenderKind.Table
+           && !_result.RenderSpec.IsFallback;
+
+    private void SelectTab(ResultTab tab)
+    {
+        if (tab == ResultTab.Render && !HasRenderOutput)
+        {
+            return;
+        }
+
+        _activeTab = tab;
+    }
     private string GetTabButtonClass(ResultTab tab) => _activeTab == tab ? "hunt-tab-active" : string.Empty;
     private string GetTabVisibilityClass(ResultTab tab) => _activeTab == tab ? "hunt-tab-active-content" : "hunt-tab-hidden";
 
@@ -497,6 +533,7 @@
         _diagnostics = [];
         _showDrawer = false;
         RenderChartService.ClearCache();
+        _chartRenderKey++;
         await LanguageService.SetEditorValueAsync(_kql);
     }
 
@@ -614,15 +651,39 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
+        if (!_editorInitialized)
+        {
+            var schema = Catalog.Views.Values
+                .Select(v => new Hunting.Web.Services.KqlTableSchema(
+                    v.Name,
+                    v.Columns.Select(c => c.Name).ToArray()))
+                .ToArray();
 
-        var schema = Catalog.Views.Values
-            .Select(v => new Hunting.Web.Services.KqlTableSchema(
-                v.Name,
-                v.Columns.Select(c => c.Name).ToArray()))
-            .ToArray();
+            await LanguageService.InitializeKqlEditorAsync("kql-editor", _kql, RunQuery, schema);
+            _editorInitialized = true;
+        }
 
-        await LanguageService.InitializeKqlEditorAsync("kql-editor", _kql, RunQuery, schema);
+        if (_activeTab != ResultTab.Render || !HasRenderOutput || RenderChartService.CachedChartOptions is null)
+        {
+            return;
+        }
+
+        var size = await JS.InvokeAsync<Hunting.Web.Services.ChartHostSize>("huntingCharts.getElementSize", _chartHost);
+        var width = size.Width;
+        var height = size.Height;
+        var widthPx = Math.Max(320, (int)Math.Round(width, MidpointRounding.AwayFromZero));
+        var heightPx = Math.Max(320, (int)Math.Round(height, MidpointRounding.AwayFromZero));
+        if (widthPx == _lastMeasuredChartWidthPx && heightPx == _lastMeasuredChartHeightPx)
+        {
+            return;
+        }
+
+        _lastMeasuredChartWidthPx = widthPx;
+        _lastMeasuredChartHeightPx = heightPx;
+        _chartWidth = $"{widthPx}px";
+        _chartHeight = $"{heightPx}px";
+        _chartRenderKey++;
+        StateHasChanged();
     }
 
     public async ValueTask DisposeAsync()

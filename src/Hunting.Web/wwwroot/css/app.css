@@ -454,9 +454,20 @@ html, body {
 /* ─── Results table ─────────────────────────────────────────────────────── */
 .hunt-results-tabs {
     display: flex;
-    gap: 8px;
-    padding: 8px 12px;
+    gap: 0;
+    padding: 0 12px;
     border-bottom: 1px solid var(--border);
+}
+
+.hunt-tab-button {
+    border-radius: 8px 8px 0 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+
+.hunt-tab-button[disabled] {
+    opacity: .5;
+    cursor: not-allowed;
 }
 
 .hunt-tab-active {
@@ -521,10 +532,18 @@ html, body {
 .hunt-chart-wrapper {
     flex: 1;
     width: 100%;
-    min-height: 0;
+    min-height: 320px;
     overflow: hidden;
     position: relative;
 }
+
+.hunt-chart-wrapper .hunt-echart {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 320px;
+    display: block;
+}
+
 
 .hunt-render-fallback {
     color: #ffb86b;
