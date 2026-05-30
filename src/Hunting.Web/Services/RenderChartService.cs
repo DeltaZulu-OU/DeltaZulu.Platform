@@ -1,8 +1,8 @@
 namespace Hunting.Web.Services;
 
 using Hunting.Core.Render;
-using Hunting.Data.Render;
 using Hunting.Data;
+using Hunting.Data.Render;
 using Vizor.ECharts;
 
 /// <summary>
@@ -91,54 +91,54 @@ public sealed class RenderChartService
 
         var showLegend = ShowLegend(chart);
         var series = new List<ISeries>();
+        TooltipTrigger trigger;
 
-        foreach (var s in chart.Series)
+        switch (chart.Kind)
         {
-            switch (chart.Kind)
-            {
-                case RenderKind.Barchart:
-                case RenderKind.Columnchart:
-                    series.Add(new BarSeries { Name = s.Name, Stack = chart.IsStacked ? "total" : null, Data = s.Values });
-                    break;
-
-                case RenderKind.Piechart:
+            case RenderKind.Barchart:
+            case RenderKind.Columnchart:
+                trigger = TooltipTrigger.Axis;
+                series.AddRange(chart.Series.Select(s => new BarSeries { Name = s.Name, Stack = chart.IsStacked ? "total" : null, Data = s.Values }));
+                break;
+            case RenderKind.Piechart:
+                trigger = TooltipTrigger.Item; // CHANGE: Use Item for Pie
+                series.AddRange(chart.Series.Select(s => {
+                    var pieData = new List<object>();
+                    for (var i = 0; i < chart.XLabels.Count && i < s.Values.Count; i++)
                     {
-                        var pieData = new List<object>();
-                        for (var i = 0; i < chart.XLabels.Count && i < s.Values.Count; i++)
-                        {
-                            pieData.Add(new { name = chart.XLabels[i], value = s.Values[i] });
-                        }
-
-                        series.Add(new PieSeries { Name = s.Name, Radius = new CircleRadius("65%"), Data = pieData });
-                        break;
+                        pieData.Add(new { name = chart.XLabels[i], value = s.Values[i] });
                     }
-                case RenderKind.Timechart:
-                case RenderKind.Linechart:
-                    series.Add(new LineSeries { Name = s.Name, Smooth = true, Data = s.Values });
-                    break;
-                case RenderKind.Areachart:
-                    series.Add(new LineSeries { Name = s.Name, Smooth = true, Stack = chart.IsStacked ? "total" : null, AreaStyle = new AreaStyle { Opacity = 1 }, Data = s.Values });
-                    break;
-                case RenderKind.Scatterchart:
-                    series.Add(new ScatterSeries { Name = s.Name, Data = s.Values });
-                    break;
-                case RenderKind.Card:
-                default:
-                    throw new NotSupportedException($"Render kind '{chart.Kind}' is not yet supported in the chart adapter.");
-            }
+
+                    return new PieSeries { Name = s.Name, Radius = new CircleRadius("65%"), Data = pieData };
+                }));
+                break;
+            case RenderKind.Timechart:
+            case RenderKind.Linechart:
+                trigger = TooltipTrigger.Axis;
+                series.AddRange(chart.Series.Select(s => new LineSeries { Name = s.Name, Smooth = true, Data = s.Values }));
+                break;
+            case RenderKind.Areachart:
+                trigger = TooltipTrigger.Axis;
+                series.AddRange(chart.Series.Select(s => new LineSeries { Name = s.Name, Smooth = true, Stack = chart.IsStacked ? "total" : null, AreaStyle = new AreaStyle { Opacity = 1 }, Data = s.Values }));
+                break;
+            case RenderKind.Scatterchart:
+                trigger = TooltipTrigger.Item; // CHANGE: Use Item for Scatter
+                series.AddRange(chart.Series.Select(s => new ScatterSeries { Name = s.Name, Data = s.Values }));    
+                break;
+            case RenderKind.Card:
+            default:
+                throw new NotSupportedException($"Render kind '{chart.Kind}' is not yet supported in the chart adapter.");
         }
 
         var chartOptions = new ChartOptions
         {
-            Tooltip = new Tooltip { Trigger = TooltipTrigger.Axis },
+            Tooltip = new Tooltip { Trigger = trigger, Show = true }, // Always enable tooltip display — Show = true for clarity
             Legend = new Legend { Show = showLegend },
-            XAxis = new XAxis 
-            { 
-                Type = AxisType.Category
-            },
+            XAxis = new XAxis { Type = AxisType.Category },
             YAxis = new YAxis { Type = AxisType.Value },
             Series = series
         };
+
 
         return chartOptions;
     }
