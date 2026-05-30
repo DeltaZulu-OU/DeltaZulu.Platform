@@ -115,6 +115,8 @@ public sealed class KustoToRelational
             return null;
         }
 
+        ValidateQualifiedApprovedTableReferences(code.Syntax);
+
         var statements = code.Syntax.GetDescendants<Statement>()
             .Where(s => IsTopLevel(s, code.Syntax))
             .ToList();
@@ -460,17 +462,17 @@ public sealed class KustoToRelational
 
     private RelNode? TranslateTableRefExpression(PathExpression path)
     {
-        // PathExpression represents dotted identifiers like schema.table or db.schema.table.
-        var parts = path.GetDescendants<NameReference>().Select(n => n.SimpleName).ToList();
+        var parts = GetPathParts(path);
         if (parts.Count == 0)
         {
             return Reject(path, "Empty path expression");
         }
 
-        // For dotted names (schema.table or db.schema.table), treat the right-most
-        // segment as the table identifier; earlier segments are qualifiers.
-        var tableName = parts[^1];
-        // For now accept schema-qualified names like silver.secret_table — policy checks will reject unapproved schemas.
+        if (!TryValidateTablePathQualifiers(parts, out var tableName))
+        {
+            return null;
+        }
+
         if (!_catalog.IsApproved(tableName))
         {
             var sanitizedTableName = parts.Count == 1 ? tableName : string.Join('.', parts);
@@ -481,6 +483,57 @@ public sealed class KustoToRelational
 
         return new ScanNode(tableName);
     }
+
+    private bool TryValidateTablePathQualifiers(IReadOnlyList<string> parts, out string tableName)
+    {
+        tableName = parts[^1];
+        if (parts.Count == 1)
+        {
+            return true;
+        }
+
+        _diagnostics.AddError(
+            DiagnosticPhase.Policy,
+            BuildQualifiedTablePathRejectedMessage(parts));
+        return false;
+    }
+
+
+    /// <summary>
+    ///     The inspiration for this project includes FalconForceTeam's KQLAnalyzer implementation.
+    ///     <see href="https://github.com/FalconForceTeam/KQLAnalyzer/blob/main/src/KustoAnalyzer.cs"/>
+    /// </summary>
+    /// <param name="root">The root syntax node to validate KQL expressions</param>
+    private void ValidateQualifiedApprovedTableReferences(SyntaxNode root)
+    {
+        // This pre-translation validation intentionally scans the syntax tree once
+        // to provide a policy diagnostic even when semantic analysis fails on
+        // qualified approved table paths (for example "golden.ProcessEvents").
+        foreach (var path in root.GetDescendants<PathExpression>())
+        {
+            var parts = GetPathParts(path);
+            if (parts.Count <= 1)
+            {
+                continue;
+            }
+
+            var tableName = parts[^1];
+            if (!_catalog.IsApproved(tableName))
+            {
+                continue;
+            }
+
+            _diagnostics.AddError(
+                DiagnosticPhase.Policy,
+                BuildQualifiedTablePathRejectedMessage(parts));
+        }
+    }
+
+    private static List<string> GetPathParts(PathExpression path)
+        => path.GetDescendants<NameReference>().Select(n => n.SimpleName).ToList();
+
+    private static string BuildQualifiedTablePathRejectedMessage(IReadOnlyList<string> parts)
+        => $"Table path '{string.Join('.', parts)}' is not allowed. Use the unqualified table name '{parts[^1]}'.";
 
     private RelNode? TranslatePipe(PipeExpression pipe)
     {
@@ -904,20 +957,20 @@ public sealed class KustoToRelational
         }
 
         return expr switch
-    {
-        InExpression inExpr => TranslateInExpression(inExpr),
-        LiteralExpression lit => TranslateLiteral(lit),
-        NameReference name => new ColumnRef(name.SimpleName),
-        CompoundNamedExpression cne => TranslateScalarExpr(cne.Expression),
-        BinaryExpression bin => TranslateBinaryScalar(bin),
-        PrefixUnaryExpression un => TranslateUnaryScalar(un),
-        FunctionCallExpression fn => TranslateFunctionCall(fn),
-        TypeOfLiteralExpression typeOf => TranslateTypeOfLiteral(typeOf),
-        ParenthesizedExpression paren => TranslateScalarExpr(paren.Expression),
-        SimpleNamedExpression named => TranslateScalarExpr(named.Expression),
-        _ => throw new NotSupportedException(
-            $"Unsupported scalar expression: {expr.Kind} ({expr.GetType().Name})")
-    };
+        {
+            InExpression inExpr => TranslateInExpression(inExpr),
+            LiteralExpression lit => TranslateLiteral(lit),
+            NameReference name => new ColumnRef(name.SimpleName),
+            CompoundNamedExpression cne => TranslateScalarExpr(cne.Expression),
+            BinaryExpression bin => TranslateBinaryScalar(bin),
+            PrefixUnaryExpression un => TranslateUnaryScalar(un),
+            FunctionCallExpression fn => TranslateFunctionCall(fn),
+            TypeOfLiteralExpression typeOf => TranslateTypeOfLiteral(typeOf),
+            ParenthesizedExpression paren => TranslateScalarExpr(paren.Expression),
+            SimpleNamedExpression named => TranslateScalarExpr(named.Expression),
+            _ => throw new NotSupportedException(
+                $"Unsupported scalar expression: {expr.Kind} ({expr.GetType().Name})")
+        };
     }
 
 

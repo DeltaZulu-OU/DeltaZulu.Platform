@@ -265,6 +265,45 @@ public sealed class KustoToRelationalEdgeCaseTests
     }
 
     [TestMethod]
+    [Description("Schema-qualified approved table is allowed only for golden schema")]
+    public void Policy_ApprovedTableWithDisallowedSchemaQualifier()
+    {
+        var (_, diag) = Translate("silver.ProcessEvents | take 1");
+        Assert.IsTrue(diag.HasErrors);
+        Assert.Contains(
+            d => d.Phase == DiagnosticPhase.Policy &&
+                 d.Message.Contains("Table path", StringComparison.OrdinalIgnoreCase),
+            diag.All,
+            "Expected policy rejection for disallowed schema-qualified table path.");
+    }
+
+    [TestMethod]
+    [Description("Fully-qualified approved table is allowed only for hunting.golden")]
+    public void Policy_ApprovedTableWithDisallowedDatabaseQualifier()
+    {
+        var (_, diag) = Translate("otherdb.golden.ProcessEvents | take 1");
+        Assert.IsTrue(diag.HasErrors);
+        Assert.Contains(
+            d => d.Phase == DiagnosticPhase.Policy &&
+                 d.Message.Contains("Table path", StringComparison.OrdinalIgnoreCase),
+            diag.All,
+            "Expected policy rejection for disallowed database-qualified table path.");
+    }
+
+    [TestMethod]
+    [Description("Golden-qualified approved table is rejected with explicit policy diagnostic")]
+    public void Policy_ApprovedTableWithGoldenQualifierRejected()
+    {
+        var (_, diag) = Translate("golden.ProcessEvents | take 1");
+        Assert.IsTrue(diag.HasErrors);
+        Assert.Contains(
+            d => d.Phase == DiagnosticPhase.Policy &&
+                 d.Message.Contains("Table path", StringComparison.OrdinalIgnoreCase),
+            diag.All,
+            "Expected policy rejection for qualified approved table path.");
+    }
+
+    [TestMethod]
     [Description("Bare join (no kind=) blocked with clear message")]
     public void Policy_BareJoinBlocked()
     {
