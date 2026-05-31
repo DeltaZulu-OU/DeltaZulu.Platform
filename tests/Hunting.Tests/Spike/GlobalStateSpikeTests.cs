@@ -1,17 +1,12 @@
 namespace Hunting.Tests.Spike;
 
 using Hunting.Core.Catalog;
-using Hunting.Schema.Definitions;
+using Hunting.Schema;
 using Kusto.Language;
 
 /// <summary>
-/// Phase 0 spike: prove that Kusto.Language semantic analysis works
-/// with our synthetic catalog. These 7 tests are the go/no-go gate
-/// for the entire translation pipeline.
-///
-/// Pass criterion: tests 1–5 produce zero errors.
-/// Tests 6–7 exercise dynamic type handling — acceptable outcomes are
-/// either zero errors or only suppressible warnings (not parse failures).
+/// Phase 0 spike: prove that Kusto.Language semantic analysis works with the
+/// active medallion catalog exposed to users.
 /// </summary>
 [TestClass]
 public sealed class GlobalStateSpikeTests
@@ -22,7 +17,7 @@ public sealed class GlobalStateSpikeTests
     public static void Init(TestContext _)
     {
         var catalog = new ApprovedViewCatalog();
-        catalog.Register(ProcessEvents.View);
+        SchemaConventions.RegisterCanonicalViews(catalog);
         _globals = catalog.BuildGlobalState();
     }
 
@@ -36,58 +31,45 @@ public sealed class GlobalStateSpikeTests
     }
 
     [TestMethod]
-    [Description("Basic table resolution — table name resolves to registered symbol")]
     public void T01_BasicTableResolution()
     {
-        var errors = Analyze("ProcessEvents | take 10");
+        var errors = Analyze("ProcessEvent | take 10");
         Assert.IsEmpty(errors, FormatErrors(errors));
     }
 
     [TestMethod]
-    [Description("Filter + project with resolved columns")]
     public void T02_FilterAndProject()
     {
-        var errors = Analyze(
-            """ProcessEvents | where FileName == "cmd.exe" | project Timestamp, DeviceName""");
+        var errors = Analyze("""ProcessEvent | where FileName == "cmd.exe" | project Timestamp, DeviceName""");
         Assert.IsEmpty(errors, FormatErrors(errors));
     }
 
     [TestMethod]
-    [Description("Extend with built-in scalar function")]
     public void T03_ExtendWithScalar()
     {
-        var errors = Analyze(
-            """ProcessEvents | extend lower_name = tolower(FileName)""");
+        var errors = Analyze("""ProcessEvent | extend lower_name = tolower(FileName)""");
         Assert.IsEmpty(errors, FormatErrors(errors));
     }
 
     [TestMethod]
-    [Description("Summarize with count() and implicit count_ column, sort by")]
     public void T04_SummarizeAndSort()
     {
-        var errors = Analyze(
-            """ProcessEvents | summarize count() by FileName | sort by count_ desc""");
+        var errors = Analyze("""ProcessEvent | summarize count() by FileName | sort by count_ desc""");
         Assert.IsEmpty(errors, FormatErrors(errors));
     }
 
     [TestMethod]
-    [Description("Scalar let binding with ago()")]
     public void T05_ScalarLetBinding()
     {
-        var errors = Analyze(
-            """let cutoff = ago(7d); ProcessEvents | where Timestamp > cutoff""");
+        var errors = Analyze("""let cutoff = ago(7d); ProcessEvent | where Timestamp > cutoff""");
         Assert.IsEmpty(errors, FormatErrors(errors));
     }
 
     [TestMethod]
-    [Description("Dynamic member access — risk area for false diagnostics")]
     public void T06_DynamicMemberAccess()
     {
-        var errors = Analyze(
-            """ProcessEvents | where AdditionalFields.someKey == "value" """);
+        var errors = Analyze("""ProcessEvent | where AdditionalFields.someKey == "value" """);
 
-        // Decision point: if this produces errors, document which ones
-        // and decide suppression strategy before proceeding.
         if (errors.Count > 0)
         {
             Assert.Inconclusive(
@@ -97,11 +79,9 @@ public sealed class GlobalStateSpikeTests
     }
 
     [TestMethod]
-    [Description("Dynamic function return — parse_json on dynamic column")]
     public void T07_DynamicFunctionReturn()
     {
-        var errors = Analyze(
-            """ProcessEvents | extend parsed = parse_json(AdditionalFields)""");
+        var errors = Analyze("""ProcessEvent | extend parsed = parse_json(AdditionalFields)""");
 
         if (errors.Count > 0)
         {

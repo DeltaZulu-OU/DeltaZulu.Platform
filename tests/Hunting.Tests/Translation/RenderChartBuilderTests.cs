@@ -43,7 +43,7 @@ public sealed class RenderChartBuilderTests
         Assert.IsTrue(model.CanRender);
         Assert.HasCount(500, model.XLabels);
         Assert.HasCount(500, model.Series[0].Values);
-        StringAssert.Contains(model.Warning, "sampled to 500 points");
+        Assert.Contains("sampled to 500 points", model.Warning);
     }
 
     private static QueryResult CreateResult(RenderSpec renderSpec, IReadOnlyList<ResultColumn> columns, params IReadOnlyList<object?>[] columnData)

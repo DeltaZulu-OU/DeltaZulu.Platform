@@ -2,7 +2,7 @@ namespace Hunting.Schema;
 
 using Hunting.Core.Catalog;
 using Hunting.Core.Schema;
-using Definitions;
+using Hunting.Schema.Definitions.Medallion;
 
 /// <summary>
 /// Central medallion schema conventions and bootstrap contracts for the hunting model.
@@ -14,19 +14,11 @@ public static class SchemaConventions
     public const string SilverSchema = "silver";
     public const string GoldenSchema = "golden";
 
-    public static IReadOnlyList<RawTableDef> RawTables => [ProcessEvents.RawWindowsEventJson];
+    public static IReadOnlyList<RawTableDef> RawTables => MedallionSchemaCatalog.RawTables;
 
-    public static IReadOnlyList<ParserViewDef> ParserViews =>
-    [
-        ProcessEvents.SysmonProcessCreate,
-        NetworkSessions.SysmonNetworkConnect
-    ];
+    public static IReadOnlyList<ParserViewDef> ParserViews => MedallionSchemaCatalog.ParserViews;
 
-    public static IReadOnlyList<CanonicalViewDef> CanonicalViews =>
-    [
-        ProcessEvents.View,
-        NetworkSessions.View
-    ];
+    public static IReadOnlyList<CanonicalViewDef> CanonicalViews => MedallionSchemaCatalog.CanonicalViews;
 
     public static void RegisterCanonicalViews(ApprovedViewCatalog catalog)
     {

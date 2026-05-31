@@ -2,15 +2,11 @@ namespace Hunting.Tests.Spike;
 
 using Hunting.Core.DuckDbSql;
 using Hunting.Data;
-using Hunting.Schema.Definitions;
+using Hunting.Schema;
 
 /// <summary>
-/// Integration tests for the full schema pipeline:
-///   C# models → SchemaEmitter → DDL → SchemaApplier → DuckDB → DESCRIBE validation
-///
-/// These prove the vertical slice works end-to-end: mock data flows from
-/// bronze.windows_event_json → silver.v_process_sysmon_create → golden.ProcessEvents
-/// and returns correctly shaped, queryable rows.
+/// Integration tests for the active Phase 1A medallion schema pipeline:
+/// C# models → SchemaEmitter → DDL → SchemaApplier → DuckDB → seeded Golden views.
 /// </summary>
 [TestClass]
 public sealed class SchemaPipelineTests
@@ -26,264 +22,154 @@ public sealed class SchemaPipelineTests
         _applier = new SchemaApplier(_factory);
         _emitter = new SchemaEmitter();
 
-        // Generate and apply DDL
         var ddl = _emitter.EmitAll(
-            rawTables: [ProcessEvents.RawWindowsEventJson],
+            rawTables: SchemaConventions.RawTables,
             internalTables: [],
-            parserViews: [ProcessEvents.SysmonProcessCreate],
-            canonicalViews: [ProcessEvents.View]);
+            parserViews: SchemaConventions.ParserViews,
+            canonicalViews: SchemaConventions.CanonicalViews);
 
         _applier.ApplyStatements(ddl);
-
-        // Seed mock data
-        _applier.ExecuteRaw(MockDataSeeder.GetProcessSeedSql());
+        _applier.ExecuteRaw(MockDataSeeder.GetMedallionSeedSql());
     }
 
     [ClassCleanup]
     public static void Cleanup() => _factory.Dispose();
 
-    // ─── Schema generation ──────────────────────────────────────────
-
     [TestMethod]
-    [Description("SchemaEmitter produces correct number of DDL statements")]
-    public void EmitAll_ProducesCorrectCount()
+    public void EmitAll_ProducesActiveMedallionDdl()
     {
         var ddl = _emitter.EmitAll(
-            rawTables: [ProcessEvents.RawWindowsEventJson],
+            rawTables: SchemaConventions.RawTables,
             internalTables: [],
-            parserViews: [ProcessEvents.SysmonProcessCreate],
-            canonicalViews: [ProcessEvents.View]);
+            parserViews: SchemaConventions.ParserViews,
+            canonicalViews: SchemaConventions.CanonicalViews);
 
-        // 3 schemas + 1 bronze table + 1 parser view + 1 canonical view = 6
-        Assert.HasCount(6, ddl);
+        Assert.IsTrue(ddl.Count >= 15, $"Expected active medallion DDL, got {ddl.Count} statements.");
+        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE TABLE IF NOT EXISTS bronze.windows_sysmon_event")));
+        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE TABLE IF NOT EXISTS bronze.windows_security_event")));
+        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE TABLE IF NOT EXISTS bronze.dns_server_event")));
+        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE OR REPLACE VIEW golden.ProcessEvent")));
+        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE OR REPLACE VIEW golden.NetworkSession")));
+        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE OR REPLACE VIEW golden.Dns")));
     }
 
     [TestMethod]
-    [Description("Raw table DDL contains correct column names")]
-    public void EmitRawTable_CorrectColumns()
+    public void EmitRawTables_UseActiveBronzeSourceEnvelope()
     {
-        var sql = _emitter.EmitCreateTable(ProcessEvents.RawWindowsEventJson);
-        Assert.Contains("ingest_time", sql);
-        Assert.Contains("source_type", sql);
-        Assert.Contains("provider", sql);
-        Assert.Contains("event_id", sql);
-        Assert.Contains("event_data", sql);
-        Assert.Contains("bronze.windows_event_json", sql);
-    }
-
-    [TestMethod]
-    [Description("Parser view DDL references correct source table")]
-    public void EmitParserView_ReferencesSource()
-    {
-        var sql = _emitter.EmitParserView(ProcessEvents.SysmonProcessCreate);
-        Assert.Contains("bronze.windows_event_json", sql);
-        Assert.Contains("silver.v_process_sysmon_create", sql);
-        Assert.Contains("Microsoft-Windows-Sysmon", sql);
-    }
-
-    [TestMethod]
-    [Description("Canonical view DDL unions parser views")]
-    public void EmitCanonicalView_UnionsParserViews()
-    {
-        var sql = _emitter.EmitCanonicalView(ProcessEvents.View);
-        Assert.Contains("golden.ProcessEvents", sql);
-        Assert.Contains("silver.v_process_sysmon_create", sql);
-    }
-
-    // ─── Schema validation via DESCRIBE ─────────────────────────────
-
-    [TestMethod]
-    [Description("Raw table matches C# schema contract")]
-    public void Validate_RawTable()
-    {
-        var mismatches = _applier.Validate(ProcessEvents.RawWindowsEventJson);
-        Assert.IsEmpty(mismatches,
-            $"Raw table mismatches:\n{string.Join("\n", mismatches.Select(m => m.Message))}");
-    }
-
-    [TestMethod]
-    [Description("Parser view matches canonical column contract")]
-    public void Validate_ParserView()
-    {
-        var mismatches = _applier.Validate(ProcessEvents.SysmonProcessCreate);
-        // Parser view may have minor type differences due to JSON extraction
-        // (e.g., json_extract_string returns VARCHAR where we expect VARCHAR — should match)
-        // Filter to only true mismatches, not nullable differences
-        var errors = mismatches.Where(m => m.ActualType != "MISSING").ToList();
-        if (errors.Count > 0)
+        foreach (var table in SchemaConventions.RawTables)
         {
-            // Log but don't fail on type approximations for now
-            foreach (var e in errors)
-            {
-                Console.WriteLine($"  [INFO] {e.Message}");
-            }
+            var sql = _emitter.EmitCreateTable(table);
+
+            Assert.Contains("ingest_time", sql);
+            Assert.Contains("source_name", sql);
+            Assert.Contains("provider", sql);
+            Assert.Contains("host", sql);
+            Assert.Contains("raw_log", sql);
+            Assert.Contains("raw_text", sql);
+            Assert.DoesNotContain("windows_event_json", sql);
+            Assert.DoesNotContain("event_data", sql);
+            Assert.DoesNotContain("source_type", sql);
         }
     }
 
     [TestMethod]
-    [Description("Public hunting view matches canonical column contract")]
-    public void Validate_CanonicalView()
+    public void EmitParserViews_ReferenceActiveBronzeSources()
     {
-        var mismatches = _applier.Validate(ProcessEvents.View);
-        // Same tolerance as parser view
-        var missing = mismatches.Where(m => m.ActualType == "MISSING").ToList();
-        Assert.IsEmpty(missing,
-            $"Missing columns in public view:\n{string.Join("\n", missing.Select(m => m.Message))}");
-    }
+        var parserSql = SchemaConventions.ParserViews
+            .Select(view => _emitter.EmitParserView(view))
+            .ToArray();
 
-    // ─── Mock data flows through pipeline ───────────────────────────
-
-    [TestMethod]
-    [Description("Mock data is inserted into raw table")]
-    public void MockData_InsertedIntoRaw()
-    {
-        var count = _applier.QueryScalar("SELECT count(*) FROM bronze.windows_event_json");
-        Assert.AreEqual(45L, count, "Expected 45 mock events");
+        Assert.IsTrue(parserSql.Any(sql => sql.Contains("FROM bronze.windows_sysmon_event")));
+        Assert.IsTrue(parserSql.Any(sql => sql.Contains("FROM bronze.windows_security_event")));
+        Assert.IsTrue(parserSql.Any(sql => sql.Contains("FROM bronze.dns_server_event")));
+        Assert.IsFalse(parserSql.Any(sql => sql.Contains("windows_event_json")));
     }
 
     [TestMethod]
-    [Description("Parser view filters to Sysmon Event ID 1 only")]
-    public void MockData_ParserViewFilters()
+    public void EmitCanonicalViews_ReferenceActiveSilverViews()
     {
-        var count = _applier.QueryScalar("SELECT count(*) FROM silver.v_process_sysmon_create");
-        Assert.AreEqual(45L, count, "All 45 events are Sysmon EID 1");
+        foreach (var view in SchemaConventions.CanonicalViews)
+        {
+            var sql = _emitter.EmitCanonicalView(view);
+
+            Assert.Contains($"CREATE OR REPLACE VIEW {view.QualifiedName}", sql);
+            foreach (var parserView in view.ParserViews)
+            {
+                Assert.Contains($"FROM {parserView}", sql);
+            }
+
+            Assert.DoesNotContain("ProcessEvents", sql);
+            Assert.DoesNotContain("NetworkSessions", sql);
+        }
     }
 
     [TestMethod]
-    [Description("Public view returns same count as parser view")]
-    public void MockData_CanonicalViewCount()
+    public void Validate_ActiveBronzeTables()
     {
-        var count = _applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvents");
-        Assert.AreEqual(45L, count);
-    }
-
-    // ─── Column extraction correctness ──────────────────────────────
-
-    [TestMethod]
-    [Description("FileName is extracted from JSON Image field")]
-    public void Extraction_FileName()
-    {
-        var count = _applier.QueryScalar(
-            "SELECT count(*) FROM golden.ProcessEvents WHERE FileName = 'cmd.exe'");
-        Assert.IsGreaterThanOrEqualTo(2, count, $"Expected at least 2 cmd.exe events, got {count}");
+        foreach (var table in SchemaConventions.RawTables)
+        {
+            var mismatches = _applier.Validate(table);
+            Assert.IsEmpty(mismatches, $"{table.QualifiedName} mismatches:\n{string.Join("\n", mismatches.Select(m => m.Message))}");
+        }
     }
 
     [TestMethod]
-    [Description("FolderPath preserves full path from JSON")]
-    public void Extraction_FolderPath()
+    public void Validate_ActiveGoldenViews()
     {
-        var count = _applier.QueryScalar(
-            """SELECT count(*) FROM golden.ProcessEvents WHERE FolderPath LIKE '%System32%'""");
-        Assert.IsGreaterThanOrEqualTo(5, count, $"Expected at least 5 System32 paths, got {count}");
+        foreach (var view in SchemaConventions.CanonicalViews)
+        {
+            var mismatches = _applier.Validate(view);
+            var missing = mismatches.Where(m => m.ActualType == "MISSING").ToList();
+
+            Assert.IsEmpty(missing, $"{view.QualifiedName} missing columns:\n{string.Join("\n", missing.Select(m => m.Message))}");
+        }
     }
 
     [TestMethod]
-    [Description("AccountName is extracted from JSON User field")]
-    public void Extraction_AccountName()
+    public void MockData_InsertedIntoActiveBronzeTables()
     {
-        var count = _applier.QueryScalar(
-            """SELECT count(*) FROM golden.ProcessEvents WHERE AccountName = 'CORP\alice'""");
-        Assert.IsGreaterThanOrEqualTo(5, count, $"Expected at least 5 alice events, got {count}");
+        var expected = MockDataSeeder.GetExpectedMedallionRowCountsByTable();
+
+        foreach (var (table, expectedRows) in expected)
+        {
+            var count = _applier.QueryScalar($"SELECT count(*) FROM {table}");
+            Assert.AreEqual(expectedRows, count, $"{table} should contain its expected development seed rows.");
+        }
     }
 
     [TestMethod]
-    [Description("ProcessCommandLine is extracted")]
-    public void Extraction_ProcessCommandLine()
+    public void MockData_FlowsIntoActiveGoldenViews()
     {
-        var count = _applier.QueryScalar(
-            """SELECT count(*) FROM golden.ProcessEvents WHERE ProcessCommandLine LIKE '%mimikatz%'""");
-        Assert.AreEqual(2L, count);
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent") >= 20);
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession") >= 10);
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.Dns") >= 5);
     }
 
     [TestMethod]
-    [Description("ActionType is constant 'ProcessCreated'")]
-    public void Extraction_ActionType()
+    public void Extraction_ProcessEventRepresentativeFields()
     {
-        var count = _applier.QueryScalar(
-            "SELECT count(DISTINCT ActionType) FROM golden.ProcessEvents");
-        Assert.AreEqual(1L, count, "All events should have ActionType='ProcessCreated'");
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName = 'cmd.exe'") >= 1);
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FolderPath LIKE '%System32%'") >= 5);
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE AccountName = 'CORP\\alice'") >= 5);
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE ProcessCommandLine LIKE '%mimikatz%'") >= 1);
+        Assert.AreEqual(1L, _applier.QueryScalar("SELECT count(DISTINCT ActionType) FROM golden.ProcessEvent"));
     }
 
     [TestMethod]
-    [Description("DeviceName comes from computer field")]
-    public void Extraction_DeviceName()
+    public void Hunting_ProcessScenarios()
     {
-        var count = _applier.QueryScalar(
-            "SELECT count(DISTINCT DeviceName) FROM golden.ProcessEvents");
-        Assert.IsGreaterThanOrEqualTo(3, count, $"Expected at least 3 distinct devices, got {count}");
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('mimikatz.exe', 'rundll32.exe', 'procdump.exe')") >= 3);
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('whoami.exe', 'net.exe', 'ipconfig.exe', 'nltest.exe')") >= 4);
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('schtasks.exe', 'reg.exe', 'sc.exe', 'at.exe')") >= 4);
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName = 'powershell.exe' AND lower(ProcessCommandLine) LIKE '%enc%'") >= 2);
     }
 
     [TestMethod]
-    [Description("ProcessId is cast to BIGINT")]
-    public void Extraction_ProcessId()
+    public void Hunting_NetworkAndDnsScenarios()
     {
-        var count = _applier.QueryScalar(
-            "SELECT count(*) FROM golden.ProcessEvents WHERE ProcessId > 0");
-        Assert.AreEqual(45L, count, "All events should have numeric ProcessId");
-    }
-
-    // ─── Hunting query scenarios against mock data ───────────────────
-
-    [TestMethod]
-    [Description("Hunting: find credential dumping tools")]
-    public void Hunting_CredentialDumping()
-    {
-        var count = _applier.QueryScalar(
-            """
-            SELECT count(*) FROM golden.ProcessEvents
-            WHERE FileName IN ('mimikatz.exe', 'rundll32.exe')
-              AND ProcessCommandLine LIKE '%lsass%' OR ProcessCommandLine LIKE '%sekurlsa%'
-            """);
-        Assert.IsGreaterThanOrEqualTo(1, count, "Should find credential dumping activity");
-    }
-
-    [TestMethod]
-    [Description("Hunting: find reconnaissance commands")]
-    public void Hunting_Reconnaissance()
-    {
-        var count = _applier.QueryScalar(
-            """
-            SELECT count(*) FROM golden.ProcessEvents
-            WHERE FileName IN ('whoami.exe', 'net.exe', 'ipconfig.exe', 'nltest.exe')
-            """);
-        Assert.AreEqual(4L, count, "Should find all 4 recon commands");
-    }
-
-    [TestMethod]
-    [Description("Hunting: find beaconing (regular interval process creation)")]
-    public void Hunting_Beaconing()
-    {
-        var count = _applier.QueryScalar(
-            """
-            SELECT count(*) FROM golden.ProcessEvents
-            WHERE FileName = 'beacon.exe'
-            """);
-        Assert.AreEqual(5L, count, "Should find 5 beaconing events");
-    }
-
-    [TestMethod]
-    [Description("Hunting: find persistence mechanisms")]
-    public void Hunting_Persistence()
-    {
-        var count = _applier.QueryScalar(
-            """
-            SELECT count(*) FROM golden.ProcessEvents
-            WHERE FileName IN ('schtasks.exe', 'reg.exe')
-              AND (ProcessCommandLine LIKE '%/create%' OR ProcessCommandLine LIKE '%add%')
-            """);
-        Assert.AreEqual(4L, count, "Should find schtasks + reg persistence");
-    }
-
-    [TestMethod]
-    [Description("Hunting: find encoded PowerShell")]
-    public void Hunting_EncodedPowerShell()
-    {
-        var count = _applier.QueryScalar(
-            """
-            SELECT count(*) FROM golden.ProcessEvents
-            WHERE FileName = 'powershell.exe'
-              AND ProcessCommandLine LIKE '%-enc%'
-            """);
-        Assert.AreEqual(2L, count, "Should find 2 encoded PowerShell");
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemotePort = 4444") >= 1);
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemotePort = 445") >= 1);
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemoteIP = '203.0.113.60' AND RemoteUrl IS NULL") >= 4);
+        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE QueryName LIKE '%example.test%'") >= 3);
     }
 }

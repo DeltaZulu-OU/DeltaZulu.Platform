@@ -1,0 +1,73 @@
+namespace Hunting.Tests.Web;
+
+using Hunting.Core.Samples;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+[TestClass]
+public sealed class SchemaBrowserSampleQueryGuardTests
+{
+    [TestMethod]
+    public void SchemaBrowser_SampleCatalog_DoesNotUseStringEmptyCheckOnNumericProcessId()
+    {
+        var samples = SampleQueryCatalog.All;
+
+        Assert.IsTrue(samples.Count > 0);
+        Assert.IsFalse(samples.Any(static sample => sample.Kql.Contains("isnotempty(ProcessId)", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsTrue(samples.Any(static sample => sample.Kql.Contains("where ProcessId > 0", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    [TestMethod]
+    public void SchemaBrowser_SampleCatalog_DoesNotReferenceLegacyTableNames()
+    {
+        var samples = SampleQueryCatalog.All;
+
+        foreach (var sample in samples)
+        {
+            Assert.DoesNotContain("ProcessEvents", sample.Kql);
+            Assert.DoesNotContain("NetworkSessions", sample.Kql);
+            Assert.DoesNotContain("DeviceProcessEvents", sample.Kql);
+            Assert.DoesNotContain("DeviceNetworkEvents", sample.Kql);
+            Assert.DoesNotContain("windows_event_json", sample.Kql);
+        }
+    }
+
+    [TestMethod]
+    public void SchemaBrowser_SampleCatalog_ReferencesOnlyActiveGoldenTables()
+    {
+        var samples = SampleQueryCatalog.All;
+
+        Assert.IsTrue(samples.Any(static sample => sample.Kql.StartsWith("ProcessEvent", StringComparison.Ordinal)));
+        Assert.IsTrue(samples.Any(static sample => sample.Kql.StartsWith("NetworkSession", StringComparison.Ordinal)));
+        Assert.IsTrue(samples.Any(static sample => sample.Kql.StartsWith("Dns", StringComparison.Ordinal)));
+    }
+
+    [TestMethod]
+    public void SchemaBrowser_RendersCentralSampleCatalog()
+    {
+        var source = ReadSchemaBrowserSource();
+
+        Assert.Contains("SampleQueryCatalog.All", source);
+        Assert.DoesNotContain("new(\"Process:", source);
+        Assert.DoesNotContain("new(\"Network:", source);
+        Assert.DoesNotContain("new(\"DNS:", source);
+    }
+
+    private static string ReadSchemaBrowserSource()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null)
+        {
+            var candidate = Path.Combine(directory.FullName, "src", "Hunting.Web", "Shared", "SchemaBrowser.razor");
+            if (File.Exists(candidate))
+            {
+                return File.ReadAllText(candidate);
+            }
+
+            directory = directory.Parent;
+        }
+
+        Assert.Fail("Could not locate src/Hunting.Web/Shared/SchemaBrowser.razor from the test output directory.");
+        return string.Empty;
+    }
+}

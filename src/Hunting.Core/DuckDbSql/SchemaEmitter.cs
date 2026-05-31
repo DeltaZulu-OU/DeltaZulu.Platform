@@ -159,6 +159,8 @@ public sealed class SchemaEmitter
         sb.Append(DuckDbQueryEmitter.EscapeQualifiedIdent(view.QualifiedName));
         sb.Append(" AS\n");
 
+        var canonicalColumns = string.Join(",\n    ", view.Columns.Select(c => DuckDbQueryEmitter.EscapeIdent(c.Name)));
+
         for (var i = 0; i < view.ParserViews.Count; i++)
         {
             if (i > 0)
@@ -166,7 +168,9 @@ public sealed class SchemaEmitter
                 sb.Append("\nUNION ALL\n");
             }
 
-            sb.Append("SELECT * FROM ");
+            sb.Append("SELECT\n    ");
+            sb.Append(canonicalColumns);
+            sb.Append("\nFROM ");
             sb.Append(DuckDbQueryEmitter.EscapeQualifiedIdent(view.ParserViews[i]));
         }
 
@@ -181,6 +185,7 @@ public sealed class SchemaEmitter
         ColumnExpr col => DuckDbQueryEmitter.EscapeIdent(col.Name),
         LiteralExpr lit => EmitMappingLiteral(lit),
         JsonTextExpr json => $"json_extract_string({EmitMappingExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}')",
+        JsonExistsExpr json => $"json_exists({EmitMappingExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}')",
         RegexExtractExpr re => $"regexp_extract({EmitMappingExpr(re.Input)}, '{EscapeSql(re.Pattern)}', {re.Group})",
         CastExpr cast => $"CAST({EmitMappingExpr(cast.Input)} AS {cast.TargetType.ToSql()})",
         FunctionExpr fn => $"{fn.Name}({string.Join(", ", fn.Args.Select(EmitMappingExpr))})",

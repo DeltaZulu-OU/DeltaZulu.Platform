@@ -48,8 +48,8 @@ public sealed class KustoToRelational
         *
         * and:
         *
-        *   ProcessEvents | take 1;
-        *   .drop table ProcessEvents
+        *   ProcessEvent | take 1;
+        *   .drop table ProcessEvent
         *
         * without rejecting dot-command-looking text inside string literals.
         */
@@ -97,8 +97,8 @@ public sealed class KustoToRelational
          * Do not derive policy safety from the statement selected for translation.
          * A malicious input such as:
          *
-         *   ProcessEvents | take 1;
-         *   .drop table ProcessEvents
+         *   ProcessEvent | take 1;
+         *   .drop table ProcessEvent
          *
          * may leave the query expression visible to the translator while the
          * management command is missed by top-level Statement filtering.
@@ -508,7 +508,7 @@ public sealed class KustoToRelational
     {
         // This pre-translation validation intentionally scans the syntax tree once
         // to provide a policy diagnostic even when semantic analysis fails on
-        // qualified approved table paths (for example "golden.ProcessEvents").
+        // qualified approved table paths (for example "golden.ProcessEvent").
         foreach (var path in root.GetDescendants<PathExpression>())
         {
             var parts = GetPathParts(path);

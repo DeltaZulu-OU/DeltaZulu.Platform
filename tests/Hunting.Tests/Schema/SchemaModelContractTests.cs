@@ -1,5 +1,5 @@
 using Hunting.Core.Schema;
-using Hunting.Schema.Definitions;
+using Hunting.Schema;
 
 namespace Hunting.Tests.Schema;
 
@@ -22,10 +22,16 @@ public class SchemaModelContractTests
         Assert.AreEqual(DuckDbType.Json, KustoType.Dynamic.ToDefaultDuckDbType());
         Assert.AreEqual(DuckDbType.BigInt, KustoType.Timespan.ToDefaultDuckDbType());
 
-        Assert.AreEqual("golden.ProcessEvents", ProcessEvents.View.QualifiedName);
-        Assert.AreEqual("bronze.windows_event_json", ProcessEvents.RawWindowsEventJson.QualifiedName);
-        Assert.HasCount(14, ProcessEvents.Columns);
-        Assert.HasCount(7, ProcessEvents.RawWindowsEventJson.Columns);
-        Assert.HasCount(14, ProcessEvents.SysmonProcessCreate.Mapping.Projections);
+        Assert.AreEqual("bronze.windows_sysmon_event", SchemaConventions.RawTables.Single(t => t.Name == "windows_sysmon_event").QualifiedName);
+        Assert.AreEqual("bronze.windows_security_event", SchemaConventions.RawTables.Single(t => t.Name == "windows_security_event").QualifiedName);
+        Assert.AreEqual("bronze.dns_server_event", SchemaConventions.RawTables.Single(t => t.Name == "dns_server_event").QualifiedName);
+
+        Assert.AreEqual("golden.ProcessEvent", SchemaConventions.CanonicalViews.Single(v => v.Name == "ProcessEvent").QualifiedName);
+        Assert.AreEqual("golden.NetworkSession", SchemaConventions.CanonicalViews.Single(v => v.Name == "NetworkSession").QualifiedName);
+        Assert.AreEqual("golden.Dns", SchemaConventions.CanonicalViews.Single(v => v.Name == "Dns").QualifiedName);
+
+        Assert.HasCount(3, SchemaConventions.RawTables);
+        Assert.HasCount(6, SchemaConventions.ParserViews);
+        Assert.HasCount(3, SchemaConventions.CanonicalViews);
     }
 }

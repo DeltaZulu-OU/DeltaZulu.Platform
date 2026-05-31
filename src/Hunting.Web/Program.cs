@@ -89,15 +89,40 @@ static async Task BootstrapSchemaAsync(WebApplication app)
         applier.ExecuteRaw($"SET schema = '{SchemaConventions.GoldenSchema}'");
         app.Logger.LogInformation("Schema bootstrapped: {Count} DDL statements applied", ddl.Count);
 
-        // Seed mock data only if the raw table is empty
-        var rowCount = applier.QueryScalar("SELECT count(*) FROM bronze.windows_event_json");
-        if (rowCount == 0)
-        {
-            applier.ExecuteRaw(MockDataSeeder.GetProcessSeedSql());
-            applier.ExecuteRaw(MockDataSeeder.GetNetworkSessionSeedSql());
-            app.Logger.LogInformation("Mock data seeded for medallion event families: ProcessEvents and NetworkSessions");
-        }
+        SeedMedallionSources(applier, app.Logger);
     });
+}
+
+static void SeedMedallionSources(SchemaApplier applier, ILogger logger)
+{
+    var expectedRowsByTable = MockDataSeeder.GetExpectedMedallionRowCountsByTable();
+
+    foreach (var (tableName, seedSql) in MockDataSeeder.GetMedallionSeedSqlByTable())
+    {
+        var expectedRows = expectedRowsByTable[tableName];
+        var existingRows = applier.QueryScalar($"SELECT count(*) FROM {tableName}");
+
+        if (existingRows >= expectedRows)
+        {
+            logger.LogInformation("Skipping seed for {TableName}: {RowCount} existing rows", tableName, existingRows);
+            continue;
+        }
+
+        if (existingRows > 0)
+        {
+            logger.LogWarning(
+                "Repairing underseeded development table {TableName}: {ExistingRows} existing rows, expected at least {ExpectedRows}",
+                tableName,
+                existingRows,
+                expectedRows);
+
+            applier.ExecuteRaw($"DELETE FROM {tableName}");
+        }
+
+        applier.ExecuteRaw(seedSql);
+        var insertedRows = applier.QueryScalar($"SELECT count(*) FROM {tableName}");
+        logger.LogInformation("Seeded {RowCount} rows into {TableName}", insertedRows, tableName);
+    }
 }
 
 static async Task BootstrapSettingsStoreAsync(WebApplication app)

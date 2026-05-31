@@ -9,7 +9,7 @@ what constraints are non-negotiable.
 ## Project Summary
 
 A schema-first KQL hunting platform over DuckDB. Analysts write KQL against logical security
-tables (`DeviceProcessEvents`, `SigninLogs`, etc.) in a Blazor Server UI. The backend parses
+tables (`ProcessEvent`, `SigninLogs`, etc.) in a Blazor Server UI. The backend parses
 KQL with Kusto.Language, translates a controlled subset through a `RelNode` intermediate model
 into transient DuckDB SQL, executes it, and returns bounded results. Runtime query SQL is never
 a source artifact. Standalone SQL migrations/views are not used for MVP. Parser-view SQL may
@@ -95,7 +95,7 @@ src/
       SchemaObjectDef.cs         — ColumnDef, RawTableDef, InternalTableDef, ParserViewDef,
                                    CanonicalViewDef (requires: using Hunting.Core.Mapping)
       Definitions/
-        DeviceProcessEventsSchema.cs — 14 canonical columns, raw table, Sysmon parser view
+        ProcessEventSchema.cs — 14 canonical columns, raw table, Sysmon parser view
     Mapping/
       MappingModel.cs            — ExprDef tree, MappingQueryDef, MapDsl builder
     Catalog/
@@ -245,7 +245,7 @@ Confirmed against `microsoft/Kusto-Query-Language` source during code review:
 - Scalar expressions: `Scalar` or `Ref` — `ColumnRef`, `BinaryScalar`, `FunctionCall`
 - DuckDB schemas: `raw`, `internal`, `main`, `accelerator`
 - Parser views: `internal.v_{category}_{source}_{action}` — e.g., `internal.v_process_sysmon_create`
-- Public views: `main.{MicrosoftTableName}` — e.g., `main.DeviceProcessEvents`
+- Public views: `main.{MicrosoftTableName}` — e.g., `main.ProcessEvent`
 - CTE stages: `__kql_stage_N` (auto-numbered, reset per `Emit()` call)
 
 ### Code Style

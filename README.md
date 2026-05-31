@@ -2,7 +2,7 @@
 
 A schema-first **KQL-on-DuckDB security hunting workbench** built with .NET.
 
-Analysts write KQL against logical security tables (for example, `DeviceProcessEvents`) in a Blazor Server UI. The backend parses KQL with `Microsoft.Azure.Kusto.Language`, translates a controlled subset through a relational intermediate model (`RelNode`), emits transient DuckDB SQL, executes it, and returns bounded results.
+Analysts write KQL against logical security tables (for example, `ProcessEvent`) in a Blazor Server UI. The backend parses KQL with `Microsoft.Azure.Kusto.Language`, translates a controlled subset through a relational intermediate model (`RelNode`), emits transient DuckDB SQL, executes it, and returns bounded results.
 
 > SQL is generated at runtime and is **not** a source artifact.
 
@@ -11,6 +11,7 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 - Phases 0–3 (schema + translation + runtime + Blazor UI vertical slice) are complete.
 - Phase 4 (hardening) is complete: schema validation automation, generated SQL preview, second table family, and Monaco KQL editor language-service integration are complete.
 - Phase 5 (Planner v1 + emitter SQL-shape simplification) is complete.
+- Phase 1A medallion checkpoint is complete: active Bronze/Silver/Golden contracts are documented, legacy vertical-slice names are removed from the active branch, and sample queries use the active Golden surface.
 - End-to-end pipeline coverage currently includes 17 hunting scenarios in `EndToEndPipelineTests`.
 - Developer-mode query debug trace is now logged on successful executions, not only failures, to support optimization telemetry.
 - `parse_path()` output is now emitted as JSON text so dynamic path components render as readable strings in the UI/results grid.
@@ -28,10 +29,21 @@ Analysts write KQL against logical security tables (for example, `DeviceProcessE
 
 MVP-ready parity = `[x] + [m]` = **223 / 320 (69.7%)**.
 
-Current public schema families in code include event-family surfaces `golden.ProcessEvents` and `golden.NetworkSessions`, with transitional compatibility aliases `golden.DeviceProcessEvents` and `golden.DeviceNetworkEvents`.
+Current public schema families in code use the Phase 1A medallion checkpoint surface:
 
-- Mock seeding and UI sample queries now default to the event-family tables (`ProcessEvents`, `NetworkSessions`) while compatibility aliases remain registered for legacy queries.
+- `golden.ProcessEvent`
+- `golden.NetworkSession`
+- `golden.Dns`
 
+Active source-family Bronze tables are:
+
+- `bronze.windows_sysmon_event`
+- `bronze.windows_security_event`
+- `bronze.dns_server_event`
+
+Active Silver parser views map the current source/event shapes into the Golden contracts. Legacy vertical-slice names such as `ProcessEvents`, `NetworkSessions`, `DeviceProcessEvents`, `DeviceNetworkEvents`, and `windows_event_json` have been removed from the active branch.
+
+- Mock seeding and UI sample queries now use the active medallion surface. Sample queries are centralized in `Hunting.Core.Samples.SampleQueryCatalog` and are validated against seeded Phase 1A data.
 - Hot-path latency review and optimization plan is documented in `docs/HOTPATH-LATENCY-REVIEW.md`.
 - Emitter hot-path optimization is in progress: stage-name index and reference-count caches were added to reduce repeated stage scans during SQL-shape rewrites.
 - Developer-mode debug trace now includes per-query emitter cache/rewrite counters to support optimization benchmarking across future patches.
@@ -97,7 +109,7 @@ Key constraints:
 ```text
 src/
   Hunting.Core/        # Query model, translation, planner, SQL emission, schema contracts/types
-  Hunting.Schema/      # User-editable schema definitions (Device* schemas)
+  Hunting.Schema/      # Schema definitions for active medallion Bronze/Silver/Golden contracts
   Hunting.Data/        # DuckDB runtime and schema application
   Hunting.Web/         # Blazor Server app host + UI components
 
@@ -109,6 +121,8 @@ docs/
   ROADMAP.md
   KQL-to-DuckDB-translation-spec.md
   kql-syntax-coverage-checklist.md
+  PHASE-1A-MEDALLION-CHECKPOINT.md
+  PHASE-1D-TRANSITION.md
   /adr                 # Architecture Decision Records (ADRs) documenting key design decisions and trade-offs
 ```
 
@@ -134,6 +148,8 @@ From the repository root:
 - Translation specification: [`docs/KQL-to-DuckDB-translation-spec.md`](docs/KQL-to-DuckDB-translation-spec.md)
 - KQL coverage checklist: [`docs/kql-syntax-coverage-checklist.md`](docs/kql-syntax-coverage-checklist.md)
 - Delivery plan: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+- Phase 1A medallion checkpoint: [`docs/PHASE-1A-MEDALLION-CHECKPOINT.md`](docs/PHASE-1A-MEDALLION-CHECKPOINT.md)
+- Phase 1D transition plan: [`docs/PHASE-1D-TRANSITION.md`](docs/PHASE-1D-TRANSITION.md)
 - Maintainer context: [`AGENTS.md`](AGENTS.md)
 
 ## License

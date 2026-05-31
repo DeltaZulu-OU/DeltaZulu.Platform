@@ -9,6 +9,7 @@ public abstract record ExprDef;
 public sealed record ColumnExpr(string Name) : ExprDef;
 public sealed record LiteralExpr(object? Value) : ExprDef;
 public sealed record JsonTextExpr(ExprDef JsonColumn, string Path) : ExprDef;
+public sealed record JsonExistsExpr(ExprDef JsonColumn, string Path) : ExprDef;
 public sealed record RegexExtractExpr(ExprDef Input, string Pattern, int Group) : ExprDef;
 public sealed record CastExpr(ExprDef Input, DuckDbType TargetType) : ExprDef;
 public sealed record CaseExpr(IReadOnlyList<CaseBranch> Branches, ExprDef Else) : ExprDef;
@@ -42,6 +43,8 @@ public static class MapDsl
     public static LiteralExpr Lit(object? value) => new(value);
 
     public static JsonTextExpr JsonText(ExprDef col, string path) => new(col, path);
+
+    public static JsonExistsExpr JsonExists(ExprDef col, string path) => new(col, path);
 
     public static RegexExtractExpr RegexExtract(ExprDef input, string pattern, int group) => new(input, pattern, group);
 

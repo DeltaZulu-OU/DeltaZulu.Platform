@@ -4,7 +4,7 @@ using Hunting.Core.Catalog;
 using Hunting.Core.Policy;
 using Hunting.Core.QueryModel;
 using Hunting.Core.Translation;
-using Hunting.Schema.Definitions;
+using Hunting.Schema;
 
 /// <summary>
 /// Edge case, error path, and adversarial tests for the KQL-to-RelNode translator.
@@ -20,7 +20,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public static void Init(TestContext _)
     {
         _catalog = new ApprovedViewCatalog();
-        _catalog.Register(ProcessEvents.View);
+        SchemaConventions.RegisterCanonicalViews(_catalog);
     }
 
     private (RelNode? Node, DiagnosticBag Diag) Translate(string kql)
@@ -65,7 +65,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Unterminated string literal produces parse error")]
     public void Syntax_UnterminatedString()
     {
-        var (_, diag) = Translate("""ProcessEvents | where FileName == "unterminated""");
+        var (_, diag) = Translate("""ProcessEvent | where FileName == "unterminated""");
         Assert.IsTrue(diag.HasErrors, "Unterminated string should produce error");
     }
 
@@ -74,7 +74,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Syntax_MissingPipe()
     {
         var (_, diag) = Translate(
-            """ProcessEvents where FileName == "cmd.exe" """);
+            """ProcessEvent where FileName == "cmd.exe" """);
         Assert.IsTrue(diag.HasErrors, "Missing pipe should produce error");
     }
 
@@ -82,7 +82,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Double pipe operator")]
     public void Syntax_DoublePipe()
     {
-        var (_, diag) = Translate("ProcessEvents || take 10");
+        var (_, diag) = Translate("ProcessEvent || take 10");
         Assert.IsTrue(diag.HasErrors, "Double pipe should produce error");
     }
 
@@ -90,7 +90,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Trailing pipe with no operator")]
     public void Syntax_TrailingPipe()
     {
-        var (_, diag) = Translate("ProcessEvents | take 10 |");
+        var (_, diag) = Translate("ProcessEvent | take 10 |");
         Assert.IsTrue(diag.HasErrors, "Trailing pipe should produce error");
     }
 
@@ -107,7 +107,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Syntax_MismatchedParens()
     {
         var (_, diag) = Translate(
-            """ProcessEvents | where (FileName == "cmd.exe" """);
+            """ProcessEvent | where (FileName == "cmd.exe" """);
         Assert.IsTrue(diag.HasErrors, "Mismatched parens should produce error");
     }
 
@@ -115,7 +115,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("take with non-numeric argument")]
     public void Syntax_TakeNonNumeric()
     {
-        var (_, diag) = Translate("""ProcessEvents | take "ten" """);
+        var (_, diag) = Translate("""ProcessEvent | take "ten" """);
         Assert.IsTrue(diag.HasErrors, "take with string should produce error");
     }
 
@@ -123,7 +123,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("take with negative number")]
     public void Syntax_TakeNegative()
     {
-        var (_, diag) = Translate("ProcessEvents | take -5");
+        var (_, diag) = Translate("ProcessEvent | take -5");
         Assert.IsTrue(diag.HasErrors, "take with negative should produce error");
     }
 
@@ -133,7 +133,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     {
         var (_, diag) = Translate(
             """
-            ProcessEvents
+            ProcessEvent
             | extend bad = extract("-enc\\s+([^\\s]+)", 1)
             """);
         Assert.IsTrue(diag.HasErrors, "extract with 2 args should fail");
@@ -147,7 +147,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     {
         var (_, diag) = Translate(
             """
-            ProcessEvents
+            ProcessEvent
             | extend bad = extract("-enc\\s+([^\\s]+)", 1, ProcessCommandLine, typeof(string), "extra")
             """);
         Assert.IsTrue(diag.HasErrors, "extract with 5 args should fail");
@@ -159,7 +159,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     {
         var (_, diag) = Translate(
             """
-            ProcessEvents
+            ProcessEvent
             | extend bad = extract("-enc\\s+([^\\s]+)", "one", ProcessCommandLine)
             """);
         Assert.IsTrue(diag.HasErrors, "extract requires integer capture group index");
@@ -174,7 +174,7 @@ public sealed class KustoToRelationalEdgeCaseTests
         var (result, diag) = Translate(
             """
             // This is a hunting query
-            ProcessEvents | take 10
+            ProcessEvent | take 10
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         Assert.IsNotNull(result);
@@ -186,7 +186,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     {
         var (result, diag) = Translate(
             """
-            ProcessEvents
+            ProcessEvent
             | where FileName == "cmd.exe" // filter for cmd
             | take 10
             """);
@@ -200,7 +200,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     {
         var (_, diag) = Translate(
             """
-            ProcessEvents
+            ProcessEvent
             | where /* only cmd */ FileName == "cmd.exe"
             | take 10
             """);
@@ -222,7 +222,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     {
         var (_, diag) = Translate(
             """
-            ProcessEvents
+            ProcessEvent
             /*
                This is a multi-line comment
                that spans several lines
@@ -238,7 +238,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Access to bronze.* table rejected")]
     public void Policy_RawTableAccess()
     {
-        var (result, diag) = Translate("bronze.windows_event_json | take 10");
+        var (result, diag) = Translate("bronze.windows_sysmon_event | take 10");
         Assert.IsTrue(diag.HasErrors);
         Assert.Contains(d => d.Phase == DiagnosticPhase.Policy ||
                                         d.Phase == DiagnosticPhase.Parse, diag.All,
@@ -249,7 +249,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Access to silver.* table rejected")]
     public void Policy_InternalTableAccess()
     {
-        var (_, diag) = Translate("silver.v_process_sysmon_create | take 10");
+        var (_, diag) = Translate("silver.v_processevent_windows_sysmon_eid1 | take 10");
         Assert.IsTrue(diag.HasErrors);
     }
 
@@ -268,7 +268,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Schema-qualified approved table is allowed only for golden schema")]
     public void Policy_ApprovedTableWithDisallowedSchemaQualifier()
     {
-        var (_, diag) = Translate("silver.ProcessEvents | take 1");
+        var (_, diag) = Translate("silver.ProcessEvent | take 1");
         Assert.IsTrue(diag.HasErrors);
         Assert.Contains(
             d => d.Phase == DiagnosticPhase.Policy &&
@@ -281,7 +281,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Fully-qualified approved table is allowed only for hunting.golden")]
     public void Policy_ApprovedTableWithDisallowedDatabaseQualifier()
     {
-        var (_, diag) = Translate("otherdb.golden.ProcessEvents | take 1");
+        var (_, diag) = Translate("otherdb.golden.ProcessEvent | take 1");
         Assert.IsTrue(diag.HasErrors);
         Assert.Contains(
             d => d.Phase == DiagnosticPhase.Policy &&
@@ -294,7 +294,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Golden-qualified approved table is rejected with explicit policy diagnostic")]
     public void Policy_ApprovedTableWithGoldenQualifierRejected()
     {
-        var (_, diag) = Translate("golden.ProcessEvents | take 1");
+        var (_, diag) = Translate("golden.ProcessEvent | take 1");
         Assert.IsTrue(diag.HasErrors);
         Assert.Contains(
             d => d.Phase == DiagnosticPhase.Policy &&
@@ -308,7 +308,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Policy_BareJoinBlocked()
     {
         var (result, diag) = Translate(
-            "ProcessEvents | join (ProcessEvents | take 5) on DeviceName");
+            "ProcessEvent | join (ProcessEvent | take 5) on DeviceName");
         Assert.IsTrue(diag.HasErrors);
         Assert.IsNull(result);
         var joinDiag = diag.All.FirstOrDefault(d =>
@@ -321,7 +321,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Policy_InneruniqueJoinBlocked()
     {
         var (_, diag) = Translate(
-            "ProcessEvents | join kind=innerunique (ProcessEvents | take 5) on DeviceName");
+            "ProcessEvent | join kind=innerunique (ProcessEvent | take 5) on DeviceName");
         Assert.IsTrue(diag.HasErrors);
     }
 
@@ -340,7 +340,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Dot-command .drop rejected")]
     public void Policy_DotCommandDrop()
     {
-        var (result, diag) = Translate(".drop table ProcessEvents");
+        var (result, diag) = Translate(".drop table ProcessEvent");
         Assert.IsTrue(diag.HasErrors || result is null,
             ".drop command should be rejected");
     }
@@ -349,7 +349,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Dot-command .set rejected")]
     public void Policy_DotCommandSet()
     {
-        var (result, diag) = Translate(".set MyTable <| ProcessEvents | take 10");
+        var (result, diag) = Translate(".set MyTable <| ProcessEvent | take 10");
         Assert.IsTrue(diag.HasErrors || result is null,
             ".set command should be rejected");
     }
@@ -360,8 +360,8 @@ public sealed class KustoToRelationalEdgeCaseTests
     {
         var (result, diag) = Translate(
             """
-            ProcessEvents | where FileName == "cmd.exe";
-            .drop table ProcessEvents
+            ProcessEvent | where FileName == "cmd.exe";
+            .drop table ProcessEvent
             """);
 
         Assert.IsNull(result, "Translator must reject multi-statement input that chains commands.");
@@ -379,8 +379,8 @@ public sealed class KustoToRelationalEdgeCaseTests
         var (result, diag) = Translate(
             """
         let Suspicious = ";
-        .drop table ProcessEvents";
-        ProcessEvents
+        .drop table ProcessEvent";
+        ProcessEvent
         | where ProcessCommandLine contains Suspicious
         | take 1
         """);
@@ -396,7 +396,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Parse_StringLiteralSqlPayload_RemainsSingleStatement()
     {
         var (result, diag) = Translate(
-            """ProcessEvents | where FileName == "'; DROP TABLE golden.ProcessEvents;--" | take 1""");
+            """ProcessEvent | where FileName == "'; DROP TABLE golden.ProcessEvent;--" | take 1""");
 
         Assert.IsNotNull(result, "Payload embedded in a KQL string should remain data, not a statement separator.");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All.Select(d => d.Message)));
@@ -409,7 +409,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Column_Nonexistent()
     {
         var (_, diag) = Translate(
-            """ProcessEvents | where FakeColumn == "test" """);
+            """ProcessEvent | where FakeColumn == "test" """);
         // Kusto.Language semantic analysis should catch this
         Assert.IsTrue(diag.HasErrors,
             "Reference to nonexistent column should produce error");
@@ -420,7 +420,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Column_TypeMismatch()
     {
         var (_, diag) = Translate(
-            "ProcessEvents | where FileName == 42");
+            "ProcessEvent | where FileName == 42");
         // Kusto.Language may or may not flag this — depends on implicit conversion
         // At minimum it should not crash
         Assert.IsNotNull(diag, "Translation should complete without crash");
@@ -432,7 +432,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("where with always-true predicate")]
     public void Operator_WhereAlwaysTrue()
     {
-        var (result, diag) = Translate("ProcessEvents | where true | take 5");
+        var (result, diag) = Translate("ProcessEvent | where true | take 5");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         Assert.IsNotNull(result);
     }
@@ -441,7 +441,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("where with always-false predicate")]
     public void Operator_WhereAlwaysFalse()
     {
-        var (result, diag) = Translate("ProcessEvents | where false | take 5");
+        var (result, diag) = Translate("ProcessEvent | where false | take 5");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         Assert.IsNotNull(result);
     }
@@ -452,7 +452,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     {
         var (result, diag) = Translate(
             """
-            ProcessEvents
+            ProcessEvent
             | where FileName == "cmd.exe"
             | where ProcessId > 100
             | where DeviceName != ""
@@ -468,7 +468,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("project with zero columns should error or produce valid SQL")]
     public void Operator_ProjectEmpty()
     {
-        var (_, diag) = Translate("ProcessEvents | project");
+        var (_, diag) = Translate("ProcessEvent | project");
         // Kusto parser should reject this
         Assert.IsTrue(diag.HasErrors, "project with no columns should error");
     }
@@ -477,7 +477,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("summarize with no aggregation function")]
     public void Operator_SummarizeNoAgg()
     {
-        var (_, diag) = Translate("ProcessEvents | summarize by FileName");
+        var (_, diag) = Translate("ProcessEvent | summarize by FileName");
         // Valid KQL — equivalent to "distinct FileName" in Kusto
         Assert.IsNotNull(diag, "Should not crash");
     }
@@ -487,7 +487,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Operator_SortMultiple()
     {
         var (result, diag) = Translate(
-            "ProcessEvents | sort by DeviceName asc, Timestamp desc | take 10");
+            "ProcessEvent | sort by DeviceName asc, Timestamp desc | take 10");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         Assert.IsNotNull(result);
     }
@@ -497,7 +497,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Operator_TopMultiSort()
     {
         var (result, diag) = Translate(
-            "ProcessEvents | top 5 by Timestamp desc");
+            "ProcessEvent | top 5 by Timestamp desc");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var limit = result as LimitNode;
         Assert.IsNotNull(limit);
@@ -510,7 +510,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     {
         var (_, diag) = Translate(
             """
-            ProcessEvents
+            ProcessEvent
             | extend
                 A = strcat_array(Tags),
                 B = bag_keys(AdditionalFields, "extra"),
@@ -531,7 +531,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Whitespace_Excessive()
     {
         var (result, diag) = Translate(
-            "ProcessEvents    |    take     10");
+            "ProcessEvent    |    take     10");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         Assert.IsNotNull(result);
     }
@@ -541,7 +541,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Whitespace_TabIndented()
     {
         var (result, diag) = Translate(
-            "ProcessEvents\n\t| where FileName == \"cmd.exe\"\n\t| take 10");
+            "ProcessEvent\n\t| where FileName == \"cmd.exe\"\n\t| take 10");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         Assert.IsNotNull(result);
     }
@@ -551,7 +551,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Whitespace_Crlf()
     {
         var (result, diag) = Translate(
-            "ProcessEvents\r\n| where FileName == \"cmd.exe\"\r\n| take 10");
+            "ProcessEvent\r\n| where FileName == \"cmd.exe\"\r\n| take 10");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         Assert.IsNotNull(result);
     }
@@ -561,7 +561,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     public void Whitespace_Compact()
     {
         var (result, diag) = Translate(
-            """ProcessEvents|where FileName=="cmd.exe"|take 10""");
+            """ProcessEvent|where FileName=="cmd.exe"|take 10""");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         Assert.IsNotNull(result);
     }
@@ -574,7 +574,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     {
         var longName = new string('A', 500);
         var (result, diag) = Translate(
-            $"ProcessEvents | where {longName} == \"test\"");
+            $"ProcessEvent | where {longName} == \"test\"");
         // Should produce error (column doesn't exist) but not crash
         Assert.IsTrue(diag.HasErrors || result is not null);
     }
@@ -585,7 +585,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     {
         var longValue = new string('X', 10_000);
         var (_, diag) = Translate(
-            $"ProcessEvents | where FileName == \"{longValue}\" | take 1");
+            $"ProcessEvent | where FileName == \"{longValue}\" | take 1");
         Assert.IsNotNull(diag, "Should not crash on long string");
     }
 
@@ -593,7 +593,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Many chained where clauses do not stack overflow")]
     public void Adversarial_ManyWheres()
     {
-        var kql = "ProcessEvents\n";
+        var kql = "ProcessEvent\n";
         for (var i = 0; i < 50; i++)
         {
             kql += $"| where ProcessId > {i}\n";
@@ -610,7 +610,7 @@ public sealed class KustoToRelationalEdgeCaseTests
     [Description("Many chained extend clauses do not stack overflow")]
     public void Adversarial_ManyExtends()
     {
-        var kql = "ProcessEvents\n";
+        var kql = "ProcessEvent\n";
         for (var i = 0; i < 30; i++)
         {
             kql += $"| extend col_{i} = ProcessId + {i}\n";
@@ -635,7 +635,7 @@ public sealed class KustoToRelationalEdgeCaseTests
             "FakeTable | take 10",
             "!@#$",
             "",
-            "ProcessEvents | join (ProcessEvents) on DeviceName",
+            "ProcessEvent | join (ProcessEvent) on DeviceName",
         ];
 
         foreach (var input in badInputs)

@@ -1,5 +1,6 @@
 @namespace Hunting.Web.Shared
 @using Hunting.Core.Schema
+@using Hunting.Core.Samples
 @inject Hunting.Core.Catalog.ApprovedViewCatalog Catalog
 @inject Hunting.Web.Services.EditorBus EditorBus
 
@@ -41,51 +42,7 @@
 </div>
 
 @code {
-    private readonly SampleQuery[] _samples =
-    [
-        // ─── ProcessEvents ──────────────────────────────────────────
-        new("Process: all events (last 1h)",
-            "ProcessEvents\n| where Timestamp > ago(1h)\n| take 100"),
-        new("Process: count by device",
-            "ProcessEvents\n| summarize count() by DeviceName\n| sort by count_ desc"),
-        new("Process: PowerShell activity",
-            "ProcessEvents\n| where FileName has \"powershell\"\n| project Timestamp, DeviceName, AccountName, ProcessCommandLine\n| take 50"),
-        new("Process: credential access tools",
-            "ProcessEvents\n| where FileName in (\"mimikatz.exe\", \"procdump.exe\", \"rundll32.exe\")\n| where ProcessCommandLine has \"lsass\" or ProcessCommandLine has \"sekurlsa\"\n| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine"),
-        new("Process: encoded PowerShell",
-            "ProcessEvents\n| where FileName =~ \"powershell.exe\"\n| where ProcessCommandLine contains \"-enc\" or ProcessCommandLine contains \"-EncodedCommand\"\n| project Timestamp, DeviceName, AccountName, ProcessCommandLine"),
-        new("Process: persistence mechanisms",
-            "ProcessEvents\n| where FileName in (\"schtasks.exe\", \"reg.exe\", \"sc.exe\", \"at.exe\")\n| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine\n| sort by Timestamp desc"),
-        new("Process: decode encoded command",
-            "ProcessEvents\n| where FileName =~ \"powershell.exe\"\n| extend EncodedPayload = extract(@\"-enc\\s+([^\\s]+)\", 1, ProcessCommandLine)\n| where isnotempty(EncodedPayload)\n| extend DecodedPayload = base64_decode_tostring(EncodedPayload)\n| project Timestamp, DeviceName, AccountName, ProcessCommandLine, DecodedPayload\n| take 25"),
-        new("Process: lookup enrichment by account",
-            "ProcessEvents\n| summarize LaunchCount = count() by AccountName\n| lookup (ProcessEvents | summarize DeviceCount = dcount(DeviceName) by AccountName) on AccountName\n| project AccountName, LaunchCount, DeviceCount\n| sort by LaunchCount desc\n| take 25"),
-        new("Process: command line URL indicators",
-            "ProcessEvents\n| extend CommandUrlEncoded = url_encode(ProcessCommandLine)\n| extend HasEncodedCmd = indexof(CommandUrlEncoded, \"%2Denc\") >= 0\n| where HasEncodedCmd\n| project Timestamp, DeviceName, AccountName, FileName, CommandUrlEncoded\n| take 25"),
-        new("Process: sample-distinct executables",
-            "ProcessEvents\n| sample-distinct 10 of FileName"),
-        new("Process: percentile process id by device",
-            "ProcessEvents\n| summarize P95ProcessId = percentile(ProcessId, 95) by DeviceName\n| sort by P95ProcessId desc"),
-        new("Process: parse path details",
-            "ProcessEvents\n| extend ParsedPath = parse_path(FolderPath)\n| project Timestamp, DeviceName, FileName, FolderPath, ParsedPath\n| take 25"),
-        new("Process: trim path roots",
-            "ProcessEvents\n| extend RelativePath = trim_start(\"[A-Za-z]:\\\\\\\\\", FolderPath)\n| extend NoTrailingSlash = trim_end(\"\\\\\\\\\", RelativePath)\n| project Timestamp, DeviceName, FolderPath, RelativePath, NoTrailingSlash\n| take 25"),
-        new("Process: base64 roundtrip preview",
-            "ProcessEvents\n| extend EncodedFileName = base64_encode_tostring(FileName)\n| extend DecodedA = base64_decode_tostring(\"YQ==\")\n| project Timestamp, DeviceName, FileName, EncodedFileName, DecodedA\n| take 25"),
-        // ─── NetworkSessions ──────────────────────────────────────────
-        new("Network: all connections (last 1h)",
-            "NetworkSessions\n| where Timestamp > ago(1h)\n| take 100"),
-        new("Network: suspicious ports",
-            "NetworkSessions\n| where RemotePort in (4444, 1337, 8888, 9999, 31337)\n| project Timestamp, DeviceName, LocalIP, RemoteIP, RemotePort, InitiatingProcessFileName"),
-        new("Network: SMB lateral movement",
-            "NetworkSessions\n| where RemotePort == 445\n| where not(RemoteIP startswith \"10.1.1.\")\n   or InitiatingProcessFileName in (\"cmd.exe\", \"powershell.exe\", \"wmic.exe\")\n| project Timestamp, DeviceName, LocalIP, RemoteIP, RemoteUrl, InitiatingProcessFileName"),
-        new("Network: beaconing (no hostname)",
-            "NetworkSessions\n| where isempty(RemoteUrl)\n| summarize count(), dcount(RemotePort) by DeviceName, RemoteIP, InitiatingProcessFileName\n| where count_ > 3\n| sort by count_ desc"),
-        new("Network: count by remote IP",
-            "NetworkSessions\n| summarize count() by RemoteIP, RemotePort\n| sort by count_ desc\n| take 20"),
-        new("Network: PowerShell DNS queries",
-            "NetworkSessions\n| where RemotePort == 53\n| where InitiatingProcessFileName has \"powershell\" or InitiatingProcessFileName has \"cmd\"\n| project Timestamp, DeviceName, RemoteUrl, InitiatingProcessFileName, InitiatingProcessCommandLine"),
-    ];
+    private readonly IReadOnlyList<SampleQuery> _samples = SampleQueryCatalog.All;
 
     private void OnTableClick(string table)
         => EditorBus.RequestInsert(table);
@@ -95,6 +52,4 @@
 
     private void OnSampleClick(string kql)
         => EditorBus.RequestInsert(kql);
-
-    private sealed record SampleQuery(string Label, string Kql);
 }

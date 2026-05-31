@@ -29,7 +29,7 @@ public abstract record SchemaObjectDef(
 }
 
 /// <summary>
-/// A raw ingestion table (e.g. bronze.windows_event_json).
+/// A raw ingestion table (e.g. bronze.windows_sysmon_event).
 /// Not user-queryable.
 /// </summary>
 public sealed record RawTableDef(
@@ -52,7 +52,7 @@ public sealed record InternalTableDef(
     : SchemaObjectDef(Schema, Name, Columns, Description);
 
 /// <summary>
-/// A source-specific parser view (e.g. silver.v_process_sysmon_create).
+/// A source-specific parser view (e.g. silver.v_processevent_windows_sysmon_eid1).
 /// Maps raw/internal data into the canonical column set for a public hunting view.
 /// </summary>
 public sealed record ParserViewDef(
@@ -66,7 +66,7 @@ public sealed record ParserViewDef(
     : SchemaObjectDef(Schema, Name, Columns, Description);
 
 /// <summary>
-/// A public hunting view (e.g. golden.ProcessEvents).
+/// A public hunting view (e.g. golden.ProcessEvent).
 /// UNION ALL over parser views. The only user-queryable surface.
 /// </summary>
 public sealed record CanonicalViewDef(
