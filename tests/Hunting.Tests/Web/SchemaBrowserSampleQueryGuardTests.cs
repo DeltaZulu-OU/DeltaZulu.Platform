@@ -11,9 +11,9 @@ public sealed class SchemaBrowserSampleQueryGuardTests
     {
         var samples = SampleQueryCatalog.All;
 
-        Assert.IsTrue(samples.Count > 0);
-        Assert.IsFalse(samples.Any(static sample => sample.Kql.Contains("isnotempty(ProcessId)", StringComparison.OrdinalIgnoreCase)));
-        Assert.IsTrue(samples.Any(static sample => sample.Kql.Contains("where ProcessId > 0", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsNotEmpty(samples);
+        Assert.DoesNotContain(static sample => sample.Kql.Contains("isnotempty(ProcessId)", StringComparison.OrdinalIgnoreCase), samples);
+        Assert.Contains(static sample => sample.Kql.Contains("where ProcessId > 0", StringComparison.OrdinalIgnoreCase), samples);
     }
 
     [TestMethod]
@@ -36,9 +36,9 @@ public sealed class SchemaBrowserSampleQueryGuardTests
     {
         var samples = SampleQueryCatalog.All;
 
-        Assert.IsTrue(samples.Any(static sample => sample.Kql.StartsWith("ProcessEvent", StringComparison.Ordinal)));
-        Assert.IsTrue(samples.Any(static sample => sample.Kql.StartsWith("NetworkSession", StringComparison.Ordinal)));
-        Assert.IsTrue(samples.Any(static sample => sample.Kql.StartsWith("Dns", StringComparison.Ordinal)));
+        Assert.Contains(static sample => sample.Kql.StartsWith("ProcessEvent", StringComparison.Ordinal), samples);
+        Assert.Contains(static sample => sample.Kql.StartsWith("NetworkSession", StringComparison.Ordinal), samples);
+        Assert.Contains(static sample => sample.Kql.StartsWith("Dns", StringComparison.Ordinal), samples);
     }
 
     [TestMethod]

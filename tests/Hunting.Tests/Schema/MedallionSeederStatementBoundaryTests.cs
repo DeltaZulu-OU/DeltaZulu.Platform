@@ -46,8 +46,8 @@ public sealed class MedallionSeederStatementBoundaryTests
         Assert.AreEqual(expected["bronze.windows_security_event"], applier.QueryScalar("SELECT count(*) FROM bronze.windows_security_event"));
         Assert.AreEqual(expected["bronze.dns_server_event"], applier.QueryScalar("SELECT count(*) FROM bronze.dns_server_event"));
 
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent") > 0);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession") > 0);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.Dns") > 0);
+        Assert.IsGreaterThan(0, applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent"));
+        Assert.IsGreaterThan(0, applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession"));
+        Assert.IsGreaterThan(0, applier.QueryScalar("SELECT count(*) FROM golden.Dns"));
     }
 }

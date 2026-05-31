@@ -57,8 +57,7 @@ public sealed class QueryService : IDisposable
             // CommandTimeout); the semaphore is released only once it truly ends.
             List<object?>[]? columnData = null;
             var rowCount = 0;
-            var streamResult = await Task.Run(() => _runtime.ExecuteStreamed(kql, reader =>
-            {
+            var streamResult = await Task.Run(() => _runtime.ExecuteStreamed(kql, reader => {
                 if (rowCount >= MaxMaterializedRows)
                 {
                     return false;
@@ -76,7 +75,7 @@ public sealed class QueryService : IDisposable
             QueryResult result;
             if (!streamResult.Success)
             {
-                result = QueryResult.FromDiagnostics(streamResult.Diagnostics, streamResult.DebugTrace.Count > 0 ? [..streamResult.DebugTrace] : null, streamResult.RenderSpec);
+                result = QueryResult.FromDiagnostics(streamResult.Diagnostics, streamResult.DebugTrace.Count > 0 ? [.. streamResult.DebugTrace] : null, streamResult.RenderSpec);
             }
             else
             {
@@ -87,7 +86,7 @@ public sealed class QueryService : IDisposable
                 }
 
                 result = QueryResult.FromData(
-                    [..streamResult.Columns],
+                    [.. streamResult.Columns],
                     columnData ?? CreateColumnData(streamResult.Columns.Count),
                     streamResult.GeneratedSql,
                     streamResult.PlannerStatsJson,

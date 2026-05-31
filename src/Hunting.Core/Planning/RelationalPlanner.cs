@@ -288,11 +288,11 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             return ReferenceEquals(input, a.Input) && groupBy is null && aggregates is null
                 ? a
                 : (a with
-            {
-                Input = input,
-                GroupBy = groupBy ?? a.GroupBy,
-                Aggregates = aggregates ?? a.Aggregates
-            });
+                {
+                    Input = input,
+                    GroupBy = groupBy ?? a.GroupBy,
+                    Aggregates = aggregates ?? a.Aggregates
+                });
         }
 
         private static ScalarExpr RewriteScalar(ScalarExpr expr, IReadOnlyDictionary<string, string> owner, ref int applied)
@@ -302,14 +302,17 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 case ColumnRef { Qualifier: null } c when owner.TryGetValue(c.Name, out var q):
                     applied++;
                     return new ColumnRef(c.Name, q);
+
                 case BinaryScalar b:
                     return b with
                     {
                         Left = RewriteScalar(b.Left, owner, ref applied),
                         Right = RewriteScalar(b.Right, owner, ref applied)
                     };
+
                 case UnaryScalar u:
                     return u with { Operand = RewriteScalar(u.Operand, owner, ref applied) };
+
                 case FunctionCall f:
                     {
                         var args = new ScalarExpr[f.Args.Count];
@@ -1190,28 +1193,28 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
         }
 
         return expr switch
-    {
-        ColumnRef c when aliasToSource.TryGetValue(c.Name, out var src) => new ColumnRef(src),
-        BinaryScalar b => b with { Left = RemapColumns(b.Left, aliasToSource), Right = RemapColumns(b.Right, aliasToSource) },
-        UnaryScalar u => u with { Operand = RemapColumns(u.Operand, aliasToSource) },
-        FunctionCall f => f with { Args = RemapArgs(f.Args, aliasToSource) },
-        CaseScalar c => c with
         {
-            Branches = RemapBranches(c.Branches, aliasToSource),
-            Else = RemapColumns(c.Else, aliasToSource)
-        },
-        WindowScalarExpr w => w with
-        {
-            Args = RemapArgs(w.Args, aliasToSource),
-            Window = w.Window with
+            ColumnRef c when aliasToSource.TryGetValue(c.Name, out var src) => new ColumnRef(src),
+            BinaryScalar b => b with { Left = RemapColumns(b.Left, aliasToSource), Right = RemapColumns(b.Right, aliasToSource) },
+            UnaryScalar u => u with { Operand = RemapColumns(u.Operand, aliasToSource) },
+            FunctionCall f => f with { Args = RemapArgs(f.Args, aliasToSource) },
+            CaseScalar c => c with
             {
-                PartitionBy = RemapArgs(w.Window.PartitionBy, aliasToSource),
-                OrderBy = RemapSorts(w.Window.OrderBy, aliasToSource)
-            }
-        },
-        ListScalar l => l with { Items = RemapArgs(l.Items, aliasToSource) },
-        _ => expr
-    };
+                Branches = RemapBranches(c.Branches, aliasToSource),
+                Else = RemapColumns(c.Else, aliasToSource)
+            },
+            WindowScalarExpr w => w with
+            {
+                Args = RemapArgs(w.Args, aliasToSource),
+                Window = w.Window with
+                {
+                    PartitionBy = RemapArgs(w.Window.PartitionBy, aliasToSource),
+                    OrderBy = RemapSorts(w.Window.OrderBy, aliasToSource)
+                }
+            },
+            ListScalar l => l with { Items = RemapArgs(l.Items, aliasToSource) },
+            _ => expr
+        };
     }
 
     private static int CountColumnRefOccurrences(ScalarExpr expr, string name)
@@ -1224,13 +1227,16 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 case ColumnRef c when c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase):
                     count++;
                     break;
+
                 case BinaryScalar b:
                     Visit(b.Left);
                     Visit(b.Right);
                     break;
+
                 case UnaryScalar u:
                     Visit(u.Operand);
                     break;
+
                 case FunctionCall f:
                     foreach (var a in f.Args)
                     {
@@ -1238,6 +1244,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                     }
 
                     break;
+
                 case CaseScalar cs:
                     foreach (var (w, t) in cs.Branches)
                     {
@@ -1246,6 +1253,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                     }
                     Visit(cs.Else);
                     break;
+
                 case WindowScalarExpr w:
                     foreach (var a in w.Args)
                     {
@@ -1263,6 +1271,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                     }
 
                     break;
+
                 case ListScalar l:
                     foreach (var i in l.Items)
                     {
@@ -1285,28 +1294,28 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
         }
 
         return expr switch
-    {
-        ColumnRef c when c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase) => replacement,
-        BinaryScalar b => b with { Left = SubstituteColumn(b.Left, name, replacement), Right = SubstituteColumn(b.Right, name, replacement) },
-        UnaryScalar u => u with { Operand = SubstituteColumn(u.Operand, name, replacement) },
-        FunctionCall f => f with { Args = SubstituteArgs(f.Args, name, replacement) },
-        CaseScalar cs => cs with
         {
-            Branches = SubstituteBranches(cs.Branches, name, replacement),
-            Else = SubstituteColumn(cs.Else, name, replacement)
-        },
-        WindowScalarExpr w => w with
-        {
-            Args = SubstituteArgs(w.Args, name, replacement),
-            Window = w.Window with
+            ColumnRef c when c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase) => replacement,
+            BinaryScalar b => b with { Left = SubstituteColumn(b.Left, name, replacement), Right = SubstituteColumn(b.Right, name, replacement) },
+            UnaryScalar u => u with { Operand = SubstituteColumn(u.Operand, name, replacement) },
+            FunctionCall f => f with { Args = SubstituteArgs(f.Args, name, replacement) },
+            CaseScalar cs => cs with
             {
-                PartitionBy = SubstituteArgs(w.Window.PartitionBy, name, replacement),
-                OrderBy = SubstituteSorts(w.Window.OrderBy, name, replacement)
-            }
-        },
-        ListScalar l => l with { Items = SubstituteArgs(l.Items, name, replacement) },
-        _ => expr
-    };
+                Branches = SubstituteBranches(cs.Branches, name, replacement),
+                Else = SubstituteColumn(cs.Else, name, replacement)
+            },
+            WindowScalarExpr w => w with
+            {
+                Args = SubstituteArgs(w.Args, name, replacement),
+                Window = w.Window with
+                {
+                    PartitionBy = SubstituteArgs(w.Window.PartitionBy, name, replacement),
+                    OrderBy = SubstituteSorts(w.Window.OrderBy, name, replacement)
+                }
+            },
+            ListScalar l => l with { Items = SubstituteArgs(l.Items, name, replacement) },
+            _ => expr
+        };
     }
 
     private static IReadOnlyList<ScalarExpr> RemapArgs(IReadOnlyList<ScalarExpr> args, IReadOnlyDictionary<string, string> aliasToSource)
@@ -1410,17 +1419,19 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
         return mapped;
     }
 
-
     private static bool ContainsUnqualifiedColumnRef(ScalarExpr expr, string name)
     {
         switch (expr)
         {
             case ColumnRef c:
                 return c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase);
+
             case BinaryScalar b:
                 return ContainsUnqualifiedColumnRef(b.Left, name) || ContainsUnqualifiedColumnRef(b.Right, name);
+
             case UnaryScalar u:
                 return ContainsUnqualifiedColumnRef(u.Operand, name);
+
             case FunctionCall f:
                 foreach (var a in f.Args)
                 {
@@ -1431,6 +1442,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 }
 
                 return false;
+
             case CaseScalar cs:
                 foreach (var (when, then) in cs.Branches)
                 {
@@ -1441,6 +1453,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 }
 
                 return ContainsUnqualifiedColumnRef(cs.Else, name);
+
             case WindowScalarExpr w:
                 foreach (var a in w.Args)
                 {
@@ -1467,6 +1480,7 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 }
 
                 return false;
+
             case ListScalar l:
                 foreach (var i in l.Items)
                 {
@@ -1477,10 +1491,12 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 }
 
                 return false;
+
             default:
                 return false;
         }
     }
+
     private static void CollectColumnRefs(ScalarExpr expr, ISet<string> sink)
     {
         switch (expr)

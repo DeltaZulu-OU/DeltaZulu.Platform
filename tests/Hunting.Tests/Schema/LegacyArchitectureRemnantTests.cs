@@ -1,9 +1,9 @@
 namespace Hunting.Tests.Schema;
 
+using System.Reflection;
 using Hunting.Data;
 using Hunting.Schema;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Reflection;
 
 [TestClass]
 public sealed class LegacyArchitectureRemnantTests

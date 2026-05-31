@@ -26,34 +26,48 @@ public sealed class SchemaEmitter
         IEnumerable<ParserViewDef> parserViews,
         IEnumerable<CanonicalViewDef> canonicalViews)
     {
-        var statements = new List<string>
-        {
-            // Schemas
-            "CREATE SCHEMA IF NOT EXISTS bronze",
-            "CREATE SCHEMA IF NOT EXISTS silver",
-            "CREATE SCHEMA IF NOT EXISTS golden"
-        };
+        var rawTableList = rawTables.ToList();
+        var internalTableList = internalTables.ToList();
+        var parserViewList = parserViews.ToList();
+        var canonicalViewList = canonicalViews.ToList();
+
+        var schemaNames = new[]
+            {
+                "bronze",
+                "silver",
+                "golden"
+            }
+            .Concat(rawTableList.Select(static obj => obj.Schema))
+            .Concat(internalTableList.Select(static obj => obj.Schema))
+            .Concat(parserViewList.Select(static obj => obj.Schema))
+            .Concat(canonicalViewList.Select(static obj => obj.Schema))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var statements = schemaNames
+            .Select(schema => $"CREATE SCHEMA IF NOT EXISTS {DuckDbQueryEmitter.EscapeIdent(schema)}")
+            .ToList();
 
         // Raw tables
-        foreach (var t in rawTables)
+        foreach (var t in rawTableList)
         {
             statements.Add(EmitCreateTable(t));
         }
 
         // Internal tables
-        foreach (var t in internalTables)
+        foreach (var t in internalTableList)
         {
             statements.Add(EmitCreateTable(t));
         }
 
         // Parser views
-        foreach (var v in parserViews)
+        foreach (var v in parserViewList)
         {
             statements.Add(EmitParserView(v));
         }
 
         // Public hunting views
-        foreach (var v in canonicalViews)
+        foreach (var v in canonicalViewList)
         {
             statements.Add(EmitCanonicalView(v));
         }

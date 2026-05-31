@@ -17,7 +17,7 @@ public sealed class MedallionSchemaCatalogTests
     [TestMethod]
     public void MedallionSchemaCatalog_Phase1A_DoesNotExposeLegacyDemoBronzeTable()
     {
-        Assert.IsFalse(MedallionSchemaCatalog.RawTables.Any(t => t.QualifiedName == "bronze.windows_event_json"));
+        Assert.DoesNotContain(t => t.QualifiedName == "bronze.windows_event_json", MedallionSchemaCatalog.RawTables);
     }
 
     [TestMethod]
@@ -32,11 +32,11 @@ public sealed class MedallionSchemaCatalogTests
     {
         var names = MedallionSchemaCatalog.CanonicalViews.Select(v => v.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        Assert.IsFalse(names.Contains("DnsEvents"));
-        Assert.IsFalse(names.Contains("NetworkSessions"));
-        Assert.IsFalse(names.Contains("ProcessEvents"));
-        Assert.IsFalse(names.Contains("DeviceNetworkEvents"));
-        Assert.IsFalse(names.Contains("DeviceProcessEvents"));
+        Assert.DoesNotContain("DnsEvents", names);
+        Assert.DoesNotContain("NetworkSessions", names);
+        Assert.DoesNotContain("ProcessEvents", names);
+        Assert.DoesNotContain("DeviceNetworkEvents", names);
+        Assert.DoesNotContain("DeviceProcessEvents", names);
     }
 
     [TestMethod]
@@ -62,7 +62,7 @@ public sealed class MedallionSchemaCatalogTests
     {
         foreach (var view in MedallionSchemaCatalog.CanonicalViews)
         {
-            Assert.AreEqual(2, view.ParserViews.Count, $"{view.QualifiedName} should have two Silver contributors.");
+            Assert.HasCount(2, view.ParserViews, $"{view.QualifiedName} should have two Silver contributors.");
         }
     }
 
@@ -86,7 +86,7 @@ public sealed class MedallionSchemaCatalogTests
 
         foreach (var parser in MedallionSchemaCatalog.ParserViews)
         {
-            Assert.IsTrue(sourceObjects.Contains(parser.Mapping.SourceObject), $"{parser.QualifiedName} source object {parser.Mapping.SourceObject} should exist in Bronze catalog.");
+            Assert.Contains(parser.Mapping.SourceObject, sourceObjects, $"{parser.QualifiedName} source object {parser.Mapping.SourceObject} should exist in Bronze catalog.");
         }
     }
 
@@ -240,7 +240,7 @@ public sealed class MedallionSchemaCatalogTests
             .Where(parser => parser.Columns.Any(column => column.Name == "AdditionalFields"))
             .ToArray();
 
-        Assert.IsTrue(additionalFieldsTargets.Length > 0, "At least one Phase 1A parser should expose AdditionalFields.");
+        Assert.IsNotEmpty(additionalFieldsTargets, "At least one Phase 1A parser should expose AdditionalFields.");
 
         foreach (var parser in additionalFieldsTargets)
         {
@@ -264,9 +264,9 @@ public sealed class MedallionSchemaCatalogTests
     {
         foreach (var view in MedallionSchemaCatalog.CanonicalViews)
         {
-            Assert.IsTrue(view.Columns.Count > 0, $"{view.QualifiedName} should define at least one column.");
-            Assert.IsTrue(view.Columns.Any(c => c.Name == "Timestamp"), $"{view.QualifiedName} should include Timestamp.");
-            Assert.IsTrue(view.Columns.Any(c => c.Name == "ActionType"), $"{view.QualifiedName} should include ActionType.");
+            Assert.IsNotEmpty(view.Columns, $"{view.QualifiedName} should define at least one column.");
+            Assert.Contains(c => c.Name == "Timestamp", view.Columns, $"{view.QualifiedName} should include Timestamp.");
+            Assert.Contains(c => c.Name == "ActionType", view.Columns, $"{view.QualifiedName} should include ActionType.");
         }
     }
 

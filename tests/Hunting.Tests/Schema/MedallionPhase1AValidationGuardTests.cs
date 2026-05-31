@@ -1,11 +1,11 @@
 namespace Hunting.Tests.Schema;
 
+using System.Reflection;
+using System.Text.RegularExpressions;
 using Hunting.Core.DuckDbSql;
 using Hunting.Data;
 using Hunting.Schema;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Reflection;
-using System.Text.RegularExpressions;
 
 [TestClass]
 public sealed class MedallionPhase1AValidationGuardTests
@@ -130,7 +130,7 @@ public sealed class MedallionPhase1AValidationGuardTests
             Assert.DoesNotContain(legacyFragment, sql);
         }
 
-        Assert.IsTrue(sql.TrimEnd().EndsWith(";", StringComparison.Ordinal));
+        Assert.IsTrue(sql.TrimEnd().EndsWith(';'));
     }
 
     [TestMethod]
@@ -144,9 +144,9 @@ public sealed class MedallionPhase1AValidationGuardTests
 
         foreach (var tableName in ExpectedBronzeTables)
         {
-            Assert.IsTrue(expectedCountsByTable[tableName] > 0, $"{tableName} should have development seed rows.");
+            Assert.IsGreaterThan(0, expectedCountsByTable[tableName], $"{tableName} should have development seed rows.");
             Assert.Contains($"INSERT INTO {tableName}", seedSqlByTable[tableName]);
-            Assert.IsTrue(seedSqlByTable[tableName].TrimEnd().EndsWith(";", StringComparison.Ordinal));
+            Assert.IsTrue(seedSqlByTable[tableName].TrimEnd().EndsWith(';'));
         }
     }
 
@@ -169,7 +169,7 @@ public sealed class MedallionPhase1AValidationGuardTests
         foreach (var viewName in ExpectedGoldenViews)
         {
             var rowCount = applier.QueryScalar($"SELECT count(*) FROM {viewName}");
-            Assert.IsTrue(rowCount > 0, $"{viewName} should have at least one seeded row.");
+            Assert.IsGreaterThan(0, rowCount, $"{viewName} should have at least one seeded row.");
         }
     }
 
@@ -181,13 +181,13 @@ public sealed class MedallionPhase1AValidationGuardTests
 
         applier.ExecuteRaw(MockDataSeeder.GetMedallionSeedSql());
 
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName = 'powershell.exe' AND lower(ProcessCommandLine) LIKE '%enc%'") >= 2);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('mimikatz.exe', 'rundll32.exe', 'procdump.exe')") >= 3);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('schtasks.exe', 'reg.exe', 'sc.exe', 'at.exe')") >= 4);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemoteIP = '203.0.113.60' AND RemoteUrl IS NULL") >= 4);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemotePort IN (4444, 445, 53)") >= 3);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE QueryName LIKE '%example.test%'") >= 3);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE ResponseCode = 'NXDOMAIN'") >= 1);
+        Assert.IsGreaterThanOrEqualTo(2, applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName = 'powershell.exe' AND lower(ProcessCommandLine) LIKE '%enc%'"));
+        Assert.IsGreaterThanOrEqualTo(3, applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('mimikatz.exe', 'rundll32.exe', 'procdump.exe')"));
+        Assert.IsGreaterThanOrEqualTo(4, applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('schtasks.exe', 'reg.exe', 'sc.exe', 'at.exe')"));
+        Assert.IsGreaterThanOrEqualTo(4, applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemoteIP = '203.0.113.60' AND RemoteUrl IS NULL"));
+        Assert.IsGreaterThanOrEqualTo(3, applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemotePort IN (4444, 445, 53)"));
+        Assert.IsGreaterThanOrEqualTo(3, applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE QueryName LIKE '%example.test%'"));
+        Assert.IsGreaterThanOrEqualTo(1, applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE ResponseCode = 'NXDOMAIN'"));
     }
 
     private static SchemaApplier CreateSchema(DuckDbConnectionFactory factory)

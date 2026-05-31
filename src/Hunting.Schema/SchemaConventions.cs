@@ -3,6 +3,7 @@ namespace Hunting.Schema;
 using Hunting.Core.Catalog;
 using Hunting.Core.Schema;
 using Hunting.Schema.Definitions.Medallion;
+using Hunting.Schema.Definitions.Phase1B;
 
 /// <summary>
 /// Central medallion schema conventions and bootstrap contracts for the hunting model.
@@ -13,8 +14,11 @@ public static class SchemaConventions
     public const string BronzeSchema = "bronze";
     public const string SilverSchema = "silver";
     public const string GoldenSchema = "golden";
+    public const string InternalSchema = "internal";
 
     public static IReadOnlyList<RawTableDef> RawTables => MedallionSchemaCatalog.RawTables;
+
+    public static IReadOnlyList<InternalTableDef> InternalTables => Phase1BInternalSchemaCatalog.InternalTables;
 
     public static IReadOnlyList<ParserViewDef> ParserViews => MedallionSchemaCatalog.ParserViews;
 

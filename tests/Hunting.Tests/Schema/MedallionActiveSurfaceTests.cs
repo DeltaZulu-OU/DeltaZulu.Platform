@@ -9,9 +9,9 @@ public sealed class MedallionActiveSurfaceTests
     [TestMethod]
     public void MedallionSchemaCatalog_ActiveSurface_HasExpectedObjectCounts()
     {
-        Assert.AreEqual(3, MedallionSchemaCatalog.RawTables.Count, "Phase 1A should expose exactly three Bronze source-family tables.");
-        Assert.AreEqual(6, MedallionSchemaCatalog.ParserViews.Count, "Phase 1A should expose exactly six Silver parser contributors.");
-        Assert.AreEqual(3, MedallionSchemaCatalog.CanonicalViews.Count, "Phase 1A should expose exactly three Golden contracts.");
+        Assert.HasCount(3, MedallionSchemaCatalog.RawTables, "Phase 1A should expose exactly three Bronze source-family tables.");
+        Assert.HasCount(6, MedallionSchemaCatalog.ParserViews, "Phase 1A should expose exactly six Silver parser contributors.");
+        Assert.HasCount(3, MedallionSchemaCatalog.CanonicalViews, "Phase 1A should expose exactly three Golden contracts.");
     }
 
     [TestMethod]
@@ -130,11 +130,11 @@ public sealed class MedallionActiveSurfaceTests
             .Concat(MedallionSchemaCatalog.CanonicalViews.Select(static view => view.Name))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        Assert.IsFalse(allObjectNames.Contains("windows_event_json"));
-        Assert.IsFalse(allObjectNames.Contains("ProcessEvents"));
-        Assert.IsFalse(allObjectNames.Contains("NetworkSessions"));
-        Assert.IsFalse(allObjectNames.Contains("DeviceProcessEvents"));
-        Assert.IsFalse(allObjectNames.Contains("DeviceNetworkEvents"));
+        Assert.DoesNotContain("windows_event_json", allObjectNames);
+        Assert.DoesNotContain("ProcessEvents", allObjectNames);
+        Assert.DoesNotContain("NetworkSessions", allObjectNames);
+        Assert.DoesNotContain("DeviceProcessEvents", allObjectNames);
+        Assert.DoesNotContain("DeviceNetworkEvents", allObjectNames);
     }
 
     [TestMethod]
@@ -168,11 +168,11 @@ public sealed class MedallionActiveSurfaceTests
             .Select(static view => view.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        Assert.IsFalse(names.Contains("DnsEvents"));
-        Assert.IsFalse(names.Contains("NetworkSessions"));
-        Assert.IsFalse(names.Contains("ProcessEvents"));
-        Assert.IsFalse(names.Contains("DeviceNetworkEvents"));
-        Assert.IsFalse(names.Contains("DeviceProcessEvents"));
+        Assert.DoesNotContain("DnsEvents", names);
+        Assert.DoesNotContain("NetworkSessions", names);
+        Assert.DoesNotContain("ProcessEvents", names);
+        Assert.DoesNotContain("DeviceNetworkEvents", names);
+        Assert.DoesNotContain("DeviceProcessEvents", names);
     }
 
     [TestMethod]
@@ -184,8 +184,8 @@ public sealed class MedallionActiveSurfaceTests
 
         foreach (var parser in MedallionSchemaCatalog.ParserViews)
         {
-            Assert.IsTrue(
-                goldenNames.Contains(parser.CanonicalTarget),
+            Assert.Contains(
+                parser.CanonicalTarget, goldenNames,
                 $"{parser.QualifiedName} targets missing Golden contract {parser.CanonicalTarget}.");
         }
     }
@@ -199,8 +199,8 @@ public sealed class MedallionActiveSurfaceTests
 
         foreach (var parser in MedallionSchemaCatalog.ParserViews)
         {
-            Assert.IsTrue(
-                bronzeNames.Contains(parser.Mapping.SourceObject),
+            Assert.Contains(
+                parser.Mapping.SourceObject, bronzeNames,
                 $"{parser.QualifiedName} reads from missing Bronze source {parser.Mapping.SourceObject}.");
         }
     }

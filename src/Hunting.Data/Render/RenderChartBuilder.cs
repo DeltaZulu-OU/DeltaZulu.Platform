@@ -2,7 +2,6 @@ namespace Hunting.Data.Render;
 
 using Hunting.Core.Render;
 
-
 public sealed class RenderChartBuilder
 {
     private static readonly string[] Palette = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#06B6D4"];

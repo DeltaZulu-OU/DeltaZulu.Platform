@@ -498,7 +498,6 @@ public sealed class KustoToRelational
         return false;
     }
 
-
     /// <summary>
     ///     The inspiration for this project includes FalconForceTeam's KQLAnalyzer implementation.
     ///     <see href="https://github.com/FalconForceTeam/KQLAnalyzer/blob/main/src/KustoAnalyzer.cs"/>
@@ -557,7 +556,6 @@ public sealed class KustoToRelational
         }
         return new ScanNode(tableName);
     }
-
 
     private RelNode? TranslatePrint(PrintOperator print)
     {
@@ -973,7 +971,6 @@ public sealed class KustoToRelational
         };
     }
 
-
     private ScalarExpr? TryTranslateBetweenExpression(Expression expr)
     {
         var kind = expr.Kind.ToString();
@@ -1261,21 +1258,27 @@ public sealed class KustoToRelational
             case "strcat_array":
                 RequireCount("strcat_array", args, 2);
                 return;
+
             case "bag_keys":
                 RequireCount("bag_keys", args, 1);
                 return;
+
             case "bag_has_key":
                 RequireCount("bag_has_key", args, 2);
                 return;
+
             case "bag_merge":
                 RequireCount("bag_merge", args, 2);
                 return;
+
             case "array_length":
                 RequireCount("array_length", args, 1);
                 return;
+
             case "exp2":
                 RequireCount("exp2", args, 1);
                 return;
+
             case "exp10":
                 RequireCount("exp10", args, 1);
                 return;

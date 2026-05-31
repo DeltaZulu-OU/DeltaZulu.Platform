@@ -100,6 +100,7 @@ public sealed class RenderChartService
                 trigger = TooltipTrigger.Axis;
                 series.AddRange(chart.Series.Select(s => new BarSeries { Name = s.Name, Stack = chart.IsStacked ? "total" : null, Data = s.Values }));
                 break;
+
             case RenderKind.Piechart:
                 trigger = TooltipTrigger.Item; // CHANGE: Use Item for Pie
                 series.AddRange(chart.Series.Select(s => {
@@ -112,19 +113,23 @@ public sealed class RenderChartService
                     return new PieSeries { Name = s.Name, Radius = new CircleRadius("65%"), Data = pieData };
                 }));
                 break;
+
             case RenderKind.Timechart:
             case RenderKind.Linechart:
                 trigger = TooltipTrigger.Axis;
                 series.AddRange(chart.Series.Select(s => new LineSeries { Name = s.Name, Smooth = true, Data = s.Values }));
                 break;
+
             case RenderKind.Areachart:
                 trigger = TooltipTrigger.Axis;
                 series.AddRange(chart.Series.Select(s => new LineSeries { Name = s.Name, Smooth = true, Stack = chart.IsStacked ? "total" : null, AreaStyle = new AreaStyle { Opacity = 1 }, Data = s.Values }));
                 break;
+
             case RenderKind.Scatterchart:
                 trigger = TooltipTrigger.Item; // CHANGE: Use Item for Scatter
-                series.AddRange(chart.Series.Select(s => new ScatterSeries { Name = s.Name, Data = s.Values }));    
+                series.AddRange(chart.Series.Select(s => new ScatterSeries { Name = s.Name, Data = s.Values }));
                 break;
+
             case RenderKind.Card:
             default:
                 throw new NotSupportedException($"Render kind '{chart.Kind}' is not yet supported in the chart adapter.");
@@ -138,7 +143,6 @@ public sealed class RenderChartService
             YAxis = new YAxis { Type = AxisType.Value },
             Series = series
         };
-
 
         return chartOptions;
     }

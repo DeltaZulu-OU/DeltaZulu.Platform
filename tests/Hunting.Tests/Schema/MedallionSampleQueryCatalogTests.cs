@@ -29,7 +29,7 @@ public sealed class MedallionSampleQueryCatalogTests
     [TestMethod]
     public void SampleQueryCatalog_ContainsOnlyActiveGoldenTableNames()
     {
-        Assert.IsTrue(SampleQueryCatalog.All.Count > 0);
+        Assert.IsNotEmpty(SampleQueryCatalog.All);
 
         foreach (var sample in SampleQueryCatalog.All)
         {
@@ -38,8 +38,8 @@ public sealed class MedallionSampleQueryCatalogTests
                 Assert.DoesNotContain(legacyName, sample.Kql);
             }
 
-            Assert.IsTrue(
-                ActiveGoldenTables.Any(table => sample.Kql.StartsWith(table, StringComparison.Ordinal)),
+            Assert.Contains(
+                table => sample.Kql.StartsWith(table, StringComparison.Ordinal), ActiveGoldenTables,
                 $"{sample.Label} should start from one of the active Golden tables.");
         }
     }
@@ -70,8 +70,8 @@ public sealed class MedallionSampleQueryCatalogTests
     {
         foreach (var table in ActiveGoldenTables)
         {
-            Assert.IsTrue(
-                SampleQueryCatalog.All.Any(sample => sample.Kql.StartsWith(table, StringComparison.Ordinal)),
+            Assert.Contains(
+                sample => sample.Kql.StartsWith(table, StringComparison.Ordinal), SampleQueryCatalog.All,
                 $"Expected at least one sample query for {table}.");
         }
     }

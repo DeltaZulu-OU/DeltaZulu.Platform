@@ -18,7 +18,7 @@ public sealed class MedallionSeederRepairTests
 
         foreach (var (table, expectedRows) in expectedCounts)
         {
-            Assert.IsTrue(expectedRows > 0, $"{table} should have a positive expected development seed row count.");
+            Assert.IsGreaterThan(0, expectedRows, $"{table} should have a positive expected development seed row count.");
         }
     }
 
@@ -54,8 +54,8 @@ public sealed class MedallionSeederRepairTests
         var existingRows = applier.QueryScalar("SELECT count(*) FROM bronze.dns_server_event");
         var expectedRows = MockDataSeeder.GetExpectedMedallionRowCountsByTable()["bronze.dns_server_event"];
 
-        Assert.IsTrue(existingRows > 0);
-        Assert.IsTrue(existingRows < expectedRows);
+        Assert.IsGreaterThan(0, existingRows);
+        Assert.IsLessThan(expectedRows, existingRows);
     }
 
     [TestMethod]
@@ -82,7 +82,7 @@ public sealed class MedallionSeederRepairTests
         }
 
         Assert.AreEqual(expectedRows, applier.QueryScalar($"SELECT count(*) FROM {table}"));
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE QueryName = 'blocked.example.test'") >= 1);
+        Assert.IsGreaterThanOrEqualTo(1, applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE QueryName = 'blocked.example.test'"));
     }
 
     private static SchemaApplier CreateSchema(DuckDbConnectionFactory factory)

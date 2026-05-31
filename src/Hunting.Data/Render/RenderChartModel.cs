@@ -1,6 +1,6 @@
 namespace Hunting.Data.Render;
-using Hunting.Core.Render;
 
+using Hunting.Core.Render;
 
 public sealed record RenderSeries(string Name, IReadOnlyList<double> Values, string Color);
 

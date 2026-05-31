@@ -34,13 +34,13 @@ public sealed class MedallionSchemaPipelineTests
             parserViews: SchemaConventions.ParserViews,
             canonicalViews: SchemaConventions.CanonicalViews);
 
-        Assert.AreEqual(
+        Assert.HasCount(
             3 + SchemaConventions.RawTables.Count + SchemaConventions.ParserViews.Count + SchemaConventions.CanonicalViews.Count,
-            ddl.Count);
+            ddl);
 
-        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE TABLE IF NOT EXISTS bronze.windows_sysmon_event")));
-        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE OR REPLACE VIEW silver.v_processevent_windows_sysmon_eid1")));
-        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE OR REPLACE VIEW golden.ProcessEvent")));
+        Assert.Contains(sql => sql.Contains("CREATE TABLE IF NOT EXISTS bronze.windows_sysmon_event"), ddl);
+        Assert.Contains(sql => sql.Contains("CREATE OR REPLACE VIEW silver.v_processevent_windows_sysmon_eid1"), ddl);
+        Assert.Contains(sql => sql.Contains("CREATE OR REPLACE VIEW golden.ProcessEvent"), ddl);
     }
 
     [TestMethod]
@@ -59,19 +59,19 @@ public sealed class MedallionSchemaPipelineTests
         foreach (var table in SchemaConventions.RawTables)
         {
             var mismatches = applier.Validate(table);
-            Assert.AreEqual(0, mismatches.Count, $"{table.QualifiedName}: {string.Join("; ", mismatches.Select(m => m.Message))}");
+            Assert.IsEmpty(mismatches, $"{table.QualifiedName}: {string.Join("; ", mismatches.Select(m => m.Message))}");
         }
 
         foreach (var parserView in SchemaConventions.ParserViews)
         {
             var mismatches = applier.Validate(parserView);
-            Assert.AreEqual(0, mismatches.Count, $"{parserView.QualifiedName}: {string.Join("; ", mismatches.Select(m => m.Message))}");
+            Assert.IsEmpty(mismatches, $"{parserView.QualifiedName}: {string.Join("; ", mismatches.Select(m => m.Message))}");
         }
 
         foreach (var canonicalView in SchemaConventions.CanonicalViews)
         {
             var mismatches = applier.Validate(canonicalView);
-            Assert.AreEqual(0, mismatches.Count, $"{canonicalView.QualifiedName}: {string.Join("; ", mismatches.Select(m => m.Message))}");
+            Assert.IsEmpty(mismatches, $"{canonicalView.QualifiedName}: {string.Join("; ", mismatches.Select(m => m.Message))}");
         }
     }
 

@@ -18,6 +18,24 @@ public static class MockDataSeeder
             [DnsServerTable] = 3
         };
 
+    public static IReadOnlyList<SeedFixtureBatch> GetMedallionSeedFixtureBatches(
+        string? catalogVersion = null)
+    {
+        var sourceNameByTable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["bronze.windows_sysmon_event"] = "Windows Sysmon",
+            ["bronze.windows_security_event"] = "Windows Security",
+            ["bronze.dns_server_event"] = "DNS Server"
+        };
+
+        return SeedFixtureBatchFactory.FromTableSeedSql(
+            GetMedallionSeedSqlByTable(),
+            GetExpectedMedallionRowCountsByTable(),
+            sourceNameByTable,
+            scenario: "development.baseline",
+            catalogVersion: catalogVersion);
+    }
+
     public static IReadOnlyDictionary<string, long> GetExpectedMedallionRowCountsByTable() =>
         ExpectedRowsByTable;
 

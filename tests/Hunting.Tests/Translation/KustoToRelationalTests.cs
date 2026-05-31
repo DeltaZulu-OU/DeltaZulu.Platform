@@ -234,7 +234,6 @@ public sealed class KustoToRelationalTests
         Assert.HasCount(7, ext.Extensions);
     }
 
-    
     [TestMethod]
     public void Filter_Between_Translates()
     {
@@ -252,7 +251,7 @@ public sealed class KustoToRelationalTests
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var proj = AssertIs<ProjectNode>(result);
         Assert.IsInstanceOfType<SingletonRowNode>(proj.Input);
-        Assert.AreEqual(2, proj.Projections.Count);
+        Assert.HasCount(2, proj.Projections);
     }
 
     // ─── AggregateNode ───────────────────────────────────────

@@ -156,6 +156,6 @@ public sealed class MedallionPhaseClosureRegressionTests
             "Golden semantic normalization"
         };
 
-        Assert.AreEqual(8, deferredItems.Length, "The closure test should keep known Phase 1D hardening work explicit.");
+        Assert.HasCount(8, deferredItems, "The closure test should keep known Phase 1D hardening work explicit.");
     }
 }

@@ -20,10 +20,8 @@ public sealed class ApprovedViewCatalog
     /// Monotonic catalog version incremented whenever canonical view registration changes.
     /// Can be used by runtime compile caches to invalidate safely on schema changes.
     /// </summary>
-    public long CatalogVersion
-    {
-        get
-        {
+    public long CatalogVersion {
+        get {
             lock (_gate)
             {
                 return _catalogVersion;

@@ -15,7 +15,7 @@ public sealed class RenderResolverTests
 
         Assert.IsFalse(plan.IsFallback);
         Assert.AreEqual("Timestamp", plan.XColumn);
-        Assert.AreEqual(1, plan.YColumns.Count);
+        Assert.HasCount(1, plan.YColumns);
         Assert.AreEqual("ProcessId", plan.YColumns[0]);
     }
 

@@ -61,9 +61,9 @@ public sealed class MedallionSeederTests
         using var factory = new DuckDbConnectionFactory(startupSql: []);
         var applier = CreateAndSeed(factory);
 
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent") >= 20);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession") >= 10);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.Dns") >= 5);
+        Assert.IsGreaterThanOrEqualTo(20, applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent"));
+        Assert.IsGreaterThanOrEqualTo(10, applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession"));
+        Assert.IsGreaterThanOrEqualTo(5, applier.QueryScalar("SELECT count(*) FROM golden.Dns"));
     }
 
     [TestMethod]
@@ -72,10 +72,10 @@ public sealed class MedallionSeederTests
         using var factory = new DuckDbConnectionFactory(startupSql: []);
         var applier = CreateAndSeed(factory);
 
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE lower(ProcessCommandLine) LIKE '%encodedcommand%' OR lower(ProcessCommandLine) LIKE '% -enc %'") >= 2);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE lower(FileName) LIKE '%mimikatz.exe%'") >= 1);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('schtasks.exe', 'reg.exe', 'sc.exe', 'at.exe')") >= 4);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('mimikatz.exe', 'rundll32.exe', 'procdump.exe')") >= 3);
+        Assert.IsGreaterThanOrEqualTo(2, applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE lower(ProcessCommandLine) LIKE '%encodedcommand%' OR lower(ProcessCommandLine) LIKE '% -enc %'"));
+        Assert.IsGreaterThanOrEqualTo(1, applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE lower(FileName) LIKE '%mimikatz.exe%'"));
+        Assert.IsGreaterThanOrEqualTo(4, applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('schtasks.exe', 'reg.exe', 'sc.exe', 'at.exe')"));
+        Assert.IsGreaterThanOrEqualTo(3, applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('mimikatz.exe', 'rundll32.exe', 'procdump.exe')"));
     }
 
     [TestMethod]
@@ -84,10 +84,10 @@ public sealed class MedallionSeederTests
         using var factory = new DuckDbConnectionFactory(startupSql: []);
         var applier = CreateAndSeed(factory);
 
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemotePort = 4444") >= 1);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemotePort = 445") >= 1);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemotePort = 53 AND lower(InitiatingProcessFileName) LIKE '%powershell%'") >= 1);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemoteIP = '203.0.113.60' AND RemoteUrl IS NULL") >= 4);
+        Assert.IsGreaterThanOrEqualTo(1, applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemotePort = 4444"));
+        Assert.IsGreaterThanOrEqualTo(1, applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemotePort = 445"));
+        Assert.IsGreaterThanOrEqualTo(1, applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemotePort = 53 AND lower(InitiatingProcessFileName) LIKE '%powershell%'"));
+        Assert.IsGreaterThanOrEqualTo(4, applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemoteIP = '203.0.113.60' AND RemoteUrl IS NULL"));
     }
 
     [TestMethod]
@@ -96,9 +96,9 @@ public sealed class MedallionSeederTests
         using var factory = new DuckDbConnectionFactory(startupSql: []);
         var applier = CreateAndSeed(factory);
 
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE QueryName = 'c2.example.test'") >= 2);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE ResponseCode = 'NXDOMAIN'") >= 1);
-        Assert.IsTrue(applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE QueryName LIKE '%example.test%'") >= 3);
+        Assert.IsGreaterThanOrEqualTo(2, applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE QueryName = 'c2.example.test'"));
+        Assert.IsGreaterThanOrEqualTo(1, applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE ResponseCode = 'NXDOMAIN'"));
+        Assert.IsGreaterThanOrEqualTo(3, applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE QueryName LIKE '%example.test%'"));
     }
 
     private static SchemaApplier CreateAndSeed(DuckDbConnectionFactory factory)

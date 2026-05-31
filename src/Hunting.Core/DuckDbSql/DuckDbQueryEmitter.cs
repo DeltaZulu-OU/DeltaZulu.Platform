@@ -321,8 +321,7 @@ public sealed partial class DuckDbQueryEmitter
             outerColumns = Regex.Replace(
                 outerColumns,
                 aliasPattern,
-                _ =>
-                {
+                _ => {
                     if (replaced)
                     {
                         return _.Value;
@@ -1561,55 +1560,55 @@ public sealed partial class DuckDbQueryEmitter
         switch (node)
         {
             case ProjectNode p:
-            {
-                var cols = new List<string>(p.Projections.Count);
-                foreach (var projection in p.Projections)
                 {
-                    cols.Add(projection.Alias);
-                }
-
-                return cols;
-            }
-            case AggregateNode a:
-            {
-                var cols = new List<string>(a.GroupBy.Count + a.Aggregates.Count);
-                foreach (var group in a.GroupBy)
-                {
-                    if (group is ColumnRef c)
+                    var cols = new List<string>(p.Projections.Count);
+                    foreach (var projection in p.Projections)
                     {
-                        cols.Add(c.Name);
+                        cols.Add(projection.Alias);
                     }
-                }
 
-                foreach (var aggregate in a.Aggregates)
+                    return cols;
+                }
+            case AggregateNode a:
                 {
-                    cols.Add(aggregate.Alias);
-                }
+                    var cols = new List<string>(a.GroupBy.Count + a.Aggregates.Count);
+                    foreach (var group in a.GroupBy)
+                    {
+                        if (group is ColumnRef c)
+                        {
+                            cols.Add(c.Name);
+                        }
+                    }
 
-                return cols;
-            }
+                    foreach (var aggregate in a.Aggregates)
+                    {
+                        cols.Add(aggregate.Alias);
+                    }
+
+                    return cols;
+                }
             case ExtendNode e:
-            {
-                var input = TryGetOutputColumns(e.Input) ?? [];
-                var cols = new List<string>(input.Count + e.Extensions.Count);
-                cols.AddRange(input);
-                foreach (var extension in e.Extensions)
                 {
-                    cols.Add(extension.Alias);
-                }
+                    var input = TryGetOutputColumns(e.Input) ?? [];
+                    var cols = new List<string>(input.Count + e.Extensions.Count);
+                    cols.AddRange(input);
+                    foreach (var extension in e.Extensions)
+                    {
+                        cols.Add(extension.Alias);
+                    }
 
-                return cols;
-            }
+                    return cols;
+                }
             case DistinctNode d:
-            {
-                var cols = new List<string>(d.Projections.Count);
-                foreach (var projection in d.Projections)
                 {
-                    cols.Add(projection.Alias);
-                }
+                    var cols = new List<string>(d.Projections.Count);
+                    foreach (var projection in d.Projections)
+                    {
+                        cols.Add(projection.Alias);
+                    }
 
-                return cols;
-            }
+                    return cols;
+                }
             case FilterNode f:
                 return TryGetOutputColumns(f.Input);
             case SortNode s:

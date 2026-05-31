@@ -4,7 +4,6 @@ using Hunting.Core.Catalog;
 using Hunting.Core.DuckDbSql;
 using Hunting.Core.Planning;
 using Hunting.Core.QueryModel;
-using Hunting.Core.Render;
 using Hunting.Data;
 using Hunting.Schema;
 
@@ -48,7 +47,7 @@ public sealed class EndToEndPipelineTests
             """);
 
         AssertSuccess(result);
-        Assert.IsTrue(result.RowCount >= 1, $"Expected at least one cmd.exe row, got {result.RowCount}.");
+        Assert.IsGreaterThanOrEqualTo(1, result.RowCount, $"Expected at least one cmd.exe row, got {result.RowCount}.");
         Assert.AreEqual(3, result.ColumnCount);
         Assert.AreEqual("Timestamp", result.Columns[0].Name);
         Assert.AreEqual("DeviceName", result.Columns[1].Name);
@@ -142,8 +141,8 @@ public sealed class EndToEndPipelineTests
         var result = runtime.Execute("ProcessEvent | project Timestamp, DeviceName | take 1");
 
         AssertSuccess(result);
-        Assert.IsTrue(capturing.LastContext is null);
-        Assert.IsTrue(result.DebugTrace.Any(d => d.Contains("Planner gateway: decision=bypass", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsNull(capturing.LastContext);
+        Assert.Contains(d => d.Contains("Planner gateway: decision=bypass", StringComparison.OrdinalIgnoreCase), result.DebugTrace);
     }
 
     [TestMethod]
@@ -162,8 +161,8 @@ public sealed class EndToEndPipelineTests
         var result = runtime.Execute("ProcessEvent | summarize count() by DeviceName");
 
         AssertSuccess(result);
-        Assert.IsTrue(capturing.LastContext is not null);
-        Assert.IsTrue(result.DebugTrace.Any(d => d.Contains("Planner gateway: decision=run", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsNotNull(capturing.LastContext);
+        Assert.Contains(d => d.Contains("Planner gateway: decision=run", StringComparison.OrdinalIgnoreCase), result.DebugTrace);
     }
 
     [TestMethod]
@@ -179,21 +178,21 @@ public sealed class EndToEndPipelineTests
     }
 
     [TestMethod]
-    public void Hunt_AllProcessEvents()
+    public void Hunt_AllProcessEventRows()
     {
         var result = _runtime.Execute("ProcessEvent | take 100");
 
         AssertSuccess(result);
-        Assert.IsTrue(result.RowCount >= 10, $"Expected at least 10 ProcessEvent rows, got {result.RowCount}.");
+        Assert.IsGreaterThanOrEqualTo(10, result.RowCount, $"Expected at least 10 ProcessEvent rows, got {result.RowCount}.");
     }
 
     [TestMethod]
-    public void Hunt_CountProcessEventsByDevice()
+    public void Hunt_CountProcessEventRowsByDevice()
     {
         var result = _runtime.Execute("ProcessEvent | summarize count() by DeviceName | sort by count_ desc");
 
         AssertSuccess(result);
-        Assert.IsTrue(result.RowCount >= 3, $"Expected at least 3 devices, got {result.RowCount}.");
+        Assert.IsGreaterThanOrEqualTo(3, result.RowCount, $"Expected at least 3 devices, got {result.RowCount}.");
     }
 
     [TestMethod]
@@ -208,7 +207,7 @@ public sealed class EndToEndPipelineTests
             """);
 
         AssertSuccess(result);
-        Assert.IsTrue(result.RowCount >= 1, $"Expected encoded PowerShell rows, got {result.RowCount}.");
+        Assert.IsGreaterThanOrEqualTo(1, result.RowCount, $"Expected encoded PowerShell rows, got {result.RowCount}.");
     }
 
     [TestMethod]
@@ -223,7 +222,7 @@ public sealed class EndToEndPipelineTests
             """);
 
         AssertSuccess(result);
-        Assert.IsTrue(result.RowCount >= 1, $"Expected mimikatz.exe rows, got {result.RowCount}.");
+        Assert.IsGreaterThanOrEqualTo(1, result.RowCount, $"Expected mimikatz.exe rows, got {result.RowCount}.");
     }
 
     [TestMethod]
@@ -247,7 +246,7 @@ public sealed class EndToEndPipelineTests
             """);
 
         AssertSuccess(result);
-        Assert.IsTrue(result.RowCount >= 1, $"Expected recon command rows, got {result.RowCount}.");
+        Assert.IsGreaterThanOrEqualTo(1, result.RowCount, $"Expected recon command rows, got {result.RowCount}.");
     }
 
     [TestMethod]
@@ -261,7 +260,7 @@ public sealed class EndToEndPipelineTests
             """);
 
         AssertSuccess(result);
-        Assert.IsTrue(result.RowCount >= 1, $"Expected suspicious NetworkSession rows, got {result.RowCount}.");
+        Assert.IsGreaterThanOrEqualTo(1, result.RowCount, $"Expected suspicious NetworkSession rows, got {result.RowCount}.");
     }
 
     [TestMethod]
@@ -275,7 +274,7 @@ public sealed class EndToEndPipelineTests
             """);
 
         AssertSuccess(result);
-        Assert.IsTrue(result.RowCount >= 1, $"Expected DNS example.test rows, got {result.RowCount}.");
+        Assert.IsGreaterThanOrEqualTo(1, result.RowCount, $"Expected DNS example.test rows, got {result.RowCount}.");
     }
 
     [TestMethod]
@@ -324,8 +323,8 @@ public sealed class EndToEndPipelineTests
 
         var stats = System.Text.Json.JsonSerializer.Deserialize<SqlShapeMetrics>(result.SqlShapeStatsJson!);
         Assert.IsNotNull(stats);
-        Assert.IsTrue(stats.SelectCount >= 1);
-        Assert.IsTrue(stats.SqlLength > 0);
+        Assert.IsGreaterThanOrEqualTo(1, stats.SelectCount);
+        Assert.IsGreaterThan(0, stats.SqlLength);
     }
 
     [TestMethod]
@@ -367,8 +366,7 @@ public sealed class EndToEndPipelineTests
         var streamedRows = new List<object?[]>();
         var result = _runtime.ExecuteStreamed(
             "ProcessEvent | project DeviceName, FileName | take 5",
-            reader =>
-            {
+            reader => {
                 var row = new object?[reader.FieldCount];
                 for (var i = 0; i < reader.FieldCount; i++)
                 {
@@ -380,8 +378,8 @@ public sealed class EndToEndPipelineTests
             });
 
         Assert.IsTrue(result.Success);
-        Assert.AreEqual(result.RowCount, streamedRows.Count);
-        Assert.AreEqual(2, result.Columns.Count);
+        Assert.HasCount(result.RowCount, streamedRows);
+        Assert.HasCount(2, result.Columns);
         Assert.AreEqual("DeviceName", result.Columns[0].Name);
         Assert.AreEqual("FileName", result.Columns[1].Name);
         Assert.IsNotNull(result.SqlShapeStatsJson);
@@ -393,8 +391,7 @@ public sealed class EndToEndPipelineTests
         var seen = 0;
         var result = _runtime.ExecuteStreamed(
             "ProcessEvent | take 100",
-            _ =>
-            {
+            _ => {
                 seen++;
                 return seen < 3;
             });

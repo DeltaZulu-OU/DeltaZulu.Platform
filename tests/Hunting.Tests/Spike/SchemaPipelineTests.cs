@@ -44,13 +44,13 @@ public sealed class SchemaPipelineTests
             parserViews: SchemaConventions.ParserViews,
             canonicalViews: SchemaConventions.CanonicalViews);
 
-        Assert.IsTrue(ddl.Count >= 15, $"Expected active medallion DDL, got {ddl.Count} statements.");
-        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE TABLE IF NOT EXISTS bronze.windows_sysmon_event")));
-        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE TABLE IF NOT EXISTS bronze.windows_security_event")));
-        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE TABLE IF NOT EXISTS bronze.dns_server_event")));
-        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE OR REPLACE VIEW golden.ProcessEvent")));
-        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE OR REPLACE VIEW golden.NetworkSession")));
-        Assert.IsTrue(ddl.Any(sql => sql.Contains("CREATE OR REPLACE VIEW golden.Dns")));
+        Assert.IsGreaterThanOrEqualTo(15, ddl.Count, $"Expected active medallion DDL, got {ddl.Count} statements.");
+        Assert.Contains(sql => sql.Contains("CREATE TABLE IF NOT EXISTS bronze.windows_sysmon_event"), ddl);
+        Assert.Contains(sql => sql.Contains("CREATE TABLE IF NOT EXISTS bronze.windows_security_event"), ddl);
+        Assert.Contains(sql => sql.Contains("CREATE TABLE IF NOT EXISTS bronze.dns_server_event"), ddl);
+        Assert.Contains(sql => sql.Contains("CREATE OR REPLACE VIEW golden.ProcessEvent"), ddl);
+        Assert.Contains(sql => sql.Contains("CREATE OR REPLACE VIEW golden.NetworkSession"), ddl);
+        Assert.Contains(sql => sql.Contains("CREATE OR REPLACE VIEW golden.Dns"), ddl);
     }
 
     [TestMethod]
@@ -79,10 +79,10 @@ public sealed class SchemaPipelineTests
             .Select(view => _emitter.EmitParserView(view))
             .ToArray();
 
-        Assert.IsTrue(parserSql.Any(sql => sql.Contains("FROM bronze.windows_sysmon_event")));
-        Assert.IsTrue(parserSql.Any(sql => sql.Contains("FROM bronze.windows_security_event")));
-        Assert.IsTrue(parserSql.Any(sql => sql.Contains("FROM bronze.dns_server_event")));
-        Assert.IsFalse(parserSql.Any(sql => sql.Contains("windows_event_json")));
+        Assert.Contains(sql => sql.Contains("FROM bronze.windows_sysmon_event"), parserSql);
+        Assert.Contains(sql => sql.Contains("FROM bronze.windows_security_event"), parserSql);
+        Assert.Contains(sql => sql.Contains("FROM bronze.dns_server_event"), parserSql);
+        Assert.DoesNotContain(sql => sql.Contains("windows_event_json"), parserSql);
     }
 
     [TestMethod]
@@ -140,36 +140,36 @@ public sealed class SchemaPipelineTests
     [TestMethod]
     public void MockData_FlowsIntoActiveGoldenViews()
     {
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent") >= 20);
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession") >= 10);
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.Dns") >= 5);
+        Assert.IsGreaterThanOrEqualTo(20, _applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent"));
+        Assert.IsGreaterThanOrEqualTo(10, _applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession"));
+        Assert.IsGreaterThanOrEqualTo(5, _applier.QueryScalar("SELECT count(*) FROM golden.Dns"));
     }
 
     [TestMethod]
     public void Extraction_ProcessEventRepresentativeFields()
     {
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName = 'cmd.exe'") >= 1);
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FolderPath LIKE '%System32%'") >= 5);
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE AccountName = 'CORP\\alice'") >= 5);
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE ProcessCommandLine LIKE '%mimikatz%'") >= 1);
+        Assert.IsGreaterThanOrEqualTo(1, _applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName = 'cmd.exe'"));
+        Assert.IsGreaterThanOrEqualTo(5, _applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FolderPath LIKE '%System32%'"));
+        Assert.IsGreaterThanOrEqualTo(5, _applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE AccountName = 'CORP\\alice'"));
+        Assert.IsGreaterThanOrEqualTo(1, _applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE ProcessCommandLine LIKE '%mimikatz%'"));
         Assert.AreEqual(1L, _applier.QueryScalar("SELECT count(DISTINCT ActionType) FROM golden.ProcessEvent"));
     }
 
     [TestMethod]
     public void Hunting_ProcessScenarios()
     {
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('mimikatz.exe', 'rundll32.exe', 'procdump.exe')") >= 3);
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('whoami.exe', 'net.exe', 'ipconfig.exe', 'nltest.exe')") >= 4);
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('schtasks.exe', 'reg.exe', 'sc.exe', 'at.exe')") >= 4);
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName = 'powershell.exe' AND lower(ProcessCommandLine) LIKE '%enc%'") >= 2);
+        Assert.IsGreaterThanOrEqualTo(3, _applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('mimikatz.exe', 'rundll32.exe', 'procdump.exe')"));
+        Assert.IsGreaterThanOrEqualTo(4, _applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('whoami.exe', 'net.exe', 'ipconfig.exe', 'nltest.exe')"));
+        Assert.IsGreaterThanOrEqualTo(4, _applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName IN ('schtasks.exe', 'reg.exe', 'sc.exe', 'at.exe')"));
+        Assert.IsGreaterThanOrEqualTo(2, _applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName = 'powershell.exe' AND lower(ProcessCommandLine) LIKE '%enc%'"));
     }
 
     [TestMethod]
     public void Hunting_NetworkAndDnsScenarios()
     {
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemotePort = 4444") >= 1);
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemotePort = 445") >= 1);
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemoteIP = '203.0.113.60' AND RemoteUrl IS NULL") >= 4);
-        Assert.IsTrue(_applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE QueryName LIKE '%example.test%'") >= 3);
+        Assert.IsGreaterThanOrEqualTo(1, _applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemotePort = 4444"));
+        Assert.IsGreaterThanOrEqualTo(1, _applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemotePort = 445"));
+        Assert.IsGreaterThanOrEqualTo(4, _applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE RemoteIP = '203.0.113.60' AND RemoteUrl IS NULL"));
+        Assert.IsGreaterThanOrEqualTo(3, _applier.QueryScalar("SELECT count(*) FROM golden.Dns WHERE QueryName LIKE '%example.test%'"));
     }
 }

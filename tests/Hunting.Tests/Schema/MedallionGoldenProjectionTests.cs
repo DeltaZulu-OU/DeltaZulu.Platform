@@ -30,9 +30,9 @@ public sealed class MedallionGoldenProjectionTests
             var sql = emitter.EmitCanonicalView(view);
             var branches = SplitUnionBranches(sql);
 
-            Assert.AreEqual(
+            Assert.HasCount(
                 view.ParserViews.Count,
-                branches.Length,
+                branches,
                 $"{view.QualifiedName} should emit one SELECT branch per Silver contributor.");
 
             var expectedColumns = view.Columns.Select(static column => column.Name).ToArray();
@@ -75,7 +75,7 @@ public sealed class MedallionGoldenProjectionTests
     private static string[] SplitUnionBranches(string sql)
     {
         var bodyStart = sql.IndexOf(" AS\n", StringComparison.Ordinal);
-        Assert.IsTrue(bodyStart >= 0, "Canonical view SQL should contain AS followed by SELECT body.");
+        Assert.IsGreaterThanOrEqualTo(0, bodyStart, "Canonical view SQL should contain AS followed by SELECT body.");
 
         var body = sql[(bodyStart + " AS\n".Length)..];
 
@@ -96,7 +96,7 @@ public sealed class MedallionGoldenProjectionTests
             $"Branch should start with {selectPrefix.Trim()}.");
 
         var fromIndex = branchSql.IndexOf(fromMarker, StringComparison.Ordinal);
-        Assert.IsTrue(fromIndex > 0, "Branch should contain FROM marker after projection list.");
+        Assert.IsGreaterThan(0, fromIndex, "Branch should contain FROM marker after projection list.");
 
         var projectionBlock = branchSql[selectPrefix.Length..fromIndex];
 

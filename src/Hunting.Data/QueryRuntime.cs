@@ -5,10 +5,10 @@ using System.Text.Json;
 using DuckDB.NET.Data;
 using Hunting.Core.Catalog;
 using Hunting.Core.DuckDbSql;
-using Hunting.Core.Render;
 using Hunting.Core.Planning;
-using Hunting.Core.QueryModel;
 using Hunting.Core.Policy;
+using Hunting.Core.QueryModel;
+using Hunting.Core.Render;
 using Hunting.Core.Translation;
 
 /// <summary>
@@ -75,8 +75,6 @@ public sealed class QueryRuntime
             throw new ArgumentOutOfRangeException(nameof(compileCacheCapacity), compileCacheCapacity, "Compile cache capacity must be zero or greater.");
         }
 
-
-
         if (plannerGatewayMaxEstimatedRows < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(plannerGatewayMaxEstimatedRows), plannerGatewayMaxEstimatedRows, "Planner gateway estimated-row threshold must be zero or greater.");
@@ -142,8 +140,7 @@ public sealed class QueryRuntime
         List<object?>[]? columnData = null;
         var streamed = ExecuteStreamed(
             kql,
-            reader =>
-            {
+            reader => {
                 if (maxRows.HasValue && columnData is not null && columnData.Length > 0 && columnData[0].Count >= maxRows.Value)
                 {
                     return false;
@@ -330,7 +327,6 @@ public sealed class QueryRuntime
             return QueryResult.FromDiagnostics(diagnostics, debugTrace, renderSpec);
         }
     }
-
 
     /// <summary>
     /// Execute a KQL query and stream rows to a callback to avoid full in-memory row materialization.
@@ -546,7 +542,6 @@ public sealed class QueryRuntime
         return $"Query execution failed: {message}";
     }
 
-
     private static List<object?>[] ReadAllColumns(DuckDBDataReader reader, int? maxRows)
     {
         var columns = CreateColumnData(reader.FieldCount);
@@ -567,8 +562,6 @@ public sealed class QueryRuntime
 
         return columns;
     }
-
-
 
     private PlannerGatewayDecision DecidePlannerExecution(RelNode root)
     {
@@ -703,34 +696,44 @@ public sealed class QueryRuntime
             case ScanNode scan:
                 views.Add(scan.ViewName);
                 break;
+
             case JoinNode join:
                 CollectViewNames(join.Left, views);
                 CollectViewNames(join.Right, views);
                 break;
+
             case FilterNode f:
                 CollectViewNames(f.Input, views);
                 break;
+
             case ProjectNode p:
                 CollectViewNames(p.Input, views);
                 break;
+
             case ExtendNode e:
                 CollectViewNames(e.Input, views);
                 break;
+
             case AggregateNode a:
                 CollectViewNames(a.Input, views);
                 break;
+
             case SortNode s:
                 CollectViewNames(s.Input, views);
                 break;
+
             case LimitNode l:
                 CollectViewNames(l.Input, views);
                 break;
+
             case SampleNode s:
                 CollectViewNames(s.Input, views);
                 break;
+
             case DistinctNode d:
                 CollectViewNames(d.Input, views);
                 break;
+
             case LetBindingNode l:
                 if (l.TabularValue is not null) CollectViewNames(l.TabularValue, views);
                 CollectViewNames(l.Body, views);
@@ -826,7 +829,6 @@ public sealed class QueryResult
 /// Column metadata from a query result.
 /// </summary>
 public sealed record ResultColumn(string Name, string TypeName);
-
 
 public sealed class QueryStreamResult
 {

@@ -30,90 +30,108 @@ v_process_sysmon_create
 GetProcessSeedSql()
 ```
 
-### Phase 1B — Schema provenance and migration safety
+### Phase 1B — Schema provenance and migration safety ✅ COMPLETE
 
-**Objective:** Make schema application safe, inspectable, and repeatable before more event families or source integrations are added.
+**Objective:** Make schema application inspectable and safer before adding more event families or source integrations.
 
-**Scope:**
+Implemented:
 
-- Add `internal.schema_provenance`.
-- Record object name, object kind, schema/catalog version, schema hash, and applied timestamp.
-- Compute stable hashes for generated table/view definitions.
-- Detect existing applied state before applying schema.
-- Allow safe idempotent reapply.
-- Allow additive changes where safe.
-- Block or diagnose destructive drift until explicit migration support exists.
+- `internal.schema_provenance`
+- deterministic schema-object fingerprints
+- idempotent provenance recording
+- provenance drift detection
+- conservative migration-safety classification
+- default blocking guard for unsafe drift
+- explicit `AllowUnsafe` policy for development/reset workflows
 
-**Initial model candidate:**
+Drift statuses:
 
-```text
-internal.schema_provenance
-  object_name VARCHAR
-  object_kind VARCHAR
-  schema_hash VARCHAR
-  catalog_version VARCHAR
-  applied_at TIMESTAMP
-```
+| Status | Meaning |
+|---|---|
+| `Unchanged` | Expected hash matches recorded provenance |
+| `NewObject` | Expected object has no recorded row |
+| `ChangedObject` | Expected object hash differs from recorded provenance |
+| `MissingObject` | Recorded object no longer exists in active catalog |
 
-**Exit criteria:**
+Safety policy:
 
-- Applying schema twice is safe.
-- Current active Bronze/Silver/Golden objects are recorded.
-- Schema hash changes are detectable.
-- Destructive changes fail fast or produce explicit diagnostics.
-- Tests cover first apply, second apply, additive change, and blocked destructive change.
+| Status | Safety |
+|---|---|
+| `Unchanged` | Safe |
+| `NewObject` | Safe |
+| `ChangedObject` | Unsafe |
+| `MissingObject` | Unsafe |
 
-### Phase 1C — Governed seed fixture model
+Remaining limitations:
+
+- no structural table/view diffs yet
+- no automatic migration plans
+- no destructive migration approval workflow
+
+### Phase 1C — Governed seed fixture model ✅ COMPLETE
 
 **Objective:** Replace ad hoc development seeding with governed, inspectable fixture batches.
 
-**Scope:**
+Implemented:
 
-- Add `internal.seed_batches`.
-- Assign seed batches stable IDs.
-- Track target table, source family, scenario, row count, content hash, and applied timestamp.
-- Split seed data into scenario-oriented fixture batches.
-- Prevent duplicate rows on repeated startup/test setup.
-- Preserve explicit dev reset behavior.
+- `internal.seed_batches`
+- `SeedFixtureBatch`
+- deterministic seed batch hashing
+- governed medallion seed batch catalog
+- seed batch metadata recording
+- idempotent seed batch application
+- duplicate-prevention behavior on repeated apply
+- default blocking of mismatched recorded metadata
+- explicit allow policy for development/reset workflows
 
-**Initial model candidate:**
+Current granularity:
 
-```text
-internal.seed_batches
-  batch_id VARCHAR
-  table_name VARCHAR
-  source_name VARCHAR
-  scenario VARCHAR
-  row_count BIGINT
-  content_hash VARCHAR
-  applied_at TIMESTAMP
-```
+| Batch granularity | Status |
+|---|---|
+| One batch per active Bronze table | Implemented |
+| Scenario-level fixture batches | Deferred |
+| External fixture files | Deferred |
 
-**Exit criteria:**
+Remaining limitations:
 
-- Repeated seeding does not duplicate rows.
-- Fixture batches are independently identifiable.
-- Representative sample queries still return data.
-- Tests verify row counts per fixture batch, not only per table.
+- no scenario-level fixture files yet
+- no automatic partial-batch repair
+- no fixture dependency graph
+- no production ingestion semantics
+- existing direct seed SQL path remains for compatibility
 
-### Phase 1D — Parser specification model and source-shape correctness
+### Phase 1D — Parser specification model and source-shape correctness ✅ COMPLETE
 
-**Objective:** Make Silver parser behavior reviewable as structured parser specs rather than implicit factory logic.
+**Objective:** Make Silver parser behavior reviewable as structured parser specs while preserving the existing parser-view generation path.
 
-**Scope:**
+Implemented:
 
-- Introduce first-class parser spec records.
-- Capture source object, target Golden contract, selector/filter, projections, intentional nulls, and source-preserved fields.
-- Add positive and negative source-shape tests per parser.
-- Validate parser specs before DDL emission.
-- Define policy for missing fields, malformed JSON, wrong EventID, wrong provider/source, and bad numeric casts.
+- `ParserSpec`
+- `ParserProjectionSpec`
+- `ParserIntentionalNullSpec`
+- active `Phase1DParserSpecCatalog`
+- active parser spec catalog validation
+- positive and negative source-shape guards
+- `ParserSpecViewBridge` validation against existing `ParserViewDef` objects
 
-**Exit criteria:**
+Current boundary:
 
-- Every active Silver contributor has a parser spec.
-- Wrong-source and wrong-event records do not leak into Golden views.
-- Missing optional fields are tolerated according to policy.
-- Required selector fields are enforced.
+| Area | Status |
+|---|---|
+| One spec per active Silver contributor | Implemented |
+| Catalog validation against Bronze/Silver/Golden contracts | Implemented |
+| Source-shape behavior guards | Implemented |
+| Bridge back to existing `ParserViewDef` | Implemented |
+| Parser-spec-driven SQL generation | Deferred |
+| Structured selector/projection expression language | Deferred |
+
+Remaining limitations:
+
+- parser specs are a validation/review layer, not the runtime mapping source
+- actual parser behavior still lives in `ParserViewDef.Mapping`
+- malformed JSON policy is deferred
+- tolerant numeric casting is deferred to Phase 1E
+- Golden semantic normalization is deferred to Phase 1E
 
 ### Phase 1E — Tolerant casting and Golden semantic normalization
 
@@ -205,9 +223,9 @@ Render work remains a parallel track as long as it does not weaken schema semant
 ## Suggested delivery order
 
 1. Complete Phase 1A documentation merge.
-2. Implement Phase 1B schema provenance and migration safety.
-3. Implement Phase 1C governed seed fixtures.
-4. Implement Phase 1D parser specs and source-shape correctness.
+2. Complete Phase 1B schema provenance and migration safety.
+3. Complete Phase 1C governed seed fixtures.
+4. Complete Phase 1D parser specs and source-shape correctness.
 5. Implement Phase 1E tolerant casting and Golden semantic normalization.
 6. Improve Monaco/schema-browser metadata under Phase 1F.
 7. Start controlled expansion under Phase 1G.
@@ -217,7 +235,7 @@ Render work remains a parallel track as long as it does not weaken schema semant
 
 ## Post-MVP Priorities
 
-1. Medallion hardening: provenance, migration safety, fixtures, parser specs, semantic normalization
+1. Medallion hardening: structural migration planning, tolerant casting, Golden semantic normalization
 2. Monaco language-service quality improvements
 3. Controlled Golden contract expansion
 4. `mv-expand`
@@ -235,8 +253,8 @@ Render work remains a parallel track as long as it does not weaken schema semant
 
 | Risk | Mitigation | Status |
 |------|-----------|--------|
-| Medallion migration/data safety | Phase 1B schema provenance and migration guardrails | Planned |
-| Seed duplication or partial seed state | Phase 1C seed batch tracking and fixture governance | Planned |
-| Parser switch-sprawl | Phase 1D first-class parser specs | Planned |
-| JSON/source-shape parser bugs | Phase 1D negative source-shape tests | Planned |
+| Medallion migration/data safety | Phase 1B schema provenance and migration guardrails | Implemented at object-fingerprint level; structural migration planning deferred |
+| Seed duplication or partial seed state | Phase 1C seed batch tracking and fixture governance | Implemented for governed development fixtures |
+| Parser switch-sprawl | Phase 1D first-class parser specs | Implemented as validation/review layer |
+| JSON/source-shape parser bugs | Phase 1D source-shape guards | Implemented for active contributors |
 | Golden semantic drift | Phase 1E semantic normalization rules and branch mappings | Planned |

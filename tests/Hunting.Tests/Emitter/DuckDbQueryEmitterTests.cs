@@ -250,7 +250,6 @@ public sealed partial class DuckDbQueryEmitterTests
         AssertSqlContains(sql, "power(10, 2) AS e10");
     }
 
-
     [TestMethod]
     public void Emit_Func_RandTrigFormatBytes()
     {
@@ -607,9 +606,9 @@ public sealed partial class DuckDbQueryEmitterTests
     [TestMethod]
     [Description("Unknown function names are rejected")]
     public void Func_Unknown_ThrowsNotSupported() => Assert.ThrowsExactly<NotSupportedException>(() =>
-                                                                          _emitter.Emit(new ExtendNode(
-                                                                              new ScanNode("ProcessEvent"),
-                                                                              [new ProjectionExpr("r", new FunctionCall("custom_function_xyz",
+                                                                                  _emitter.Emit(new ExtendNode(
+                                                                                      new ScanNode("ProcessEvent"),
+                                                                                      [new ProjectionExpr("r", new FunctionCall("custom_function_xyz",
                     [new ColumnRef("FileName"), new LiteralScalar(42, LiteralKind.Int)]))])));
 
     [TestMethod]
@@ -1460,6 +1459,7 @@ public sealed partial class DuckDbQueryEmitterTests
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex MyRegex();
+
     [GeneratedRegex(@"AS \(SELECT \* FROM __kql_stage_\d+\)")]
     private static partial Regex PassthroughPattern();
 }
