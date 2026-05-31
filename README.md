@@ -121,8 +121,6 @@ docs/
   ROADMAP.md
   KQL-to-DuckDB-translation-spec.md
   kql-syntax-coverage-checklist.md
-  PHASE-1A-MEDALLION-CHECKPOINT.md
-  PHASE-1D-TRANSITION.md
   /adr                 # Architecture Decision Records (ADRs) documenting key design decisions and trade-offs
 ```
 
@@ -148,8 +146,6 @@ From the repository root:
 - Translation specification: [`docs/KQL-to-DuckDB-translation-spec.md`](docs/KQL-to-DuckDB-translation-spec.md)
 - KQL coverage checklist: [`docs/kql-syntax-coverage-checklist.md`](docs/kql-syntax-coverage-checklist.md)
 - Delivery plan: [`docs/ROADMAP.md`](docs/ROADMAP.md)
-- Phase 1A medallion checkpoint: [`docs/PHASE-1A-MEDALLION-CHECKPOINT.md`](docs/PHASE-1A-MEDALLION-CHECKPOINT.md)
-- Phase 1D transition plan: [`docs/PHASE-1D-TRANSITION.md`](docs/PHASE-1D-TRANSITION.md)
 - Maintainer context: [`AGENTS.md`](AGENTS.md)
 
 ## License
