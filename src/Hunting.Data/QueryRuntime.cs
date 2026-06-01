@@ -348,8 +348,8 @@ public sealed class QueryRuntime
         var cacheKey = new CompileCacheKey(queryWithoutRender, _catalog.CatalogVersion, _plannerMaxIterations, _defaultLimit, _policyEpoch, _compilerEpoch);
         string sql;
         string? plannerStats = null;
-        string? sqlShapeStats = null;
-        string? emitterStats = null;
+        string? sqlShapeStats;
+        string? emitterStats;
 
         if (_compileCacheCapacity > 0 && _compileCache.TryGetValue(cacheKey, out var cacheHit))
         {
@@ -735,7 +735,11 @@ public sealed class QueryRuntime
                 break;
 
             case LetBindingNode l:
-                if (l.TabularValue is not null) CollectViewNames(l.TabularValue, views);
+                if (l.TabularValue is not null)
+                {
+                    CollectViewNames(l.TabularValue, views);
+                }
+
                 CollectViewNames(l.Body, views);
                 break;
         }

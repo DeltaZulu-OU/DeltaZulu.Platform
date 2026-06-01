@@ -219,6 +219,34 @@ public sealed class RelationalPlannerTests
     }
 
     [TestMethod]
+    public void ProjectionPruning_DoesNotReduceVisibleProjectToSortKey()
+    {
+        var node =
+            new LimitNode(
+                new SortNode(
+                    new ProjectNode(
+                        new ScanNode("ProcessEvent"),
+                        [
+                            new ProjectionExpr("AccountName", new ColumnRef("AccountName")),
+                        new ProjectionExpr("LaunchCount", new ColumnRef("LaunchCount")),
+                        new ProjectionExpr("DeviceCount", new ColumnRef("DeviceCount"))
+                        ]),
+                    [new SortExpr(new ColumnRef("LaunchCount"), SortDirection.Desc)]),
+                25);
+
+        var planned = new RelationalPlanner().Plan(
+            node,
+            new PlannerContext(Enabled: true, MaxIterations: 3));
+
+        var project = FindFirst<ProjectNode>(planned);
+
+        Assert.IsNotNull(project);
+        CollectionAssert.AreEqual(
+            new[] { "AccountName", "LaunchCount", "DeviceCount" },
+            project!.Projections.Select(p => p.Alias).ToArray());
+    }
+
+    [TestMethod]
     public void LookupJoin_ProjectColumns_AreBoundToJoinSides()
     {
         var planner = new RelationalPlanner();
@@ -579,5 +607,28 @@ public sealed class RelationalPlannerTests
             "A column a sibling extension depends on must not be inlined away");
         var kept = (ExtendNode)filter.Input;
         Assert.HasCount(2, kept.Extensions);
+    }
+
+    private static T? FindFirst<T>(RelNode node)
+    where T : RelNode
+    {
+        if (node is T match)
+        {
+            return match;
+        }
+
+        return node switch
+        {
+            LimitNode n => FindFirst<T>(n.Input),
+            SortNode n => FindFirst<T>(n.Input),
+            ProjectNode n => FindFirst<T>(n.Input),
+            FilterNode n => FindFirst<T>(n.Input),
+            ExtendNode n => FindFirst<T>(n.Input),
+            AggregateNode n => FindFirst<T>(n.Input),
+            SampleNode n => FindFirst<T>(n.Input),
+            JoinNode n => FindFirst<T>(n.Left) ?? FindFirst<T>(n.Right),
+            LetBindingNode n => FindFirst<T>(n.Body),
+            _ => null
+        };
     }
 }

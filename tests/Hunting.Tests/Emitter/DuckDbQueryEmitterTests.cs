@@ -1,8 +1,12 @@
 namespace Hunting.Tests.Emitter;
 
 using System.Text.RegularExpressions;
+using Hunting.Core.Catalog;
 using Hunting.Core.DuckDbSql;
+using Hunting.Core.Policy;
 using Hunting.Core.QueryModel;
+using Hunting.Core.Translation;
+using Hunting.Schema;
 
 /// <summary>
 /// Red-green-refactor harness for RelNode → DuckDB SQL emission.
@@ -653,68 +657,19 @@ public sealed partial class DuckDbQueryEmitterTests
     [Description("Lookup-shaped aggregate join emits explicit projection without SELECT * join wrappers")]
     public void Lookup_AggregateProjectSortTake_UsesExplicitJoinProjection()
     {
-        var leftAgg = new AggregateNode(
+        var left = new AggregateNode(
             new ScanNode("ProcessEvent"),
             Aggregates: [new ProjectionExpr("LaunchCount", new FunctionCall("count", []))],
             GroupBy: [new ColumnRef("AccountName")]);
 
-        var rightAgg = new AggregateNode(
+        var right = new AggregateNode(
             new ScanNode("ProcessEvent"),
             Aggregates: [new ProjectionExpr("DeviceCount", new FunctionCall("dcount", [new ColumnRef("DeviceName")]))],
             GroupBy: [new ColumnRef("AccountName")]);
 
-        var lookupJoin = new JoinNode(
-            leftAgg,
-            rightAgg,
-            JoinKind.LeftOuter,
-            new BinaryScalar(
-                new ColumnRef("AccountName", JoinSide.Left),
-                ScalarBinaryOp.Eq,
-                new ColumnRef("AccountName", JoinSide.Right)));
-
-        var project = new ProjectNode(
-            lookupJoin,
-            [
-                new ProjectionExpr("AccountName", new ColumnRef("AccountName", JoinSide.Left)),
-                new ProjectionExpr("LaunchCount", new ColumnRef("LaunchCount", JoinSide.Left)),
-                new ProjectionExpr("DeviceCount", new ColumnRef("DeviceCount", JoinSide.Right)),
-            ]);
-
-        var top = new LimitNode(
-            new SortNode(project, [new SortExpr(new ColumnRef("LaunchCount", JoinSide.Left), SortDirection.Desc)]),
-            25);
-
-        var sql = _emitter.Emit(top);
-        var normalizedSql = NormSql(sql);
-
-        AssertSqlContains(normalizedSql, "LEFT JOIN");
-        AssertSqlContains(normalizedSql, "count(*) AS LaunchCount");
-        AssertSqlContains(normalizedSql, "count(DISTINCT DeviceName) AS DeviceCount");
-        AssertSqlContains(normalizedSql, "ON left_agg.AccountName = right_agg.AccountName");
-        AssertSqlContains(normalizedSql, "SELECT AccountName, LaunchCount, DeviceCount FROM");
-        AssertSqlContains(normalizedSql, "ORDER BY LaunchCount DESC");
-        AssertSqlContains(normalizedSql, "LIMIT 25");
-        Assert.DoesNotMatchRegex(@"SELECT\s+\*\s+FROM\s+.*LEFT\s+JOIN", normalizedSql);
-    }
-
-    [TestMethod]
-    [Description("Lookup-flavored aggregate join collapses project+join into one qualified, unambiguous SELECT")]
-    public void Lookup_FlavorAggregateProjectSortTake_InlinesQualifiedJoin()
-    {
-        var leftAgg = new AggregateNode(
-            new ScanNode("ProcessEvent"),
-            Aggregates: [new ProjectionExpr("LaunchCount", new FunctionCall("count", []))],
-            GroupBy: [new ColumnRef("AccountName")]);
-
-        var rightAgg = new AggregateNode(
-            new ScanNode("ProcessEvent"),
-            Aggregates: [new ProjectionExpr("DeviceCount", new FunctionCall("dcount", [new ColumnRef("DeviceName")]))],
-            GroupBy: [new ColumnRef("AccountName")]);
-
-        // JoinFlavor.Lookup is what the translator emits for `| lookup (...) on Col`.
-        var lookupJoin = new JoinNode(
-            leftAgg,
-            rightAgg,
+        var join = new JoinNode(
+            left,
+            right,
             JoinKind.LeftOuter,
             new BinaryScalar(
                 new ColumnRef("AccountName", JoinSide.Left),
@@ -723,33 +678,142 @@ public sealed partial class DuckDbQueryEmitterTests
             JoinFlavor.Lookup);
 
         var project = new ProjectNode(
-            lookupJoin,
+            join,
             [
                 new ProjectionExpr("AccountName", new ColumnRef("AccountName")),
-                new ProjectionExpr("LaunchCount", new ColumnRef("LaunchCount")),
-                new ProjectionExpr("DeviceCount", new ColumnRef("DeviceCount")),
+            new ProjectionExpr("LaunchCount", new ColumnRef("LaunchCount")),
+            new ProjectionExpr("DeviceCount", new ColumnRef("DeviceCount"))
             ]);
 
-        var top = new LimitNode(
-            new SortNode(project, [new SortExpr(new ColumnRef("LaunchCount"), SortDirection.Desc)]),
-            25);
+        var sort = new SortNode(
+            project,
+            [new SortExpr(new ColumnRef("LaunchCount"), SortDirection.Desc)]);
 
-        var sql = _emitter.Emit(top);
-        var normalizedSql = NormSql(sql);
+        var node = new LimitNode(sort, 25);
+        var sql = _emitter.Emit(node);
 
-        // Each output column is qualified by its owning side and aliased.
-        AssertSqlContains(normalizedSql, "left_agg.AccountName AS AccountName");
-        AssertSqlContains(normalizedSql, "left_agg.LaunchCount AS LaunchCount");
-        AssertSqlContains(normalizedSql, "right_agg.DeviceCount AS DeviceCount");
-        AssertSqlContains(normalizedSql, "LEFT JOIN");
-        AssertSqlContains(normalizedSql, "ON left_agg.AccountName = right_agg.AccountName");
-        AssertSqlContains(normalizedSql, "ORDER BY LaunchCount DESC NULLS LAST");
-        AssertSqlContains(normalizedSql, "LIMIT 25");
+        AssertSqlContains(sql, "left_agg.AccountName AS AccountName");
+        AssertSqlContains(sql, "left_agg.LaunchCount AS LaunchCount");
+        AssertSqlContains(sql, "right_agg.DeviceCount AS DeviceCount");
+        AssertSqlContains(sql, "LEFT JOIN");
+        AssertSqlContains(sql, "ON left_agg.AccountName = right_agg.AccountName");
+        AssertSqlContains(sql, "ORDER BY left_agg.LaunchCount DESC NULLS LAST");
+        AssertSqlContains(sql, "LIMIT 25");
 
-        // The redundant projection stage and the __join_* select wrapper are gone.
-        Assert.DoesNotContain("__join_left", normalizedSql, "join-side placeholder aliases must be renamed");
-        Assert.DoesNotContain("__join_right", normalizedSql, "join-side placeholder aliases must be renamed");
-        Assert.DoesNotMatchRegex(@"SELECT\s+__join_left\.\*", normalizedSql);
+        Assert.DoesNotContain(
+            "SELECT * FROM __kql_stage_4",
+            NormSql(sql),
+            "Projected lookup join must not be wrapped by a final SELECT * stage.");
+    }
+
+    [TestMethod]
+    public void Lookup_AggregateSubquery_ProjectSortTake_TranslationPreservesProjectColumns()
+    {
+        var catalog = new ApprovedViewCatalog();
+        SchemaConventions.RegisterCanonicalViews(catalog);
+
+        var diagnostics = new DiagnosticBag();
+        var translator = new KustoToRelational(catalog, diagnostics);
+
+        var plan = translator.Translate(
+            """
+        ProcessEvent
+        | summarize LaunchCount = count() by AccountName
+        | lookup (ProcessEvent | summarize DeviceCount = dcount(DeviceName) by AccountName) on AccountName
+        | project AccountName, LaunchCount, DeviceCount
+        | sort by LaunchCount desc
+        | take 25
+        """);
+
+        Assert.IsFalse(diagnostics.HasErrors, string.Join(Environment.NewLine, diagnostics.All));
+        Assert.IsNotNull(plan);
+
+        var project = FindFirst<ProjectNode>(plan!);
+
+        Assert.IsNotNull(project);
+
+        CollectionAssert.AreEqual(
+            new[] { "AccountName", "LaunchCount", "DeviceCount" },
+            project!.Projections.Select(p => p.Alias).ToArray());
+    }
+
+    private static T? FindFirst<T>(RelNode node)
+        where T : RelNode
+    {
+        if (node is T match)
+        {
+            return match;
+        }
+
+        return node switch
+        {
+            LimitNode n => FindFirst<T>(n.Input),
+            SortNode n => FindFirst<T>(n.Input),
+            ProjectNode n => FindFirst<T>(n.Input),
+            FilterNode n => FindFirst<T>(n.Input),
+            ExtendNode n => FindFirst<T>(n.Input),
+            AggregateNode n => FindFirst<T>(n.Input),
+            SampleNode n => FindFirst<T>(n.Input),
+            JoinNode n => FindFirst<T>(n.Left) ?? FindFirst<T>(n.Right),
+            LetBindingNode n => FindFirst<T>(n.Body),
+            _ => null
+        };
+    }
+
+    [TestMethod]
+    [Description("Lookup-flavored aggregate join collapses project+join into one qualified, unambiguous SELECT")]
+    public void Lookup_FlavorAggregateProjectSortTake_InlinesQualifiedJoin()
+    {
+        var left = new AggregateNode(
+            new ScanNode("ProcessEvent"),
+            Aggregates: [new ProjectionExpr("LaunchCount", new FunctionCall("count", []))],
+            GroupBy: [new ColumnRef("AccountName")]);
+
+        var right = new AggregateNode(
+            new ScanNode("ProcessEvent"),
+            Aggregates: [new ProjectionExpr("DeviceCount", new FunctionCall("dcount", [new ColumnRef("DeviceName")]))],
+            GroupBy: [new ColumnRef("AccountName")]);
+
+        var join = new JoinNode(
+            left,
+            right,
+            JoinKind.LeftOuter,
+            new BinaryScalar(
+                new ColumnRef("AccountName", JoinSide.Left),
+                ScalarBinaryOp.Eq,
+                new ColumnRef("AccountName", JoinSide.Right)),
+            JoinFlavor.Lookup);
+
+        var project = new ProjectNode(
+            join,
+            [
+                new ProjectionExpr("AccountName", new ColumnRef("AccountName")),
+            new ProjectionExpr("LaunchCount", new ColumnRef("LaunchCount")),
+            new ProjectionExpr("DeviceCount", new ColumnRef("DeviceCount"))
+            ]);
+
+        var sort = new SortNode(
+            project,
+            [new SortExpr(new ColumnRef("LaunchCount"), SortDirection.Desc)]);
+
+        var node = new LimitNode(sort, 25);
+        var sql = _emitter.Emit(node);
+
+        AssertSqlContains(sql, "WITH");
+        AssertSqlContains(sql, "left_agg AS (");
+        AssertSqlContains(sql, "right_agg AS (");
+        AssertSqlContains(sql, "left_agg.AccountName AS AccountName");
+        AssertSqlContains(sql, "left_agg.LaunchCount AS LaunchCount");
+        AssertSqlContains(sql, "right_agg.DeviceCount AS DeviceCount");
+        AssertSqlContains(sql, "FROM left_agg LEFT JOIN right_agg");
+        AssertSqlContains(sql, "ON left_agg.AccountName = right_agg.AccountName");
+        AssertSqlContains(sql, "ORDER BY left_agg.LaunchCount DESC NULLS LAST");
+        AssertSqlContains(sql, "LIMIT 25");
+
+        Assert.DoesNotContain(
+            "SELECT *",
+            NormSql(sql),
+            "Clean projected lookup aggregate rendering must not emit SELECT * wrappers.");
     }
 
     [TestMethod]

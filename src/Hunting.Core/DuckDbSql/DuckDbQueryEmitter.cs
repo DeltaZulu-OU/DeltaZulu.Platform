@@ -145,6 +145,12 @@ public sealed partial class DuckDbQueryEmitter
         _stageRefCountLookups = 0;
         _cacheInvalidations = 0;
 
+        if (TryRenderProjectedLookupSortTake(node, out var projectedLookupSql))
+        {
+            LastRunStats = BuildRunStats();
+            return projectedLookupSql;
+        }
+
         var (finalSource, columns) = EmitNode(node);
         var hasUserLimit = HasLimit(node);
         var terminalTopK = ShapeSql(ref finalSource);
@@ -387,35 +393,44 @@ public sealed partial class DuckDbQueryEmitter
         var plainMatch = LeftLookupJoinStageRegex().Match(_ctes[joinIndex].Sql);
         if (plainMatch.Success)
         {
-            // Generic `SELECT * FROM left LEFT JOIN right` join: keep the join as a
-            // single CTE stage and fold the trailing projection into it verbatim.
             var projected = RenameJoinAliases(projectionMatch.Groups["projection"].Value);
-            var joinSql =
-                $"SELECT {projected} FROM {plainMatch.Groups["left"].Value} AS left_agg LEFT JOIN {plainMatch.Groups["right"].Value} AS right_agg ON {RenameJoinAliases(plainMatch.Groups["pred"].Value)}";
+            var plainJoinSource =
+                $"{plainMatch.Groups["left"].Value} AS left_agg LEFT JOIN {plainMatch.Groups["right"].Value} AS right_agg ON {RenameJoinAliases(plainMatch.Groups["pred"].Value)}";
 
-            _ctes[joinIndex] = (joinStageName, joinSql);
-            RemoveStageAt(projectionIndex);
+            // Remove the higher index first so the lower index stays valid.
+            var plainHigherIndex = Math.Max(projectionIndex, joinIndex);
+            var plainLowerIndex = Math.Min(projectionIndex, joinIndex);
+            RemoveStageAt(plainHigherIndex);
+            RemoveStageAt(plainLowerIndex);
 
-            finalSource = joinStageName;
-            columns = null;
+            finalSource = plainJoinSource;
+            columns = projected;
+
             if (terminalTopK is not null)
             {
-                terminalTopK = terminalTopK with { Source = joinStageName, OrderBy = RenameJoinAliases(terminalTopK.OrderBy) };
+                terminalTopK = terminalTopK with
+                {
+                    Source = plainJoinSource,
+                    OrderBy = RenameJoinAliases(terminalTopK.OrderBy)
+                };
             }
 
             if (terminalOrder is not null)
             {
-                terminalOrder = terminalOrder with { Source = joinStageName, OrderBy = RenameJoinAliases(terminalOrder.OrderBy) };
+                terminalOrder = terminalOrder with
+                {
+                    Source = plainJoinSource,
+                    OrderBy = RenameJoinAliases(terminalOrder.OrderBy)
+                };
             }
 
             if (terminalLimit is not null)
             {
-                terminalLimit = terminalLimit with { Source = joinStageName };
+                terminalLimit = terminalLimit with { Source = plainJoinSource };
             }
 
             return;
         }
-
         // A `lookup` join emits `SELECT __join_left.*, __join_right.<cols> FROM ...`
         // rather than `SELECT *`, so the plain rule above never matches it. Fold the
         // trailing projection into a fully-qualified SELECT directly over the join
@@ -462,6 +477,119 @@ public sealed partial class DuckDbQueryEmitter
         {
             terminalLimit = terminalLimit with { Source = inlinedJoin };
         }
+    }
+
+    private string BindProjectedLookupJoinColumn(
+        string projectionItem,
+        IReadOnlyDictionary<string, string> leftColumns,
+        IReadOnlyDictionary<string, string> rightColumns,
+        IReadOnlySet<string> joinKeys)
+    {
+        var renamed = projectionItem
+            .Replace("__join_left.", "left_agg.", StringComparison.Ordinal)
+            .Replace("__join_right.", "right_agg.", StringComparison.Ordinal);
+
+        if (renamed.Contains("left_agg.", StringComparison.Ordinal) ||
+            renamed.Contains("right_agg.", StringComparison.Ordinal))
+        {
+            return renamed;
+        }
+
+        var (sourceColumn, alias) = ExtractLookupProjectionColumn(projectionItem);
+        if (string.IsNullOrWhiteSpace(sourceColumn))
+        {
+            return renamed;
+        }
+
+        if (joinKeys.Contains(sourceColumn) && leftColumns.TryGetValue(sourceColumn, out var leftJoinKey))
+        {
+            return $"{leftJoinKey} AS {alias}";
+        }
+
+        if (leftColumns.TryGetValue(sourceColumn, out var leftColumn))
+        {
+            return $"{leftColumn} AS {alias}";
+        }
+
+        if (rightColumns.TryGetValue(sourceColumn, out var rightColumn))
+        {
+            return $"{rightColumn} AS {alias}";
+        }
+
+        throw new InvalidOperationException(
+            $"Unknown lookup projection column '{sourceColumn}' while collapsing projected lookup join.");
+    }
+
+    private static string TrimSingleOuterParentheses(string value)
+    {
+        var text = value.Trim();
+
+        if (text.Length < 2 || text[0] != '(' || text[^1] != ')')
+        {
+            return text;
+        }
+
+        var depth = 0;
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (text[i] == '(')
+            {
+                depth++;
+            }
+            else if (text[i] == ')')
+            {
+                depth--;
+
+                if (depth == 0 && i < text.Length - 1)
+                {
+                    return text;
+                }
+            }
+        }
+
+        return depth == 0 ? text[1..^1].Trim() : text;
+    }
+
+    private static (string SourceColumn, string Alias) ExtractLookupProjectionColumn(string projectionItem)
+    {
+        var trimmed = projectionItem.Trim();
+        var asMatch = AiasMatchPattern().Match(trimmed);
+
+        if (asMatch.Success)
+        {
+            return (
+                TrimLookupColumnQualifier(asMatch.Groups["expr"].Value),
+                asMatch.Groups["alias"].Value);
+        }
+
+        if (LookupColumnPattern().IsMatch(trimmed))
+        {
+            var column = TrimLookupColumnQualifier(trimmed);
+            return (column, column);
+        }
+
+        return (string.Empty, ExtractLookupProjectionAlias(trimmed));
+    }
+
+    private static string ExtractLookupProjectionAlias(string projectionItem)
+    {
+        var trimmed = projectionItem.Trim();
+        var asMatch = LookupProjectionAliasPattern().Match(trimmed);
+
+        if (asMatch.Success)
+        {
+            return asMatch.Groups["alias"].Value;
+        }
+
+        return TrimLookupColumnQualifier(trimmed);
+    }
+
+    private static string TrimLookupColumnQualifier(string column)
+    {
+        var trimmed = column.Trim();
+        var dot = trimmed.LastIndexOf('.');
+        return dot >= 0 ? trimmed[(dot + 1)..] : trimmed;
     }
 
     /// <summary>
@@ -2491,7 +2619,17 @@ to_json(
     }
 
     private static string EscapeString(string s) => s.Replace("'", "''");
+
     [GeneratedRegex(@"^(?<expr>.+)\s+AS\s+(?<alias>[A-Za-z_][A-Za-z0-9_]*)$", RegexOptions.IgnoreCase, "en-150")]
     private static partial Regex DecodedPattern();
+
+    [GeneratedRegex(@"^(?<expr>[A-Za-z_][A-Za-z0-9_\.]*)\s+AS\s+(?<alias>[A-Za-z_][A-Za-z0-9_]*)$", RegexOptions.IgnoreCase, "en-150")]
+    private static partial Regex AiasMatchPattern();
+
+    [GeneratedRegex(@"^[A-Za-z_][A-Za-z0-9_\.]*$")]
+    private static partial Regex LookupColumnPattern();
+
+    [GeneratedRegex(@"\s+AS\s+(?<alias>[A-Za-z_][A-Za-z0-9_]*)$", RegexOptions.IgnoreCase, "en-150")]
+    private static partial Regex LookupProjectionAliasPattern();
 }
 #endregion Helpers

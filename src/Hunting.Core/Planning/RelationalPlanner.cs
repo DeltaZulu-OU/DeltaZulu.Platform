@@ -599,9 +599,16 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
 
                 case SortNode s:
                     var sortReq = new HashSet<string>(required, StringComparer.OrdinalIgnoreCase);
-                    foreach (var se in s.Sorts)
+
+                    // Root/visible sort preserves its input row shape. Do not let ORDER BY
+                    // columns become the visible projection requirement; otherwise
+                    // project A, B, C | sort by B | take N incorrectly becomes project B.
+                    if (required.Count > 0)
                     {
-                        CollectColumnRefs(se.Expression, sortReq);
+                        foreach (var se in s.Sorts)
+                        {
+                            CollectColumnRefs(se.Expression, sortReq);
+                        }
                     }
 
                     return s with { Input = RewriteNode(s.Input, sortReq, ref attempted, ref applied) };
