@@ -581,6 +581,15 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     // ─── Emitter reuse / state isolation ────────────────────────────
 
     [TestMethod]
+    [Description("Null RelNode input is rejected before emitter state changes")]
+    public void Reuse_NullInputRejected()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 100);
+
+        Assert.ThrowsExactly<ArgumentNullException>(() => emitter.Emit(null!));
+    }
+
+    [TestMethod]
     [Description("Emitter produces consistent output on repeated calls")]
     public void Reuse_ConsistentOutput()
     {
@@ -615,6 +624,100 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
         // Should not contain high stage numbers from first call
         Assert.DoesNotContain("__kql_stage_5", sql2,
             "Stage counter should reset between Emit() calls");
+    }
+
+    [TestMethod]
+    [Description("Scalar let bindings do not leak between Emit calls")]
+    public void Reuse_ScalarLetBindingsReset()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 100);
+        var first = new LetBindingNode(
+            "cutoff",
+            TabularValue: null,
+            ScalarValue: new LiteralScalar(7, LiteralKind.Int),
+            Body: new FilterNode(
+                new ScanNode("ProcessEvent"),
+                new BinaryScalar(
+                    new ColumnRef("ProcessId"),
+                    ScalarBinaryOp.Gt,
+                    new ColumnRef("cutoff"))));
+
+        var firstSql = emitter.Emit(first);
+        var secondSql = emitter.Emit(new FilterNode(
+            new ScanNode("ProcessEvent"),
+            new BinaryScalar(
+                new ColumnRef("ProcessId"),
+                ScalarBinaryOp.Gt,
+                new ColumnRef("cutoff"))));
+
+        AssertSqlContains(firstSql, "ProcessId > 7");
+        AssertSqlContains(secondSql, "ProcessId > cutoff");
+        Assert.DoesNotContain("ProcessId > 7", NormSql(secondSql),
+            "Scalar let binding from the first run must not leak into the second run");
+    }
+
+    [TestMethod]
+    [Description("Join aliases do not leak after predicate emission throws")]
+    public void Reuse_JoinAliasesResetAfterException()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 100);
+        var invalidJoin = new JoinNode(
+            new ScanNode("ProcessEvent"),
+            new ScanNode("ProcessEvent"),
+            JoinKind.Inner,
+            new FunctionCall("strcat_array", [new ColumnRef("ProcessId", JoinSide.Left)]));
+
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => emitter.Emit(invalidJoin));
+
+        var sql = emitter.Emit(new FilterNode(
+            new ScanNode("ProcessEvent"),
+            new BinaryScalar(
+                new ColumnRef("ProcessId", JoinSide.Left),
+                ScalarBinaryOp.Gt,
+                new LiteralScalar(0, LiteralKind.Int))));
+
+        AssertSqlContains(sql, "ProcessId > 0");
+        Assert.DoesNotContain("__join_left.ProcessId", NormSql(sql),
+            "Join alias from the failed run must not leak into the next run");
+    }
+
+    [TestMethod]
+    [Description("Emitter options are preserved when a fresh context is created for each run")]
+    public void Reuse_OptionsPreservedAcrossRuns()
+    {
+        var limitedEmitter = new DuckDbQueryEmitter(defaultLimit: 37);
+        var unlimitedEmitter = new DuckDbQueryEmitter(defaultLimit: 37, applyDefaultLimit: false);
+        var node = new ScanNode("ProcessEvent");
+
+        AssertSqlContains(limitedEmitter.Emit(node), "LIMIT 37");
+        AssertSqlContains(limitedEmitter.Emit(node), "LIMIT 37");
+        Assert.DoesNotContain("LIMIT", NormSql(unlimitedEmitter.Emit(node)));
+        Assert.DoesNotContain("LIMIT", NormSql(unlimitedEmitter.Emit(node)));
+    }
+
+    [TestMethod]
+    [Description("Emitter stats are rebuilt for each Emit call rather than accumulated")]
+    public void Reuse_RunStatsReset()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 100);
+        emitter.Emit(new LimitNode(
+            new FilterNode(
+                new ScanNode("ProcessEvent"),
+                new BinaryScalar(
+                    new ColumnRef("ProcessId"),
+                    ScalarBinaryOp.Gt,
+                    new LiteralScalar(0, LiteralKind.Int))),
+            10));
+        var firstStats = emitter.LastRunStats;
+
+        emitter.Emit(new ScanNode("ProcessEvent"));
+        var secondStats = emitter.LastRunStats;
+
+        Assert.IsNotNull(firstStats);
+        Assert.IsNotNull(secondStats);
+        Assert.AreNotSame(firstStats, secondStats);
+        Assert.AreEqual(0, secondStats.StageAdds,
+            "Second-run stats should describe only the simple scan emission");
     }
 
     // ─── Join emission ──────────────────────────────────────────────

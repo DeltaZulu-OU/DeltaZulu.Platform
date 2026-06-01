@@ -19,6 +19,8 @@ Items that have no meaning in a read-only DuckDB hunting workbench, such as mana
 
 For the POC, canonical SQL emission uses CTE staging (`__kql_stage_N`) to preserve KQL pipe semantics clearly. A post-translation planner can collapse, inline, retain, or reshape these stages when enabled. Planner rewrites are implemented as an optimization layer and must preserve semantics. Safety rule: when KQL and DuckDB differ, the converter must preserve KQL semantics, use a documented helper, emit a visible approximation diagnostic, or reject.
 
+Emitter decomposition is structural only and is now complete: `DuckDbQueryEmitter` remains the public compatibility façade, retaining immutable options and mutable `LastRunStats` publication only. Each `Emit(RelNode)` call constructs a fresh `DuckDbEmitterContext` plus run-scoped `DuckDbFunctionEmitter`, `DuckDbScalarEmitter`, `DuckDbJoinEmitter`, and `DuckDbRelNodeEmitter` collaborators. `DuckDbStageRegistry` owns stage state, caches, mutation operations, reference counting, and registry statistics; `DuckDbSqlShapeRewriter` owns SQL-shape simplifications; and the internal stateless `DuckDbSqlText` helper owns identifier escaping, qualified-identifier escaping, string escaping, and SQL indentation. `StageFrom` lives with relational orchestration. Statistics assembly remains a trivial context adapter, so no separate stats builder was added. Removing façade context storage does not claim shared-emitter thread safety because `LastRunStats` remains mutable publication state. This does not change construct coverage or emitted SQL semantics.
+
 ---
 
 ## 1. Tabular Operators

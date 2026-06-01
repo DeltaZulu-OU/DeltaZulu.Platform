@@ -45,7 +45,7 @@ public sealed class SchemaEmitter
             .ToList();
 
         var statements = schemaNames
-            .Select(schema => $"CREATE SCHEMA IF NOT EXISTS {DuckDbQueryEmitter.EscapeIdent(schema)}")
+            .Select(schema => $"CREATE SCHEMA IF NOT EXISTS {DuckDbSqlText.EscapeIdent(schema)}")
             .ToList();
 
         // Raw tables
@@ -82,14 +82,14 @@ public sealed class SchemaEmitter
     {
         var sb = new StringBuilder();
         sb.Append("CREATE TABLE IF NOT EXISTS ");
-        sb.Append(DuckDbQueryEmitter.EscapeQualifiedIdent(table.QualifiedName));
+        sb.Append(DuckDbSqlText.EscapeQualifiedIdent(table.QualifiedName));
         sb.Append(" (\n");
 
         for (var i = 0; i < table.Columns.Count; i++)
         {
             var col = table.Columns[i];
             sb.Append("    ");
-            sb.Append(DuckDbQueryEmitter.EscapeIdent(col.Name));
+            sb.Append(DuckDbSqlText.EscapeIdent(col.Name));
             sb.Append(' ');
             sb.Append(col.DuckDbType.ToSql());
             if (i < table.Columns.Count - 1)
@@ -111,7 +111,7 @@ public sealed class SchemaEmitter
     {
         var sb = new StringBuilder();
         sb.Append("CREATE OR REPLACE VIEW ");
-        sb.Append(DuckDbQueryEmitter.EscapeQualifiedIdent(view.QualifiedName));
+        sb.Append(DuckDbSqlText.EscapeQualifiedIdent(view.QualifiedName));
         sb.Append(" AS\nSELECT\n");
 
         // Build column type lookup for typed NULL emission
@@ -136,7 +136,7 @@ public sealed class SchemaEmitter
             }
 
             sb.Append(" AS ");
-            sb.Append(DuckDbQueryEmitter.EscapeIdent(proj.TargetColumn));
+            sb.Append(DuckDbSqlText.EscapeIdent(proj.TargetColumn));
             if (i < view.Mapping.Projections.Count - 1)
             {
                 sb.Append(',');
@@ -146,7 +146,7 @@ public sealed class SchemaEmitter
         }
 
         sb.Append("FROM ");
-        sb.Append(DuckDbQueryEmitter.EscapeQualifiedIdent(view.Mapping.SourceObject));
+        sb.Append(DuckDbSqlText.EscapeQualifiedIdent(view.Mapping.SourceObject));
 
         if (view.Mapping.Filter is not null)
         {
@@ -170,10 +170,10 @@ public sealed class SchemaEmitter
 
         var sb = new StringBuilder();
         sb.Append("CREATE OR REPLACE VIEW ");
-        sb.Append(DuckDbQueryEmitter.EscapeQualifiedIdent(view.QualifiedName));
+        sb.Append(DuckDbSqlText.EscapeQualifiedIdent(view.QualifiedName));
         sb.Append(" AS\n");
 
-        var canonicalColumns = string.Join(",\n    ", view.Columns.Select(c => DuckDbQueryEmitter.EscapeIdent(c.Name)));
+        var canonicalColumns = string.Join(",\n    ", view.Columns.Select(c => DuckDbSqlText.EscapeIdent(c.Name)));
 
         for (var i = 0; i < view.ParserViews.Count; i++)
         {
@@ -185,7 +185,7 @@ public sealed class SchemaEmitter
             sb.Append("SELECT\n    ");
             sb.Append(canonicalColumns);
             sb.Append("\nFROM ");
-            sb.Append(DuckDbQueryEmitter.EscapeQualifiedIdent(view.ParserViews[i]));
+            sb.Append(DuckDbSqlText.EscapeQualifiedIdent(view.ParserViews[i]));
         }
 
         return sb.ToString();
@@ -196,7 +196,7 @@ public sealed class SchemaEmitter
 
     private string EmitMappingExpr(ExprDef expr) => expr switch
     {
-        ColumnExpr col => DuckDbQueryEmitter.EscapeIdent(col.Name),
+        ColumnExpr col => DuckDbSqlText.EscapeIdent(col.Name),
         LiteralExpr lit => EmitMappingLiteral(lit),
         JsonTextExpr json => $"json_extract_string({EmitMappingExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}')",
         JsonExistsExpr json => $"json_exists({EmitMappingExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}')",

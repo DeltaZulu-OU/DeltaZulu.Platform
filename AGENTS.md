@@ -151,7 +151,7 @@ docs/
 | `MSTest.TestAdapter` | 3.* | Test adapter |
 | `Microsoft.NET.Test.Sdk` | 17.* | Test host |
 
-Target framework: `net9.0`. Nullable reference types enabled. Implicit usings enabled (includes
+Target framework: `net10.0`. Nullable reference types enabled. Implicit usings enabled (includes
 `System.Linq`, `System.Collections.Generic`, `System.Threading.Tasks`).
 
 ## Architectural Constraints
@@ -252,7 +252,7 @@ Confirmed against `microsoft/Kusto-Query-Language` source during code review:
 
 - Records over classes for immutable data types
 - `IReadOnlyList<T>` in public contracts, never `List<T>`
-- Collection expressions `[]` for initialization (C# 12, supported on net9.0)
+- Collection expressions `[]` for initialization (C# 12, supported on net10.0)
 - `sealed` on all non-abstract types
 - No `null` without `?` annotation and documented semantics
 - `StringComparer.OrdinalIgnoreCase` for all table/view name lookups
