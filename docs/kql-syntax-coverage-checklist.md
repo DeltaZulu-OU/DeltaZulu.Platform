@@ -21,6 +21,8 @@ For the POC, canonical SQL emission uses CTE staging (`__kql_stage_N`) to preser
 
 Emitter decomposition is structural only and is now complete: `DuckDbQueryEmitter` remains the public compatibility façade, retaining immutable options and mutable `LastRunStats` publication only. Each `Emit(RelNode)` call constructs a fresh `DuckDbEmitterContext` plus run-scoped `DuckDbFunctionEmitter`, `DuckDbScalarEmitter`, `DuckDbJoinEmitter`, and `DuckDbRelNodeEmitter` collaborators. `DuckDbStageRegistry` owns stage state, caches, mutation operations, reference counting, and registry statistics; `DuckDbSqlShapeRewriter` owns SQL-shape simplifications; and the internal stateless `DuckDbSqlText` helper owns identifier escaping, qualified-identifier escaping, string escaping, and SQL indentation. `StageFrom` lives with relational orchestration. Statistics assembly remains a trivial context adapter, so no separate stats builder was added. Removing façade context storage does not claim shared-emitter thread safety because `LastRunStats` remains mutable publication state. This does not change construct coverage or emitted SQL semantics.
 
+Translator decomposition is also structural only: public `KustoToRelational` remains the compatibility adapter over internal `KustoQueryTranslator`. Document analysis, management-command guarding, approved-table policy, Kusto SDK syntax adaptation, projection naming, function validation, and integer-literal reading are isolated internal services. This refactor does not change construct coverage or translation semantics.
+
 ---
 
 ## 1. Tabular Operators

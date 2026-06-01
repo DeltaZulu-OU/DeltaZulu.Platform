@@ -84,13 +84,15 @@ The repository currently includes:
 - `Hunting.Data`: connection factory, schema application, runtime orchestration, and mock seeding.
 - `Hunting.Web`: Blazor Server host and analyst UI.
 - `Hunting.Tests`: MSTest test suite across translation/emitter/runtime/planner seams.
+- Translation API compatibility is preserved: public `KustoToRelational` delegates to the internal `KustoQueryTranslator` façade, while document analysis, management-command guarding, table-reference policy, SDK syntax helpers, projection naming, function validation, and integer-literal reading are isolated internal services.
 
 ## Architecture at a Glance
 
 ```text
 KQL query
   -> Kusto.Language parse + semantic checks
-  -> KustoToRelational (KQL AST -> RelNode)
+  -> KustoToRelational compatibility adapter
+  -> internal KustoQueryTranslator (KQL AST -> RelNode)
   -> RelationalPlanner (logical rewrite passes)
   -> DuckDbQueryEmitter (RelNode -> DuckDB SQL)
   -> DuckDB execution

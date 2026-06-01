@@ -249,6 +249,7 @@ Render work remains a parallel track as long as it does not weaken schema semant
 12. Multi-dialect backend architecture
 13. Render implementation track
 14. Controlled `DuckDbQueryEmitter` decomposition is complete: the public façade retains immutable options and mutable `LastRunStats` publication only; each emission constructs a fresh context and run-scoped function, scalar, join, and relational-node collaborators; `DuckDbStageRegistry`, `DuckDbSqlShapeRewriter`, and `DuckDbSqlText` retain their focused responsibilities; `StageFrom` lives with relational orchestration; statistics assembly remains a trivial context adapter, so a separate stats builder was not justified; shared-emitter thread safety remains a separate backlog item because `LastRunStats` is mutable façade state
+15. Preserve the public `KustoToRelational` API while incrementally decomposing the internal `KustoQueryTranslator`; document analysis, command guarding, table policy, syntax adaptation, projection naming, function validation, and integer-literal reading are extracted, while tabular/join/scalar extraction remains optional follow-up refactoring with no KQL coverage change.
 
 ## Key Risks
 

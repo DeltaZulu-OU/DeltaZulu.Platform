@@ -20,7 +20,7 @@ The architecture is structurally CQRS because the write-side schema pipeline and
 
 **Write side:** C# schema models → `SchemaEmitter` DDL → `SchemaApplier` → DuckDB state mutation.
 
-**Read side:** KQL → `KustoToRelational` → `RelNode` IR → planner → `DuckDbQueryEmitter` → read-only DuckDB execution → bounded results.
+**Read side:** KQL → public `KustoToRelational` compatibility adapter → internal `KustoQueryTranslator` → `RelNode` IR → `RelationalPlanner` → `DuckDbQueryEmitter` → read-only DuckDB execution → bounded results.
 
 `ApprovedViewCatalog` bridges the two pipelines by projecting Golden schema models into Kusto.Language symbols.
 
@@ -269,8 +269,9 @@ The catalog must not use legacy table names or relative time filters such as `ag
 KQL input
   -> Kusto.Language ParseAndAnalyze with ApprovedViewCatalog GlobalState
   -> Policy validation
-  -> KustoToRelational
-  -> RelNode planner
+  -> KustoToRelational compatibility adapter
+  -> internal KustoQueryTranslator
+  -> RelationalPlanner RelNode rewrite passes
   -> DuckDbQueryEmitter
   -> DuckDB.NET execution
   -> bounded QueryResult
@@ -278,6 +279,12 @@ KQL input
 ```
 
 Bronze and Silver are not part of the user-facing query surface. Only approved Golden contracts are registered in the KQL catalog.
+
+### Translator, planner, and optimizer naming boundary
+
+`KustoQueryTranslator` is the internal KQL/Kusto-syntax-to-`RelNode` translation façade. The public `KustoToRelational` type remains as a compatibility adapter until a deliberate breaking API change is accepted. Translation does not perform relational rewrite decisions. `RelationalPlanner` remains the name for semantics-preserving `RelNode` rewrite passes. Optimizer terminology is reserved for future cost- or rule-based optimization work rather than AST lowering.
+
+Document parsing and diagnostics, management-command blocking, approved table-reference policy, Kusto SDK syntax adaptation, projection naming, function argument validation, and integer-literal reading are isolated internal translation collaborators. Tabular, join, and scalar translation remain in the internal façade for now and may be extracted incrementally without changing the compatibility surface.
 
 ## Schema Pipeline
 
