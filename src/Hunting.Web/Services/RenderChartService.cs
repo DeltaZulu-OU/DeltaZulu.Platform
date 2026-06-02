@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace Hunting.Web.Services;
 
 using Hunting.Core.Render;
@@ -129,22 +131,22 @@ public sealed class RenderChartService
                 trigger = TooltipTrigger.Item; // CHANGE: Use Item for Scatter
                 series.AddRange(chart.Series.Select(s => new ScatterSeries { Name = s.Name, Data = s.Values }));
                 break;
-
-            case RenderKind.Card:
             default:
                 throw new NotSupportedException($"Render kind '{chart.Kind}' is not yet supported in the chart adapter.");
         }
 
-        var chartOptions = new ChartOptions
+        return new ChartOptions
         {
             Tooltip = new Tooltip { Trigger = trigger, Show = true }, // Always enable tooltip display — Show = true for clarity
             Legend = new Legend { Show = showLegend },
-            XAxis = new XAxis { Type = AxisType.Category },
+            XAxis = new XAxis
+            {
+                Type = AxisType.Category,
+                Data = chart.XLabels.Select(v => new AxisData() { Value = v }).ToList()
+            },
             YAxis = new YAxis { Type = AxisType.Value },
             Series = series
         };
-
-        return chartOptions;
     }
 
     /// <summary>
