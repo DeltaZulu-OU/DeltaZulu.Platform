@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace Hunting.Web.Services;
 
 using Hunting.Core.Render;

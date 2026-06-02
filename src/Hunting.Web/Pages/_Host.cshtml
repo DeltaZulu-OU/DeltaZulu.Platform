@@ -9,8 +9,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KQL Hunting Workbench</title>
     <base href="~/" />
-    <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="_content/MudBlazor/MudBlazor.min.css" />
+    <link rel="stylesheet" href="css/deltazulu/colors_and_type.css" asp-append-version="true" />
+    <link rel="stylesheet" href="css/app.css" asp-append-version="true" />
+    <link rel="stylesheet" href="css/deltazulu/dashboard.css" asp-append-version="true" />
 </head>
 <body>
     <component type="typeof(Hunting.Web.App)" render-mode="Server" />
@@ -20,6 +22,7 @@
         <a class="dismiss">🗙</a>
     </div>
     <script src="~/js/monaco.js" asp-append-version="true"></script>
+    <script src="~/js/monaco-theme-loader.js" asp-append-version="true"></script>
     <script src="~/js/charts.js" asp-append-version="true"></script>
     <script src="~/js/splitter.js" asp-append-version="true"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
