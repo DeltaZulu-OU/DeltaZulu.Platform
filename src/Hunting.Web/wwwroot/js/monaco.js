@@ -250,7 +250,8 @@ window.huntingMonaco = {
             fontSize: 13,
             lineNumbers: 'on',
             quickSuggestions: true,
-            suggestOnTriggerCharacters: true
+            suggestOnTriggerCharacters: true,
+            contextmenu: false
         });
 
         editor.onKeyDown((event) => {
@@ -263,6 +264,10 @@ window.huntingMonaco = {
         });
 
         window.huntingMonaco._editors[containerId] = editor;
+
+        editor.onContextMenu((e) => {
+            e.event.preventDefault();
+        });
     },
     getValue: (containerId) => window.huntingMonaco._editors[containerId]?.getValue() ?? '',
     setValue: (containerId, value) => window.huntingMonaco._editors[containerId]?.setValue(value ?? ''),
