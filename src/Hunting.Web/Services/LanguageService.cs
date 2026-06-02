@@ -1,3 +1,4 @@
+using Hunting.Core.Schema;
 using Microsoft.JSInterop;
 
 namespace Hunting.Web.Services;
@@ -19,23 +20,23 @@ public sealed class LanguageService : IAsyncDisposable
         string containerId,
         string initialValue,
         Func<Task> runCommand,
-        IReadOnlyList<KqlTableSchema> schema)
+        EditorSchemaMetadata schema)
     {
         _containerId = containerId;
         ResetCallback(runCommand);
 
+        await SetSchemaAsync(schema);
         await _jsRuntime.InvokeVoidAsync("huntingMonaco.registerKqlLanguage");
         var isReady = await _jsRuntime.InvokeAsync<bool>("huntingMonaco.isReady");
         if (!isReady)
         {
             throw new InvalidOperationException("Monaco failed to initialize in browser runtime.");
         }
-        await SetSchemaAsync(schema);
         await _jsRuntime.InvokeVoidAsync("huntingMonaco.init", _callbackRef, containerId, initialValue);
         _logger.LogInformation("Monaco KQL editor initialized for container {ContainerId}.", containerId);
     }
 
-    public ValueTask SetSchemaAsync(IReadOnlyList<KqlTableSchema> schema)
+    public ValueTask SetSchemaAsync(EditorSchemaMetadata schema)
         => _jsRuntime.InvokeVoidAsync("huntingMonaco.setSchema", schema);
 
     public ValueTask<string> GetEditorValueAsync()
@@ -89,5 +90,3 @@ public sealed class LanguageService : IAsyncDisposable
         public Task RunFromEditor() => _runCommand();
     }
 }
-
-public sealed record KqlTableSchema(string Name, IReadOnlyList<string> Columns);

@@ -12,91 +12,91 @@
 
 
 <div class="hunt-page">
-<div class="hunt-page-content" id="hunt-page-content">
-    <!-- ─── Editor panel ──────────────────────────────────────────────────────── -->
-    <section class="hunt-editor-panel" id="hunt-editor-panel">
-        <div class="hunt-editor-toolbar">
-            <span class="hunt-editor-label">KQL Query</span>
-            <div class="hunt-toolbar-actions">
-                <button class="hunt-btn hunt-btn-run"
-                        disabled="@_running"
-                        @onclick="RunQuery">
-                    @(_running ? "Running…" : "▶ Run (Shift+Enter)")
-                </button>
-                <button class="hunt-btn hunt-btn-clear"
-                        @onclick="Clear">
-                    Clear
-                </button>
+    <div class="hunt-page-content" id="hunt-page-content">
+        <!-- ─── Editor panel ──────────────────────────────────────────────────────── -->
+        <section class="hunt-editor-panel" id="hunt-editor-panel">
+            <div class="hunt-editor-toolbar">
+                <span class="hunt-editor-label">KQL Query</span>
+                <div class="hunt-toolbar-actions">
+                    <button class="hunt-btn hunt-btn-run"
+                            disabled="@_running"
+                            @onclick="RunQuery">
+                        @(_running ? "Running…" : "▶ Run (Shift+Enter)")
+                    </button>
+                    <button class="hunt-btn hunt-btn-clear"
+                            @onclick="Clear">
+                        Clear
+                    </button>
+                </div>
             </div>
-        </div>
 
         
-        <div class="hunt-timefilter-toolbar">
-            <label class="hunt-timefilter-label" for="time-range">Time filter</label>
-            <select id="time-range" class="hunt-timefilter-select" @bind="_toolbar.SelectedTimeFilter">
-                @foreach (var preset in Hunting.Web.Services.QueryToolbarState.TimeFilterPresets)
+            <div class="hunt-timefilter-toolbar">
+                <label class="hunt-timefilter-label" for="time-range">Time filter</label>
+                <select id="time-range" class="hunt-timefilter-select" @bind="_toolbar.SelectedTimeFilter">
+                    @foreach (var preset in Hunting.Web.Services.QueryToolbarState.TimeFilterPresets)
+                    {
+                        <option value="@preset.Key">@preset.Label</option>
+                    }
+                </select>
+
+                @if (_toolbar.SelectedTimeFilter == "custom")
                 {
-                    <option value="@preset.Key">@preset.Label</option>
+                    <input type="date" class="hunt-timefilter-date" @bind="_toolbar.CustomFrom" />
+                    <span class="hunt-timefilter-sep">→</span>
+                    <input type="date" class="hunt-timefilter-date" @bind="_toolbar.CustomTo" />
                 }
-            </select>
 
-            @if (_toolbar.SelectedTimeFilter == "custom")
-            {
-                <input type="date" class="hunt-timefilter-date" @bind="_toolbar.CustomFrom" />
-                <span class="hunt-timefilter-sep">→</span>
-                <input type="date" class="hunt-timefilter-date" @bind="_toolbar.CustomTo" />
-            }
+                <span class="hunt-timefilter-status">@_toolbar.TimeFilterCaption</span>
 
-            <span class="hunt-timefilter-status">@_toolbar.TimeFilterCaption</span>
-
-            <label class="hunt-timefilter-label" for="result-limit">Limit</label>
-            <select id="result-limit" class="hunt-timefilter-select" @bind="SelectedResultLimitValue">
-                @foreach (var opt in Hunting.Web.Services.QueryToolbarState.ResultLimitOptions)
-                {
-                    <option value="@(opt?.ToString() ?? string.Empty)">@(opt is null ? "None" : opt.Value.ToString())</option>
-                }
-            </select>
-        </div>
-
-
-        <!-- Monaco editor placeholder — wired via JS interop -->
-        <div class="hunt-editor-container">
-            <div id="kql-editor" class="hunt-editor-textarea"></div>
-        </div>
-
-        @if (_diagnostics.Any())
-        {
-            <div class="hunt-diagnostics">
-                @foreach (var d in _diagnostics)
-                {
-                    <div class="hunt-diagnostic hunt-diagnostic-@d.Severity.ToString().ToLower()">
-                        <span class="hunt-diag-phase">[@d.Phase]</span>
-                        @d.Message
-                    </div>
-                }
+                <label class="hunt-timefilter-label" for="result-limit">Limit</label>
+                <select id="result-limit" class="hunt-timefilter-select" @bind="SelectedResultLimitValue">
+                    @foreach (var opt in Hunting.Web.Services.QueryToolbarState.ResultLimitOptions)
+                    {
+                        <option value="@(opt?.ToString() ?? string.Empty)">@(opt is null ? "None" : opt.Value.ToString())</option>
+                    }
+                </select>
             </div>
-        }
-    </section>
 
-    <!-- ─── Results panel ───────────────────────────────────────── -->
-    <div class="hunt-panel-splitter" id="hunt-panel-splitter" role="separator" aria-orientation="horizontal" aria-label="Resize editor and results panels"></div>
 
-    <section class="hunt-results-panel" id="hunt-results-panel">
-        <div class="hunt-results-toolbar">
-            <span class="hunt-results-label">
-                @if (_result is not null && _result.Success)
-                {
-                    <span>@_result.RowCount rows · @_elapsed.TotalMilliseconds.ToString("F0") ms</span>
-                }
-                else if (_result is not null && !_result.Success)
-                {
-                    <span class="hunt-error-label">Query failed</span>
-                }
-                else
-                {
-                    <span class="hunt-idle-label">No results yet</span>
-                }
-            </span>
+            <!-- Monaco editor placeholder — wired via JS interop -->
+            <div class="hunt-editor-container">
+                <div id="kql-editor" class="hunt-editor-textarea"></div>
+            </div>
+
+            @if (_diagnostics.Any())
+            {
+                <div class="hunt-diagnostics">
+                    @foreach (var d in _diagnostics)
+                    {
+                        <div class="hunt-diagnostic hunt-diagnostic-@d.Severity.ToString().ToLower()">
+                            <span class="hunt-diag-phase">[@d.Phase]</span>
+                            @d.Message
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <!-- ─── Results panel ───────────────────────────────────────── -->
+        <div class="hunt-panel-splitter" id="hunt-panel-splitter" role="separator" aria-orientation="horizontal" aria-label="Resize editor and results panels"></div>
+
+        <section class="hunt-results-panel" id="hunt-results-panel">
+            <div class="hunt-results-toolbar">
+                <span class="hunt-results-label">
+                    @if (_result is not null && _result.Success)
+                    {
+                        <span>@_result.RowCount rows · @_elapsed.TotalMilliseconds.ToString("F0") ms</span>
+                    }
+                    else if (_result is not null && !_result.Success)
+                    {
+                        <span class="hunt-error-label">Query failed</span>
+                    }
+                    else
+                    {
+                        <span class="hunt-idle-label">No results yet</span>
+                    }
+                </span>
                 @if (_result?.GeneratedSql is string)
                 {
                     <button class="hunt-btn hunt-btn-sql"
@@ -104,135 +104,137 @@
                         Show SQL
                     </button>
                 }
-        </div>
-
-        @if (_showSql && _result?.GeneratedSql is string sql)
-        {
-            <pre class="hunt-sql-preview">@sql</pre>
-        }
-
-        @if (_result?.Success == true && _result.RowCount > 0)
-        {
-            <div class="hunt-results-tabs" role="tablist" aria-label="Result views">
-                <button class="hunt-btn hunt-tab-button @GetTabButtonClass(ResultTab.Table)" role="tab" aria-selected="@(_activeTab == ResultTab.Table)" aria-controls="results-table-panel" id="results-table-tab" @onclick="() => SelectTab(ResultTab.Table)">Table</button>
-                <button class="hunt-btn hunt-tab-button @GetTabButtonClass(ResultTab.Render)" role="tab" aria-selected="@(_activeTab == ResultTab.Render)" aria-controls="results-render-panel" id="results-render-tab" disabled="@(!HasRenderOutput)" @onclick="() => SelectTab(ResultTab.Render)">Render</button>
             </div>
 
-            <div class="hunt-results-content">
-                @if (_activeTab == ResultTab.Table)
-                {
-                <div id="results-table-panel" role="tabpanel" aria-labelledby="results-table-tab" class="hunt-tab-content hunt-tab-active-content">
-                    <div class="hunt-table-wrapper">
-                        <table class="hunt-table">
-                            <thead>
-                                <tr>
-                                    @foreach (var col in _result.Columns)
-                                    {
-                                        <th class="hunt-th" @onclick="() => SortBy(col.Name)">
-                                            @col.Name
-                                            @if (_sortColumn == col.Name)
-                                            {
-                                                @(_sortAsc ? " ▲" : " ▼")
-                                            }
-                                        </th>
-                                    }
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var rowIndex in VisibleRows())
-                                {
-                                    <tr class="hunt-tr">
-                                        @for (int i = 0; i < _result.Columns.Count; i++)
-                                        {
-                                            var cellIndex = i;
-                                            var cellValue = _result.GetValue(rowIndex, cellIndex);
-                                            var hasDrawer = ShouldShowCellDrawerButton(cellValue);
-                                            <td class="hunt-td">
-                                                <div class="hunt-cell-content">
-                                                    @if (hasDrawer)
-                                                    {
-                                                        <button class="hunt-cell-chevron"
-                                                                @onclick:stopPropagation="true"
-                                                                @onclick="() => OpenCellDrawer(_result.Columns[cellIndex].Name, cellValue, true)"
-                                                                aria-label="Open full cell content">
-                                                            &gt;
-                                                        </button>
-                                                    }
-                                                    <span class="hunt-cell-text">@FormatCell(cellValue)</span>
-                                                </div>
-                                            </td>
-                                        }
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
+            @if (_showSql && _result?.GeneratedSql is string sql)
+            {
+                <pre class="hunt-sql-preview">@sql</pre>
+            }
 
-                    @if (_result.RowCount > _pageSize)
+            @if (_result?.Success == true && _result.RowCount > 0)
+            {
+                <div class="hunt-results-tabs" role="tablist" aria-label="Result views">
+                    <button class="hunt-btn hunt-tab-button @GetTabButtonClass(ResultTab.Table)" role="tab" aria-selected="@(_activeTab == ResultTab.Table)" aria-controls="results-table-panel" id="results-table-tab" @onclick="() => SelectTab(ResultTab.Table)">Table</button>
+                    <button class="hunt-btn hunt-tab-button @GetTabButtonClass(ResultTab.Render)" role="tab" aria-selected="@(_activeTab == ResultTab.Render)" aria-controls="results-render-panel" id="results-render-tab" disabled="@(!HasRenderOutput)" @onclick="() => SelectTab(ResultTab.Render)">Render</button>
+                </div>
+
+                <div class="hunt-results-content">
+                    @if (_activeTab == ResultTab.Table)
                     {
-                        <div class="hunt-pagination">
-                            <button class="hunt-btn" disabled="@(_page == 0)"
-                                    @onclick="() => _page--">
-                                ◀ Prev
-                            </button>
-                            <span>Page @(_page + 1) of @TotalPages</span>
-                            <button class="hunt-btn" disabled="@(_page >= TotalPages - 1)"
-                                    @onclick="() => _page++">
-                                Next ▶
-                            </button>
+                        <div id="results-table-panel" role="tabpanel" aria-labelledby="results-table-tab" class="hunt-tab-content hunt-tab-active-content">
+                            <div class="hunt-table-wrapper">
+                                <table class="hunt-table">
+                                    <thead>
+                                        <tr>
+                                            @foreach (var col in _result.Columns)
+                                            {
+                                                <th class="hunt-th" @onclick="() => SortBy(col.Name)">
+                                                    @col.Name
+                                                    @if (_sortColumn == col.Name)
+                                                    {
+                                                        @(_sortAsc ? " ▲" : " ▼")
+                                                    }
+                                                </th>
+                                            }
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var rowIndex in VisibleRows())
+                                        {
+                                            <tr class="hunt-tr">
+                                                @for (int i = 0; i < _result.Columns.Count; i++)
+                                                {
+                                                    var cellIndex = i;
+                                                    var cellValue = _result.GetValue(rowIndex, cellIndex);
+                                                    var hasDrawer = ShouldShowCellDrawerButton(cellValue);
+                                                    <td class="hunt-td">
+                                                        <div class="hunt-cell-content">
+                                                            @if (hasDrawer)
+                                                            {
+                                                                <button class="hunt-cell-chevron"
+                                                                        @onclick:stopPropagation="true"
+                                                                        @onclick="() => OpenCellDrawer(_result.Columns[cellIndex].Name, cellValue, true)"
+                                                                        aria-label="Open full cell content">
+                                                                    &gt;
+                                                                </button>
+                                                            }
+                                                            <span class="hunt-cell-text">@FormatCell(cellValue)</span>
+                                                        </div>
+                                                    </td>
+                                                }
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            @if (_result.RowCount > _pageSize)
+                            {
+                                <div class="hunt-pagination">
+                                    <button class="hunt-btn" disabled="@(_page == 0)"
+                                            @onclick="() => _page--">
+                                        ◀ Prev
+                                    </button>
+                                    <span>Page @(_page + 1) of @TotalPages</span>
+                                    <button class="hunt-btn" disabled="@(_page >= TotalPages - 1)"
+                                            @onclick="() => _page++">
+                                        Next ▶
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (_activeTab == ResultTab.Render)
+                    {
+                        <div id="results-render-panel" role="tabpanel" aria-labelledby="results-render-tab" class="hunt-tab-content hunt-tab-active-content">
+                            <div class="hunt-render-panel">
+                                @{
+                                    var chart = RenderChartService.CachedChart;
+                                }
+                                <h4>@(string.IsNullOrWhiteSpace(_result.RenderSpec.Title) ? "Render" : _result.RenderSpec.Title)</h4>
+                                <div class="hunt-render-content">
+                                    @if (!(chart?.CanRender ?? false))
+                                    {
+                                        <div class="hunt-render-fallback">@chart?.Message ?? "No render data."</div>
+                                        <p class="hunt-render-note">Falling back to table output.</p>
+                                    }
+                                    else
+                                    {
+                                        <div class="hunt-chart-wrapper">
+                                            @if (RenderChartService.CachedChartOptions is { } chartOptions)
+                                            {
+                                                <div class="hunt-echart" @ref="_chartHost">
+                                                    <Vizor.ECharts.EChart @key="_chartRenderKey" Width="@_chartWidth" Height="@_chartHeight" Options="@chartOptions" />
+                                                </div>
+                                            }
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(chart?.Warning))
+                                        {
+                                            <p class="hunt-render-note">@chart.Warning</p>
+                                        }
+                                    }
+                                </div>
+                                @if (!(chart?.CanRender ?? false) || Hunting.Web.Services.RenderChartService.ShowLegend(chart))
+                                {
+                                    <div class="hunt-render-legend">
+                                        @foreach (var series in chart?.Series ?? [])
+                                        {
+                                            <span><i style="background-color:@series.Color"></i>@series.Name</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
                         </div>
                     }
                 </div>
-                }
-
-                @if (_activeTab == ResultTab.Render)
-                {
-                <div id="results-render-panel" role="tabpanel" aria-labelledby="results-render-tab" class="hunt-tab-content hunt-tab-active-content">
-                    <div class="hunt-render-panel">
-                        @{ var chart = RenderChartService.CachedChart; }
-                        <h4>@(string.IsNullOrWhiteSpace(_result.RenderSpec.Title) ? "Render" : _result.RenderSpec.Title)</h4>
-                        <div class="hunt-render-content">
-                            @if (!(chart?.CanRender ?? false))
-                            {
-                                <div class="hunt-render-fallback">@chart?.Message ?? "No render data."</div>
-                                <p class="hunt-render-note">Falling back to table output.</p>
-                            }
-                            else
-                            {
-                                <div class="hunt-chart-wrapper">
-                                    @if (RenderChartService.CachedChartOptions is { } chartOptions)
-                                    {
-                                        <div class="hunt-echart" @ref="_chartHost">
-                                            <Vizor.ECharts.EChart @key="_chartRenderKey" Width="@_chartWidth" Height="@_chartHeight" Options="@chartOptions" />
-                                        </div>
-                                    }
-                                </div>
-                                @if (!string.IsNullOrWhiteSpace(chart?.Warning))
-                                {
-                                    <p class="hunt-render-note">@chart.Warning</p>
-                                }
-                            }
-                        </div>
-                        @if (!(chart?.CanRender ?? false) || Hunting.Web.Services.RenderChartService.ShowLegend(chart))
-                        {
-                            <div class="hunt-render-legend">
-                                @foreach (var series in chart?.Series ?? [])
-                                {
-                                    <span><i style="background-color:@series.Color"></i>@series.Name</span>
-                                }
-                            </div>
-                        }
-                    </div>
-                </div>
-                }
-            </div>
-        }
-        else if (_result?.Success == true && _result.RowCount == 0)
-        {
-            <div class="hunt-empty">Query returned no rows.</div>
-        }
-    </section>
-</div>
+            }
+            else if (_result?.Success == true && _result.RowCount == 0)
+            {
+                <div class="hunt-empty">Query returned no rows.</div>
+            }
+        </section>
+    </div>
 </div>
 
 @if (_showDrawer)
@@ -656,12 +658,7 @@
 
         if (!_editorInitialized)
         {
-            var schema = Catalog.Views.Values
-                .Select(v => new Hunting.Web.Services.KqlTableSchema(
-                    v.Name,
-                    v.Columns.Select(c => c.Name).ToArray()))
-                .ToArray();
-
+            var schema = Catalog.BuildEditorSchemaMetadata();
             var editorSeed = await GetCachedEditorTextForInitializationAsync();
             var initialized = await TryInitializeEditorAsync(schema, editorSeed);
             if (!initialized)
@@ -718,7 +715,7 @@
     }
 
     private async Task<bool> TryInitializeEditorAsync(
-        IReadOnlyList<Hunting.Web.Services.KqlTableSchema> schema,
+        Hunting.Core.Schema.EditorSchemaMetadata schema,
         string initialValue)
     {
         Exception? lastException = null;

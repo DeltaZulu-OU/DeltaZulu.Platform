@@ -24,6 +24,13 @@ public static class SchemaConventions
 
     public static IReadOnlyList<CanonicalViewDef> CanonicalViews => MedallionSchemaCatalog.CanonicalViews;
 
+    /// <summary>
+    /// UI-agnostic editor metadata projected from the same Golden contracts used
+    /// for SQL view generation. Hosts can serialize this without referencing Web.
+    /// </summary>
+    public static EditorSchemaMetadata EditorMetadata
+        => EditorSchemaMetadata.FromCanonicalViews(CanonicalViews);
+
     public static void RegisterCanonicalViews(ApprovedViewCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(catalog);

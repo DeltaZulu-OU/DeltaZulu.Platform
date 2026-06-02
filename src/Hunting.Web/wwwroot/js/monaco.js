@@ -37,28 +37,25 @@ const registerKqlLanguage = async () => {
 
     monaco.languages.register({ id: 'kql' });
 
-    const keywords = [
-        'where', 'project', 'take', 'limit', 'extend', 'summarize',
-        'by', 'join', 'on', 'kind', 'lookup', 'sort', 'order', 'asc', 'desc',
-        'count', 'distinct', 'render', 'fork', 'union', 'mv-expand'
-    ];
-
-    const renderKinds = [
-        'table', 'timechart', 'linechart', 'barchart', 'columnchart', 'piechart', 'areachart', 'scatterchart'
-    ];
-    const operators = [
-        '==', '!=', '=~', '!~', '>', '<', '>=', '<=', 'contains', 'contains_cs',
-        '!contains', 'startswith', 'endswith', 'has', 'has_cs', 'and', 'or'
-    ];
+    const language = window.huntingMonaco?._schema?.language ?? {};
+    const keywords = language.keywords ?? [];
+    const renderKinds = language.renderKinds ?? [];
+    const operators = language.operators ?? [];
+    const hyphenatedKeywords = keywords.filter((keyword) => keyword.includes('-'));
+    const hyphenatedKeywordPattern = hyphenatedKeywords.length > 0
+        ? new RegExp(`(?:${hyphenatedKeywords.map((keyword) => keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?![\\w-])`)
+        : /(?!)/;
 
     monaco.languages.setMonarchTokensProvider('kql', {
         keywords,
         operators,
         tokenizer: {
             root: [
+                [hyphenatedKeywordPattern, 'keyword'],
                 [/[a-zA-Z_]\w*/, {
                     cases: {
                         '@keywords': 'keyword',
+                        '@operators': 'operator',
                         '@default': 'identifier'
                     }
                 }],
@@ -85,15 +82,18 @@ const registerKqlLanguage = async () => {
     });
 
     monaco.languages.registerCompletionItemProvider('kql', {
-        triggerCharacters: ['|', ' ', '.'],
+        triggerCharacters: ['|', ' ', '.', '-'],
         provideCompletionItems: (model, position) => {
             const word = model.getWordUntilPosition(position);
             const linePrefix = model.getLineContent(position.lineNumber).slice(0, position.column - 1);
+            const completionToken = linePrefix.match(/!?[A-Za-z_][\w-]*$/)?.[0] ?? '';
             const afterRender = /\|\s*render\s+[A-Za-z0-9_-]*$/i.test(linePrefix);
             const range = {
                 startLineNumber: position.lineNumber,
                 endLineNumber: position.lineNumber,
-                startColumn: word.startColumn,
+                startColumn: completionToken.length > 0
+                    ? position.column - completionToken.length
+                    : word.startColumn,
                 endColumn: word.endColumn
             };
 
@@ -128,20 +128,21 @@ const registerKqlLanguage = async () => {
                 }
             ];
 
-            const tableSuggestions = (window.huntingMonaco?._schema ?? []).map((table) => ({
+            const tableSuggestions = (window.huntingMonaco?._schema?.tables ?? []).map((table) => ({
                 label: table.name,
                 kind: monaco.languages.CompletionItemKind.Class,
                 insertText: table.name,
-                detail: 'Table',
+                detail: table.description ? `Table · ${table.description}` : 'Table',
                 range
             }));
 
-            const columnSuggestions = (window.huntingMonaco?._schema ?? [])
+            const columnSuggestions = (window.huntingMonaco?._schema?.tables ?? [])
                 .flatMap((table) => (table.columns ?? []).map((column) => ({
-                    label: column,
+                    label: column.name,
                     kind: monaco.languages.CompletionItemKind.Field,
-                    insertText: column,
-                    detail: `Column · ${table.name}`,
+                    insertText: column.name,
+                    detail: `Column · ${table.name} · ${column.type}${column.nullable ? ' · nullable' : ''}${column.dynamic ? ' · dynamic' : ''}`,
+                    documentation: column.description,
                     range
                 })));
 
@@ -218,11 +219,13 @@ const registerKqlLanguage = async () => {
 
 window.huntingMonaco = {
     _editors: {},
-    _schema: [],
+    _schema: { tables: [], language: { keywords: [], operators: [], renderKinds: [] } },
     registerKqlLanguage,
     isReady: () => typeof window.monaco !== 'undefined',
     setSchema: (schema) => {
-        window.huntingMonaco._schema = Array.isArray(schema) ? schema : [];
+        window.huntingMonaco._schema = Array.isArray(schema?.tables) && schema?.language
+            ? schema
+            : { tables: [], language: { keywords: [], operators: [], renderKinds: [] } };
     },
     init: async (dotNetRef, containerId, initialValue) => {
         await window.ensureMonaco();

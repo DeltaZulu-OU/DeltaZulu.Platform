@@ -60,6 +60,19 @@ public sealed class ApprovedViewCatalog
         => _views.TryGetValue(tableName, out var view) ? view : null;
 
     /// <summary>
+    /// Builds UI-agnostic editor metadata from the approved public hunting views.
+    /// The returned snapshot can be serialized by any host without coupling the
+    /// schema library to a specific editor integration.
+    /// </summary>
+    public EditorSchemaMetadata BuildEditorSchemaMetadata()
+    {
+        lock (_gate)
+        {
+            return EditorSchemaMetadata.FromCanonicalViews(_views.Values);
+        }
+    }
+
+    /// <summary>
     /// Builds the Kusto.Language GlobalState with all approved views
     /// registered as TableSymbol instances in a synthetic database.
     /// </summary>
