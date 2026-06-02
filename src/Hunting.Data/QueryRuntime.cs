@@ -399,13 +399,35 @@ public sealed class QueryRuntime
         }
         catch (DuckDBException ex)
         {
-            diagnostics.AddError(DiagnosticPhase.Execute, NormalizeDuckDbError(ex.Message), BuildDeveloperDetail(sql, ex.Message), code: QueryDiagnosticCodes.ExecuteDuckDbFailed);
-            return QueryStreamResult.FromDiagnostics(diagnostics, debugTrace, renderSpec);
+            diagnostics.AddError(
+                DiagnosticPhase.Execute,
+                NormalizeDuckDbError(ex.Message),
+                BuildDeveloperDetail(sql, ex.Message),
+                code: QueryDiagnosticCodes.ExecuteDuckDbFailed);
+
+            return QueryStreamResult.FromDiagnostics(
+                diagnostics,
+                debugTrace,
+                renderSpec,
+                generatedSql: _developerMode ? sql : null,
+                plannerStatsJson: plannerStats,
+                sqlShapeStatsJson: sqlShapeStats);
         }
         catch (Exception ex)
         {
-            diagnostics.AddError(DiagnosticPhase.Execute, "An internal error occurred while executing the query.", BuildDeveloperDetail(sql, $"{ex.GetType().Name}: {ex.Message}"), code: QueryDiagnosticCodes.ExecuteUnhandledFailed);
-            return QueryStreamResult.FromDiagnostics(diagnostics, debugTrace, renderSpec);
+            diagnostics.AddError(
+                DiagnosticPhase.Execute,
+                "An internal error occurred while executing the query.",
+                BuildDeveloperDetail(sql, $"{ex.GetType().Name}: {ex.Message}"),
+                code: QueryDiagnosticCodes.ExecuteUnhandledFailed);
+
+            return QueryStreamResult.FromDiagnostics(
+                diagnostics,
+                debugTrace,
+                renderSpec,
+                generatedSql: _developerMode ? sql : null,
+                plannerStatsJson: plannerStats,
+                sqlShapeStatsJson: sqlShapeStats);
         }
     }
 
@@ -859,13 +881,22 @@ public sealed class QueryStreamResult
         RenderSpec = renderSpec
     };
 
-    public static QueryStreamResult FromDiagnostics(DiagnosticBag diagnostics, List<string>? debugTrace = null, RenderSpec? renderSpec = null) => new()
-    {
-        Success = false,
-        DebugTrace = debugTrace ?? [],
-        Diagnostics = diagnostics,
-        RenderSpec = renderSpec ?? RenderSpecDefaults.Table()
-    };
+    public static QueryStreamResult FromDiagnostics(
+        DiagnosticBag diagnostics,
+        List<string>? debugTrace = null,
+        RenderSpec? renderSpec = null,
+        string? generatedSql = null,
+        string? plannerStatsJson = null,
+        string? sqlShapeStatsJson = null) => new()
+        {
+            Success = false,
+            DebugTrace = debugTrace ?? [],
+            Diagnostics = diagnostics,
+            RenderSpec = renderSpec ?? RenderSpecDefaults.Table(),
+            GeneratedSql = generatedSql,
+            PlannerStatsJson = plannerStatsJson,
+            SqlShapeStatsJson = sqlShapeStatsJson
+        };
 }
 
 public sealed class QueryTabularResult

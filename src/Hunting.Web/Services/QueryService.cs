@@ -79,7 +79,17 @@ public sealed class QueryService : IDisposable
             QueryResult result;
             if (!streamResult.Success)
             {
-                result = QueryResult.FromDiagnostics(streamResult.Diagnostics, streamResult.DebugTrace.Count > 0 ? [.. streamResult.DebugTrace] : null, streamResult.RenderSpec);
+                _logger.LogWarning(
+                    "Query failed. KQL: {Kql}. SQL: {GeneratedSql}. Diagnostics: {Diagnostics}. Trace: {Trace}",
+                    kql,
+                    streamResult.GeneratedSql,
+                    string.Join(" | ", streamResult.Diagnostics.All.Select(d => d.Message)),
+                    string.Join(" | ", streamResult.DebugTrace));
+
+                result = QueryResult.FromDiagnostics(
+                    streamResult.Diagnostics,
+                    streamResult.DebugTrace.Count > 0 ? [.. streamResult.DebugTrace] : null,
+                    streamResult.RenderSpec);
             }
             else
             {

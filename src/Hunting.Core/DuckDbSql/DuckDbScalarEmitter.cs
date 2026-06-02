@@ -1,5 +1,6 @@
 namespace Hunting.Core.DuckDbSql;
 
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using QueryModel;
@@ -31,6 +32,7 @@ internal sealed class DuckDbScalarEmitter
                     => $"{_context.JoinRightAlias}.{DuckDbSqlText.EscapeIdent(col.Name)}",
         ColumnRef col when _context.ScalarBindings.TryGetValue(col.Name, out var bound) => bound,
         ColumnRef col => DuckDbSqlText.EscapeIdent(col.Name),
+        LiteralScalar { Value: DateTime dt } => EmitTimestampLiteral(dt),
         LiteralScalar lit => EmitLiteral(lit),
         BinaryScalar bin => EmitBinary(bin),
         UnaryScalar un => EmitUnary(un),
@@ -245,7 +247,7 @@ internal sealed class DuckDbScalarEmitter
         if (win.Window.PartitionBy.Count > 0)
         {
             sb.Append("PARTITION BY ");
-            sb.Append(string.Join(", ", win.Window.PartitionBy.Select(EmitScalar)));
+            sb.AppendJoin(", ", win.Window.PartitionBy.Select(EmitScalar));
             if (win.Window.OrderBy.Count > 0)
             {
                 sb.Append(' ');
@@ -255,7 +257,7 @@ internal sealed class DuckDbScalarEmitter
         if (win.Window.OrderBy.Count > 0)
         {
             sb.Append("ORDER BY ");
-            sb.Append(string.Join(", ", win.Window.OrderBy.Select(EmitSortExpr)));
+            sb.AppendJoin(", ", win.Window.OrderBy.Select(EmitSortExpr));
         }
 
         if (win.Window.Frame is { } frame)
@@ -530,6 +532,18 @@ internal sealed class DuckDbScalarEmitter
         // For dynamic operands: use DuckDB's regexp_escape() function
         return $"regexp_escape({emitted})";
     }
+    private static string EmitTimestampLiteral(DateTime value)
+    {
+        var utc = value.Kind switch
+        {
+            DateTimeKind.Local => value.ToUniversalTime(),
+            DateTimeKind.Utc => value,
+            _ => value
+        };
 
+        return "TIMESTAMP '" +
+               utc.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) +
+               "'";
+    }
     #endregion Helpers
 }

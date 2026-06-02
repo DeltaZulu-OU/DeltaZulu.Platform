@@ -1,5 +1,6 @@
 namespace Hunting.Web.Services;
 
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 public sealed partial class QueryToolbarState
@@ -139,8 +140,13 @@ public sealed partial class QueryToolbarState
             return query;
         }
 
-        var from = range.Value.From.ToString("yyyy-MM-dd HH:mm:ss");
-        var to = range.Value.To?.ToString("yyyy-MM-dd HH:mm:ss");
+        var from = range.Value.From
+            .ToUniversalTime()
+            .ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+
+        var to = range.Value.To?
+            .ToUniversalTime()
+            .ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
 
         if (IsSqlQuery(query))
         {
@@ -154,8 +160,8 @@ public sealed partial class QueryToolbarState
         }
 
         var kqlClause = to is null
-            ? $"Timestamp >= datetime({from})"
-            : $"Timestamp >= datetime({from}) and Timestamp <= datetime({to})";
+            ? $"Timestamp >= datetime('{from}')"
+            : $"Timestamp >= datetime('{from}') and Timestamp <= datetime('{to}')";
 
         return AppendKqlPipelineOperatorBeforeTerminalRender(query, $"where {kqlClause}");
     }
