@@ -122,6 +122,26 @@ public sealed class SchemaEmitter
 
     public string EmitParserView(ParserViewDef view)
     {
+        ArgumentNullException.ThrowIfNull(view);
+
+        if (view.Columns is null)
+        {
+            throw new InvalidOperationException(
+                $"Parser view {view.QualifiedName} has null column metadata.");
+        }
+
+        if (view.Mapping is null)
+        {
+            throw new InvalidOperationException(
+                $"Parser view {view.QualifiedName} has null mapping metadata.");
+        }
+
+        if (view.Mapping.Projections is null)
+        {
+            throw new InvalidOperationException(
+                $"Parser view {view.QualifiedName} has null projection metadata.");
+        }
+
         var sb = new StringBuilder();
         sb.Append("CREATE OR REPLACE VIEW ");
         sb.Append(DuckDbSqlText.EscapeQualifiedIdent(view.QualifiedName));
