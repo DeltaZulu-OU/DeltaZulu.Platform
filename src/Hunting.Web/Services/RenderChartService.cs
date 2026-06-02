@@ -1,5 +1,3 @@
-using System.Linq;
-
 namespace Hunting.Web.Services;
 
 using Hunting.Core.Render;
@@ -39,6 +37,25 @@ public sealed class RenderChartService
     public string? LastErrorMessage => _lastErrorMessage;
 
     /// <summary>
+    /// Determines whether the legend should be hidden based on the chart model.
+    /// </summary>
+    public static bool ShowLegend(RenderChartModel chart)
+    {
+        var legendValue = chart.Legend?.Trim().ToLowerInvariant();
+        return legendValue is "hidden" or "hide" or "none" or "off";
+    }
+
+    /// <summary>
+    /// Clears the cached chart and options.
+    /// </summary>
+    public void ClearCache()
+    {
+        _cachedChart = null;
+        _cachedChartOptions = null;
+        _lastErrorMessage = null;
+    }
+
+    /// <summary>
     /// Rebuilds the chart cache from the given query result.
     /// </summary>
     public void RebuildCache(QueryResult? result)
@@ -57,30 +74,6 @@ public sealed class RenderChartService
             _cachedChartOptions = null;
         }
     }
-
-    /// <summary>
-    /// Clears the cached chart and options.
-    /// </summary>
-    public void ClearCache()
-    {
-        _cachedChart = null;
-        _cachedChartOptions = null;
-        _lastErrorMessage = null;
-    }
-
-    /// <summary>
-    /// Builds a render chart model from query results.
-    /// </summary>
-    private RenderChartModel BuildChart(QueryResult? result)
-    {
-        if (result is null)
-        {
-            return new RenderChartModel(false, "No render data.", string.Empty, string.Empty, null, [], [], 0, 1, null, false, RenderKind.Table);
-        }
-
-        return _renderChartBuilder.Build(result);
-    }
-
     /// <summary>
     /// Builds EChart options from a render chart model.
     /// </summary>
@@ -131,6 +124,7 @@ public sealed class RenderChartService
                 trigger = TooltipTrigger.Item; // CHANGE: Use Item for Scatter
                 series.AddRange(chart.Series.Select(s => new ScatterSeries { Name = s.Name, Data = s.Values }));
                 break;
+
             default:
                 throw new NotSupportedException($"Render kind '{chart.Kind}' is not yet supported in the chart adapter.");
         }
@@ -150,11 +144,15 @@ public sealed class RenderChartService
     }
 
     /// <summary>
-    /// Determines whether the legend should be hidden based on the chart model.
+    /// Builds a render chart model from query results.
     /// </summary>
-    public static bool ShowLegend(RenderChartModel chart)
+    private RenderChartModel BuildChart(QueryResult? result)
     {
-        var legendValue = chart.Legend?.Trim().ToLowerInvariant();
-        return legendValue is "hidden" or "hide" or "none" or "off";
+        if (result is null)
+        {
+            return new RenderChartModel(false, "No render data.", string.Empty, string.Empty, null, [], [], 0, 1, null, false, RenderKind.Table);
+        }
+
+        return _renderChartBuilder.Build(result);
     }
 }
