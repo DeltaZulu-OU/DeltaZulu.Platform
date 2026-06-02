@@ -192,7 +192,6 @@
                                 @{
                                     var chart = RenderChartService.CachedChart;
                                 }
-                                <h4>@(string.IsNullOrWhiteSpace(_result.RenderSpec.Title) ? "Render" : _result.RenderSpec.Title)</h4>
                                 <div class="hunt-render-content">
                                     @if (!(chart?.CanRender ?? false))
                                     {

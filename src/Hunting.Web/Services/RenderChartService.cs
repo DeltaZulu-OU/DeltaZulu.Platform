@@ -131,18 +131,29 @@ public sealed class RenderChartService
                 throw new NotSupportedException($"Render kind '{chart.Kind}' is not yet supported in the chart adapter.");
         }
 
-        return new ChartOptions
+        var opt = new ChartOptions
         {
             Tooltip = new Tooltip { Trigger = trigger, Show = true }, // Always enable tooltip display — Show = true for clarity
             Legend = new Legend { Show = showLegend },
-            XAxis = new XAxis
-            {
-                Type = AxisType.Category,
-                Data = chart.XLabels.Select(v => new AxisData() { Value = v }).ToList()
-            },
-            YAxis = new YAxis { Type = AxisType.Value },
             Series = series
         };
+
+        if (chart.Kind != RenderKind.Piechart) // Pie charts don't use XAxis
+        {
+            opt.XAxis = new XAxis
+            {
+                Type = AxisType.Category,
+                Data = chart.XLabels.Select(v => new AxisData { Value = v }).ToList()
+            };
+            opt.YAxis = new YAxis { Type = AxisType.Value };
+        }
+        else
+        {
+            opt.XAxis = new XAxis() { Show = false };
+            opt.YAxis = new YAxis() { Show = false };
+        }
+
+        return opt;
     }
 
     /// <summary>
