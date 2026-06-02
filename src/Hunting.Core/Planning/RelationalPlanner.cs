@@ -2,14 +2,14 @@ namespace Hunting.Core.Planning;
 
 using Hunting.Core.QueryModel;
 
-public interface IRelationalPlanner
-{
-    RelNode Plan(RelNode root, PlannerContext context);
-}
-
 public interface IPlannerTelemetry
 {
     PlannerRunStats? LastRunStats { get; }
+}
+
+public interface IRelationalPlanner
+{
+    RelNode Plan(RelNode root, PlannerContext context);
 }
 
 public sealed record PlannerContext(bool Enabled, int MaxIterations = 3, int MaxRuleApplications = 10_000);
@@ -111,6 +111,891 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
         return current;
     }
 
+    private static string BoundKey(WindowBound b) =>
+        $"{b.Kind}:{(b.Offset is null ? "" : ScalarKey(b.Offset))}";
+
+    private static void CollectColumnRefs(ScalarExpr expr, ISet<string> sink)
+    {
+        switch (expr)
+        {
+            case ColumnRef c:
+                sink.Add(c.Name);
+                break;
+
+            case BinaryScalar b:
+                CollectColumnRefs(b.Left, sink);
+                CollectColumnRefs(b.Right, sink);
+                break;
+
+            case UnaryScalar u:
+                CollectColumnRefs(u.Operand, sink);
+                break;
+
+            case FunctionCall f:
+                foreach (var a in f.Args)
+                {
+                    CollectColumnRefs(a, sink);
+                }
+
+                break;
+
+            case CaseScalar c:
+                foreach (var (w, t) in c.Branches)
+                {
+                    CollectColumnRefs(w, sink);
+                    CollectColumnRefs(t, sink);
+                }
+                CollectColumnRefs(c.Else, sink);
+                break;
+
+            case WindowScalarExpr w:
+                foreach (var a in w.Args)
+                {
+                    CollectColumnRefs(a, sink);
+                }
+
+                foreach (var p in w.Window.PartitionBy)
+                {
+                    CollectColumnRefs(p, sink);
+                }
+
+                foreach (var o in w.Window.OrderBy)
+                {
+                    CollectColumnRefs(o.Expression, sink);
+                }
+
+                break;
+
+            case ListScalar l:
+                foreach (var i in l.Items)
+                {
+                    CollectColumnRefs(i, sink);
+                }
+
+                break;
+        }
+    }
+
+    private static bool ContainsUnqualifiedColumnRef(ScalarExpr expr, string name)
+    {
+        switch (expr)
+        {
+            case ColumnRef c:
+                return c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase);
+
+            case BinaryScalar b:
+                return ContainsUnqualifiedColumnRef(b.Left, name) || ContainsUnqualifiedColumnRef(b.Right, name);
+
+            case UnaryScalar u:
+                return ContainsUnqualifiedColumnRef(u.Operand, name);
+
+            case FunctionCall f:
+                foreach (var a in f.Args)
+                {
+                    if (ContainsUnqualifiedColumnRef(a, name))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+
+            case CaseScalar cs:
+                foreach (var (when, then) in cs.Branches)
+                {
+                    if (ContainsUnqualifiedColumnRef(when, name) || ContainsUnqualifiedColumnRef(then, name))
+                    {
+                        return true;
+                    }
+                }
+
+                return ContainsUnqualifiedColumnRef(cs.Else, name);
+
+            case WindowScalarExpr w:
+                foreach (var a in w.Args)
+                {
+                    if (ContainsUnqualifiedColumnRef(a, name))
+                    {
+                        return true;
+                    }
+                }
+
+                foreach (var p in w.Window.PartitionBy)
+                {
+                    if (ContainsUnqualifiedColumnRef(p, name))
+                    {
+                        return true;
+                    }
+                }
+
+                foreach (var o in w.Window.OrderBy)
+                {
+                    if (ContainsUnqualifiedColumnRef(o.Expression, name))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+
+            case ListScalar l:
+                foreach (var i in l.Items)
+                {
+                    if (ContainsUnqualifiedColumnRef(i, name))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+
+            default:
+                return false;
+        }
+    }
+
+    private static int CountColumnRefOccurrences(ScalarExpr expr, string name)
+    {
+        var count = 0;
+        void Visit(ScalarExpr e)
+        {
+            switch (e)
+            {
+                case ColumnRef c when c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase):
+                    count++;
+                    break;
+
+                case BinaryScalar b:
+                    Visit(b.Left);
+                    Visit(b.Right);
+                    break;
+
+                case UnaryScalar u:
+                    Visit(u.Operand);
+                    break;
+
+                case FunctionCall f:
+                    foreach (var a in f.Args)
+                    {
+                        Visit(a);
+                    }
+
+                    break;
+
+                case CaseScalar cs:
+                    foreach (var (w, t) in cs.Branches)
+                    {
+                        Visit(w);
+                        Visit(t);
+                    }
+                    Visit(cs.Else);
+                    break;
+
+                case WindowScalarExpr w:
+                    foreach (var a in w.Args)
+                    {
+                        Visit(a);
+                    }
+
+                    foreach (var p in w.Window.PartitionBy)
+                    {
+                        Visit(p);
+                    }
+
+                    foreach (var o in w.Window.OrderBy)
+                    {
+                        Visit(o.Expression);
+                    }
+
+                    break;
+
+                case ListScalar l:
+                    foreach (var i in l.Items)
+                    {
+                        Visit(i);
+                    }
+
+                    break;
+            }
+        }
+
+        Visit(expr);
+        return count;
+    }
+
+    private static string FrameKey(WindowFrame f) =>
+        $"{f.Type}:{BoundKey(f.Start)}:{BoundKey(f.End)}";
+
+    private static bool IsIdentityProjection(IReadOnlyList<ProjectionExpr> projections)
+    {
+        if (projections.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (var proj in projections)
+        {
+            if (proj.Expression is not ColumnRef col)
+            {
+                return false;
+            }
+
+            // KQL column names are case-insensitive, so an identity projection may
+            // differ only in casing from its source column.
+            if (!string.Equals(proj.Alias, col.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static IReadOnlyList<ScalarExpr> RemapArgs(IReadOnlyList<ScalarExpr> args, IReadOnlyDictionary<string, string> aliasToSource)
+    {
+        if (args.Count == 0)
+        {
+            return [];
+        }
+
+        var remapped = new ScalarExpr[args.Count];
+        for (var i = 0; i < args.Count; i++)
+        {
+            remapped[i] = RemapColumns(args[i], aliasToSource);
+        }
+
+        return remapped;
+    }
+
+    private static IReadOnlyList<(ScalarExpr When, ScalarExpr Then)> RemapBranches(
+        IReadOnlyList<(ScalarExpr When, ScalarExpr Then)> branches,
+        IReadOnlyDictionary<string, string> aliasToSource)
+    {
+        if (branches.Count == 0)
+        {
+            return [];
+        }
+
+        var mapped = new (ScalarExpr When, ScalarExpr Then)[branches.Count];
+        for (var i = 0; i < branches.Count; i++)
+        {
+            mapped[i] = (RemapColumns(branches[i].When, aliasToSource), RemapColumns(branches[i].Then, aliasToSource));
+        }
+
+        return mapped;
+    }
+
+    private static ScalarExpr RemapColumns(ScalarExpr expr, IReadOnlyDictionary<string, string> aliasToSource)
+    {
+        if (aliasToSource.Count == 0)
+        {
+            return expr;
+        }
+
+        return expr switch
+        {
+            ColumnRef c when aliasToSource.TryGetValue(c.Name, out var src) => new ColumnRef(src),
+            BinaryScalar b => b with { Left = RemapColumns(b.Left, aliasToSource), Right = RemapColumns(b.Right, aliasToSource) },
+            UnaryScalar u => u with { Operand = RemapColumns(u.Operand, aliasToSource) },
+            FunctionCall f => f with { Args = RemapArgs(f.Args, aliasToSource) },
+            CaseScalar c => c with
+            {
+                Branches = RemapBranches(c.Branches, aliasToSource),
+                Else = RemapColumns(c.Else, aliasToSource)
+            },
+            WindowScalarExpr w => w with
+            {
+                Args = RemapArgs(w.Args, aliasToSource),
+                Window = w.Window with
+                {
+                    PartitionBy = RemapArgs(w.Window.PartitionBy, aliasToSource),
+                    OrderBy = RemapSorts(w.Window.OrderBy, aliasToSource)
+                }
+            },
+            ListScalar l => l with { Items = RemapArgs(l.Items, aliasToSource) },
+            _ => expr
+        };
+    }
+
+    private static IReadOnlyList<SortExpr> RemapSorts(IReadOnlyList<SortExpr> sorts, IReadOnlyDictionary<string, string> aliasToSource)
+    {
+        if (sorts.Count == 0)
+        {
+            return [];
+        }
+
+        var mapped = new SortExpr[sorts.Count];
+        for (var i = 0; i < sorts.Count; i++)
+        {
+            mapped[i] = sorts[i] with { Expression = RemapColumns(sorts[i].Expression, aliasToSource) };
+        }
+
+        return mapped;
+    }
+
+    private static bool SameColumnSequence(
+        IReadOnlyList<ProjectionExpr> outer,
+        IReadOnlyList<ProjectionExpr> inner)
+    {
+        if (outer.Count != inner.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < outer.Count; i++)
+        {
+            if (!string.Equals(outer[i].Alias, inner[i].Alias, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static string ScalarKey(ScalarExpr expr) => expr switch
+    {
+        // Column names are case-insensitive in KQL; qualifier distinguishes join sides.
+        ColumnRef c => $"col:{c.Qualifier}:{c.Name.ToLowerInvariant()}",
+        LiteralScalar l => $"lit:{l.Kind}:{l.Value}",
+        BinaryScalar b => $"bin:{b.Op}:({ScalarKey(b.Left)}):({ScalarKey(b.Right)})",
+        UnaryScalar u => $"un:{u.Op}:({ScalarKey(u.Operand)})",
+        FunctionCall f => $"fn:{f.Name.ToLowerInvariant()}({string.Join(',', f.Args.Select(ScalarKey))})",
+        CaseScalar c => $"case:{string.Join('|', c.Branches.Select(b => ScalarKey(b.When) + "=>" + ScalarKey(b.Then)))}:else:{ScalarKey(c.Else)}",
+        // The window specification (partitioning, ordering, frame) is part of the
+        // expression's identity. Omitting it would treat two window functions with
+        // different partitions as a common subexpression and deduplicate them,
+        // producing wrong analytics.
+        WindowScalarExpr w => $"win:{w.FunctionName}({string.Join(',', w.Args.Select(ScalarKey))}){WindowKey(w.Window)}",
+        ListScalar l => $"list:{string.Join(',', l.Items.Select(ScalarKey))}",
+        StarExpr => "star",
+        _ => expr.ToString() ?? expr.GetType().Name
+    };
+
+    private static string SortKey(SortExpr s) => $"{ScalarKey(s.Expression)}:{s.Direction}:{s.Nulls}";
+
+    private static IReadOnlyList<ScalarExpr> SubstituteArgs(IReadOnlyList<ScalarExpr> args, string name, ScalarExpr replacement)
+    {
+        if (args.Count == 0)
+        {
+            return [];
+        }
+
+        var substituted = new ScalarExpr[args.Count];
+        for (var i = 0; i < args.Count; i++)
+        {
+            substituted[i] = SubstituteColumn(args[i], name, replacement);
+        }
+
+        return substituted;
+    }
+
+    private static IReadOnlyList<(ScalarExpr When, ScalarExpr Then)> SubstituteBranches(
+        IReadOnlyList<(ScalarExpr When, ScalarExpr Then)> branches,
+        string name,
+        ScalarExpr replacement)
+    {
+        if (branches.Count == 0)
+        {
+            return [];
+        }
+
+        var mapped = new (ScalarExpr When, ScalarExpr Then)[branches.Count];
+        for (var i = 0; i < branches.Count; i++)
+        {
+            mapped[i] = (SubstituteColumn(branches[i].When, name, replacement), SubstituteColumn(branches[i].Then, name, replacement));
+        }
+
+        return mapped;
+    }
+
+    private static ScalarExpr SubstituteColumn(ScalarExpr expr, string name, ScalarExpr replacement)
+    {
+        if (!ContainsUnqualifiedColumnRef(expr, name))
+        {
+            return expr;
+        }
+
+        return expr switch
+        {
+            ColumnRef c when c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase) => replacement,
+            BinaryScalar b => b with { Left = SubstituteColumn(b.Left, name, replacement), Right = SubstituteColumn(b.Right, name, replacement) },
+            UnaryScalar u => u with { Operand = SubstituteColumn(u.Operand, name, replacement) },
+            FunctionCall f => f with { Args = SubstituteArgs(f.Args, name, replacement) },
+            CaseScalar cs => cs with
+            {
+                Branches = SubstituteBranches(cs.Branches, name, replacement),
+                Else = SubstituteColumn(cs.Else, name, replacement)
+            },
+            WindowScalarExpr w => w with
+            {
+                Args = SubstituteArgs(w.Args, name, replacement),
+                Window = w.Window with
+                {
+                    PartitionBy = SubstituteArgs(w.Window.PartitionBy, name, replacement),
+                    OrderBy = SubstituteSorts(w.Window.OrderBy, name, replacement)
+                }
+            },
+            ListScalar l => l with { Items = SubstituteArgs(l.Items, name, replacement) },
+            _ => expr
+        };
+    }
+
+    private static IReadOnlyList<SortExpr> SubstituteSorts(IReadOnlyList<SortExpr> sorts, string name, ScalarExpr replacement)
+    {
+        if (sorts.Count == 0)
+        {
+            return [];
+        }
+
+        var mapped = new SortExpr[sorts.Count];
+        for (var i = 0; i < sorts.Count; i++)
+        {
+            mapped[i] = sorts[i] with { Expression = SubstituteColumn(sorts[i].Expression, name, replacement) };
+        }
+
+        return mapped;
+    }
+
+    private static bool TryPushFilterBelowProject(ScalarExpr predicate, ProjectNode project, out RelNode rewritten)
+    {
+        rewritten = project;
+
+        var required = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        CollectColumnRefs(predicate, required);
+
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in project.Projections)
+        {
+            if (p.Expression is not ColumnRef c)
+            {
+                continue;
+            }
+
+            if (map.ContainsKey(p.Alias))
+            {
+                return false;
+            }
+
+            map[p.Alias] = c.Name;
+        }
+
+        foreach (var col in required)
+        {
+            if (!map.ContainsKey(col))
+            {
+                return false;
+            }
+        }
+
+        var remapped = RemapColumns(predicate, map);
+        rewritten = new ProjectNode(new FilterNode(project.Input, remapped), project.Projections);
+        return true;
+    }
+
+    private static string WindowKey(WindowSpec spec)
+    {
+        var partition = string.Join(',', spec.PartitionBy.Select(ScalarKey));
+        var order = string.Join(',', spec.OrderBy.Select(SortKey));
+        var frame = spec.Frame is null ? "" : FrameKey(spec.Frame);
+        return $"[part:{partition}|order:{order}|frame:{frame}]";
+    }
+
+    private sealed class CommonScalarHoistPass : IPlannerPass
+    {
+        private const int MinDuplicateCountToHoist = 2;
+        private const int MinScalarComplexityToHoist = 3;
+
+        public string Name => "CommonScalarHoistPass";
+
+        public RelNode Apply(RelNode node, out bool changed, out int attempted, out int applied)
+        {
+            attempted = 0;
+            applied = 0;
+            var rewritten = RewriteNode(node, ref attempted, ref applied);
+            changed = rewritten != node;
+            return rewritten;
+        }
+
+        private static int EstimateScalarComplexity(ScalarExpr expression) => expression switch
+        {
+            ColumnRef => 1,
+            LiteralScalar => 1,
+            UnaryScalar u => 1 + EstimateScalarComplexity(u.Operand),
+            BinaryScalar b => 1 + EstimateScalarComplexity(b.Left) + EstimateScalarComplexity(b.Right),
+            FunctionCall f => 2 + f.Args.Sum(EstimateScalarComplexity),
+            CaseScalar c => 2 + c.Branches.Sum(b => EstimateScalarComplexity(b.When) + EstimateScalarComplexity(b.Then)) + EstimateScalarComplexity(c.Else),
+            ListScalar l => 1 + l.Items.Sum(EstimateScalarComplexity),
+            WindowScalarExpr w => 3 + w.Args.Sum(EstimateScalarComplexity) + w.Window.PartitionBy.Sum(EstimateScalarComplexity) + w.Window.OrderBy.Sum(o => EstimateScalarComplexity(o.Expression)),
+            _ => 2
+        };
+
+        private static RelNode RewriteExtend(ExtendNode e, ref int attempted, ref int applied)
+        {
+            var input = RewriteNode(e.Input, ref attempted, ref applied);
+            var rewrittenExt = TryHoistExtensions(e.Extensions, ref attempted, ref applied, out var changed);
+            return !changed ? input == e.Input ? e : e with { Input = input } : new ExtendNode(input, rewrittenExt);
+        }
+
+        private static RelNode RewriteNode(RelNode node, ref int attempted, ref int applied) => node switch
+        {
+            ProjectNode p => RewriteProject(p, ref attempted, ref applied),
+            ExtendNode e => RewriteExtend(e, ref attempted, ref applied),
+            FilterNode f => f with { Input = RewriteNode(f.Input, ref attempted, ref applied) },
+            AggregateNode a => a with { Input = RewriteNode(a.Input, ref attempted, ref applied) },
+            SortNode s => s with { Input = RewriteNode(s.Input, ref attempted, ref applied) },
+            LimitNode l => l with { Input = RewriteNode(l.Input, ref attempted, ref applied) },
+            DistinctNode d => d with { Input = RewriteNode(d.Input, ref attempted, ref applied) },
+            JoinNode j => j with { Left = RewriteNode(j.Left, ref attempted, ref applied), Right = RewriteNode(j.Right, ref attempted, ref applied) },
+            LetBindingNode lb => lb with { Body = RewriteNode(lb.Body, ref attempted, ref applied), TabularValue = lb.TabularValue is null ? null : RewriteNode(lb.TabularValue, ref attempted, ref applied) },
+            _ => node
+        };
+
+        private static RelNode RewriteProject(ProjectNode p, ref int attempted, ref int applied)
+        {
+            var input = RewriteNode(p.Input, ref attempted, ref applied);
+            var ext = TryHoist(p.Projections, input, ref attempted, ref applied);
+            return ext ?? (input == p.Input ? p : p with { Input = input });
+        }
+
+        private static bool ShouldHoist(IReadOnlyDictionary<string, int> keyCounts, string key, ScalarExpr expression)
+        {
+            if (!keyCounts.TryGetValue(key, out var count) || count < MinDuplicateCountToHoist)
+            {
+                return false;
+            }
+
+            return EstimateScalarComplexity(expression) >= MinScalarComplexityToHoist;
+        }
+
+        private static ProjectNode? TryHoist(IReadOnlyList<ProjectionExpr> projections, RelNode input, ref int attempted, ref int applied)
+        {
+            var firstByExpr = new Dictionary<string, string>(StringComparer.Ordinal);
+            var keyCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var projection in projections)
+            {
+                if (projection.Expression is ColumnRef)
+                {
+                    continue;
+                }
+
+                var key = ScalarKey(projection.Expression);
+                keyCounts.TryGetValue(key, out var count);
+                keyCounts[key] = count + 1;
+            }
+
+            var ext = new List<ProjectionExpr>();
+            var outProj = new List<ProjectionExpr>();
+            var changed = false;
+
+            foreach (var p in projections)
+            {
+                attempted++;
+                if (p.Expression is ColumnRef)
+                {
+                    outProj.Add(p);
+                    continue;
+                }
+
+                var key = ScalarKey(p.Expression);
+                if (!ShouldHoist(keyCounts, key, p.Expression))
+                {
+                    outProj.Add(p);
+                    continue;
+                }
+
+                if (firstByExpr.TryGetValue(key, out var existingAlias))
+                {
+                    outProj.Add(new ProjectionExpr(p.Alias, new ColumnRef(existingAlias)));
+                    applied++;
+                    changed = true;
+                }
+                else
+                {
+                    firstByExpr[key] = p.Alias;
+                    // The ExtendNode computes the expression once as p.Alias; the
+                    // outer projection must reference that hoisted column, not
+                    // re-emit the full expression (which would evaluate it twice).
+                    ext.Add(p);
+                    outProj.Add(new ProjectionExpr(p.Alias, new ColumnRef(p.Alias)));
+                }
+            }
+
+            if (!changed)
+            {
+                return null;
+            }
+
+            var inner = new ExtendNode(input, ext);
+            return new ProjectNode(inner, outProj);
+        }
+
+        private static IReadOnlyList<ProjectionExpr> TryHoistExtensions(
+                            IReadOnlyList<ProjectionExpr> extensions,
+            ref int attempted,
+            ref int applied,
+            out bool changed)
+        {
+            var firstByExpr = new Dictionary<string, string>(StringComparer.Ordinal);
+            var keyCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var extension in extensions)
+            {
+                if (extension.Expression is ColumnRef)
+                {
+                    continue;
+                }
+
+                var key = ScalarKey(extension.Expression);
+                keyCounts.TryGetValue(key, out var count);
+                keyCounts[key] = count + 1;
+            }
+
+            var rewritten = new List<ProjectionExpr>();
+            changed = false;
+
+            foreach (var e in extensions)
+            {
+                attempted++;
+                if (e.Expression is ColumnRef)
+                {
+                    rewritten.Add(e);
+                    continue;
+                }
+
+                var key = ScalarKey(e.Expression);
+                if (!ShouldHoist(keyCounts, key, e.Expression))
+                {
+                    rewritten.Add(e);
+                    continue;
+                }
+
+                if (firstByExpr.TryGetValue(key, out var existingAlias))
+                {
+                    rewritten.Add(new ProjectionExpr(e.Alias, new ColumnRef(existingAlias)));
+                    applied++;
+                    changed = true;
+                }
+                else
+                {
+                    firstByExpr[key] = e.Alias;
+                    rewritten.Add(e);
+                }
+            }
+
+            return rewritten;
+        }
+    }
+
+    /// <summary>
+    /// <para>
+    /// Inlines a computed <see cref="ExtendNode"/> column into a directly-following
+    /// <see cref="FilterNode"/> predicate when that column is consumed only by the
+    /// filter. This removes a throwaway boolean/intermediate column (and its CTE
+    /// stage) that exists solely to feed a <c>where</c>:
+    /// </para>
+    /// <para><c>... | extend Flag = expr | where Flag</c>  →  <c>... | where expr</c></para>
+    /// <para>
+    /// The rewrite is gated on liveness: <c>required</c> tracks the columns
+    /// downstream operators still need, so a column kept in the <c>project</c>
+    /// output (or any ancestor) is never inlined away. It is also gated on a single
+    /// reference in the predicate so the expression is not duplicated, and on the
+    /// extension not being referenced by a sibling extension in the same node.
+    /// </para>
+    /// </summary>
+    private sealed class FilterExtendInlinePass : IPlannerPass
+    {
+        public string Name => "FilterExtendInlinePass";
+
+        public RelNode Apply(RelNode node, out bool changed, out int attempted, out int applied)
+        {
+            attempted = 0;
+            applied = 0;
+            var rewritten = Rewrite(node, null, ref attempted, ref applied);
+            changed = rewritten != node;
+            return rewritten;
+        }
+
+        private static HashSet<string> AggregateInputRequired(AggregateNode a)
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var g in a.GroupBy)
+            {
+                CollectColumnRefs(g, set);
+            }
+
+            foreach (var ag in a.Aggregates)
+            {
+                CollectColumnRefs(ag.Expression, set);
+            }
+
+            return set;
+        }
+
+        private static HashSet<string>? ExtendInputRequired(HashSet<string>? required, ExtendNode e)
+        {
+            if (required is null)
+            {
+                return null;
+            }
+
+            var aliases = e.Extensions.Select(x => x.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var r in required)
+            {
+                if (!aliases.Contains(r))
+                {
+                    set.Add(r);
+                }
+            }
+
+            foreach (var ex in e.Extensions)
+            {
+                CollectColumnRefs(ex.Expression, set);
+            }
+
+            return set;
+        }
+
+        private static HashSet<string>? PassThrough(HashSet<string>? required, ScalarExpr extra)
+        {
+            if (required is null)
+            {
+                return null;
+            }
+
+            var set = new HashSet<string>(required, StringComparer.OrdinalIgnoreCase);
+            CollectColumnRefs(extra, set);
+            return set;
+        }
+
+        private static HashSet<string>? PassThrough(HashSet<string>? required, IEnumerable<ScalarExpr> extras)
+        {
+            if (required is null)
+            {
+                return null;
+            }
+
+            var set = new HashSet<string>(required, StringComparer.OrdinalIgnoreCase);
+            foreach (var e in extras)
+            {
+                CollectColumnRefs(e, set);
+            }
+
+            return set;
+        }
+
+        private static HashSet<string> ResetTo(IReadOnlyList<ProjectionExpr> projections)
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in projections)
+            {
+                CollectColumnRefs(p.Expression, set);
+            }
+
+            return set;
+        }
+
+        // `required` is the set of column names that ancestors consume from this
+        // node's output. `null` means "all output columns are required" — used at
+        // the query root (every column is returned) and across boundaries (joins,
+        // tabular let values) where the live set cannot be tracked precisely. A
+        // null set conservatively disables inlining, because no column can be
+        // proven dead.
+        private static RelNode Rewrite(RelNode node, HashSet<string>? required, ref int attempted, ref int applied) => node switch
+        {
+            FilterNode f when f.Input is ExtendNode ext => RewriteFilterOverExtend(f, ext, required, ref attempted, ref applied),
+            FilterNode f => f with { Input = Rewrite(f.Input, PassThrough(required, f.Predicate), ref attempted, ref applied) },
+            // A projection redefines the output schema to its aliases, so the
+            // incoming required set no longer applies below it; the input must
+            // expose the columns the projection expressions reference.
+            ProjectNode p => p with { Input = Rewrite(p.Input, ResetTo(p.Projections), ref attempted, ref applied) },
+            DistinctNode d => d with { Input = Rewrite(d.Input, ResetTo(d.Projections), ref attempted, ref applied) },
+            AggregateNode a => a with { Input = Rewrite(a.Input, AggregateInputRequired(a), ref attempted, ref applied) },
+            ExtendNode e => e with { Input = Rewrite(e.Input, ExtendInputRequired(required, e), ref attempted, ref applied) },
+            SortNode s => s with { Input = Rewrite(s.Input, PassThrough(required, s.Sorts.Select(x => x.Expression)), ref attempted, ref applied) },
+            LimitNode l => l with { Input = Rewrite(l.Input, required, ref attempted, ref applied) },
+            SampleNode sm => sm with { Input = Rewrite(sm.Input, required, ref attempted, ref applied) },
+            JoinNode j => j with
+            {
+                Left = Rewrite(j.Left, null, ref attempted, ref applied),
+                Right = Rewrite(j.Right, null, ref attempted, ref applied)
+            },
+            LetBindingNode lb => lb with
+            {
+                Body = Rewrite(lb.Body, required, ref attempted, ref applied),
+                TabularValue = lb.TabularValue is null ? null : Rewrite(lb.TabularValue, null, ref attempted, ref applied)
+            },
+            _ => node,
+        };
+
+        private static RelNode RewriteFilterOverExtend(
+            FilterNode f,
+            ExtendNode ext,
+            HashSet<string>? required,
+            ref int attempted,
+            ref int applied)
+        {
+            var predicate = f.Predicate;
+            var remaining = new List<ProjectionExpr>();
+            var inlinedAny = false;
+
+            foreach (var extension in ext.Extensions)
+            {
+                attempted++;
+
+                // Inline only when the extension column is:
+                //  - provably dead above the filter (not in `required`, set known),
+                //  - an actual computation (a bare passthrough saves nothing and
+                //    could shadow a base column),
+                //  - not depended on by a sibling extension in this same node, and
+                //  - referenced exactly once in the predicate (so the expression is
+                //    substituted, not duplicated).
+                if (required is not null
+                    && !required.Contains(extension.Alias)
+                    && extension.Expression is not ColumnRef
+                    && !SiblingReferences(ext.Extensions, extension)
+                    && CountColumnRefOccurrences(predicate, extension.Alias) == 1)
+                {
+                    predicate = SubstituteColumn(predicate, extension.Alias, extension.Expression);
+                    inlinedAny = true;
+                    applied++;
+                    continue;
+                }
+
+                remaining.Add(extension);
+            }
+
+            if (!inlinedAny)
+            {
+                return f with { Input = Rewrite(ext, PassThrough(required, f.Predicate), ref attempted, ref applied) };
+            }
+
+            var newInput = remaining.Count == 0 ? ext.Input : ext with { Extensions = remaining };
+            var rewrittenInput = Rewrite(newInput, PassThrough(required, predicate), ref attempted, ref applied);
+            return new FilterNode(rewrittenInput, predicate);
+        }
+
+        private static bool SiblingReferences(IReadOnlyList<ProjectionExpr> extensions, ProjectionExpr target)
+        {
+            foreach (var e in extensions)
+            {
+                if (ReferenceEquals(e, target))
+                {
+                    continue;
+                }
+
+                var refs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                CollectColumnRefs(e.Expression, refs);
+                if (refs.Contains(target.Alias))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
     private sealed class FilterPushdownPass : IPlannerPass
     {
         public string Name => "FilterPushdownPass";
@@ -123,24 +1008,6 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             changed = rewritten != node;
             return rewritten;
         }
-
-        private static RelNode RewriteNode(RelNode node, ref int attempted, ref int applied) => node switch
-        {
-            FilterNode f => RewriteFilter(f, ref attempted, ref applied),
-            ProjectNode p => p with { Input = RewriteNode(p.Input, ref attempted, ref applied) },
-            ExtendNode e => e with { Input = RewriteNode(e.Input, ref attempted, ref applied) },
-            AggregateNode a => a with { Input = RewriteNode(a.Input, ref attempted, ref applied) },
-            SortNode s => s with { Input = RewriteNode(s.Input, ref attempted, ref applied) },
-            LimitNode l => l with { Input = RewriteNode(l.Input, ref attempted, ref applied) },
-            DistinctNode d => d with { Input = RewriteNode(d.Input, ref attempted, ref applied) },
-            JoinNode j => j with { Left = RewriteNode(j.Left, ref attempted, ref applied), Right = RewriteNode(j.Right, ref attempted, ref applied) },
-            LetBindingNode lb => lb with
-            {
-                Body = RewriteNode(lb.Body, ref attempted, ref applied),
-                TabularValue = lb.TabularValue is null ? null : RewriteNode(lb.TabularValue, ref attempted, ref applied)
-            },
-            _ => node
-        };
 
         private static RelNode RewriteFilter(FilterNode node, ref int attempted, ref int applied)
         {
@@ -161,6 +1028,79 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
 
             return rewritten;
         }
+
+        private static RelNode RewriteNode(RelNode node, ref int attempted, ref int applied) => node switch
+        {
+            FilterNode f => RewriteFilter(f, ref attempted, ref applied),
+            ProjectNode p => p with { Input = RewriteNode(p.Input, ref attempted, ref applied) },
+            ExtendNode e => e with { Input = RewriteNode(e.Input, ref attempted, ref applied) },
+            AggregateNode a => a with { Input = RewriteNode(a.Input, ref attempted, ref applied) },
+            SortNode s => s with { Input = RewriteNode(s.Input, ref attempted, ref applied) },
+            LimitNode l => l with { Input = RewriteNode(l.Input, ref attempted, ref applied) },
+            DistinctNode d => d with { Input = RewriteNode(d.Input, ref attempted, ref applied) },
+            JoinNode j => j with { Left = RewriteNode(j.Left, ref attempted, ref applied), Right = RewriteNode(j.Right, ref attempted, ref applied) },
+            LetBindingNode lb => lb with
+            {
+                Body = RewriteNode(lb.Body, ref attempted, ref applied),
+                TabularValue = lb.TabularValue is null ? null : RewriteNode(lb.TabularValue, ref attempted, ref applied)
+            },
+            _ => node
+        };
+    }
+
+    private sealed class IdentityProjectionCollapsePass : IPlannerPass
+    {
+        public string Name => "IdentityProjectionCollapsePass";
+
+        public RelNode Apply(RelNode node, out bool changed, out int attempted, out int applied)
+        {
+            attempted = 0;
+            applied = 0;
+            var rewritten = RewriteNode(node, ref attempted, ref applied);
+            changed = rewritten != node;
+            return rewritten;
+        }
+
+        private static RelNode RewriteNode(RelNode node, ref int attempted, ref int applied) => node switch
+        {
+            ProjectNode p => RewriteProject(p, ref attempted, ref applied),
+            FilterNode f => f with { Input = RewriteNode(f.Input, ref attempted, ref applied) },
+            ExtendNode e => e with { Input = RewriteNode(e.Input, ref attempted, ref applied) },
+            AggregateNode a => a with { Input = RewriteNode(a.Input, ref attempted, ref applied) },
+            SortNode s => s with { Input = RewriteNode(s.Input, ref attempted, ref applied) },
+            LimitNode l => l with { Input = RewriteNode(l.Input, ref attempted, ref applied) },
+            DistinctNode d => d with { Input = RewriteNode(d.Input, ref attempted, ref applied) },
+            JoinNode j => j with { Left = RewriteNode(j.Left, ref attempted, ref applied), Right = RewriteNode(j.Right, ref attempted, ref applied) },
+            LetBindingNode lb => lb with
+            {
+                Body = RewriteNode(lb.Body, ref attempted, ref applied),
+                TabularValue = lb.TabularValue is null ? null : RewriteNode(lb.TabularValue, ref attempted, ref applied)
+            },
+            _ => node
+        };
+
+        private static RelNode RewriteProject(ProjectNode node, ref int attempted, ref int applied)
+        {
+            var rewrittenInput = RewriteNode(node.Input, ref attempted, ref applied);
+            var rewritten = rewrittenInput == node.Input ? node : node with { Input = rewrittenInput };
+
+            if (rewritten.Input is ProjectNode inner)
+            {
+                attempted++;
+                // Only collapse when the outer projection is a true pass-through of
+                // the inner one: same columns, same order. A narrowing projection
+                // such as `project A,B,C | project A,B` is NOT identity — collapsing
+                // it to the inner node would leak column C.
+                if (IsIdentityProjection(rewritten.Projections)
+                    && SameColumnSequence(rewritten.Projections, inner.Projections))
+                {
+                    applied++;
+                    return inner;
+                }
+            }
+
+            return rewritten;
+        }
     }
 
     private sealed class LookupOutputBindingPass : IPlannerPass
@@ -175,6 +1115,111 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             changed = !ReferenceEquals(rewritten, node) && rewritten != node;
             return rewritten;
         }
+
+        private static HashSet<string> AddAliases(HashSet<string> set, IEnumerable<string> aliases)
+        {
+            foreach (var alias in aliases)
+            {
+                set.Add(alias);
+            }
+
+            return set;
+        }
+
+        private static ProjectionExpr[] CopyProjectionExprs(IReadOnlyList<ProjectionExpr> source)
+        {
+            var copy = new ProjectionExpr[source.Count];
+            for (var i = 0; i < source.Count; i++)
+            {
+                copy[i] = source[i];
+            }
+
+            return copy;
+        }
+
+        private static ScalarExpr[] CopyScalarExprs(IReadOnlyList<ScalarExpr> source)
+        {
+            var copy = new ScalarExpr[source.Count];
+            for (var i = 0; i < source.Count; i++)
+            {
+                copy[i] = source[i];
+            }
+
+            return copy;
+        }
+
+        private static SortExpr[] CopySortExprs(IReadOnlyList<SortExpr> source)
+        {
+            var copy = new SortExpr[source.Count];
+            for (var i = 0; i < source.Count; i++)
+            {
+                copy[i] = source[i];
+            }
+
+            return copy;
+        }
+
+        private static HashSet<string> JoinKeyRightNames(ScalarExpr pred)
+        {
+            var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            void Visit(ScalarExpr e)
+            {
+                if (e is BinaryScalar b && b.Op == ScalarBinaryOp.And) { Visit(b.Left); Visit(b.Right); return; }
+                if (e is BinaryScalar eq && eq.Op == ScalarBinaryOp.Eq && eq.Right is ColumnRef { Qualifier: JoinSide.Right } rc)
+                {
+                    keys.Add(rc.Name);
+                }
+            }
+            Visit(pred);
+            return keys;
+        }
+
+        private static IReadOnlyDictionary<string, string> LookupOwners(RelNode node)
+        {
+            if (node is not JoinNode { Flavor: JoinFlavor.Lookup } join)
+            {
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var left = OutputNames(join.Left);
+            var right = OutputNames(join.Right);
+            var keyCols = JoinKeyRightNames(join.OnPredicate);
+            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var c in left)
+            {
+                map[c] = JoinSide.Left;
+            }
+
+            foreach (var c in right)
+            {
+                if (keyCols.Contains(c))
+                {
+                    continue;
+                }
+
+                if (!map.ContainsKey(c))
+                {
+                    map[c] = JoinSide.Right;
+                }
+            }
+            return map;
+        }
+
+        private static HashSet<string> OutputNames(RelNode node) => node switch
+        {
+            ProjectNode p => ToCaseInsensitiveSet(p.Projections.Select(x => x.Alias)),
+            ExtendNode e => AddAliases(OutputNames(e.Input), e.Extensions.Select(x => x.Alias)),
+            AggregateNode a => AddAliases(
+                ToCaseInsensitiveSet(a.Aggregates.Select(x => x.Alias)),
+                a.GroupBy.OfType<ColumnRef>().Select(c => c.Name)),
+            DistinctNode d => ToCaseInsensitiveSet(d.Projections.Select(x => x.Alias)),
+            FilterNode f => OutputNames(f.Input),
+            SortNode s => OutputNames(s.Input),
+            LimitNode l => OutputNames(l.Input),
+            SampleNode s => OutputNames(s.Input),
+            JoinNode j => AddAliases(OutputNames(j.Left), OutputNames(j.Right)),
+            _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        };
 
         private static RelNode Rewrite(RelNode node, ref int applied) => node switch
         {
@@ -194,69 +1239,6 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             },
             _ => node
         };
-
-        private static ProjectNode RewriteProject(ProjectNode p, ref int applied)
-        {
-            var input = Rewrite(p.Input, ref applied);
-            var owner = LookupOwners(input);
-            ProjectionExpr[]? projections = null;
-            for (var i = 0; i < p.Projections.Count; i++)
-            {
-                var proj = p.Projections[i];
-                var rewrittenExpr = RewriteScalar(proj.Expression, owner, ref applied);
-                if (!Equals(rewrittenExpr, proj.Expression))
-                {
-                    projections ??= CopyProjectionExprs(p.Projections);
-                    projections[i] = proj with { Expression = rewrittenExpr };
-                }
-            }
-            return ReferenceEquals(input, p.Input) && projections is null
-                ? p
-                : (p with { Input = input, Projections = projections ?? p.Projections });
-        }
-
-        private static FilterNode RewriteFilter(FilterNode f, ref int applied)
-        {
-            var input = Rewrite(f.Input, ref applied);
-            var owner = LookupOwners(input);
-            return f with { Input = input, Predicate = RewriteScalar(f.Predicate, owner, ref applied) };
-        }
-
-        private static SortNode RewriteSort(SortNode s, ref int applied)
-        {
-            var input = Rewrite(s.Input, ref applied);
-            var owner = LookupOwners(input);
-            SortExpr[]? sorts = null;
-            for (var i = 0; i < s.Sorts.Count; i++)
-            {
-                var sort = s.Sorts[i];
-                var rewrittenExpr = RewriteScalar(sort.Expression, owner, ref applied);
-                if (!Equals(rewrittenExpr, sort.Expression))
-                {
-                    sorts ??= CopySortExprs(s.Sorts);
-                    sorts[i] = sort with { Expression = rewrittenExpr };
-                }
-            }
-            return ReferenceEquals(input, s.Input) && sorts is null ? s : (s with { Input = input, Sorts = sorts ?? s.Sorts });
-        }
-
-        private static ExtendNode RewriteExtend(ExtendNode e, ref int applied)
-        {
-            var input = Rewrite(e.Input, ref applied);
-            var owner = LookupOwners(input);
-            ProjectionExpr[]? ext = null;
-            for (var i = 0; i < e.Extensions.Count; i++)
-            {
-                var expr = e.Extensions[i];
-                var rewrittenExpr = RewriteScalar(expr.Expression, owner, ref applied);
-                if (!Equals(rewrittenExpr, expr.Expression))
-                {
-                    ext ??= CopyProjectionExprs(e.Extensions);
-                    ext[i] = expr with { Expression = rewrittenExpr };
-                }
-            }
-            return ReferenceEquals(input, e.Input) && ext is null ? e : (e with { Input = input, Extensions = ext ?? e.Extensions });
-        }
 
         private static AggregateNode RewriteAggregate(AggregateNode a, ref int applied)
         {
@@ -293,6 +1275,51 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                     GroupBy = groupBy ?? a.GroupBy,
                     Aggregates = aggregates ?? a.Aggregates
                 });
+        }
+
+        private static ExtendNode RewriteExtend(ExtendNode e, ref int applied)
+        {
+            var input = Rewrite(e.Input, ref applied);
+            var owner = LookupOwners(input);
+            ProjectionExpr[]? ext = null;
+            for (var i = 0; i < e.Extensions.Count; i++)
+            {
+                var expr = e.Extensions[i];
+                var rewrittenExpr = RewriteScalar(expr.Expression, owner, ref applied);
+                if (!Equals(rewrittenExpr, expr.Expression))
+                {
+                    ext ??= CopyProjectionExprs(e.Extensions);
+                    ext[i] = expr with { Expression = rewrittenExpr };
+                }
+            }
+            return ReferenceEquals(input, e.Input) && ext is null ? e : (e with { Input = input, Extensions = ext ?? e.Extensions });
+        }
+
+        private static FilterNode RewriteFilter(FilterNode f, ref int applied)
+        {
+            var input = Rewrite(f.Input, ref applied);
+            var owner = LookupOwners(input);
+            return f with { Input = input, Predicate = RewriteScalar(f.Predicate, owner, ref applied) };
+        }
+
+        private static ProjectNode RewriteProject(ProjectNode p, ref int applied)
+        {
+            var input = Rewrite(p.Input, ref applied);
+            var owner = LookupOwners(input);
+            ProjectionExpr[]? projections = null;
+            for (var i = 0; i < p.Projections.Count; i++)
+            {
+                var proj = p.Projections[i];
+                var rewrittenExpr = RewriteScalar(proj.Expression, owner, ref applied);
+                if (!Equals(rewrittenExpr, proj.Expression))
+                {
+                    projections ??= CopyProjectionExprs(p.Projections);
+                    projections[i] = proj with { Expression = rewrittenExpr };
+                }
+            }
+            return ReferenceEquals(input, p.Input) && projections is null
+                ? p
+                : (p with { Input = input, Projections = projections ?? p.Projections });
         }
 
         private static ScalarExpr RewriteScalar(ScalarExpr expr, IReadOnlyDictionary<string, string> owner, ref int applied)
@@ -370,85 +1397,23 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             }
         }
 
-        private static ProjectionExpr[] CopyProjectionExprs(IReadOnlyList<ProjectionExpr> source)
+        private static SortNode RewriteSort(SortNode s, ref int applied)
         {
-            var copy = new ProjectionExpr[source.Count];
-            for (var i = 0; i < source.Count; i++)
+            var input = Rewrite(s.Input, ref applied);
+            var owner = LookupOwners(input);
+            SortExpr[]? sorts = null;
+            for (var i = 0; i < s.Sorts.Count; i++)
             {
-                copy[i] = source[i];
-            }
-
-            return copy;
-        }
-
-        private static SortExpr[] CopySortExprs(IReadOnlyList<SortExpr> source)
-        {
-            var copy = new SortExpr[source.Count];
-            for (var i = 0; i < source.Count; i++)
-            {
-                copy[i] = source[i];
-            }
-
-            return copy;
-        }
-
-        private static ScalarExpr[] CopyScalarExprs(IReadOnlyList<ScalarExpr> source)
-        {
-            var copy = new ScalarExpr[source.Count];
-            for (var i = 0; i < source.Count; i++)
-            {
-                copy[i] = source[i];
-            }
-
-            return copy;
-        }
-
-        private static IReadOnlyDictionary<string, string> LookupOwners(RelNode node)
-        {
-            if (node is not JoinNode { Flavor: JoinFlavor.Lookup } join)
-            {
-                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            }
-
-            var left = OutputNames(join.Left);
-            var right = OutputNames(join.Right);
-            var keyCols = JoinKeyRightNames(join.OnPredicate);
-            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var c in left)
-            {
-                map[c] = JoinSide.Left;
-            }
-
-            foreach (var c in right)
-            {
-                if (keyCols.Contains(c))
+                var sort = s.Sorts[i];
+                var rewrittenExpr = RewriteScalar(sort.Expression, owner, ref applied);
+                if (!Equals(rewrittenExpr, sort.Expression))
                 {
-                    continue;
-                }
-
-                if (!map.ContainsKey(c))
-                {
-                    map[c] = JoinSide.Right;
+                    sorts ??= CopySortExprs(s.Sorts);
+                    sorts[i] = sort with { Expression = rewrittenExpr };
                 }
             }
-            return map;
+            return ReferenceEquals(input, s.Input) && sorts is null ? s : (s with { Input = input, Sorts = sorts ?? s.Sorts });
         }
-
-        private static HashSet<string> OutputNames(RelNode node) => node switch
-        {
-            ProjectNode p => ToCaseInsensitiveSet(p.Projections.Select(x => x.Alias)),
-            ExtendNode e => AddAliases(OutputNames(e.Input), e.Extensions.Select(x => x.Alias)),
-            AggregateNode a => AddAliases(
-                ToCaseInsensitiveSet(a.Aggregates.Select(x => x.Alias)),
-                a.GroupBy.OfType<ColumnRef>().Select(c => c.Name)),
-            DistinctNode d => ToCaseInsensitiveSet(d.Projections.Select(x => x.Alias)),
-            FilterNode f => OutputNames(f.Input),
-            SortNode s => OutputNames(s.Input),
-            LimitNode l => OutputNames(l.Input),
-            SampleNode s => OutputNames(s.Input),
-            JoinNode j => AddAliases(OutputNames(j.Left), OutputNames(j.Right)),
-            _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        };
 
         private static HashSet<string> ToCaseInsensitiveSet(IEnumerable<string> source)
         {
@@ -459,86 +1424,6 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
             }
 
             return set;
-        }
-
-        private static HashSet<string> AddAliases(HashSet<string> set, IEnumerable<string> aliases)
-        {
-            foreach (var alias in aliases)
-            {
-                set.Add(alias);
-            }
-
-            return set;
-        }
-
-        private static HashSet<string> JoinKeyRightNames(ScalarExpr pred)
-        {
-            var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            void Visit(ScalarExpr e)
-            {
-                if (e is BinaryScalar b && b.Op == ScalarBinaryOp.And) { Visit(b.Left); Visit(b.Right); return; }
-                if (e is BinaryScalar eq && eq.Op == ScalarBinaryOp.Eq && eq.Right is ColumnRef { Qualifier: JoinSide.Right } rc)
-                {
-                    keys.Add(rc.Name);
-                }
-            }
-            Visit(pred);
-            return keys;
-        }
-    }
-
-    private sealed class IdentityProjectionCollapsePass : IPlannerPass
-    {
-        public string Name => "IdentityProjectionCollapsePass";
-
-        public RelNode Apply(RelNode node, out bool changed, out int attempted, out int applied)
-        {
-            attempted = 0;
-            applied = 0;
-            var rewritten = RewriteNode(node, ref attempted, ref applied);
-            changed = rewritten != node;
-            return rewritten;
-        }
-
-        private static RelNode RewriteNode(RelNode node, ref int attempted, ref int applied) => node switch
-        {
-            ProjectNode p => RewriteProject(p, ref attempted, ref applied),
-            FilterNode f => f with { Input = RewriteNode(f.Input, ref attempted, ref applied) },
-            ExtendNode e => e with { Input = RewriteNode(e.Input, ref attempted, ref applied) },
-            AggregateNode a => a with { Input = RewriteNode(a.Input, ref attempted, ref applied) },
-            SortNode s => s with { Input = RewriteNode(s.Input, ref attempted, ref applied) },
-            LimitNode l => l with { Input = RewriteNode(l.Input, ref attempted, ref applied) },
-            DistinctNode d => d with { Input = RewriteNode(d.Input, ref attempted, ref applied) },
-            JoinNode j => j with { Left = RewriteNode(j.Left, ref attempted, ref applied), Right = RewriteNode(j.Right, ref attempted, ref applied) },
-            LetBindingNode lb => lb with
-            {
-                Body = RewriteNode(lb.Body, ref attempted, ref applied),
-                TabularValue = lb.TabularValue is null ? null : RewriteNode(lb.TabularValue, ref attempted, ref applied)
-            },
-            _ => node
-        };
-
-        private static RelNode RewriteProject(ProjectNode node, ref int attempted, ref int applied)
-        {
-            var rewrittenInput = RewriteNode(node.Input, ref attempted, ref applied);
-            var rewritten = rewrittenInput == node.Input ? node : node with { Input = rewrittenInput };
-
-            if (rewritten.Input is ProjectNode inner)
-            {
-                attempted++;
-                // Only collapse when the outer projection is a true pass-through of
-                // the inner one: same columns, same order. A narrowing projection
-                // such as `project A,B,C | project A,B` is NOT identity — collapsing
-                // it to the inner node would leak column C.
-                if (IsIdentityProjection(rewritten.Projections)
-                    && SameColumnSequence(rewritten.Projections, inner.Projections))
-                {
-                    applied++;
-                    return inner;
-                }
-            }
-
-            return rewritten;
         }
     }
 
@@ -680,889 +1565,6 @@ public sealed class RelationalPlanner : IRelationalPlanner, IPlannerTelemetry
                 default:
                     return node;
             }
-        }
-    }
-
-    private sealed class CommonScalarHoistPass : IPlannerPass
-    {
-        private const int MinDuplicateCountToHoist = 2;
-        private const int MinScalarComplexityToHoist = 3;
-
-        public string Name => "CommonScalarHoistPass";
-
-        public RelNode Apply(RelNode node, out bool changed, out int attempted, out int applied)
-        {
-            attempted = 0;
-            applied = 0;
-            var rewritten = RewriteNode(node, ref attempted, ref applied);
-            changed = rewritten != node;
-            return rewritten;
-        }
-
-        private static RelNode RewriteNode(RelNode node, ref int attempted, ref int applied) => node switch
-        {
-            ProjectNode p => RewriteProject(p, ref attempted, ref applied),
-            ExtendNode e => RewriteExtend(e, ref attempted, ref applied),
-            FilterNode f => f with { Input = RewriteNode(f.Input, ref attempted, ref applied) },
-            AggregateNode a => a with { Input = RewriteNode(a.Input, ref attempted, ref applied) },
-            SortNode s => s with { Input = RewriteNode(s.Input, ref attempted, ref applied) },
-            LimitNode l => l with { Input = RewriteNode(l.Input, ref attempted, ref applied) },
-            DistinctNode d => d with { Input = RewriteNode(d.Input, ref attempted, ref applied) },
-            JoinNode j => j with { Left = RewriteNode(j.Left, ref attempted, ref applied), Right = RewriteNode(j.Right, ref attempted, ref applied) },
-            LetBindingNode lb => lb with { Body = RewriteNode(lb.Body, ref attempted, ref applied), TabularValue = lb.TabularValue is null ? null : RewriteNode(lb.TabularValue, ref attempted, ref applied) },
-            _ => node
-        };
-
-        private static RelNode RewriteProject(ProjectNode p, ref int attempted, ref int applied)
-        {
-            var input = RewriteNode(p.Input, ref attempted, ref applied);
-            var ext = TryHoist(p.Projections, input, ref attempted, ref applied);
-            return ext ?? (input == p.Input ? p : p with { Input = input });
-        }
-
-        private static RelNode RewriteExtend(ExtendNode e, ref int attempted, ref int applied)
-        {
-            var input = RewriteNode(e.Input, ref attempted, ref applied);
-            var rewrittenExt = TryHoistExtensions(e.Extensions, ref attempted, ref applied, out var changed);
-            return !changed ? input == e.Input ? e : e with { Input = input } : new ExtendNode(input, rewrittenExt);
-        }
-
-        private static IReadOnlyList<ProjectionExpr> TryHoistExtensions(
-            IReadOnlyList<ProjectionExpr> extensions,
-            ref int attempted,
-            ref int applied,
-            out bool changed)
-        {
-            var firstByExpr = new Dictionary<string, string>(StringComparer.Ordinal);
-            var keyCounts = new Dictionary<string, int>(StringComparer.Ordinal);
-            foreach (var extension in extensions)
-            {
-                if (extension.Expression is ColumnRef)
-                {
-                    continue;
-                }
-
-                var key = ScalarKey(extension.Expression);
-                keyCounts.TryGetValue(key, out var count);
-                keyCounts[key] = count + 1;
-            }
-
-            var rewritten = new List<ProjectionExpr>();
-            changed = false;
-
-            foreach (var e in extensions)
-            {
-                attempted++;
-                if (e.Expression is ColumnRef)
-                {
-                    rewritten.Add(e);
-                    continue;
-                }
-
-                var key = ScalarKey(e.Expression);
-                if (!ShouldHoist(keyCounts, key, e.Expression))
-                {
-                    rewritten.Add(e);
-                    continue;
-                }
-
-                if (firstByExpr.TryGetValue(key, out var existingAlias))
-                {
-                    rewritten.Add(new ProjectionExpr(e.Alias, new ColumnRef(existingAlias)));
-                    applied++;
-                    changed = true;
-                }
-                else
-                {
-                    firstByExpr[key] = e.Alias;
-                    rewritten.Add(e);
-                }
-            }
-
-            return rewritten;
-        }
-
-        private static ProjectNode? TryHoist(IReadOnlyList<ProjectionExpr> projections, RelNode input, ref int attempted, ref int applied)
-        {
-            var firstByExpr = new Dictionary<string, string>(StringComparer.Ordinal);
-            var keyCounts = new Dictionary<string, int>(StringComparer.Ordinal);
-            foreach (var projection in projections)
-            {
-                if (projection.Expression is ColumnRef)
-                {
-                    continue;
-                }
-
-                var key = ScalarKey(projection.Expression);
-                keyCounts.TryGetValue(key, out var count);
-                keyCounts[key] = count + 1;
-            }
-
-            var ext = new List<ProjectionExpr>();
-            var outProj = new List<ProjectionExpr>();
-            var changed = false;
-
-            foreach (var p in projections)
-            {
-                attempted++;
-                if (p.Expression is ColumnRef)
-                {
-                    outProj.Add(p);
-                    continue;
-                }
-
-                var key = ScalarKey(p.Expression);
-                if (!ShouldHoist(keyCounts, key, p.Expression))
-                {
-                    outProj.Add(p);
-                    continue;
-                }
-
-                if (firstByExpr.TryGetValue(key, out var existingAlias))
-                {
-                    outProj.Add(new ProjectionExpr(p.Alias, new ColumnRef(existingAlias)));
-                    applied++;
-                    changed = true;
-                }
-                else
-                {
-                    firstByExpr[key] = p.Alias;
-                    // The ExtendNode computes the expression once as p.Alias; the
-                    // outer projection must reference that hoisted column, not
-                    // re-emit the full expression (which would evaluate it twice).
-                    ext.Add(p);
-                    outProj.Add(new ProjectionExpr(p.Alias, new ColumnRef(p.Alias)));
-                }
-            }
-
-            if (!changed)
-            {
-                return null;
-            }
-
-            var inner = new ExtendNode(input, ext);
-            return new ProjectNode(inner, outProj);
-        }
-
-        private static bool ShouldHoist(IReadOnlyDictionary<string, int> keyCounts, string key, ScalarExpr expression)
-        {
-            if (!keyCounts.TryGetValue(key, out var count) || count < MinDuplicateCountToHoist)
-            {
-                return false;
-            }
-
-            return EstimateScalarComplexity(expression) >= MinScalarComplexityToHoist;
-        }
-
-        private static int EstimateScalarComplexity(ScalarExpr expression) => expression switch
-        {
-            ColumnRef => 1,
-            LiteralScalar => 1,
-            UnaryScalar u => 1 + EstimateScalarComplexity(u.Operand),
-            BinaryScalar b => 1 + EstimateScalarComplexity(b.Left) + EstimateScalarComplexity(b.Right),
-            FunctionCall f => 2 + f.Args.Sum(EstimateScalarComplexity),
-            CaseScalar c => 2 + c.Branches.Sum(b => EstimateScalarComplexity(b.When) + EstimateScalarComplexity(b.Then)) + EstimateScalarComplexity(c.Else),
-            ListScalar l => 1 + l.Items.Sum(EstimateScalarComplexity),
-            WindowScalarExpr w => 3 + w.Args.Sum(EstimateScalarComplexity) + w.Window.PartitionBy.Sum(EstimateScalarComplexity) + w.Window.OrderBy.Sum(o => EstimateScalarComplexity(o.Expression)),
-            _ => 2
-        };
-    }
-
-    /// <summary>
-    /// Inlines a computed <see cref="ExtendNode"/> column into a directly-following
-    /// <see cref="FilterNode"/> predicate when that column is consumed only by the
-    /// filter. This removes a throwaway boolean/intermediate column (and its CTE
-    /// stage) that exists solely to feed a <c>where</c>:
-    ///
-    ///   <c>... | extend Flag = expr | where Flag</c>  →  <c>... | where expr</c>
-    ///
-    /// The rewrite is gated on liveness: <c>required</c> tracks the columns
-    /// downstream operators still need, so a column kept in the <c>project</c>
-    /// output (or any ancestor) is never inlined away. It is also gated on a single
-    /// reference in the predicate so the expression is not duplicated, and on the
-    /// extension not being referenced by a sibling extension in the same node.
-    /// </summary>
-    private sealed class FilterExtendInlinePass : IPlannerPass
-    {
-        public string Name => "FilterExtendInlinePass";
-
-        public RelNode Apply(RelNode node, out bool changed, out int attempted, out int applied)
-        {
-            attempted = 0;
-            applied = 0;
-            var rewritten = Rewrite(node, null, ref attempted, ref applied);
-            changed = rewritten != node;
-            return rewritten;
-        }
-
-        // `required` is the set of column names that ancestors consume from this
-        // node's output. `null` means "all output columns are required" — used at
-        // the query root (every column is returned) and across boundaries (joins,
-        // tabular let values) where the live set cannot be tracked precisely. A
-        // null set conservatively disables inlining, because no column can be
-        // proven dead.
-        private static RelNode Rewrite(RelNode node, HashSet<string>? required, ref int attempted, ref int applied) => node switch
-        {
-            FilterNode f when f.Input is ExtendNode ext => RewriteFilterOverExtend(f, ext, required, ref attempted, ref applied),
-            FilterNode f => f with { Input = Rewrite(f.Input, PassThrough(required, f.Predicate), ref attempted, ref applied) },
-            // A projection redefines the output schema to its aliases, so the
-            // incoming required set no longer applies below it; the input must
-            // expose the columns the projection expressions reference.
-            ProjectNode p => p with { Input = Rewrite(p.Input, ResetTo(p.Projections), ref attempted, ref applied) },
-            DistinctNode d => d with { Input = Rewrite(d.Input, ResetTo(d.Projections), ref attempted, ref applied) },
-            AggregateNode a => a with { Input = Rewrite(a.Input, AggregateInputRequired(a), ref attempted, ref applied) },
-            ExtendNode e => e with { Input = Rewrite(e.Input, ExtendInputRequired(required, e), ref attempted, ref applied) },
-            SortNode s => s with { Input = Rewrite(s.Input, PassThrough(required, s.Sorts.Select(x => x.Expression)), ref attempted, ref applied) },
-            LimitNode l => l with { Input = Rewrite(l.Input, required, ref attempted, ref applied) },
-            SampleNode sm => sm with { Input = Rewrite(sm.Input, required, ref attempted, ref applied) },
-            JoinNode j => j with
-            {
-                Left = Rewrite(j.Left, null, ref attempted, ref applied),
-                Right = Rewrite(j.Right, null, ref attempted, ref applied)
-            },
-            LetBindingNode lb => lb with
-            {
-                Body = Rewrite(lb.Body, required, ref attempted, ref applied),
-                TabularValue = lb.TabularValue is null ? null : Rewrite(lb.TabularValue, null, ref attempted, ref applied)
-            },
-            _ => node,
-        };
-
-        private static RelNode RewriteFilterOverExtend(
-            FilterNode f,
-            ExtendNode ext,
-            HashSet<string>? required,
-            ref int attempted,
-            ref int applied)
-        {
-            var predicate = f.Predicate;
-            var remaining = new List<ProjectionExpr>();
-            var inlinedAny = false;
-
-            foreach (var extension in ext.Extensions)
-            {
-                attempted++;
-
-                // Inline only when the extension column is:
-                //  - provably dead above the filter (not in `required`, set known),
-                //  - an actual computation (a bare passthrough saves nothing and
-                //    could shadow a base column),
-                //  - not depended on by a sibling extension in this same node, and
-                //  - referenced exactly once in the predicate (so the expression is
-                //    substituted, not duplicated).
-                if (required is not null
-                    && !required.Contains(extension.Alias)
-                    && extension.Expression is not ColumnRef
-                    && !SiblingReferences(ext.Extensions, extension)
-                    && CountColumnRefOccurrences(predicate, extension.Alias) == 1)
-                {
-                    predicate = SubstituteColumn(predicate, extension.Alias, extension.Expression);
-                    inlinedAny = true;
-                    applied++;
-                    continue;
-                }
-
-                remaining.Add(extension);
-            }
-
-            if (!inlinedAny)
-            {
-                return f with { Input = Rewrite(ext, PassThrough(required, f.Predicate), ref attempted, ref applied) };
-            }
-
-            var newInput = remaining.Count == 0 ? ext.Input : ext with { Extensions = remaining };
-            var rewrittenInput = Rewrite(newInput, PassThrough(required, predicate), ref attempted, ref applied);
-            return new FilterNode(rewrittenInput, predicate);
-        }
-
-        private static bool SiblingReferences(IReadOnlyList<ProjectionExpr> extensions, ProjectionExpr target)
-        {
-            foreach (var e in extensions)
-            {
-                if (ReferenceEquals(e, target))
-                {
-                    continue;
-                }
-
-                var refs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                CollectColumnRefs(e.Expression, refs);
-                if (refs.Contains(target.Alias))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static HashSet<string> ResetTo(IReadOnlyList<ProjectionExpr> projections)
-        {
-            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var p in projections)
-            {
-                CollectColumnRefs(p.Expression, set);
-            }
-
-            return set;
-        }
-
-        private static HashSet<string> AggregateInputRequired(AggregateNode a)
-        {
-            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var g in a.GroupBy)
-            {
-                CollectColumnRefs(g, set);
-            }
-
-            foreach (var ag in a.Aggregates)
-            {
-                CollectColumnRefs(ag.Expression, set);
-            }
-
-            return set;
-        }
-
-        private static HashSet<string>? ExtendInputRequired(HashSet<string>? required, ExtendNode e)
-        {
-            if (required is null)
-            {
-                return null;
-            }
-
-            var aliases = e.Extensions.Select(x => x.Alias).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var r in required)
-            {
-                if (!aliases.Contains(r))
-                {
-                    set.Add(r);
-                }
-            }
-
-            foreach (var ex in e.Extensions)
-            {
-                CollectColumnRefs(ex.Expression, set);
-            }
-
-            return set;
-        }
-
-        private static HashSet<string>? PassThrough(HashSet<string>? required, ScalarExpr extra)
-        {
-            if (required is null)
-            {
-                return null;
-            }
-
-            var set = new HashSet<string>(required, StringComparer.OrdinalIgnoreCase);
-            CollectColumnRefs(extra, set);
-            return set;
-        }
-
-        private static HashSet<string>? PassThrough(HashSet<string>? required, IEnumerable<ScalarExpr> extras)
-        {
-            if (required is null)
-            {
-                return null;
-            }
-
-            var set = new HashSet<string>(required, StringComparer.OrdinalIgnoreCase);
-            foreach (var e in extras)
-            {
-                CollectColumnRefs(e, set);
-            }
-
-            return set;
-        }
-    }
-
-    private static bool TryPushFilterBelowProject(ScalarExpr predicate, ProjectNode project, out RelNode rewritten)
-    {
-        rewritten = project;
-
-        var required = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        CollectColumnRefs(predicate, required);
-
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var p in project.Projections)
-        {
-            if (p.Expression is not ColumnRef c)
-            {
-                continue;
-            }
-
-            if (map.ContainsKey(p.Alias))
-            {
-                return false;
-            }
-
-            map[p.Alias] = c.Name;
-        }
-
-        foreach (var col in required)
-        {
-            if (!map.ContainsKey(col))
-            {
-                return false;
-            }
-        }
-
-        var remapped = RemapColumns(predicate, map);
-        rewritten = new ProjectNode(new FilterNode(project.Input, remapped), project.Projections);
-        return true;
-    }
-
-    private static bool IsIdentityProjection(IReadOnlyList<ProjectionExpr> projections)
-    {
-        if (projections.Count == 0)
-        {
-            return false;
-        }
-
-        foreach (var proj in projections)
-        {
-            if (proj.Expression is not ColumnRef col)
-            {
-                return false;
-            }
-
-            // KQL column names are case-insensitive, so an identity projection may
-            // differ only in casing from its source column.
-            if (!string.Equals(proj.Alias, col.Name, StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool SameColumnSequence(
-        IReadOnlyList<ProjectionExpr> outer,
-        IReadOnlyList<ProjectionExpr> inner)
-    {
-        if (outer.Count != inner.Count)
-        {
-            return false;
-        }
-
-        for (var i = 0; i < outer.Count; i++)
-        {
-            if (!string.Equals(outer[i].Alias, inner[i].Alias, StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static string ScalarKey(ScalarExpr expr) => expr switch
-    {
-        // Column names are case-insensitive in KQL; qualifier distinguishes join sides.
-        ColumnRef c => $"col:{c.Qualifier}:{c.Name.ToLowerInvariant()}",
-        LiteralScalar l => $"lit:{l.Kind}:{l.Value}",
-        BinaryScalar b => $"bin:{b.Op}:({ScalarKey(b.Left)}):({ScalarKey(b.Right)})",
-        UnaryScalar u => $"un:{u.Op}:({ScalarKey(u.Operand)})",
-        FunctionCall f => $"fn:{f.Name.ToLowerInvariant()}({string.Join(',', f.Args.Select(ScalarKey))})",
-        CaseScalar c => $"case:{string.Join('|', c.Branches.Select(b => ScalarKey(b.When) + "=>" + ScalarKey(b.Then)))}:else:{ScalarKey(c.Else)}",
-        // The window specification (partitioning, ordering, frame) is part of the
-        // expression's identity. Omitting it would treat two window functions with
-        // different partitions as a common subexpression and deduplicate them,
-        // producing wrong analytics.
-        WindowScalarExpr w => $"win:{w.FunctionName}({string.Join(',', w.Args.Select(ScalarKey))}){WindowKey(w.Window)}",
-        ListScalar l => $"list:{string.Join(',', l.Items.Select(ScalarKey))}",
-        StarExpr => "star",
-        _ => expr.ToString() ?? expr.GetType().Name
-    };
-
-    private static string WindowKey(WindowSpec spec)
-    {
-        var partition = string.Join(',', spec.PartitionBy.Select(ScalarKey));
-        var order = string.Join(',', spec.OrderBy.Select(SortKey));
-        var frame = spec.Frame is null ? "" : FrameKey(spec.Frame);
-        return $"[part:{partition}|order:{order}|frame:{frame}]";
-    }
-
-    private static string SortKey(SortExpr s) => $"{ScalarKey(s.Expression)}:{s.Direction}:{s.Nulls}";
-
-    private static string FrameKey(WindowFrame f) =>
-        $"{f.Type}:{BoundKey(f.Start)}:{BoundKey(f.End)}";
-
-    private static string BoundKey(WindowBound b) =>
-        $"{b.Kind}:{(b.Offset is null ? "" : ScalarKey(b.Offset))}";
-
-    private static ScalarExpr RemapColumns(ScalarExpr expr, IReadOnlyDictionary<string, string> aliasToSource)
-    {
-        if (aliasToSource.Count == 0)
-        {
-            return expr;
-        }
-
-        return expr switch
-        {
-            ColumnRef c when aliasToSource.TryGetValue(c.Name, out var src) => new ColumnRef(src),
-            BinaryScalar b => b with { Left = RemapColumns(b.Left, aliasToSource), Right = RemapColumns(b.Right, aliasToSource) },
-            UnaryScalar u => u with { Operand = RemapColumns(u.Operand, aliasToSource) },
-            FunctionCall f => f with { Args = RemapArgs(f.Args, aliasToSource) },
-            CaseScalar c => c with
-            {
-                Branches = RemapBranches(c.Branches, aliasToSource),
-                Else = RemapColumns(c.Else, aliasToSource)
-            },
-            WindowScalarExpr w => w with
-            {
-                Args = RemapArgs(w.Args, aliasToSource),
-                Window = w.Window with
-                {
-                    PartitionBy = RemapArgs(w.Window.PartitionBy, aliasToSource),
-                    OrderBy = RemapSorts(w.Window.OrderBy, aliasToSource)
-                }
-            },
-            ListScalar l => l with { Items = RemapArgs(l.Items, aliasToSource) },
-            _ => expr
-        };
-    }
-
-    private static int CountColumnRefOccurrences(ScalarExpr expr, string name)
-    {
-        var count = 0;
-        void Visit(ScalarExpr e)
-        {
-            switch (e)
-            {
-                case ColumnRef c when c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase):
-                    count++;
-                    break;
-
-                case BinaryScalar b:
-                    Visit(b.Left);
-                    Visit(b.Right);
-                    break;
-
-                case UnaryScalar u:
-                    Visit(u.Operand);
-                    break;
-
-                case FunctionCall f:
-                    foreach (var a in f.Args)
-                    {
-                        Visit(a);
-                    }
-
-                    break;
-
-                case CaseScalar cs:
-                    foreach (var (w, t) in cs.Branches)
-                    {
-                        Visit(w);
-                        Visit(t);
-                    }
-                    Visit(cs.Else);
-                    break;
-
-                case WindowScalarExpr w:
-                    foreach (var a in w.Args)
-                    {
-                        Visit(a);
-                    }
-
-                    foreach (var p in w.Window.PartitionBy)
-                    {
-                        Visit(p);
-                    }
-
-                    foreach (var o in w.Window.OrderBy)
-                    {
-                        Visit(o.Expression);
-                    }
-
-                    break;
-
-                case ListScalar l:
-                    foreach (var i in l.Items)
-                    {
-                        Visit(i);
-                    }
-
-                    break;
-            }
-        }
-
-        Visit(expr);
-        return count;
-    }
-
-    private static ScalarExpr SubstituteColumn(ScalarExpr expr, string name, ScalarExpr replacement)
-    {
-        if (!ContainsUnqualifiedColumnRef(expr, name))
-        {
-            return expr;
-        }
-
-        return expr switch
-        {
-            ColumnRef c when c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase) => replacement,
-            BinaryScalar b => b with { Left = SubstituteColumn(b.Left, name, replacement), Right = SubstituteColumn(b.Right, name, replacement) },
-            UnaryScalar u => u with { Operand = SubstituteColumn(u.Operand, name, replacement) },
-            FunctionCall f => f with { Args = SubstituteArgs(f.Args, name, replacement) },
-            CaseScalar cs => cs with
-            {
-                Branches = SubstituteBranches(cs.Branches, name, replacement),
-                Else = SubstituteColumn(cs.Else, name, replacement)
-            },
-            WindowScalarExpr w => w with
-            {
-                Args = SubstituteArgs(w.Args, name, replacement),
-                Window = w.Window with
-                {
-                    PartitionBy = SubstituteArgs(w.Window.PartitionBy, name, replacement),
-                    OrderBy = SubstituteSorts(w.Window.OrderBy, name, replacement)
-                }
-            },
-            ListScalar l => l with { Items = SubstituteArgs(l.Items, name, replacement) },
-            _ => expr
-        };
-    }
-
-    private static IReadOnlyList<ScalarExpr> RemapArgs(IReadOnlyList<ScalarExpr> args, IReadOnlyDictionary<string, string> aliasToSource)
-    {
-        if (args.Count == 0)
-        {
-            return [];
-        }
-
-        var remapped = new ScalarExpr[args.Count];
-        for (var i = 0; i < args.Count; i++)
-        {
-            remapped[i] = RemapColumns(args[i], aliasToSource);
-        }
-
-        return remapped;
-    }
-
-    private static IReadOnlyList<ScalarExpr> SubstituteArgs(IReadOnlyList<ScalarExpr> args, string name, ScalarExpr replacement)
-    {
-        if (args.Count == 0)
-        {
-            return [];
-        }
-
-        var substituted = new ScalarExpr[args.Count];
-        for (var i = 0; i < args.Count; i++)
-        {
-            substituted[i] = SubstituteColumn(args[i], name, replacement);
-        }
-
-        return substituted;
-    }
-
-    private static IReadOnlyList<(ScalarExpr When, ScalarExpr Then)> RemapBranches(
-        IReadOnlyList<(ScalarExpr When, ScalarExpr Then)> branches,
-        IReadOnlyDictionary<string, string> aliasToSource)
-    {
-        if (branches.Count == 0)
-        {
-            return [];
-        }
-
-        var mapped = new (ScalarExpr When, ScalarExpr Then)[branches.Count];
-        for (var i = 0; i < branches.Count; i++)
-        {
-            mapped[i] = (RemapColumns(branches[i].When, aliasToSource), RemapColumns(branches[i].Then, aliasToSource));
-        }
-
-        return mapped;
-    }
-
-    private static IReadOnlyList<(ScalarExpr When, ScalarExpr Then)> SubstituteBranches(
-        IReadOnlyList<(ScalarExpr When, ScalarExpr Then)> branches,
-        string name,
-        ScalarExpr replacement)
-    {
-        if (branches.Count == 0)
-        {
-            return [];
-        }
-
-        var mapped = new (ScalarExpr When, ScalarExpr Then)[branches.Count];
-        for (var i = 0; i < branches.Count; i++)
-        {
-            mapped[i] = (SubstituteColumn(branches[i].When, name, replacement), SubstituteColumn(branches[i].Then, name, replacement));
-        }
-
-        return mapped;
-    }
-
-    private static IReadOnlyList<SortExpr> RemapSorts(IReadOnlyList<SortExpr> sorts, IReadOnlyDictionary<string, string> aliasToSource)
-    {
-        if (sorts.Count == 0)
-        {
-            return [];
-        }
-
-        var mapped = new SortExpr[sorts.Count];
-        for (var i = 0; i < sorts.Count; i++)
-        {
-            mapped[i] = sorts[i] with { Expression = RemapColumns(sorts[i].Expression, aliasToSource) };
-        }
-
-        return mapped;
-    }
-
-    private static IReadOnlyList<SortExpr> SubstituteSorts(IReadOnlyList<SortExpr> sorts, string name, ScalarExpr replacement)
-    {
-        if (sorts.Count == 0)
-        {
-            return [];
-        }
-
-        var mapped = new SortExpr[sorts.Count];
-        for (var i = 0; i < sorts.Count; i++)
-        {
-            mapped[i] = sorts[i] with { Expression = SubstituteColumn(sorts[i].Expression, name, replacement) };
-        }
-
-        return mapped;
-    }
-
-    private static bool ContainsUnqualifiedColumnRef(ScalarExpr expr, string name)
-    {
-        switch (expr)
-        {
-            case ColumnRef c:
-                return c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase);
-
-            case BinaryScalar b:
-                return ContainsUnqualifiedColumnRef(b.Left, name) || ContainsUnqualifiedColumnRef(b.Right, name);
-
-            case UnaryScalar u:
-                return ContainsUnqualifiedColumnRef(u.Operand, name);
-
-            case FunctionCall f:
-                foreach (var a in f.Args)
-                {
-                    if (ContainsUnqualifiedColumnRef(a, name))
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
-
-            case CaseScalar cs:
-                foreach (var (when, then) in cs.Branches)
-                {
-                    if (ContainsUnqualifiedColumnRef(when, name) || ContainsUnqualifiedColumnRef(then, name))
-                    {
-                        return true;
-                    }
-                }
-
-                return ContainsUnqualifiedColumnRef(cs.Else, name);
-
-            case WindowScalarExpr w:
-                foreach (var a in w.Args)
-                {
-                    if (ContainsUnqualifiedColumnRef(a, name))
-                    {
-                        return true;
-                    }
-                }
-
-                foreach (var p in w.Window.PartitionBy)
-                {
-                    if (ContainsUnqualifiedColumnRef(p, name))
-                    {
-                        return true;
-                    }
-                }
-
-                foreach (var o in w.Window.OrderBy)
-                {
-                    if (ContainsUnqualifiedColumnRef(o.Expression, name))
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
-
-            case ListScalar l:
-                foreach (var i in l.Items)
-                {
-                    if (ContainsUnqualifiedColumnRef(i, name))
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
-
-            default:
-                return false;
-        }
-    }
-
-    private static void CollectColumnRefs(ScalarExpr expr, ISet<string> sink)
-    {
-        switch (expr)
-        {
-            case ColumnRef c:
-                sink.Add(c.Name);
-                break;
-
-            case BinaryScalar b:
-                CollectColumnRefs(b.Left, sink);
-                CollectColumnRefs(b.Right, sink);
-                break;
-
-            case UnaryScalar u:
-                CollectColumnRefs(u.Operand, sink);
-                break;
-
-            case FunctionCall f:
-                foreach (var a in f.Args)
-                {
-                    CollectColumnRefs(a, sink);
-                }
-
-                break;
-
-            case CaseScalar c:
-                foreach (var (w, t) in c.Branches)
-                {
-                    CollectColumnRefs(w, sink);
-                    CollectColumnRefs(t, sink);
-                }
-                CollectColumnRefs(c.Else, sink);
-                break;
-
-            case WindowScalarExpr w:
-                foreach (var a in w.Args)
-                {
-                    CollectColumnRefs(a, sink);
-                }
-
-                foreach (var p in w.Window.PartitionBy)
-                {
-                    CollectColumnRefs(p, sink);
-                }
-
-                foreach (var o in w.Window.OrderBy)
-                {
-                    CollectColumnRefs(o.Expression, sink);
-                }
-
-                break;
-
-            case ListScalar l:
-                foreach (var i in l.Items)
-                {
-                    CollectColumnRefs(i, sink);
-                }
-
-                break;
         }
     }
 }

@@ -5,17 +5,21 @@ using Hunting.Core.DuckDbSql;
 using Hunting.Core.QueryModel;
 
 /// <summary>
+/// <para>
 /// End-to-end verification: emit SQL from RelNode trees, then execute against
 /// a real in-memory DuckDB instance. This catches emitter bugs that produce
 /// syntactically valid-looking SQL that DuckDB actually rejects.
-///
-/// These are integration tests, not unit tests. They depend on DuckDB.NET.
+/// </para>
+/// <para>These are integration tests, not unit tests. They depend on DuckDB.NET.</para>
 /// </summary>
 [TestClass]
 public sealed class DuckDbQueryEmitterExecutionTests
 {
     private static DuckDBConnection _conn = null!;
     private static DuckDbQueryEmitter _emitter = null!;
+
+    [ClassCleanup]
+    public static void Cleanup() => _conn.Dispose();
 
     [ClassInitialize]
     public static void Init(TestContext _)
@@ -79,91 +83,78 @@ public sealed class DuckDbQueryEmitterExecutionTests
         cmd.ExecuteNonQuery();
     }
 
-    [ClassCleanup]
-    public static void Cleanup() => _conn.Dispose();
-
-    private int Execute(string sql)
+    [TestMethod]
+    [Description("Aggregate with count() by executes")]
+    public void Execute_Aggregate()
     {
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = sql;
-        using var reader = cmd.ExecuteReader();
-        var count = 0;
-        while (reader.Read())
-        {
-            count++;
-        }
+        var node = new AggregateNode(
+            new ScanNode("ProcessEvent"),
+            Aggregates: [new ProjectionExpr("cnt", new FunctionCall("count", []))],
+            GroupBy: [new ColumnRef("DeviceName")]);
 
-        return count;
+        AssertExecutes(node, expectedMinRows: 1);
     }
-
-    private void AssertExecutes(RelNode node, int? expectedMinRows = null)
-    {
-        var sql = _emitter.Emit(node);
-        Assert.IsNotNull(sql, "Emitter returned null SQL");
-        Assert.IsGreaterThan(0, sql.Length, "Emitter returned empty SQL");
-
-        try
-        {
-            var rows = Execute(sql);
-            if (expectedMinRows.HasValue)
-            {
-                Assert.IsGreaterThanOrEqualTo(expectedMinRows.Value, rows,
-                    $"Expected at least {expectedMinRows} rows, got {rows}.\nSQL: {sql}");
-            }
-        }
-        catch (Exception ex)
-        {
-#pragma warning disable MSTEST0058 // Do not use asserts in catch blocks
-            Assert.Fail($"DuckDB execution failed.\nSQL: {sql}\nError: {ex.Message}");
-#pragma warning restore MSTEST0058 // Do not use asserts in catch blocks
-        }
-    }
-
-    private object? ExecuteFirstValue(string sql)
-    {
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = sql;
-        using var reader = cmd.ExecuteReader();
-        if (!reader.Read())
-        {
-            return null;
-        }
-
-        return reader.IsDBNull(0) ? null : reader.GetValue(0);
-    }
-
-    // ─── Core operators execute ─────────────────────────────────────
 
     [TestMethod]
-    [Description("Bare scan executes against mock data")]
-    public void Execute_Scan() => AssertExecutes(new ScanNode("ProcessEvent"), expectedMinRows: 5);
+    [Description("ago() executes in DuckDB (native function)")]
+    public void Execute_Ago()
+    {
+        var node = new FilterNode(
+            new ScanNode("ProcessEvent"),
+            new BinaryScalar(
+                new ColumnRef("Timestamp"),
+                ScalarBinaryOp.Gt,
+                new FunctionCall("ago", [new LiteralScalar("365d", LiteralKind.Timespan)])));
+
+        AssertExecutes(node);
+    }
 
     [TestMethod]
-    [Description("Filter executes and reduces rows")]
-    public void Execute_Filter()
+    [Description("CASE WHEN expression executes")]
+    public void Execute_CaseExpr()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("risk",
+                new CaseScalar(
+                    [(new BinaryScalar(
+                        new ColumnRef("FileName"),
+                        ScalarBinaryOp.Eq,
+                        new LiteralScalar("mimikatz.exe", LiteralKind.String)),
+                      new LiteralScalar("critical", LiteralKind.String))],
+                    new LiteralScalar("normal", LiteralKind.String)))]);
+
+        AssertExecutes(node, expectedMinRows: 5);
+    }
+
+    [TestMethod]
+    [Description("coalesce executes")]
+    public void Execute_Coalesce()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("safe_id",
+                new FunctionCall("coalesce",
+                    [new ColumnRef("DeviceId"),
+                     new LiteralScalar("unknown", LiteralKind.String)]))]);
+
+        AssertExecutes(node, expectedMinRows: 1);
+    }
+
+    [TestMethod]
+    [Description("Filter that matches nothing returns zero rows without error")]
+    public void Execute_EmptyResult()
     {
         var node = new FilterNode(
             new ScanNode("ProcessEvent"),
             new BinaryScalar(
                 new ColumnRef("FileName"),
                 ScalarBinaryOp.Eq,
-                new LiteralScalar("cmd.exe", LiteralKind.String)));
+                new LiteralScalar("definitely_not_a_real_process.exe", LiteralKind.String)));
 
-        AssertExecutes(node, expectedMinRows: 1);
-    }
-
-    [TestMethod]
-    [Description("Project executes with column subset")]
-    public void Execute_Project()
-    {
-        var node = new ProjectNode(
-            new ScanNode("ProcessEvent"),
-            [
-                new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
-                new ProjectionExpr("FileName", new ColumnRef("FileName")),
-            ]);
-
-        AssertExecutes(node, expectedMinRows: 1);
+        var sql = _emitter.Emit(node);
+        var rows = Execute(sql);
+        Assert.AreEqual(0, rows);
     }
 
     [TestMethod]
@@ -196,58 +187,6 @@ public sealed class DuckDbQueryEmitterExecutionTests
     }
 
     [TestMethod]
-    [Description("Aggregate with count() by executes")]
-    public void Execute_Aggregate()
-    {
-        var node = new AggregateNode(
-            new ScanNode("ProcessEvent"),
-            Aggregates: [new ProjectionExpr("cnt", new FunctionCall("count", []))],
-            GroupBy: [new ColumnRef("DeviceName")]);
-
-        AssertExecutes(node, expectedMinRows: 1);
-    }
-
-    [TestMethod]
-    [Description("Sort + limit executes")]
-    public void Execute_SortLimit()
-    {
-        var node = new LimitNode(
-            new SortNode(
-                new ScanNode("ProcessEvent"),
-                [new SortExpr(new ColumnRef("Timestamp"), SortDirection.Desc)]),
-            3);
-
-        AssertExecutes(node, expectedMinRows: 3);
-    }
-
-    // ─── Function mapping executes ──────────────────────────────────
-
-    [TestMethod]
-    [Description("ago() executes in DuckDB (native function)")]
-    public void Execute_Ago()
-    {
-        var node = new FilterNode(
-            new ScanNode("ProcessEvent"),
-            new BinaryScalar(
-                new ColumnRef("Timestamp"),
-                ScalarBinaryOp.Gt,
-                new FunctionCall("ago", [new LiteralScalar("365d", LiteralKind.Timespan)])));
-
-        AssertExecutes(node);
-    }
-
-    [TestMethod]
-    [Description("isempty() executes correctly")]
-    public void Execute_IsEmpty()
-    {
-        var node = new FilterNode(
-            new ScanNode("ProcessEvent"),
-            new FunctionCall("isnotempty", [new ColumnRef("FileName")]));
-
-        AssertExecutes(node, expectedMinRows: 1);
-    }
-
-    [TestMethod]
     [Description("extract with COALESCE wrapper executes")]
     public void Execute_Extract()
     {
@@ -263,63 +202,17 @@ public sealed class DuckDbQueryEmitterExecutionTests
     }
 
     [TestMethod]
-    [Description("coalesce executes")]
-    public void Execute_Coalesce()
+    [Description("Filter executes and reduces rows")]
+    public void Execute_Filter()
     {
-        var node = new ExtendNode(
+        var node = new FilterNode(
             new ScanNode("ProcessEvent"),
-            [new ProjectionExpr("safe_id",
-                new FunctionCall("coalesce",
-                    [new ColumnRef("DeviceId"),
-                     new LiteralScalar("unknown", LiteralKind.String)]))]);
+            new BinaryScalar(
+                new ColumnRef("FileName"),
+                ScalarBinaryOp.Eq,
+                new LiteralScalar("cmd.exe", LiteralKind.String)));
 
         AssertExecutes(node, expectedMinRows: 1);
-    }
-
-    [TestMethod]
-    [Description("parse_ipv4() executes and returns numeric value for valid IPv4 literal")]
-    public void Execute_ParseIpv4()
-    {
-        var node = new ExtendNode(
-            new ScanNode("ProcessEvent"),
-            [new ProjectionExpr("ip_num",
-                new FunctionCall("parse_ipv4", [new LiteralScalar("10.1.2.3", LiteralKind.String)]))]);
-
-        AssertExecutes(node, expectedMinRows: 1);
-    }
-
-    [TestMethod]
-    [Description("trim_start/trim_end and base64 encode/decode execute")]
-    public void Execute_StringHelpers_New()
-    {
-        var node = new ExtendNode(
-            new ScanNode("ProcessEvent"),
-            [
-                new ProjectionExpr("trimmed_l", new FunctionCall("trim_start", [new LiteralScalar(@"[A-Za-z]:\\\\", LiteralKind.String), new ColumnRef("FolderPath")])),
-                new ProjectionExpr("trimmed_r", new FunctionCall("trim_end", [new LiteralScalar(@"\\\\", LiteralKind.String), new ColumnRef("FolderPath")])),
-                new ProjectionExpr("b64", new FunctionCall("base64_encode_tostring", [new ColumnRef("FileName")])),
-                new ProjectionExpr("decoded", new FunctionCall("base64_decode_tostring", [new LiteralScalar("YQ==", LiteralKind.String)]))
-            ]);
-        AssertExecutes(node, expectedMinRows: 1);
-    }
-
-    [TestMethod]
-    [Description("parse_path and percentile execute")]
-    public void Execute_ParsePath_And_Percentile()
-    {
-        var parsePathNode = new ExtendNode(
-            new ScanNode("ProcessEvent"),
-            [new ProjectionExpr("parsed", new FunctionCall("parse_path", [new ColumnRef("FolderPath")]))]);
-        AssertExecutes(parsePathNode, expectedMinRows: 1);
-        var parsePathSql = _emitter.Emit(new ProjectNode(parsePathNode, [new ProjectionExpr("parsed", new ColumnRef("parsed"))]));
-        var parsed = ExecuteFirstValue(parsePathSql);
-        Assert.IsInstanceOfType<string>(parsed, "parse_path should emit JSON text, not a structured CLR object.");
-
-        var percentileNode = new AggregateNode(
-            new ScanNode("ProcessEvent"),
-            [new ProjectionExpr("p95", new FunctionCall("percentile", [new ColumnRef("ProcessId"), new LiteralScalar(95, LiteralKind.Int)]))],
-            []);
-        AssertExecutes(percentileNode, expectedMinRows: 1);
     }
 
     [TestMethod]
@@ -345,107 +238,6 @@ public sealed class DuckDbQueryEmitterExecutionTests
             EmitAndExecute(new FunctionCall("translate", [new LiteralScalar("abc", LiteralKind.String), new LiteralScalar("x", LiteralKind.String), new LiteralScalar("abc", LiteralKind.String)])));
     }
 
-    // ─── Window functions execute ───────────────────────────────────
-
-    [TestMethod]
-    [Description("lag() window function executes")]
-    public void Execute_Window_Lag()
-    {
-        var node = new ExtendNode(
-            new ScanNode("ProcessEvent"),
-            [new ProjectionExpr("prev_ts",
-                new WindowScalarExpr(
-                    "lag",
-                    [new ColumnRef("Timestamp")],
-                    new WindowSpec(
-                        PartitionBy: [],
-                        OrderBy: [new SortExpr(new ColumnRef("Timestamp"), SortDirection.Asc)])))]);
-
-        AssertExecutes(node, expectedMinRows: 5);
-    }
-
-    [TestMethod]
-    [Description("row_number() window function executes")]
-    public void Execute_Window_RowNumber()
-    {
-        var node = new ExtendNode(
-            new ScanNode("ProcessEvent"),
-            [new ProjectionExpr("rn",
-                new WindowScalarExpr(
-                    "row_number",
-                    [],
-                    new WindowSpec(
-                        PartitionBy: [],
-                        OrderBy: [new SortExpr(new ColumnRef("Timestamp"), SortDirection.Asc)])))]);
-
-        AssertExecutes(node, expectedMinRows: 5);
-    }
-
-    [TestMethod]
-    [Description("Cumulative sum window function executes")]
-    public void Execute_Window_CumulativeSum()
-    {
-        var node = new ExtendNode(
-            new ScanNode("ProcessEvent"),
-            [new ProjectionExpr("running",
-                new WindowScalarExpr(
-                    "sum",
-                    [new ColumnRef("ProcessId")],
-                    new WindowSpec(
-                        PartitionBy: [],
-                        OrderBy: [new SortExpr(new ColumnRef("Timestamp"), SortDirection.Asc)],
-                        Frame: new WindowFrame(
-                            WindowFrameType.Rows,
-                            new WindowBound(WindowBoundKind.UnboundedPreceding),
-                            new WindowBound(WindowBoundKind.CurrentRow)))))]);
-
-        AssertExecutes(node, expectedMinRows: 5);
-    }
-
-    [TestMethod]
-    [Description("Partitioned window function executes")]
-    public void Execute_Window_Partitioned()
-    {
-        var node = new ExtendNode(
-            new ScanNode("ProcessEvent"),
-            [new ProjectionExpr("rn_per_device",
-                new WindowScalarExpr(
-                    "row_number",
-                    [],
-                    new WindowSpec(
-                        PartitionBy: [new ColumnRef("DeviceName")],
-                        OrderBy: [new SortExpr(new ColumnRef("Timestamp"), SortDirection.Asc)])))]);
-
-        AssertExecutes(node, expectedMinRows: 5);
-    }
-
-    // ─── Full vertical slice executes ───────────────────────────────
-
-    [TestMethod]
-    [Description("Section 19 vertical slice query executes end-to-end")]
-    public void Execute_VerticalSlice()
-    {
-        var node =
-            new LimitNode(
-                new ProjectNode(
-                    new FilterNode(
-                        new ScanNode("ProcessEvent"),
-                        new BinaryScalar(
-                            new ColumnRef("FileName"),
-                            ScalarBinaryOp.Eq,
-                            new LiteralScalar("cmd.exe", LiteralKind.String))),
-                    [
-                        new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
-                        new ProjectionExpr("DeviceName", new ColumnRef("DeviceName")),
-                        new ProjectionExpr("ProcessCommandLine", new ColumnRef("ProcessCommandLine")),
-                    ]),
-                20);
-
-        AssertExecutes(node, expectedMinRows: 1);
-    }
-
-    // ─── SQL injection does not execute ─────────────────────────────
-
     [TestMethod]
     [Description("SQL injection payload in string literal does not break query")]
     public void Execute_InjectionSafe()
@@ -465,24 +257,20 @@ public sealed class DuckDbQueryEmitterExecutionTests
         Assert.IsGreaterThan(0, verifyRows, "Table should still exist after injection attempt");
     }
 
-    // ─── Empty result sets ──────────────────────────────────────────
-
+    // ─── Function mapping executes ──────────────────────────────────
     [TestMethod]
-    [Description("Filter that matches nothing returns zero rows without error")]
-    public void Execute_EmptyResult()
+    [Description("isempty() executes correctly")]
+    public void Execute_IsEmpty()
     {
         var node = new FilterNode(
             new ScanNode("ProcessEvent"),
-            new BinaryScalar(
-                new ColumnRef("FileName"),
-                ScalarBinaryOp.Eq,
-                new LiteralScalar("definitely_not_a_real_process.exe", LiteralKind.String)));
+            new FunctionCall("isnotempty", [new ColumnRef("FileName")]));
 
-        var sql = _emitter.Emit(node);
-        var rows = Execute(sql);
-        Assert.AreEqual(0, rows);
+        AssertExecutes(node, expectedMinRows: 1);
     }
 
+    // ─── SQL injection does not execute ─────────────────────────────
+    // ─── Empty result sets ──────────────────────────────────────────
     [TestMethod]
     [Description("LIMIT 0 returns zero rows")]
     public void Execute_LimitZero()
@@ -493,27 +281,54 @@ public sealed class DuckDbQueryEmitterExecutionTests
         Assert.AreEqual(0, rows);
     }
 
-    // ─── CASE expression executes ───────────────────────────────────
-
     [TestMethod]
-    [Description("CASE WHEN expression executes")]
-    public void Execute_CaseExpr()
+    [Description("parse_ipv4() executes and returns numeric value for valid IPv4 literal")]
+    public void Execute_ParseIpv4()
     {
         var node = new ExtendNode(
             new ScanNode("ProcessEvent"),
-            [new ProjectionExpr("risk",
-                new CaseScalar(
-                    [(new BinaryScalar(
-                        new ColumnRef("FileName"),
-                        ScalarBinaryOp.Eq,
-                        new LiteralScalar("mimikatz.exe", LiteralKind.String)),
-                      new LiteralScalar("critical", LiteralKind.String))],
-                    new LiteralScalar("normal", LiteralKind.String)))]);
+            [new ProjectionExpr("ip_num",
+                new FunctionCall("parse_ipv4", [new LiteralScalar("10.1.2.3", LiteralKind.String)]))]);
 
-        AssertExecutes(node, expectedMinRows: 5);
+        AssertExecutes(node, expectedMinRows: 1);
     }
 
-    // ─── Pipeline simplification executes correctly ─────────────────
+    [TestMethod]
+    [Description("parse_path and percentile execute")]
+    public void Execute_ParsePath_And_Percentile()
+    {
+        var parsePathNode = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("parsed", new FunctionCall("parse_path", [new ColumnRef("FolderPath")]))]);
+        AssertExecutes(parsePathNode, expectedMinRows: 1);
+        var parsePathSql = _emitter.Emit(new ProjectNode(parsePathNode, [new ProjectionExpr("parsed", new ColumnRef("parsed"))]));
+        var parsed = ExecuteFirstValue(parsePathSql);
+        Assert.IsInstanceOfType<string>(parsed, "parse_path should emit JSON text, not a structured CLR object.");
+
+        var percentileNode = new AggregateNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("p95", new FunctionCall("percentile", [new ColumnRef("ProcessId"), new LiteralScalar(95, LiteralKind.Int)]))],
+            []);
+        AssertExecutes(percentileNode, expectedMinRows: 1);
+    }
+
+    [TestMethod]
+    [Description("Project executes with column subset")]
+    public void Execute_Project()
+    {
+        var node = new ProjectNode(
+            new ScanNode("ProcessEvent"),
+            [
+                new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
+                new ProjectionExpr("FileName", new ColumnRef("FileName")),
+            ]);
+
+        AssertExecutes(node, expectedMinRows: 1);
+    }
+
+    [TestMethod]
+    [Description("Bare scan executes against mock data")]
+    public void Execute_Scan() => AssertExecutes(new ScanNode("ProcessEvent"), expectedMinRows: 5);
 
     [TestMethod]
     [Description("Top-k pipeline (summarize|sort|take) executes; fused, correctly ordered and bounded")]
@@ -556,4 +371,183 @@ public sealed class DuckDbQueryEmitterExecutionTests
                 $"counts must be non-increasing: {string.Join(",", counts)}");
         }
     }
+
+    // ─── Core operators execute ─────────────────────────────────────
+    [TestMethod]
+    [Description("Sort + limit executes")]
+    public void Execute_SortLimit()
+    {
+        var node = new LimitNode(
+            new SortNode(
+                new ScanNode("ProcessEvent"),
+                [new SortExpr(new ColumnRef("Timestamp"), SortDirection.Desc)]),
+            3);
+
+        AssertExecutes(node, expectedMinRows: 3);
+    }
+
+    [TestMethod]
+    [Description("trim_start/trim_end and base64 encode/decode execute")]
+    public void Execute_StringHelpers_New()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [
+                new ProjectionExpr("trimmed_l", new FunctionCall("trim_start", [new LiteralScalar(@"[A-Za-z]:\\\\", LiteralKind.String), new ColumnRef("FolderPath")])),
+                new ProjectionExpr("trimmed_r", new FunctionCall("trim_end", [new LiteralScalar(@"\\\\", LiteralKind.String), new ColumnRef("FolderPath")])),
+                new ProjectionExpr("b64", new FunctionCall("base64_encode_tostring", [new ColumnRef("FileName")])),
+                new ProjectionExpr("decoded", new FunctionCall("base64_decode_tostring", [new LiteralScalar("YQ==", LiteralKind.String)]))
+            ]);
+        AssertExecutes(node, expectedMinRows: 1);
+    }
+
+    [TestMethod]
+    [Description("Section 19 vertical slice query executes end-to-end")]
+    public void Execute_VerticalSlice()
+    {
+        var node =
+            new LimitNode(
+                new ProjectNode(
+                    new FilterNode(
+                        new ScanNode("ProcessEvent"),
+                        new BinaryScalar(
+                            new ColumnRef("FileName"),
+                            ScalarBinaryOp.Eq,
+                            new LiteralScalar("cmd.exe", LiteralKind.String))),
+                    [
+                        new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
+                        new ProjectionExpr("DeviceName", new ColumnRef("DeviceName")),
+                        new ProjectionExpr("ProcessCommandLine", new ColumnRef("ProcessCommandLine")),
+                    ]),
+                20);
+
+        AssertExecutes(node, expectedMinRows: 1);
+    }
+
+    [TestMethod]
+    [Description("Cumulative sum window function executes")]
+    public void Execute_Window_CumulativeSum()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("running",
+                new WindowScalarExpr(
+                    "sum",
+                    [new ColumnRef("ProcessId")],
+                    new WindowSpec(
+                        PartitionBy: [],
+                        OrderBy: [new SortExpr(new ColumnRef("Timestamp"), SortDirection.Asc)],
+                        Frame: new WindowFrame(
+                            WindowFrameType.Rows,
+                            new WindowBound(WindowBoundKind.UnboundedPreceding),
+                            new WindowBound(WindowBoundKind.CurrentRow)))))]);
+
+        AssertExecutes(node, expectedMinRows: 5);
+    }
+
+    [TestMethod]
+    [Description("lag() window function executes")]
+    public void Execute_Window_Lag()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("prev_ts",
+                new WindowScalarExpr(
+                    "lag",
+                    [new ColumnRef("Timestamp")],
+                    new WindowSpec(
+                        PartitionBy: [],
+                        OrderBy: [new SortExpr(new ColumnRef("Timestamp"), SortDirection.Asc)])))]);
+
+        AssertExecutes(node, expectedMinRows: 5);
+    }
+
+    [TestMethod]
+    [Description("Partitioned window function executes")]
+    public void Execute_Window_Partitioned()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("rn_per_device",
+                new WindowScalarExpr(
+                    "row_number",
+                    [],
+                    new WindowSpec(
+                        PartitionBy: [new ColumnRef("DeviceName")],
+                        OrderBy: [new SortExpr(new ColumnRef("Timestamp"), SortDirection.Asc)])))]);
+
+        AssertExecutes(node, expectedMinRows: 5);
+    }
+
+    // ─── Window functions execute ───────────────────────────────────
+    [TestMethod]
+    [Description("row_number() window function executes")]
+    public void Execute_Window_RowNumber()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("rn",
+                new WindowScalarExpr(
+                    "row_number",
+                    [],
+                    new WindowSpec(
+                        PartitionBy: [],
+                        OrderBy: [new SortExpr(new ColumnRef("Timestamp"), SortDirection.Asc)])))]);
+
+        AssertExecutes(node, expectedMinRows: 5);
+    }
+
+    private void AssertExecutes(RelNode node, int? expectedMinRows = null)
+    {
+        var sql = _emitter.Emit(node);
+        Assert.IsNotNull(sql, "Emitter returned null SQL");
+        Assert.IsGreaterThan(0, sql.Length, "Emitter returned empty SQL");
+
+        try
+        {
+            var rows = Execute(sql);
+            if (expectedMinRows.HasValue)
+            {
+                Assert.IsGreaterThanOrEqualTo(expectedMinRows.Value, rows,
+                    $"Expected at least {expectedMinRows} rows, got {rows}.\nSQL: {sql}");
+            }
+        }
+        catch (Exception ex)
+        {
+#pragma warning disable MSTEST0058 // Do not use asserts in catch blocks
+            Assert.Fail($"DuckDB execution failed.\nSQL: {sql}\nError: {ex.Message}");
+#pragma warning restore MSTEST0058 // Do not use asserts in catch blocks
+        }
+    }
+
+    private int Execute(string sql)
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = sql;
+        using var reader = cmd.ExecuteReader();
+        var count = 0;
+        while (reader.Read())
+        {
+            count++;
+        }
+
+        return count;
+    }
+
+    private object? ExecuteFirstValue(string sql)
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = sql;
+        using var reader = cmd.ExecuteReader();
+        if (!reader.Read())
+        {
+            return null;
+        }
+
+        return reader.IsDBNull(0) ? null : reader.GetValue(0);
+    }
+
+    // ─── Full vertical slice executes ───────────────────────────────
+    // ─── CASE expression executes ───────────────────────────────────
+    // ─── Pipeline simplification executes correctly ─────────────────
 }

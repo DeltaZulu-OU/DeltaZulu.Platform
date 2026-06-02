@@ -5,12 +5,15 @@ using Mapping;
 using Schema;
 
 /// <summary>
+/// <para>
 /// Generates transient DuckDB DDL (CREATE SCHEMA, CREATE TABLE, CREATE VIEW)
 /// from C# schema models. SQL is generated, executed, and discarded — never
 /// persisted as a source artifact.
-///
+/// </para>
+/// <para>
 /// Emission order matters: schemas → bronze tables → silver tables →
 /// silver parser views → golden public hunting views.
+/// </para>
 /// </summary>
 public sealed class SchemaEmitter
 {
@@ -194,21 +197,6 @@ public sealed class SchemaEmitter
     #endregion Canonical view (golden.*)
     #region Mapping expression → SQL
 
-    private string EmitMappingExpr(ExprDef expr) => expr switch
-    {
-        ColumnExpr col => DuckDbSqlText.EscapeIdent(col.Name),
-        LiteralExpr lit => EmitMappingLiteral(lit),
-        JsonTextExpr json => $"json_extract_string({EmitMappingExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}')",
-        JsonExistsExpr json => $"json_exists({EmitMappingExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}')",
-        RegexExtractExpr re => $"regexp_extract({EmitMappingExpr(re.Input)}, '{EscapeSql(re.Pattern)}', {re.Group})",
-        CastExpr cast => $"CAST({EmitMappingExpr(cast.Input)} AS {cast.TargetType.ToSql()})",
-        TryCastExpr cast => $"TRY_CAST({EmitMappingExpr(cast.Input)} AS {cast.TargetType.ToSql()})",
-        FunctionExpr fn => $"{fn.Name}({string.Join(", ", fn.Args.Select(EmitMappingExpr))})",
-        BinaryExpr bin => EmitMappingBinary(bin),
-        CaseExpr cs => EmitMappingCase(cs),
-        _ => throw new NotSupportedException($"Unsupported mapping expression: {expr.GetType().Name}")
-    };
-
     private static string EmitMappingLiteral(LiteralExpr lit)
     {
         if (lit.Value is null)
@@ -228,6 +216,8 @@ public sealed class SchemaEmitter
 
         return lit.Value.ToString()!;
     }
+
+    private static string EscapeSql(string s) => s.Replace("'", "''");
 
     private string EmitMappingBinary(BinaryExpr bin)
     {
@@ -259,6 +249,19 @@ public sealed class SchemaEmitter
         return sb.ToString();
     }
 
-    private static string EscapeSql(string s) => s.Replace("'", "''");
+    private string EmitMappingExpr(ExprDef expr) => expr switch
+    {
+        ColumnExpr col => DuckDbSqlText.EscapeIdent(col.Name),
+        LiteralExpr lit => EmitMappingLiteral(lit),
+        JsonTextExpr json => $"json_extract_string({EmitMappingExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}')",
+        JsonExistsExpr json => $"json_exists({EmitMappingExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}')",
+        RegexExtractExpr re => $"regexp_extract({EmitMappingExpr(re.Input)}, '{EscapeSql(re.Pattern)}', {re.Group})",
+        CastExpr cast => $"CAST({EmitMappingExpr(cast.Input)} AS {cast.TargetType.ToSql()})",
+        TryCastExpr cast => $"TRY_CAST({EmitMappingExpr(cast.Input)} AS {cast.TargetType.ToSql()})",
+        FunctionExpr fn => $"{fn.Name}({string.Join(", ", fn.Args.Select(EmitMappingExpr))})",
+        BinaryExpr bin => EmitMappingBinary(bin),
+        CaseExpr cs => EmitMappingCase(cs),
+        _ => throw new NotSupportedException($"Unsupported mapping expression: {expr.GetType().Name}")
+    };
 }
 #endregion Mapping expression → SQL

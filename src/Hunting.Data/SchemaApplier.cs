@@ -4,11 +4,14 @@ using DuckDB.NET.Data;
 using Hunting.Core.Schema;
 
 /// <summary>
+/// <para>
 /// Applies generated DDL to DuckDB and validates the resulting schema
 /// against C# contracts via DESCRIBE.
-///
+/// </para>
+/// <para>
 /// Schema provenance (hashes, versions) should be recorded after
 /// successful application — not implemented in MVP but the contract is here.
+/// </para>
 /// </summary>
 public sealed class SchemaApplier
 {
@@ -33,6 +36,32 @@ public sealed class SchemaApplier
             cmd.CommandText = sql;
             cmd.ExecuteNonQuery();
         }
+    }
+
+    /// <summary>
+    /// Insert mock/seed data by executing raw SQL.
+    /// <b>TEST AND DEVELOPMENT USE ONLY.</b>
+    /// Production code must not call this method — it bypasses the
+    /// schema pipeline and "SQL is not a developer-authored artifact" policy.
+    /// </summary>
+    public void ExecuteRaw(string sql)
+    {
+        var conn = _connectionFactory.GetConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Query a single integer value (for row count verification etc.)
+    /// <b>TEST AND DEVELOPMENT USE ONLY.</b>
+    /// </summary>
+    public long QueryScalar(string sql)
+    {
+        var conn = _connectionFactory.GetConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = sql;
+        return Convert.ToInt64(cmd.ExecuteScalar());
     }
 
     /// <summary>
@@ -96,17 +125,6 @@ public sealed class SchemaApplier
         return result;
     }
 
-    /// <summary>
-    /// Check if two DuckDB type names are compatible.
-    /// Handles aliases: VARCHAR/TEXT, BIGINT/INT8, etc.
-    /// </summary>
-    private static bool TypesCompatible(string expected, string actual)
-    {
-        var e = NormalizeType(expected);
-        var a = NormalizeType(actual);
-        return e == a;
-    }
-
     private static string NormalizeType(string type)
     {
         var upper = type.ToUpperInvariant().Trim();
@@ -123,29 +141,14 @@ public sealed class SchemaApplier
     }
 
     /// <summary>
-    /// Insert mock/seed data by executing raw SQL.
-    /// <b>TEST AND DEVELOPMENT USE ONLY.</b>
-    /// Production code must not call this method — it bypasses the
-    /// schema pipeline and "SQL is not a developer-authored artifact" policy.
+    /// Check if two DuckDB type names are compatible.
+    /// Handles aliases: VARCHAR/TEXT, BIGINT/INT8, etc.
     /// </summary>
-    public void ExecuteRaw(string sql)
+    private static bool TypesCompatible(string expected, string actual)
     {
-        var conn = _connectionFactory.GetConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = sql;
-        cmd.ExecuteNonQuery();
-    }
-
-    /// <summary>
-    /// Query a single integer value (for row count verification etc.)
-    /// <b>TEST AND DEVELOPMENT USE ONLY.</b>
-    /// </summary>
-    public long QueryScalar(string sql)
-    {
-        var conn = _connectionFactory.GetConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = sql;
-        return Convert.ToInt64(cmd.ExecuteScalar());
+        var e = NormalizeType(expected);
+        var a = NormalizeType(actual);
+        return e == a;
     }
 }
 

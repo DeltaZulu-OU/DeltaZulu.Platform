@@ -4,14 +4,22 @@ using System.Text.RegularExpressions;
 using QueryModel;
 
 /// <summary>
-/// Emits DuckDB SQL from a RelNode query tree.
-///
+/// <para>Emits DuckDB SQL from a RelNode query tree.</para>
+/// <para>
 /// SQL is transient — generated, executed, discarded. Run-scoped collaborators
 /// own mutable emission state; the public façade retains only immutable options
 /// and the most recently published statistics snapshot.
+/// </para>
 /// </summary>
 public sealed partial class DuckDbQueryEmitter
 {
+    private readonly DuckDbEmitterOptions _options;
+
+    public DuckDbQueryEmitter(int defaultLimit = 10_000, bool applyDefaultLimit = true)
+    {
+        _options = new DuckDbEmitterOptions(defaultLimit, applyDefaultLimit);
+    }
+
     public EmitterRunStats? LastRunStats { get; private set; }
 
     public sealed record EmitterRunStats(
@@ -23,16 +31,6 @@ public sealed partial class DuckDbQueryEmitter
         int StageRefCountLookups,
         int CacheInvalidations,
         int FinalCteCount);
-
-    [GeneratedRegex(@"__kql_stage_\d+")]
-    internal static partial Regex StageRefRegex();
-
-    private readonly DuckDbEmitterOptions _options;
-
-    public DuckDbQueryEmitter(int defaultLimit = 10_000, bool applyDefaultLimit = true)
-    {
-        _options = new DuckDbEmitterOptions(defaultLimit, applyDefaultLimit);
-    }
 
     /// <summary>
     /// Emit a complete DuckDB SQL statement from a RelNode tree.
@@ -53,4 +51,7 @@ public sealed partial class DuckDbQueryEmitter
         LastRunStats = context.BuildRunStats();
         return sql;
     }
+
+    [GeneratedRegex(@"__kql_stage_\d+")]
+    internal static partial Regex StageRefRegex();
 }

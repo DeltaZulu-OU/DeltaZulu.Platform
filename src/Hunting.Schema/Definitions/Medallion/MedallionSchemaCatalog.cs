@@ -6,21 +6,22 @@ using Hunting.Schema.Definitions.Medallion.Golden;
 using Hunting.Schema.Definitions.Medallion.Silver;
 
 /// <summary>
-/// C#-first catalog for the medallion schema path.
-///
+/// <para>C#-first catalog for the medallion schema path.</para>
+/// <para>
 /// Follow-up commits add source/event-specific Silver filters, parser-specific
 /// JSON extraction, and schema-pipeline wiring in small reviewable slices.
+/// </para>
 /// </summary>
 public static class MedallionSchemaCatalog
 {
     /// <summary>
-    /// Source-preserving Bronze ingestion tables.
+    /// Operator-facing Golden hunting views.
     /// </summary>
-    public static IReadOnlyList<RawTableDef> RawTables { get; } =
+    public static IReadOnlyList<CanonicalViewDef> CanonicalViews { get; } =
     [
-        BronzeSourceTables.WindowsSysmonEvent,
-        BronzeSourceTables.WindowsSecurityEvent,
-        BronzeSourceTables.DnsServerEvent
+        GoldenEventContracts.Dns,
+        GoldenEventContracts.NetworkSession,
+        GoldenEventContracts.ProcessEvent
     ];
 
     /// <summary>
@@ -37,12 +38,12 @@ public static class MedallionSchemaCatalog
     ];
 
     /// <summary>
-    /// Operator-facing Golden hunting views.
+    /// Source-preserving Bronze ingestion tables.
     /// </summary>
-    public static IReadOnlyList<CanonicalViewDef> CanonicalViews { get; } =
+    public static IReadOnlyList<RawTableDef> RawTables { get; } =
     [
-        GoldenEventContracts.Dns,
-        GoldenEventContracts.NetworkSession,
-        GoldenEventContracts.ProcessEvent
+        BronzeSourceTables.WindowsSysmonEvent,
+        BronzeSourceTables.WindowsSecurityEvent,
+        BronzeSourceTables.DnsServerEvent
     ];
 }

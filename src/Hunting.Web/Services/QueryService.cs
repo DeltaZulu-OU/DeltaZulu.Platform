@@ -4,25 +4,29 @@ using Hunting.Core.Policy;
 using Hunting.Data;
 
 /// <summary>
+/// <para>
 /// Wraps QueryRuntime with a SemaphoreSlim to serialize DuckDB access
 /// across concurrent Blazor Server circuits.
-///
+/// </para>
+/// <para>
 /// The single-connection MVP model is correct but not concurrent-safe.
 /// All query execution goes through this service so the serialization
 /// point is explicit and named, not implicit.
+/// </para>
 /// </summary>
 public sealed class QueryService : IDisposable
 {
+    private const int MaxMaterializedRows = 2000;
+    private readonly ILogger<QueryService> _logger;
     private readonly QueryRuntime _runtime;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private readonly ILogger<QueryService> _logger;
-    private const int MaxMaterializedRows = 2000;
-
     public QueryService(QueryRuntime runtime, ILogger<QueryService> logger)
     {
         _runtime = runtime;
         _logger = logger;
     }
+
+    public void Dispose() => _semaphore.Dispose();
 
     /// <summary>
     /// Execute a KQL query. Serializes access to the single DuckDB connection.
@@ -120,9 +124,6 @@ public sealed class QueryService : IDisposable
             _semaphore.Release();
         }
     }
-
-    public void Dispose() => _semaphore.Dispose();
-
     private static List<object?>[] CreateColumnData(int count)
     {
         var columns = new List<object?>[count];
