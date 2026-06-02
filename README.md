@@ -12,6 +12,7 @@ Analysts write KQL against logical security tables (for example, `ProcessEvent`)
 - Phase 4 (hardening) is complete: schema validation automation, generated SQL preview, second table family, and Monaco KQL editor language-service integration are complete.
 - Phase 5 (Planner v1 + emitter SQL-shape simplification) is complete.
 - Phase 1A medallion checkpoint is complete: active Bronze/Silver/Golden contracts are documented, legacy vertical-slice names are removed from the active branch, and sample queries use the active Golden surface.
+- Phase 1E semantic-hardening baseline is in progress: Silver parsers now extract source-specific event timestamps with explicit `ingest_time` fallback and use tolerant DuckDB conversions for optional numeric telemetry; Golden contract documentation records the current normalization boundary.
 - End-to-end pipeline coverage currently includes 17 hunting scenarios in `EndToEndPipelineTests`.
 - Developer-mode query debug trace is now logged on successful executions, not only failures, to support optimization telemetry.
 - `parse_path()` output is now emitted as JSON text so dynamic path components render as readable strings in the UI/results grid.

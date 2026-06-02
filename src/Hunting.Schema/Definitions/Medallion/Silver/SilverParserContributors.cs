@@ -8,9 +8,9 @@ using static Hunting.Core.Mapping.MapDsl;
 /// <summary>
 /// Active Phase 1A Silver parser contributors.
 ///
-/// This commit maps the DNS server query contributor. At this point all six
-/// active Phase 1A Silver contributors have source/event filters and parser
-/// projections. Semantic normalization remains a later hardening step.
+/// All active contributors keep source-specific interpretation in Silver:
+/// selectors, event-time extraction, tolerant optional conversions, and Golden
+/// projections are declared per source/event shape.
 /// </summary>
 public static class SilverParserContributors
 {
@@ -24,14 +24,14 @@ public static class SilverParserContributors
         columns: GoldenEventContracts.ProcessEventColumns,
         projections:
         [
-            Map("Timestamp", Col("ingest_time")),
+            Map("Timestamp", EventTimestamp("$.UtcTime")),
             Map("DeviceId", Lit(null)),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("ProcessCreated")),
             Map("FileName", RegexExtract(JsonText(Col("raw_log"), "$.Image"), @"[^\\]+$", 0)),
             Map("FolderPath", JsonText(Col("raw_log"), "$.Image")),
             Map("SHA256", JsonText(Col("raw_log"), "$.Hashes")),
-            Map("ProcessId", Cast(JsonText(Col("raw_log"), "$.ProcessId"), DuckDbType.BigInt)),
+            Map("ProcessId", TryCast(JsonText(Col("raw_log"), "$.ProcessId"), DuckDbType.BigInt)),
             Map("ProcessCommandLine", JsonText(Col("raw_log"), "$.CommandLine")),
             Map("AccountName", JsonText(Col("raw_log"), "$.User")),
             Map("InitiatingProcessFileName", RegexExtract(JsonText(Col("raw_log"), "$.ParentImage"), @"[^\\]+$", 0)),
@@ -51,14 +51,14 @@ public static class SilverParserContributors
         columns: GoldenEventContracts.ProcessEventColumns,
         projections:
         [
-            Map("Timestamp", Col("ingest_time")),
+            Map("Timestamp", EventTimestamp("$.TimeCreated")),
             Map("DeviceId", Lit(null)),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("ProcessCreated")),
             Map("FileName", RegexExtract(JsonText(Col("raw_log"), "$.NewProcessName"), @"[^\\]+$", 0)),
             Map("FolderPath", JsonText(Col("raw_log"), "$.NewProcessName")),
             Map("SHA256", Lit(null)),
-            Map("ProcessId", Lit(null)),
+            Map("ProcessId", TryCast(JsonText(Col("raw_log"), "$.NewProcessId"), DuckDbType.BigInt)),
             Map("ProcessCommandLine", JsonText(Col("raw_log"), "$.CommandLine")),
             Map("AccountName", JsonText(Col("raw_log"), "$.SubjectUserName")),
             Map("InitiatingProcessFileName", RegexExtract(JsonText(Col("raw_log"), "$.ParentProcessName"), @"[^\\]+$", 0)),
@@ -78,20 +78,20 @@ public static class SilverParserContributors
         columns: GoldenEventContracts.NetworkSessionColumns,
         projections:
         [
-            Map("Timestamp", Col("ingest_time")),
+            Map("Timestamp", EventTimestamp("$.UtcTime")),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("ConnectionSuccess")),
             Map("LocalIP", JsonText(Col("raw_log"), "$.SourceIp")),
-            Map("LocalPort", Cast(JsonText(Col("raw_log"), "$.SourcePort"), DuckDbType.Integer)),
+            Map("LocalPort", TryCast(JsonText(Col("raw_log"), "$.SourcePort"), DuckDbType.Integer)),
             Map("RemoteIP", JsonText(Col("raw_log"), "$.DestinationIp")),
-            Map("RemotePort", Cast(JsonText(Col("raw_log"), "$.DestinationPort"), DuckDbType.Integer)),
+            Map("RemotePort", TryCast(JsonText(Col("raw_log"), "$.DestinationPort"), DuckDbType.Integer)),
             Map("Protocol", JsonText(Col("raw_log"), "$.Protocol")),
             Map("RemoteUrl", JsonText(Col("raw_log"), "$.DestinationHostname")),
             Map("LocalIPType", Lit(null)),
             Map("RemoteIPType", Lit(null)),
             Map("InitiatingProcessFileName", RegexExtract(JsonText(Col("raw_log"), "$.Image"), @"[^\\]+$", 0)),
             Map("InitiatingProcessFolderPath", JsonText(Col("raw_log"), "$.Image")),
-            Map("InitiatingProcessId", Cast(JsonText(Col("raw_log"), "$.ProcessId"), DuckDbType.BigInt)),
+            Map("InitiatingProcessId", TryCast(JsonText(Col("raw_log"), "$.ProcessId"), DuckDbType.BigInt)),
             Map("InitiatingProcessCommandLine", Lit(null)),
             Map("InitiatingProcessAccountName", JsonText(Col("raw_log"), "$.User")),
             Map("InitiatingProcessSHA256", JsonText(Col("raw_log"), "$.Hashes")),
@@ -109,13 +109,13 @@ public static class SilverParserContributors
         columns: GoldenEventContracts.NetworkSessionColumns,
         projections:
         [
-            Map("Timestamp", Col("ingest_time")),
+            Map("Timestamp", EventTimestamp("$.TimeCreated")),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("ConnectionAllowed")),
             Map("LocalIP", JsonText(Col("raw_log"), "$.SourceAddress")),
-            Map("LocalPort", Lit(null)),
+            Map("LocalPort", TryCast(JsonText(Col("raw_log"), "$.SourcePort"), DuckDbType.Integer)),
             Map("RemoteIP", JsonText(Col("raw_log"), "$.DestAddress")),
-            Map("RemotePort", Lit(null)),
+            Map("RemotePort", TryCast(JsonText(Col("raw_log"), "$.DestPort"), DuckDbType.Integer)),
             Map("Protocol", JsonText(Col("raw_log"), "$.Protocol")),
             Map("RemoteUrl", Lit(null)),
             Map("LocalIPType", Lit(null)),
@@ -140,7 +140,7 @@ public static class SilverParserContributors
         columns: GoldenEventContracts.DnsColumns,
         projections:
         [
-            Map("Timestamp", Col("ingest_time")),
+            Map("Timestamp", EventTimestamp("$.UtcTime")),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("DnsQuery")),
             Map("QueryName", JsonText(Col("raw_log"), "$.QueryName")),
@@ -166,7 +166,7 @@ public static class SilverParserContributors
         columns: GoldenEventContracts.DnsColumns,
         projections:
         [
-            Map("Timestamp", Col("ingest_time")),
+            Map("Timestamp", EventTimestamp("$.event_time")),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("DnsQuery")),
             Map("QueryName", JsonText(Col("raw_log"), "$.query_name")),
@@ -203,6 +203,12 @@ public static class SilverParserContributors
                 Projections: projections),
             Columns: columns,
             Description: description);
+
+    private static ExprDef EventTimestamp(string jsonPath) =>
+        Fn(
+            "COALESCE",
+            TryCast(JsonText(Col("raw_log"), jsonPath), DuckDbType.Timestamp),
+            Col("ingest_time"));
 
     private static ExprDef EventIdEquals(string eventId) =>
         And(

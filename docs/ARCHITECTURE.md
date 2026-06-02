@@ -55,6 +55,29 @@ internal = control-plane metadata
 
 Bronze stores source-shaped records. Silver interprets those records using source/event filters and parser-specific projections. Golden consolidates Silver outputs into operator-facing contracts. Golden may perform thin harmonization but must not hide source-specific payload parsing.
 
+### Silver semantic-normalization baseline
+
+Bronze does not normalize source event timestamps or optional payload values into a universal ingestion shape. Timestamp location and representation differ across Windows event records, DNS records, audit logs, syslog, web-server logs, CEF, and future source families. Each Silver parser owns extraction and interpretation for its source/event shape.
+
+The active timestamp rule is:
+
+```text
+Golden.Timestamp = Silver-extracted source event time
+                   or Bronze.ingest_time when extraction is absent or invalid
+```
+
+The `ingest_time` fallback is explicit in generated Silver SQL so it remains reviewable. It is an ingestion fallback, not the preferred event-time semantic. Optional numeric telemetry uses tolerant conversion so one malformed process identifier or port does not invalidate otherwise useful rows. Selector fields remain strict parser-eligibility inputs.
+
+Current Golden field semantics:
+
+| Field | Active semantic boundary |
+|---|---|
+| `Timestamp` | Source event time extracted and normalized by Silver, with explicit Bronze `ingest_time` fallback. |
+| `ActionType` | Golden event-family action label assigned by the contributing Silver parser. |
+| `ReportId` | Source-local event or record identifier; consumers must not assume global uniqueness. |
+| `AccountName` | Source-provided account identity when present; broader identity normalization remains source-specific follow-up work. |
+| DNS response fields | Source-provided response status/name/address values; fields may remain null when a contributor does not supply an equivalent value. |
+
 ## Phase 1A Medallion Checkpoint
 
 Phase 1A is the first active medallion checkpoint.

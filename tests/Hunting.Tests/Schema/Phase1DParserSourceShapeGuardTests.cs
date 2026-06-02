@@ -186,6 +186,60 @@ public sealed class Phase1DParserSourceShapeGuardTests
         Assert.AreEqual(1, applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent"));
     }
 
+    [TestMethod]
+    public void ParserSourceShape_SysmonProcessParser_UsesSourceEventTimeAndToleratesMalformedOptionalProcessId()
+    {
+        using var factory = new DuckDbConnectionFactory(startupSql: []);
+        var applier = CreateAndApplySchema(factory);
+
+        applier.ExecuteRaw(
+            """
+            INSERT INTO bronze.windows_sysmon_event (ingest_time, source_name, provider, host, raw_log, raw_text)
+            VALUES
+                (TIMESTAMP '2024-06-15 11:00:00', 'sysmon', 'Microsoft-Windows-Sysmon', 'HOST-1',
+                 CAST('{"EventID":"1","UtcTime":"2024-06-15 10:00:00","Image":"C:\\Windows\\System32\\cmd.exe","ProcessId":"not-a-number","EventRecordID":"50"}' AS JSON), ''),
+                (TIMESTAMP '2024-06-15 12:00:00', 'sysmon', 'Microsoft-Windows-Sysmon', 'HOST-1',
+                 CAST('{"EventID":"1","UtcTime":"not-a-timestamp","Image":"C:\\Windows\\System32\\whoami.exe","ProcessId":"101","EventRecordID":"51"}' AS JSON), '')
+            """);
+
+        Assert.AreEqual(1, applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName = 'cmd.exe' AND Timestamp = TIMESTAMP '2024-06-15 10:00:00' AND ProcessId IS NULL"));
+        Assert.AreEqual(1, applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName = 'whoami.exe' AND Timestamp = TIMESTAMP '2024-06-15 12:00:00' AND ProcessId = 101"));
+    }
+
+    [TestMethod]
+    public void ParserSourceShape_WindowsSecurityProcessParser_ExtractsOptionalProcessId()
+    {
+        using var factory = new DuckDbConnectionFactory(startupSql: []);
+        var applier = CreateAndApplySchema(factory);
+
+        applier.ExecuteRaw(
+            """
+            INSERT INTO bronze.windows_security_event (ingest_time, source_name, provider, host, raw_log, raw_text)
+            VALUES
+                (TIMESTAMP '2024-06-15 11:00:00', 'security', 'Microsoft-Windows-Security-Auditing', 'HOST-1',
+                 CAST('{"EventID":"4688","TimeCreated":"2024-06-15 10:30:00","NewProcessName":"C:\\Windows\\System32\\cmd.exe","NewProcessId":"0x4d2","EventRecordID":"60"}' AS JSON), '')
+            """);
+
+        Assert.AreEqual(1, applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent WHERE FileName = 'cmd.exe' AND Timestamp = TIMESTAMP '2024-06-15 10:30:00' AND ProcessId = 1234"));
+    }
+
+    [TestMethod]
+    public void ParserSourceShape_WindowsSecurityNetworkParser_ToleratesMalformedOptionalPorts()
+    {
+        using var factory = new DuckDbConnectionFactory(startupSql: []);
+        var applier = CreateAndApplySchema(factory);
+
+        applier.ExecuteRaw(
+            """
+            INSERT INTO bronze.windows_security_event (ingest_time, source_name, provider, host, raw_log, raw_text)
+            VALUES
+                (TIMESTAMP '2024-06-15 11:00:00', 'security', 'Microsoft-Windows-Security-Auditing', 'HOST-1',
+                 CAST('{"EventID":"5156","TimeCreated":"2024-06-15 10:45:00","SourceAddress":"10.0.0.5","SourcePort":"not-a-port","DestAddress":"203.0.113.10","DestPort":"443","Protocol":"6","Application":"C:\\Windows\\System32\\svchost.exe","EventRecordID":"70"}' AS JSON), '')
+            """);
+
+        Assert.AreEqual(1, applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession WHERE Timestamp = TIMESTAMP '2024-06-15 10:45:00' AND LocalPort IS NULL AND RemotePort = 443"));
+    }
+
     private static SchemaApplier CreateAndApplySchema(DuckDbConnectionFactory factory)
     {
         var applier = new SchemaApplier(factory);

@@ -57,4 +57,28 @@ public sealed class SchemaEmitterMappingTests
 
         Assert.Contains("json_exists(raw_log, '$.weird''path')", sql);
     }
+
+    [TestMethod]
+    public void EmitParserView_TryCastProjection_EmitsDuckDbTryCast()
+    {
+        var view = new ParserViewDef(
+            "silver",
+            "v_test_try_cast",
+            "test-source",
+            "TestEvent",
+            new MappingQueryDef(
+                "bronze.test_source",
+                null,
+                [
+                    Map("ProcessId", TryCast(JsonText(Col("raw_log"), "$.ProcessId"), DuckDbType.BigInt))
+                ]),
+            [
+                new ColumnDef("ProcessId", DuckDbType.BigInt, KustoType.Long)
+            ]);
+
+        var sql = new SchemaEmitter().EmitParserView(view);
+
+        Assert.Contains("TRY_CAST(json_extract_string(raw_log, '$.ProcessId') AS BIGINT) AS ProcessId", sql);
+    }
+
 }

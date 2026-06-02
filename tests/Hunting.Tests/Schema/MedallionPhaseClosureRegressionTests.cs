@@ -146,16 +146,14 @@ public sealed class MedallionPhaseClosureRegressionTests
     {
         var deferredItems = new[]
         {
-            "schema provenance and migration safety",
-            "seed idempotency and fixture provenance",
-            "first-class Silver parser specs",
-            "negative JSON and wrong-source tests",
-            "tolerant casting policy",
-            "DNS response-code normalization",
-            "Windows Security hex process ID handling",
-            "Golden semantic normalization"
+            "malformed JSON policy",
+            "parser-spec-driven Silver generation",
+            "additional source-specific conversion formats",
+            "additional source-specific timestamp parsers",
+            "deeper Golden value-domain normalization",
+            "scenario-level fixture expansion"
         };
 
-        Assert.HasCount(8, deferredItems, "The closure test should keep known Phase 1D hardening work explicit.");
+        Assert.HasCount(6, deferredItems, "The closure test should keep remaining medallion hardening work explicit.");
     }
 }

@@ -202,6 +202,7 @@ public sealed class SchemaEmitter
         JsonExistsExpr json => $"json_exists({EmitMappingExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}')",
         RegexExtractExpr re => $"regexp_extract({EmitMappingExpr(re.Input)}, '{EscapeSql(re.Pattern)}', {re.Group})",
         CastExpr cast => $"CAST({EmitMappingExpr(cast.Input)} AS {cast.TargetType.ToSql()})",
+        TryCastExpr cast => $"TRY_CAST({EmitMappingExpr(cast.Input)} AS {cast.TargetType.ToSql()})",
         FunctionExpr fn => $"{fn.Name}({string.Join(", ", fn.Args.Select(EmitMappingExpr))})",
         BinaryExpr bin => EmitMappingBinary(bin),
         CaseExpr cs => EmitMappingCase(cs),

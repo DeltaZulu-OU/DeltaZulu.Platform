@@ -76,7 +76,9 @@ Seeder -> bronze source tables -> silver source/event-specific parser views -> g
 ```
 
 - Seeder writes source-shaped records only to Bronze objects.
-- Silver is the only layer that extracts/interprets source-specific payload details, such as Sysmon event IDs, Windows Security payload paths, DNS payload keys, and cloud audit payload shapes.
+- Silver is the only layer that extracts/interprets source-specific payload details, such as Sysmon event IDs, Windows Security payload paths, DNS payload keys, cloud audit payload shapes, and source-specific event timestamps.
+- Silver maps source event time into the Golden `Timestamp` contract and may use Bronze `ingest_time` only as an explicit fallback when source event time is absent or invalid. This remains parser-specific because Windows records, auditd, syslog, Nginx, Apache, CEF, and other source families encode timestamps differently.
+- Silver uses tolerant conversion for optional messy telemetry where a malformed value should become `NULL` rather than invalidate an otherwise useful row; parser-eligibility selectors remain strict.
 - Golden consolidates normalized outputs from Silver contributors and must not directly parse Bronze payload fields in normal operation.
 - Golden may apply thin harmonization logic, such as `UNION ALL`, `COALESCE`, final type alignment, canonical column ordering, and table defaults, while preserving provenance back to Bronze through Silver-emitted metadata.
 

@@ -129,21 +129,29 @@ Remaining limitations:
 
 - parser specs are a validation/review layer, not the runtime mapping source
 - actual parser behavior still lives in `ParserViewDef.Mapping`
-- malformed JSON policy is deferred
-- tolerant numeric casting is deferred to Phase 1E
-- Golden semantic normalization is deferred to Phase 1E
+- Phase 1E tolerant-conversion and Golden semantic baseline is active; additional source-specific formats remain follow-up work
+- malformed JSON policy remains deferred
 
-### Phase 1E — Tolerant casting and Golden semantic normalization
+### Phase 1E — Tolerant casting and Golden semantic normalization 🚧 IN PROGRESS
 
 **Objective:** Prevent messy telemetry values from breaking queries and make Golden semantics explicit across source contributors.
 
-**Scope:**
+Implemented baseline:
 
-- Define strict versus tolerant conversion policy.
-- Use tolerant conversions for optional extracted numeric fields where appropriate.
-- Add explicit conversion helpers for hex process IDs and source-specific formats.
-- Normalize or document Golden value domains such as `ActionType`, `ReportId`, `AccountName`, `ResponseCode`, and DNS response fields.
-- Decide how to model event/source/ingest timestamps.
+- Silver-owned source event-time extraction for all active parser contributors
+- explicit Bronze `ingest_time` fallback when a source event timestamp is absent or malformed
+- tolerant DuckDB `TRY_CAST` mapping support for optional numeric telemetry
+- tolerant Sysmon and Windows Security process ID and network-port projections
+- Windows Security EID 4688 `NewProcessId` projection into Golden `ProcessId`
+- focused source-shape regressions for timestamp precedence, timestamp fallback, hexadecimal process IDs, and malformed optional numeric values
+- documented active Golden semantic boundaries
+
+**Remaining scope:**
+
+- Extend source-specific conversion helpers only when future formats are not handled by DuckDB tolerant conversion.
+- Continue refining Golden value-domain documentation as new contributors introduce materially different semantics.
+- Define malformed JSON policy.
+- Extend source-specific timestamp parsing as new audit, syslog, web-server, CEF, and other log families are onboarded.
 
 **Exit criteria:**
 

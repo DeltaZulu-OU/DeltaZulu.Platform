@@ -131,11 +131,11 @@ public sealed class MedallionSchemaCatalogTests
     {
         var sql = EmitParserSql("silver.v_processevent_windows_sysmon_eid1");
 
-        Assert.Contains("ingest_time AS Timestamp", sql);
+        Assert.Contains("COALESCE(TRY_CAST(json_extract_string(raw_log, '$.UtcTime') AS TIMESTAMP), ingest_time) AS Timestamp", sql);
         Assert.Contains("host AS DeviceName", sql);
         Assert.Contains("'ProcessCreated' AS ActionType", sql);
         Assert.Contains("json_extract_string(raw_log, '$.Image') AS FolderPath", sql);
-        Assert.Contains("CAST(json_extract_string(raw_log, '$.ProcessId') AS BIGINT) AS ProcessId", sql);
+        Assert.Contains("TRY_CAST(json_extract_string(raw_log, '$.ProcessId') AS BIGINT) AS ProcessId", sql);
         Assert.Contains("json_extract_string(raw_log, '$.User') AS AccountName", sql);
         Assert.Contains("raw_log AS AdditionalFields", sql);
     }
@@ -145,11 +145,11 @@ public sealed class MedallionSchemaCatalogTests
     {
         var sql = EmitParserSql("silver.v_processevent_windows_security_eid4688");
 
-        Assert.Contains("ingest_time AS Timestamp", sql);
+        Assert.Contains("COALESCE(TRY_CAST(json_extract_string(raw_log, '$.TimeCreated') AS TIMESTAMP), ingest_time) AS Timestamp", sql);
         Assert.Contains("host AS DeviceName", sql);
         Assert.Contains("'ProcessCreated' AS ActionType", sql);
         Assert.Contains("json_extract_string(raw_log, '$.NewProcessName') AS FolderPath", sql);
-        Assert.Contains("CAST(NULL AS BIGINT) AS ProcessId", sql);
+        Assert.Contains("TRY_CAST(json_extract_string(raw_log, '$.NewProcessId') AS BIGINT) AS ProcessId", sql);
         Assert.Contains("json_extract_string(raw_log, '$.SubjectUserName') AS AccountName", sql);
         Assert.Contains("raw_log AS AdditionalFields", sql);
     }
@@ -159,15 +159,15 @@ public sealed class MedallionSchemaCatalogTests
     {
         var sql = EmitParserSql("silver.v_networksession_windows_sysmon_eid3");
 
-        Assert.Contains("ingest_time AS Timestamp", sql);
+        Assert.Contains("COALESCE(TRY_CAST(json_extract_string(raw_log, '$.UtcTime') AS TIMESTAMP), ingest_time) AS Timestamp", sql);
         Assert.Contains("host AS DeviceName", sql);
         Assert.Contains("'ConnectionSuccess' AS ActionType", sql);
         Assert.Contains("json_extract_string(raw_log, '$.SourceIp') AS LocalIP", sql);
-        Assert.Contains("CAST(json_extract_string(raw_log, '$.SourcePort') AS INTEGER) AS LocalPort", sql);
+        Assert.Contains("TRY_CAST(json_extract_string(raw_log, '$.SourcePort') AS INTEGER) AS LocalPort", sql);
         Assert.Contains("json_extract_string(raw_log, '$.DestinationIp') AS RemoteIP", sql);
-        Assert.Contains("CAST(json_extract_string(raw_log, '$.DestinationPort') AS INTEGER) AS RemotePort", sql);
+        Assert.Contains("TRY_CAST(json_extract_string(raw_log, '$.DestinationPort') AS INTEGER) AS RemotePort", sql);
         Assert.Contains("json_extract_string(raw_log, '$.Protocol') AS Protocol", sql);
-        Assert.Contains("CAST(json_extract_string(raw_log, '$.ProcessId') AS BIGINT) AS InitiatingProcessId", sql);
+        Assert.Contains("TRY_CAST(json_extract_string(raw_log, '$.ProcessId') AS BIGINT) AS InitiatingProcessId", sql);
     }
 
     [TestMethod]
@@ -175,13 +175,13 @@ public sealed class MedallionSchemaCatalogTests
     {
         var sql = EmitParserSql("silver.v_networksession_windows_security_eid5156");
 
-        Assert.Contains("ingest_time AS Timestamp", sql);
+        Assert.Contains("COALESCE(TRY_CAST(json_extract_string(raw_log, '$.TimeCreated') AS TIMESTAMP), ingest_time) AS Timestamp", sql);
         Assert.Contains("host AS DeviceName", sql);
         Assert.Contains("'ConnectionAllowed' AS ActionType", sql);
         Assert.Contains("json_extract_string(raw_log, '$.SourceAddress') AS LocalIP", sql);
-        Assert.Contains("CAST(NULL AS INTEGER) AS LocalPort", sql);
+        Assert.Contains("TRY_CAST(json_extract_string(raw_log, '$.SourcePort') AS INTEGER) AS LocalPort", sql);
         Assert.Contains("json_extract_string(raw_log, '$.DestAddress') AS RemoteIP", sql);
-        Assert.Contains("CAST(NULL AS INTEGER) AS RemotePort", sql);
+        Assert.Contains("TRY_CAST(json_extract_string(raw_log, '$.DestPort') AS INTEGER) AS RemotePort", sql);
         Assert.Contains("json_extract_string(raw_log, '$.Application') AS InitiatingProcessFolderPath", sql);
         Assert.Contains("CAST(NULL AS BIGINT) AS InitiatingProcessId", sql);
     }
@@ -191,7 +191,7 @@ public sealed class MedallionSchemaCatalogTests
     {
         var sql = EmitParserSql("silver.v_dns_windows_sysmon_eid22");
 
-        Assert.Contains("ingest_time AS Timestamp", sql);
+        Assert.Contains("COALESCE(TRY_CAST(json_extract_string(raw_log, '$.UtcTime') AS TIMESTAMP), ingest_time) AS Timestamp", sql);
         Assert.Contains("host AS DeviceName", sql);
         Assert.Contains("'DnsQuery' AS ActionType", sql);
         Assert.Contains("json_extract_string(raw_log, '$.QueryName') AS QueryName", sql);
@@ -208,7 +208,7 @@ public sealed class MedallionSchemaCatalogTests
     {
         var sql = EmitParserSql("silver.v_dns_server_query_event");
 
-        Assert.Contains("ingest_time AS Timestamp", sql);
+        Assert.Contains("COALESCE(TRY_CAST(json_extract_string(raw_log, '$.event_time') AS TIMESTAMP), ingest_time) AS Timestamp", sql);
         Assert.Contains("host AS DeviceName", sql);
         Assert.Contains("'DnsQuery' AS ActionType", sql);
         Assert.Contains("json_extract_string(raw_log, '$.query_name') AS QueryName", sql);
@@ -229,7 +229,8 @@ public sealed class MedallionSchemaCatalogTests
         foreach (var parser in MedallionSchemaCatalog.ParserViews)
         {
             var sql = new SchemaEmitter().EmitParserView(parser);
-            Assert.DoesNotContain("SELECT\n    CAST(NULL AS TIMESTAMP) AS Timestamp", sql, $"{parser.QualifiedName} should map Timestamp from source data.");
+            Assert.Contains("COALESCE(TRY_CAST(json_extract_string(raw_log,", sql, $"{parser.QualifiedName} should extract source event time in Silver.");
+            Assert.Contains(") AS TIMESTAMP), ingest_time) AS Timestamp", sql, $"{parser.QualifiedName} should fall back to Bronze ingest_time explicitly.");
         }
     }
 
