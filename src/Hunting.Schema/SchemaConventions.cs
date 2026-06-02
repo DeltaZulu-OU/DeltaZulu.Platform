@@ -2,11 +2,11 @@ namespace Hunting.Schema;
 
 using Hunting.Core.Catalog;
 using Hunting.Core.Schema;
+using Hunting.Schema.Definitions.Internal;
 using Hunting.Schema.Definitions.Medallion;
-using Hunting.Schema.Definitions.Phase1B;
 
 /// <summary>
-/// Central medallion schema conventions and bootstrap contracts for the hunting model.
+/// Central schema conventions and bootstrap contracts for the hunting model.
 /// This keeps schema-surface ownership in Hunting.Schema instead of UI composition code.
 /// </summary>
 public static class SchemaConventions
@@ -18,7 +18,7 @@ public static class SchemaConventions
 
     public static IReadOnlyList<RawTableDef> RawTables => MedallionSchemaCatalog.RawTables;
 
-    public static IReadOnlyList<InternalTableDef> InternalTables => Phase1BInternalSchemaCatalog.InternalTables;
+    public static IReadOnlyList<InternalTableDef> InternalTables => InternalSchemaCatalog.InternalTables;
 
     public static IReadOnlyList<ParserViewDef> ParserViews => MedallionSchemaCatalog.ParserViews;
 

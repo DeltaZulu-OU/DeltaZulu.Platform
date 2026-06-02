@@ -1,12 +1,12 @@
-namespace Hunting.Schema.Definitions.Phase1B;
+namespace Hunting.Schema.Definitions.Internal;
 
 using Hunting.Core.Schema;
 
 /// <summary>
-/// Internal metadata schema objects introduced for Phase 1B and extended by Phase 1C.
+/// Internal metadata schema objects used by the hunting database runtime.
 /// These tables are not exposed to KQL users and are not part of the Golden surface.
 /// </summary>
-public static class Phase1BInternalSchemaCatalog
+public static class InternalSchemaCatalog
 {
     public const string InternalSchema = "internal";
     public const string SchemaProvenanceTableName = "schema_provenance";
