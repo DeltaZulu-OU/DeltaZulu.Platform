@@ -241,6 +241,11 @@ Render work remains a parallel track as long as it does not weaken schema semant
 
 ---
 
+## Completed KQL Coverage Quick Wins
+
+- Added DuckDB scalar mappings for string-input `hash_sha256(string)`, string-input `hash_md5(string)`, and KQL-compatible `translate(searchList, replacementList, source)`.
+- Hash functions reject non-string inputs until KQL scalar serialization is implemented; direct RelNode emission validates the new mappings defensively; generic `hash(s, mod)` remains deferred until KQL-compatible hash semantics are verified.
+
 ## Post-MVP Priorities
 
 1. Medallion hardening: structural migration planning, tolerant casting, Golden semantic normalization

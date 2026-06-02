@@ -826,13 +826,18 @@ internal sealed class KustoQueryTranslator
     private ScalarExpr TranslateFunctionCall(FunctionCallExpression fn)
     {
         var name = fn.Name.SimpleName;
-        var args = new List<ScalarExpr>();
+        var syntaxArgs = new List<Expression>();
         foreach (var elem in fn.ArgumentList.Expressions)
         {
-            args.Add(TranslateScalarExpr(KustoSyntaxHelpers.UnwrapSeparated(elem)));
+            syntaxArgs.Add(KustoSyntaxHelpers.UnwrapSeparated(elem)
+                ?? throw new NotSupportedException($"{name}() contains an unsupported argument shape."));
         }
 
-        KustoFunctionArgumentValidator.Validate(name, args);
+        var args = syntaxArgs
+            .Select(TranslateScalarExpr)
+            .ToList();
+
+        KustoFunctionArgumentValidator.Validate(name, args, syntaxArgs);
 
         // KQL 'not(expr)' is a FunctionCallExpression, not a PrefixUnaryExpression.
         // SyntaxKind.UnaryNotExpression does not exist — this is the correct path for NOT.

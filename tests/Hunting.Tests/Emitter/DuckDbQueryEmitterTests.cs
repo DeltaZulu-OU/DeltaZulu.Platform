@@ -274,6 +274,24 @@ public sealed partial class DuckDbQueryEmitterTests
     }
 
     [TestMethod]
+    [Description("hash_sha256, hash_md5, and KQL-compatible translate emit DuckDB scalar mappings")]
+    public void Emit_Func_HashAndTranslateMappings()
+    {
+        var node = new ProjectNode(
+            new SingletonRowNode(),
+            [
+                new ProjectionExpr("sha", new FunctionCall("hash_sha256", [new LiteralScalar("abc", LiteralKind.String)])),
+                new ProjectionExpr("md5", new FunctionCall("hash_md5", [new LiteralScalar("abc", LiteralKind.String)])),
+                new ProjectionExpr("translated", new FunctionCall("translate", [new LiteralScalar("abc", LiteralKind.String), new LiteralScalar("x", LiteralKind.String), new LiteralScalar("abc", LiteralKind.String)]))
+            ]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "sha256('abc') AS sha");
+        AssertSqlContains(sql, "md5('abc') AS md5");
+        AssertSqlContains(sql, "translate('abc', 'abc', CASE WHEN 'x' = '' THEN '' ELSE rpad('x', CAST(length('abc') AS INTEGER), right('x', 1)) END) AS translated");
+    }
+
+    [TestMethod]
     [Description("sample-distinct emits DISTINCT stage then sample stage")]
     public void Emit_SampleDistinct()
     {

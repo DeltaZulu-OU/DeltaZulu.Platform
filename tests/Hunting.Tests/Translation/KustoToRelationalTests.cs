@@ -227,11 +227,14 @@ public sealed class KustoToRelationalTests
                 Merged = bag_merge(AdditionalFields, AdditionalFields),
                 Len = array_length(split(FileName, ",")),
                 E2 = exp2(3),
-                E10 = exp10(2)
+                E10 = exp10(2),
+                Sha256 = hash_sha256(FileName),
+                Md5 = hash_md5(FileName),
+                Translated = translate("abc", "xyz", FileName)
             """);
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var ext = AssertIs<ExtendNode>(result);
-        Assert.HasCount(7, ext.Extensions);
+        Assert.HasCount(10, ext.Extensions);
     }
 
     [TestMethod]

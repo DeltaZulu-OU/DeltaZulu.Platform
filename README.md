@@ -18,17 +18,17 @@ Analysts write KQL against logical security tables (for example, `ProcessEvent`)
 - `parse_path()` output is now emitted as JSON text so dynamic path components render as readable strings in the UI/results grid.
 - Long/structured result cells now show an inline chevron affordance that opens the right-side drawer with beautified, syntax-highlighted JSON content when applicable.
 - The long/structured cell heuristic controls **chevron visibility only**; opening the drawer is an explicit chevron action.
-- Feature parity snapshot from `docs/kql-syntax-coverage-checklist.md` uses an in-scope-only statistics table. Out-of-scope constructs are excluded. Current code-backed promotions include scalar `let`, multiple scalar `let` chains, `in`/`!in` list predicates, `url_encode`/`url_decode`, `array_concat`, and `array_slice`.
+- Feature parity snapshot from `docs/kql-syntax-coverage-checklist.md` uses an in-scope-only statistics table. Out-of-scope constructs are excluded. Current code-backed promotions include scalar `let`, multiple scalar `let` chains, `in`/`!in` list predicates, `url_encode`/`url_decode`, `array_concat`, `array_slice`, string-input `hash_sha256`, string-input `hash_md5`, and `translate`; direct RelNode emission validates these mappings defensively.
 
 | Feature parity status (in scope only) | Count | Percent of in-scope total |
 |---|---:|---:|
-| MVP translated (`[x]`) | 220 | 68.8% |
+| MVP translated (`[x]`) | 223 | 69.7% |
 | Metadata-only (`[m]`) | 3 | 0.9% |
 | Blocked for semantic safety (`[B]`) | 3 | 0.9% |
-| Deferred (`[ ]`) | 94 | 29.4% |
+| Deferred (`[ ]`) | 91 | 28.4% |
 | **Total in-scope constructs** | **320** | **100%** |
 
-MVP-ready parity = `[x] + [m]` = **223 / 320 (69.7%)**.
+MVP-ready parity = `[x] + [m]` = **226 / 320 (70.6%)**.
 
 Current public schema families in code use the Phase 1A medallion checkpoint surface:
 

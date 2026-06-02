@@ -97,6 +97,9 @@ to_json(
             "base64_decode_tostring" => $"CAST(from_base64({args[0]}) AS VARCHAR)",
             "url_encode" => $"url_encode({args[0]})",
             "url_decode" => $"url_decode({args[0]})",
+            "hash_sha256" => EmitStringHash("hash_sha256", "sha256", fn.Args, args),
+            "hash_md5" => EmitStringHash("hash_md5", "md5", fn.Args, args),
+            "translate" => EmitTranslate(args),
 
             // Conditional
             "iff" or "iif" => $"CASE WHEN {args[0]} THEN {args[1]} ELSE {args[2]} END",
@@ -221,6 +224,46 @@ to_json(
 
         // Non-literal part: fall back to CAST-based approach
         return $"({args[2]} + CAST(CAST({args[1]} AS VARCHAR) || ' ' || REPLACE({args[0]}, '''', '') AS INTERVAL))";
+    }
+
+    /// <summary>
+    /// Emit string-only KQL cryptographic hash mappings defensively for callers
+    /// that construct RelNode trees directly and therefore bypass translation.
+    /// </summary>
+    private static string EmitStringHash(
+        string kustoName,
+        string duckDbName,
+        IReadOnlyList<ScalarExpr> rawArgs,
+        IReadOnlyList<string> args)
+    {
+        RequireFunctionArity(kustoName, args, 1);
+        if (rawArgs[0] is LiteralScalar { Kind: not LiteralKind.String and not LiteralKind.Null })
+        {
+            throw new NotSupportedException(
+                $"{kustoName}() currently supports only string input because DuckDB and KQL serialize non-string scalars differently.");
+        }
+
+        return $"{duckDbName}({args[0]})";
+    }
+
+    /// <summary>
+    /// KQL translate(searchList, replacementList, source) repeats the final
+    /// replacement character when replacementList is shorter than searchList.
+    /// DuckDB translate(source, from, to) deletes characters without a matching
+    /// target, so pad or truncate the replacement list before emission.
+    /// </summary>
+    private static string EmitTranslate(IReadOnlyList<string> args)
+    {
+        RequireFunctionArity("translate", args, 3);
+        return $"translate({args[2]}, {args[0]}, CASE WHEN {args[1]} = '' THEN '' ELSE rpad({args[1]}, CAST(length({args[0]}) AS INTEGER), right({args[1]}, 1)) END)";
+    }
+
+    private static void RequireFunctionArity(string functionName, IReadOnlyList<string> args, int expected)
+    {
+        if (args.Count != expected)
+        {
+            throw new NotSupportedException($"{functionName}() expects exactly {expected} argument(s).");
+        }
     }
 
     /// <summary>

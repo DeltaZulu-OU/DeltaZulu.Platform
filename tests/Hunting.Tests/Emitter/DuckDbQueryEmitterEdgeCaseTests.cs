@@ -720,6 +720,26 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
             "Second-run stats should describe only the simple scan emission");
     }
 
+    [TestMethod]
+    [Description("Direct RelNode callers receive structured hash/translate validation failures")]
+    public void Func_HashAndTranslate_DirectRelNodeValidation()
+    {
+        FunctionCall[] invalidFunctions =
+        [
+            new FunctionCall("hash_sha256", []),
+            new FunctionCall("hash_md5", [new LiteralScalar(42, LiteralKind.Int)]),
+            new FunctionCall("translate", [new LiteralScalar("abc", LiteralKind.String), new LiteralScalar("x", LiteralKind.String)])
+        ];
+
+        foreach (var invalidFunction in invalidFunctions)
+        {
+            var node = new ProjectNode(
+                new SingletonRowNode(),
+                [new ProjectionExpr("invalid", invalidFunction)]);
+            Assert.ThrowsExactly<NotSupportedException>(() => _emitter.Emit(node));
+        }
+    }
+
     // ─── Join emission ──────────────────────────────────────────────
 
     [TestMethod]

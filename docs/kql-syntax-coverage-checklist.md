@@ -246,7 +246,8 @@ Translator decomposition is also structural only: public `KustoToRelational` rem
 - [x] `base64_encode_tostring(s)`
 - [x] `base64_decode_tostring(s)`
 - [x] `url_encode(s)` / `url_decode(s)` — direct DuckDB mapping
-- [ ] `hash_sha256(s)`, `hash_md5(s)`, `hash(s, mod)`, `translate(s, from, to)` — *frequency*
+- [x] `hash_sha256(string)`, `hash_md5(string)`, `translate(searchList, replacementList, source)` — DuckDB scalar mappings; hash functions reject non-string inputs until KQL scalar serialization is implemented; `translate` pads replacements compatibly; direct RelNode emission validates the new mappings defensively
+- [ ] `hash(s, mod)` — *frequency: requires KQL-compatible generic hash semantics*
 
 ### 4.2 DateTime Functions
 
@@ -396,25 +397,25 @@ Translator decomposition is also structural only: public `KustoToRelational` rem
 
 | Status | Count | Meaning |
 |--------|------:|---------|
-| `[x]` MVP | 220 | Direct translation to DuckDB SQL |
+| `[x]` MVP | 223 | Direct translation to DuckDB SQL |
 | `[m]` Metadata | 3 | Side-channel/runtime/UI metadata |
 | `[B]` Blocked | 3 | Deliberately rejected to prevent silent semantic change |
-| `[ ]` Deferred | 94 | Post-MVP, reason annotated |
+| `[ ]` Deferred | 91 | Post-MVP, reason annotated |
 | **In scope** | **320** | |
 | N/A (out of scope) | N/A | Listed in Section 10 and not tracked as checklist rows |
 
-MVP-ready = `[x]` + `[m]` = **223 / 320 (69.7%)**
+MVP-ready = `[x]` + `[m]` = **226 / 320 (70.6%)**
 
 ### Deferred by reason
 
 | Reason | Count | Meaning |
 |--------|------:|---------|
-| *frequency* | 22 | Valid translation exists but rare in hunting queries |
+| *frequency* | 19 | Valid translation exists but rare in hunting queries |
 | *complexity* | 49 | Significant implementation effort or no DuckDB equivalent |
 | *dependency* | 8 | Depends on another deferred capability |
 | *format* | 4 | Requires format/specifier translation tables |
 | *uncategorized* | 11 | Deferred without an explicit reason tag |
-| **Total deferred** | **94** | |
+| **Total deferred** | **91** | |
 
 ### Blocked items (3 total)
 
@@ -431,6 +432,8 @@ Scalar `let` was promoted because the translator now emits `LetBindingNode` for 
 `in` and `!in` were promoted because the query model now contains `ListScalar`, the translator builds it from parenthesized expression lists, and the emitter renders SQL `IN (...)` / `NOT IN (...)`.
 
 `url_encode`, `url_decode`, `array_concat`, and `array_slice` were promoted because explicit emitter mappings exist in the current code.
+
+`hash_sha256`, `hash_md5`, and `translate` were promoted because the emitter now includes direct DuckDB scalar mappings; hash functions defensively reject non-string inputs (until KQL scalar serialization is implemented), while `translate` pads replacements to match KQL semantics where the final replacement character repeats when the replacement list is shorter than the search list.
 
 Window functions remain MVP because DuckDB supports the underlying window operations natively. `union` remains deferred because translator/cross-source binding semantics are not yet implemented.
 

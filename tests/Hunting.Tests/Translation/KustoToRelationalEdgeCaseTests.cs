@@ -518,10 +518,51 @@ public sealed class KustoToRelationalEdgeCaseTests
                 D = bag_merge(AdditionalFields),
                 E = array_length(),
                 F = exp2(),
-                G = exp10(1, 2)
+                G = exp10(1, 2),
+                H = hash_sha256(FileName, "extra"),
+                I = hash_md5(),
+                J = translate("abc", FileName)
             """);
 
         Assert.IsTrue(diag.HasErrors, "invalid function arity should produce diagnostics");
+    }
+
+    [TestMethod]
+    [Description("hash_sha256, hash_md5, and translate invalid arity is rejected with diagnostics")]
+    public void Functions_HashAndTranslate_InvalidArity()
+    {
+        string[] invalidCalls =
+        [
+            "hash_sha256(FileName, 'extra')",
+            "hash_md5()",
+            "translate('abc', FileName)"
+        ];
+
+        foreach (var invalidCall in invalidCalls)
+        {
+            var (_, diag) = Translate($"ProcessEvent | extend Invalid = {invalidCall}");
+            Assert.IsTrue(diag.HasErrors, $"{invalidCall} should produce an invalid-arity diagnostic");
+        }
+    }
+
+    [TestMethod]
+    [Description("hash_sha256 and hash_md5 reject non-string scalars until KQL scalar serialization is implemented")]
+    public void Functions_Hash_NonStringInput_Rejected()
+    {
+        string[] unsupportedCalls =
+        [
+            "hash_sha256(ProcessId)",
+            "hash_md5(datetime(2020-01-01))"
+        ];
+
+        foreach (var unsupportedCall in unsupportedCalls)
+        {
+            var (_, diag) = Translate($"ProcessEvent | extend Invalid = {unsupportedCall}");
+            Assert.Contains(
+                diagnostic => diagnostic.Message.Contains("only string input", StringComparison.OrdinalIgnoreCase),
+                diag.All,
+                $"{unsupportedCall} should produce a string-only hash diagnostic");
+        }
     }
 
     // ─── Whitespace and formatting edge cases ───────────────────────

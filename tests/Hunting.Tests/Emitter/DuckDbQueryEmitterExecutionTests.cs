@@ -322,6 +322,29 @@ public sealed class DuckDbQueryEmitterExecutionTests
         AssertExecutes(percentileNode, expectedMinRows: 1);
     }
 
+    [TestMethod]
+    [Description("hash_sha256, hash_md5, and translate execute with DuckDB-compatible results")]
+    public void Execute_HashAndTranslateMappings()
+    {
+        object? EmitAndExecute(FunctionCall function)
+        {
+            var node = new ProjectNode(
+                new SingletonRowNode(),
+                [new ProjectionExpr("value", function)]);
+            return ExecuteFirstValue(_emitter.Emit(node));
+        }
+
+        Assert.AreEqual(
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            EmitAndExecute(new FunctionCall("hash_sha256", [new LiteralScalar("abc", LiteralKind.String)])));
+        Assert.AreEqual(
+            "900150983cd24fb0d6963f7d28e17f72",
+            EmitAndExecute(new FunctionCall("hash_md5", [new LiteralScalar("abc", LiteralKind.String)])));
+        Assert.AreEqual(
+            "xxx",
+            EmitAndExecute(new FunctionCall("translate", [new LiteralScalar("abc", LiteralKind.String), new LiteralScalar("x", LiteralKind.String), new LiteralScalar("abc", LiteralKind.String)])));
+    }
+
     // ─── Window functions execute ───────────────────────────────────
 
     [TestMethod]

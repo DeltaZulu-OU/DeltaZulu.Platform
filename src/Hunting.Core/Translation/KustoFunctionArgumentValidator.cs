@@ -1,11 +1,16 @@
 namespace Hunting.Core.Translation;
 
+using Kusto.Language.Symbols;
+using Kusto.Language.Syntax;
 using QueryModel;
 
 /// <summary>Applies function-specific arity and literal argument rules.</summary>
 internal static class KustoFunctionArgumentValidator
 {
-    public static void Validate(string name, IReadOnlyList<ScalarExpr> args)
+    public static void Validate(
+        string name,
+        IReadOnlyList<ScalarExpr> args,
+        IReadOnlyList<Expression> syntaxArgs)
     {
         static void RequireCount(string functionName, IReadOnlyList<ScalarExpr> functionArgs, int expected)
         {
@@ -13,6 +18,12 @@ internal static class KustoFunctionArgumentValidator
             {
                 throw new NotSupportedException($"{functionName}() expects exactly {expected} argument(s).");
             }
+        }
+
+        if (name.Equals("hash_sha256", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("hash_md5", StringComparison.OrdinalIgnoreCase))
+        {
+            RequireStringHashInput(name, syntaxArgs);
         }
 
         switch (name.ToLowerInvariant())
@@ -24,6 +35,18 @@ internal static class KustoFunctionArgumentValidator
             case "array_length": RequireCount("array_length", args, 1); return;
             case "exp2": RequireCount("exp2", args, 1); return;
             case "exp10": RequireCount("exp10", args, 1); return;
+            case "hash_sha256": RequireCount("hash_sha256", args, 1); return;
+            case "hash_md5": RequireCount("hash_md5", args, 1); return;
+            case "translate": RequireCount("translate", args, 3); return;
+        }
+
+        static void RequireStringHashInput(string functionName, IReadOnlyList<Expression> expressions)
+        {
+            if (expressions.Count == 1 && !ReferenceEquals(expressions[0].ResultType, ScalarTypes.String))
+            {
+                throw new NotSupportedException(
+                    $"{functionName}() currently supports only string input because DuckDB and KQL serialize non-string scalars differently.");
+            }
         }
 
         if (!name.Equals("extract", StringComparison.OrdinalIgnoreCase)) { return; }
