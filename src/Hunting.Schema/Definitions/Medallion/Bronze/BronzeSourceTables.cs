@@ -11,15 +11,8 @@ using Hunting.Core.Schema;
 /// </summary>
 public static class BronzeSourceTables
 {
-    public static readonly RawTableDef DnsServerEvent = new(
-        Schema: "bronze",
-        Name: "dns_server_event",
-        Columns: SourceRecordColumns,
-        SourceDescription: "DNS server source-shaped event records",
-        Description: "Source-preserving Bronze table for DNS server records.");
-
     public static readonly IReadOnlyList<ColumnDef> SourceRecordColumns =
-        [
+    [
         new("ingest_time", DuckDbType.Timestamp, KustoType.DateTime, Description: "Time the record was ingested into the local store."),
         new("source_name", DuckDbType.Varchar, KustoType.String, Description: "Logical source family or collector name."),
         new("provider", DuckDbType.Varchar, KustoType.String, Description: "Source provider or product identifier."),
@@ -27,6 +20,13 @@ public static class BronzeSourceTables
         new("raw_log", DuckDbType.Json, KustoType.Dynamic, Description: "Source-shaped raw event payload."),
         new("raw_text", DuckDbType.Varchar, KustoType.String, Description: "Optional original text representation.")
     ];
+
+    public static readonly RawTableDef DnsServerEvent = new(
+        Schema: "bronze",
+        Name: "dns_server_event",
+        Columns: SourceRecordColumns,
+        SourceDescription: "DNS server source-shaped event records",
+        Description: "Source-preserving Bronze table for DNS server records.");
 
     public static readonly RawTableDef WindowsSecurityEvent = new(
         Schema: "bronze",
@@ -36,7 +36,7 @@ public static class BronzeSourceTables
         Description: "Source-preserving Bronze table for Windows Security records.");
 
     public static readonly RawTableDef WindowsSysmonEvent = new(
-            Schema: "bronze",
+        Schema: "bronze",
         Name: "windows_sysmon_event",
         Columns: SourceRecordColumns,
         SourceDescription: "Windows Sysmon source-shaped event records",

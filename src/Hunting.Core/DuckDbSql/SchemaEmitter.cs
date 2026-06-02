@@ -17,6 +17,12 @@ using Schema;
 /// </summary>
 public sealed class SchemaEmitter
 {
+    private static readonly string[] first = new[]
+            {
+                "bronze",
+                "silver",
+                "golden"
+            };
     #region Top-level orchestration
 
     /// <summary>
@@ -34,13 +40,7 @@ public sealed class SchemaEmitter
         var parserViewList = parserViews.ToList();
         var canonicalViewList = canonicalViews.ToList();
 
-        var schemaNames = new[]
-            {
-                "bronze",
-                "silver",
-                "golden"
-            }
-            .Concat(rawTableList.Select(static obj => obj.Schema))
+        var schemaNames = first.Concat(rawTableList.Select(static obj => obj.Schema))
             .Concat(internalTableList.Select(static obj => obj.Schema))
             .Concat(parserViewList.Select(static obj => obj.Schema))
             .Concat(canonicalViewList.Select(static obj => obj.Schema))
@@ -48,8 +48,8 @@ public sealed class SchemaEmitter
             .ToList();
 
         var statements = schemaNames
-            .Select(schema => $"CREATE SCHEMA IF NOT EXISTS {DuckDbSqlText.EscapeIdent(schema)}")
-            .ToList();
+            .ConvertAll(schema => $"CREATE SCHEMA IF NOT EXISTS {DuckDbSqlText.EscapeIdent(schema)}")
+;
 
         // Raw tables
         foreach (var t in rawTableList)
@@ -83,6 +83,13 @@ public sealed class SchemaEmitter
 
     public string EmitCreateTable(SchemaObjectDef table)
     {
+        ArgumentNullException.ThrowIfNull(table);
+        if (table.Columns is null)
+        {
+            throw new InvalidOperationException(
+                $"Schema object {table.QualifiedName} has null column metadata.");
+        }
+
         var sb = new StringBuilder();
         sb.Append("CREATE TABLE IF NOT EXISTS ");
         sb.Append(DuckDbSqlText.EscapeQualifiedIdent(table.QualifiedName));
@@ -91,10 +98,13 @@ public sealed class SchemaEmitter
         for (var i = 0; i < table.Columns.Count; i++)
         {
             var col = table.Columns[i];
+            ArgumentNullException.ThrowIfNull(col);
+
             sb.Append("    ");
             sb.Append(DuckDbSqlText.EscapeIdent(col.Name));
             sb.Append(' ');
             sb.Append(col.DuckDbType.ToSql());
+
             if (i < table.Columns.Count - 1)
             {
                 sb.Append(',');
@@ -165,6 +175,20 @@ public sealed class SchemaEmitter
 
     public string EmitCanonicalView(CanonicalViewDef view)
     {
+        ArgumentNullException.ThrowIfNull(view);
+
+        if (view.Columns is null)
+        {
+            throw new InvalidOperationException(
+                $"Canonical view {view.QualifiedName} has null column metadata.");
+        }
+
+        if (view.ParserViews is null)
+        {
+            throw new InvalidOperationException(
+                $"Canonical view {view.QualifiedName} has null parser-view metadata.");
+        }
+
         if (view.ParserViews.Count == 0)
         {
             throw new InvalidOperationException(
@@ -176,7 +200,11 @@ public sealed class SchemaEmitter
         sb.Append(DuckDbSqlText.EscapeQualifiedIdent(view.QualifiedName));
         sb.Append(" AS\n");
 
-        var canonicalColumns = string.Join(",\n    ", view.Columns.Select(c => DuckDbSqlText.EscapeIdent(c.Name)));
+        var canonicalColumns = string.Join(",\n    ", view.Columns.Select(c =>
+        {
+            ArgumentNullException.ThrowIfNull(c);
+            return DuckDbSqlText.EscapeIdent(c.Name);
+        }));
 
         for (var i = 0; i < view.ParserViews.Count; i++)
         {
