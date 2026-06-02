@@ -80,5 +80,4 @@ internal sealed partial class DuckDbJoinEmitter
 
     private string StageFrom(RelNode node) =>
         (_stageFrom ?? throw new InvalidOperationException("Relational emitter callbacks are not bound."))(node);
-
 }

@@ -1,7 +1,6 @@
 namespace Hunting.Core.Translation;
 
 using Catalog;
-using Kusto.Language;
 using Kusto.Language.Syntax;
 using Policy;
 using QueryModel;
@@ -880,7 +879,6 @@ internal sealed class KustoQueryTranslator
     }
 
     #endregion Scalar expressions
-
 
     #region Utilities
 

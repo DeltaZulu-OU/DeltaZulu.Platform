@@ -40,6 +40,7 @@ internal sealed partial class DuckDbRelNodeEmitter
     private (string Source, string? Columns) EmitScan(ScanNode scan) => ($"golden.{DuckDbSqlText.EscapeIdent(scan.ViewName)}", null);
 
     #endregion Scan
+
     #region Filter
 
     private (string Source, string? Columns) EmitFilter(FilterNode filter)
@@ -52,6 +53,7 @@ internal sealed partial class DuckDbRelNodeEmitter
     }
 
     #endregion Filter
+
     #region Project
 
     private (string Source, string? Columns) EmitProject(ProjectNode project)
@@ -62,6 +64,7 @@ internal sealed partial class DuckDbRelNodeEmitter
     }
 
     #endregion Project
+
     #region Extend
 
     private (string Source, string? Columns) EmitExtend(ExtendNode extend)
@@ -84,6 +87,7 @@ internal sealed partial class DuckDbRelNodeEmitter
     }
 
     #endregion Extend
+
     #region Aggregate
 
     private (string Source, string? Columns) EmitAggregate(AggregateNode agg)
@@ -117,6 +121,7 @@ internal sealed partial class DuckDbRelNodeEmitter
     }
 
     #endregion Aggregate
+
     #region Sort
 
     private (string Source, string? Columns) EmitSort(SortNode sort)
@@ -129,6 +134,7 @@ internal sealed partial class DuckDbRelNodeEmitter
     }
 
     #endregion Sort
+
     #region Distinct
 
     private (string Source, string? Columns) EmitDistinct(DistinctNode dist)
@@ -141,6 +147,7 @@ internal sealed partial class DuckDbRelNodeEmitter
     }
 
     #endregion Distinct
+
     #region Limit
 
     private (string Source, string? Columns) EmitLimit(LimitNode limit)
@@ -173,6 +180,7 @@ internal sealed partial class DuckDbRelNodeEmitter
     }
 
     #endregion Limit
+
     private (string Source, string? Columns) EmitSingleton(SingletonRowNode _)
     {
         var stage = _context.Stages.NextStage();

@@ -211,6 +211,7 @@ internal sealed class DuckDbScalarEmitter
             _ => throw new NotSupportedException($"Not a has operator: {bin.Op}")
         };
     }
+
     private string EmitCase(CaseScalar cs)
     {
         var sb = new StringBuilder("CASE");
@@ -223,6 +224,7 @@ internal sealed class DuckDbScalarEmitter
     }
 
     #endregion Scalar expressions
+
     #region Window expressions
 
     private string EmitWindow(WindowScalarExpr win)
@@ -298,6 +300,7 @@ internal sealed class DuckDbScalarEmitter
     };
 
     #endregion Window expressions
+
     #region Sort expression
 
     /// <summary>
@@ -382,6 +385,7 @@ internal sealed class DuckDbScalarEmitter
     }
 
     #endregion Sort expression
+
     #region Projection
 
     internal string EmitProjection(ProjectionExpr proj)
@@ -396,6 +400,7 @@ internal sealed class DuckDbScalarEmitter
     }
 
     #endregion Projection
+
     #region Timespan
 
     /// <summary>
@@ -486,6 +491,7 @@ internal sealed class DuckDbScalarEmitter
     }
 
     #endregion Timespan
+
     #region Helpers
 
     /// <summary>
@@ -524,7 +530,6 @@ internal sealed class DuckDbScalarEmitter
         // For dynamic operands: use DuckDB's regexp_escape() function
         return $"regexp_escape({emitted})";
     }
-
 
     #endregion Helpers
 }

@@ -133,5 +133,4 @@ internal sealed partial class DuckDbRelNodeEmitter
         LetBindingNode l => HasLimit(l.Body),
         _ => false
     };
-
 }

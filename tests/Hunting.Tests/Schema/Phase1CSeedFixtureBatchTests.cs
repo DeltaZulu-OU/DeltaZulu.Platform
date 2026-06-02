@@ -29,13 +29,13 @@ public sealed class Phase1CSeedFixtureBatchTests
 
     [TestMethod]
     public void SeedFixtureBatch_RejectsNegativeRowCount() => Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
-                                                                           new SeedFixtureBatch(
-                                                                               BatchId: "batch",
-                                                                               TableName: "bronze.windows_sysmon_event",
-                                                                               SourceName: "sysmon",
-                                                                               Scenario: "process.basic",
-                                                                               Sql: "SELECT 1",
-                                                                               RowCount: -1));
+                                                                               new SeedFixtureBatch(
+                                                                                   BatchId: "batch",
+                                                                                   TableName: "bronze.windows_sysmon_event",
+                                                                                   SourceName: "sysmon",
+                                                                                   Scenario: "process.basic",
+                                                                                   Sql: "SELECT 1",
+                                                                                   RowCount: -1));
 
     [TestMethod]
     public void SeedFixtureBatchHasher_IsStableForSameBatch()

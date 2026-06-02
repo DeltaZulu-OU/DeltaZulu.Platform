@@ -290,7 +290,6 @@ internal sealed partial class DuckDbSqlShapeRewriter
         return false;
     }
 
-
     private TerminalTopK? TryExtractTerminalTopK(string finalSource)
     {
         var idx = _stages.GetStageIndex(finalSource);
@@ -774,5 +773,4 @@ internal sealed partial class DuckDbSqlShapeRewriter
 
         return true;
     }
-
 }

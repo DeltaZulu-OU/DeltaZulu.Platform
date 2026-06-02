@@ -579,7 +579,6 @@ internal sealed partial class DuckDbJoinEmitter
 
     #region Join
 
-
     private static bool TryBuildLookupJoinProjection(
         RelNode right,
         ScalarExpr predicate,
@@ -665,12 +664,16 @@ internal sealed partial class DuckDbJoinEmitter
                 }
             case FilterNode f:
                 return TryGetOutputColumns(f.Input);
+
             case SortNode s:
                 return TryGetOutputColumns(s.Input);
+
             case LimitNode l:
                 return TryGetOutputColumns(l.Input);
+
             case SampleNode s:
                 return TryGetOutputColumns(s.Input);
+
             default:
                 return null;
         }
@@ -700,7 +703,6 @@ internal sealed partial class DuckDbJoinEmitter
 
     #endregion Join
 
-
     [GeneratedRegex(@"^(?<expr>[A-Za-z_][A-Za-z0-9_\.]*)\s+AS\s+(?<alias>[A-Za-z_][A-Za-z0-9_]*)$", RegexOptions.IgnoreCase, "en-150")]
     private static partial Regex AiasMatchPattern();
 
@@ -709,7 +711,7 @@ internal sealed partial class DuckDbJoinEmitter
 
     [GeneratedRegex(@"\s+AS\s+(?<alias>[A-Za-z_][A-Za-z0-9_]*)$", RegexOptions.IgnoreCase, "en-150")]
     private static partial Regex LookupProjectionAliasPattern();
+
     private (string Source, string? Columns) EmitNode(RelNode node) =>
         (_emitNode ?? throw new InvalidOperationException("Relational emitter callbacks are not bound."))(node);
-
 }

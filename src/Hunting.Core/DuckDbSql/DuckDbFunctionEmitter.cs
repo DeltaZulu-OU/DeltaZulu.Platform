@@ -185,6 +185,7 @@ to_json(
                 "Add an explicit mapping or reject it.")
         };
     }
+
     /// DuckDB official docs do NOT list ago() as a function.
     /// The documented pattern is current_timestamp - INTERVAL.
     /// Source: https://duckdb.org/docs/current/sql/functions/timestamp
@@ -273,7 +274,6 @@ to_json(
     /// </summary>
     private string EmitTimespanArg(IReadOnlyList<ScalarExpr> args, int index) => _emitScalar(args[index]);
 
-
     /// <summary>
     /// KQL bin(value, roundTo) rounds value down to a multiple of roundTo.
     /// A timespan roundTo buckets a datetime: time_bucket needs an explicit
@@ -306,5 +306,4 @@ to_json(
 
         return $"make_timestamp({string.Join(", ", parts)})";
     }
-
 }

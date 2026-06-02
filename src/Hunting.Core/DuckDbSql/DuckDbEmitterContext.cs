@@ -22,6 +22,7 @@ internal sealed class DuckDbEmitterContext
     // emitting a JoinNode's ON predicate so $left/$right qualified ColumnRefs
     // resolve to the correct side. Null elsewhere.
     public string? JoinLeftAlias;
+
     public string? JoinRightAlias;
     public bool InAggregateProjection;
 

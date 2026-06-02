@@ -80,5 +80,4 @@ public sealed class SchemaEmitterMappingTests
 
         Assert.Contains("TRY_CAST(json_extract_string(raw_log, '$.ProcessId') AS BIGINT) AS ProcessId", sql);
     }
-
 }

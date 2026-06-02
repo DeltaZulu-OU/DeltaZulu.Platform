@@ -47,5 +47,4 @@ internal static class DuckDbSqlText
             Environment.NewLine,
             lines.Select(line => "    " + line));
     }
-
 }
