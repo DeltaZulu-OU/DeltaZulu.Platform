@@ -27,7 +27,7 @@ public sealed class EndToEndPipelineTests
             canonicalViews: SchemaConventions.CanonicalViews);
 
         applier.ApplyStatements(ddl);
-        applier.ExecuteRaw(MockDataSeeder.GetMedallionSeedSql());
+        applier.ExecuteRaw(MedallionTestData.GetMedallionSeedSql());
 
         _runtime = new QueryRuntime(CreateMedallionCatalog(), _factory, defaultLimit: 10_000, developerMode: true);
     }

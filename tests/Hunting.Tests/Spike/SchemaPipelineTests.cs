@@ -29,7 +29,7 @@ public sealed class SchemaPipelineTests
             canonicalViews: SchemaConventions.CanonicalViews);
 
         _applier.ApplyStatements(ddl);
-        _applier.ExecuteRaw(MockDataSeeder.GetMedallionSeedSql());
+        _applier.ExecuteRaw(MedallionTestData.GetMedallionSeedSql());
     }
 
     [ClassCleanup]
@@ -128,20 +128,20 @@ public sealed class SchemaPipelineTests
     [TestMethod]
     public void MockData_InsertedIntoActiveBronzeTables()
     {
-        var expected = MockDataSeeder.GetExpectedMedallionRowCountsByTable();
+        var expected = Hunting.Tests.MedallionTestData.ExpectedRowsByTable;
 
         foreach (var (table, expectedRows) in expected)
         {
             var count = _applier.QueryScalar($"SELECT count(*) FROM {table}");
-            Assert.AreEqual(expectedRows, count, $"{table} should contain its expected development seed rows.");
+            Assert.AreEqual(expectedRows, count, $"{table} should contain its expected test fixture rows.");
         }
     }
 
     [TestMethod]
     public void MockData_FlowsIntoActiveGoldenViews()
     {
-        Assert.IsGreaterThanOrEqualTo(20, _applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent"));
-        Assert.IsGreaterThanOrEqualTo(10, _applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession"));
+        Assert.IsGreaterThanOrEqualTo(10, _applier.QueryScalar("SELECT count(*) FROM golden.ProcessEvent"));
+        Assert.IsGreaterThanOrEqualTo(4, _applier.QueryScalar("SELECT count(*) FROM golden.NetworkSession"));
         Assert.IsGreaterThanOrEqualTo(5, _applier.QueryScalar("SELECT count(*) FROM golden.Dns"));
     }
 
