@@ -370,6 +370,15 @@
         }
     }
 
+    private async Task RunQueryFromEditor()
+    {
+        await InvokeAsync(async () =>
+        {
+            await RunQuery();
+            StateHasChanged();
+        });
+    }
+
     private void OpenSqlDrawer()
     {
         if (_result?.GeneratedSql is not string sql) return;
@@ -715,8 +724,8 @@
     }
 
     private async Task<bool> TryInitializeEditorAsync(
-        Hunting.Core.Schema.EditorSchemaMetadata schema,
-        string initialValue)
+       Hunting.Core.Schema.EditorSchemaMetadata schema,
+       string initialValue)
     {
         Exception? lastException = null;
 
@@ -724,7 +733,12 @@
         {
             try
             {
-                await LanguageService.InitializeKqlEditorAsync("kql-editor", initialValue, RunQuery, schema);
+                await LanguageService.InitializeKqlEditorAsync(
+                    "kql-editor",
+                    initialValue,
+                    RunQueryFromEditor,
+                    schema);
+
                 return true;
             }
             catch (Exception ex)
@@ -740,6 +754,7 @@
         Snackbar.Add(
             $"Could not initialize the KQL editor after {EditorInitializationMaxAttempts} attempts. {lastException?.Message}",
             Severity.Error);
+
         return false;
     }
 

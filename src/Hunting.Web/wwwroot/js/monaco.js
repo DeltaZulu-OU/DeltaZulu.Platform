@@ -253,10 +253,14 @@ window.huntingMonaco = {
             suggestOnTriggerCharacters: true
         });
 
-        editor.addCommand(
-            monaco.KeyMod.Shift | monaco.KeyCode.Enter,
-            () => dotNetRef.invokeMethodAsync('RunFromEditor')
-        );
+        editor.onKeyDown((event) => {
+            if (event.shiftKey && event.keyCode === monaco.KeyCode.Enter) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                dotNetRef.invokeMethodAsync('RunFromEditor');
+            }
+        });
 
         window.huntingMonaco._editors[containerId] = editor;
     },
