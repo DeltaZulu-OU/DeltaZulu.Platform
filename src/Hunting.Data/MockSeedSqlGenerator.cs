@@ -1,5 +1,6 @@
 namespace Hunting.Data;
 
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
@@ -11,10 +12,16 @@ using System.Text.Json;
 /// patterns seen in public datasets and lab logs, while remaining small, stable,
 /// and aligned to the current Bronze contracts.
 /// </para>
+/// <para>
+/// The generated dataset is deterministic in shape but relative in time. A single
+/// UTC anchor is captured by the caller and all event timestamps are generated as
+/// offsets from that anchor, so time-window filters such as ago(1h), ago(24h),
+/// and start-of-day filters remain useful in development data.
+/// </para>
 /// </summary>
 internal static class MockSeedSqlGenerator
 {
-    private static readonly DateTime BaseTime = new(2024, 6, 15, 8, 0, 0, DateTimeKind.Utc);
+    private static readonly TimeSpan BaseOffsetFromNow = TimeSpan.FromHours(10);
 
     private static readonly string[] Users =
     [
@@ -223,14 +230,17 @@ internal static class MockSeedSqlGenerator
         "backup-storage.example.test"
     ];
 
-    public static string BuildWindowsSysmonSeedSql(string tableName)
+    public static string BuildWindowsSysmonSeedSql(
+        string tableName,
+        DateTimeOffset? nowUtc = null)
     {
+        var baseTime = ResolveBaseTime(nowUtc);
         var rows = new List<string>(320);
 
         for (var i = 0; i < 220; i++)
         {
             var template = ProcessTemplates[i % ProcessTemplates.Length];
-            var timestamp = BaseTime.AddMinutes(i);
+            var timestamp = baseTime.AddMinutes(i);
             var host = i % 9 == 0 ? Servers[i % Servers.Length] : Workstations[i % Workstations.Length];
             var user = template.Image.Contains("svchost.exe", StringComparison.OrdinalIgnoreCase)
                 ? "NT AUTHORITY\\SYSTEM"
@@ -239,15 +249,15 @@ internal static class MockSeedSqlGenerator
             var raw = new Dictionary<string, string?>
             {
                 ["EventID"] = "1",
-                ["EventRecordID"] = (1000 + i).ToString(),
+                ["EventRecordID"] = (1000 + i).ToString(CultureInfo.InvariantCulture),
                 ["UtcTime"] = FormatIso(timestamp),
                 ["Image"] = template.Image,
                 ["CommandLine"] = template.CommandLine,
                 ["User"] = user,
-                ["ProcessId"] = (4000 + i).ToString(),
+                ["ProcessId"] = (4000 + i).ToString(CultureInfo.InvariantCulture),
                 ["ParentImage"] = template.ParentImage,
                 ["ParentCommandLine"] = template.ParentCommandLine,
-                ["ParentProcessId"] = (3000 + i).ToString(),
+                ["ParentProcessId"] = (3000 + i).ToString(CultureInfo.InvariantCulture),
                 ["Hashes"] = $"SHA256=proc{i:000000}",
                 ["IntegrityLevel"] = i % 5 == 0 ? "High" : "Medium",
                 ["Scenario"] = template.Scenario
@@ -259,22 +269,22 @@ internal static class MockSeedSqlGenerator
         for (var i = 0; i < 100; i++)
         {
             var template = NetworkTemplates[i % NetworkTemplates.Length];
-            var timestamp = BaseTime.AddHours(5).AddMinutes(i);
+            var timestamp = baseTime.AddHours(5).AddMinutes(i);
             var host = Workstations[i % Workstations.Length];
             var user = Users[i % (Users.Length - 1)];
 
             var raw = new Dictionary<string, string?>
             {
                 ["EventID"] = "3",
-                ["EventRecordID"] = (3000 + i).ToString(),
+                ["EventRecordID"] = (3000 + i).ToString(CultureInfo.InvariantCulture),
                 ["UtcTime"] = FormatIso(timestamp),
                 ["SourceIp"] = template.SourceIp,
-                ["SourcePort"] = (51000 + i).ToString(),
+                ["SourcePort"] = (51000 + i).ToString(CultureInfo.InvariantCulture),
                 ["DestinationIp"] = template.DestinationIp,
                 ["DestinationPort"] = template.DestinationPort,
                 ["Protocol"] = template.Protocol,
                 ["Image"] = template.Image,
-                ["ProcessId"] = (6000 + i).ToString(),
+                ["ProcessId"] = (6000 + i).ToString(CultureInfo.InvariantCulture),
                 ["User"] = user,
                 ["Hashes"] = $"SHA256=net{i:000000}",
                 ["DestinationHostname"] = template.DestinationHostname,
@@ -287,13 +297,16 @@ internal static class MockSeedSqlGenerator
         return BuildInsert(tableName, rows);
     }
 
-    public static string BuildWindowsSecuritySeedSql(string tableName)
+    public static string BuildWindowsSecuritySeedSql(
+        string tableName,
+        DateTimeOffset? nowUtc = null)
     {
+        var baseTime = ResolveBaseTime(nowUtc);
         var rows = new List<string>(100);
 
         for (var i = 0; i < 100; i++)
         {
-            var timestamp = BaseTime.AddHours(7).AddMinutes(i);
+            var timestamp = baseTime.AddHours(7).AddMinutes(i);
             var eventId = (i % 10) switch
             {
                 0 or 1 or 2 or 3 => "4624",
@@ -314,13 +327,16 @@ internal static class MockSeedSqlGenerator
         return BuildInsert(tableName, rows);
     }
 
-    public static string BuildDnsServerSeedSql(string tableName)
+    public static string BuildDnsServerSeedSql(
+        string tableName,
+        DateTimeOffset? nowUtc = null)
     {
+        var baseTime = ResolveBaseTime(nowUtc);
         var rows = new List<string>(80);
 
         for (var i = 0; i < 80; i++)
         {
-            var timestamp = BaseTime.AddHours(9).AddSeconds(i * 30);
+            var timestamp = baseTime.AddHours(9).AddSeconds(i * 30);
             var queryName = DnsNames[i % DnsNames.Length];
             var queryType = queryName.Contains("dGhpcy", StringComparison.OrdinalIgnoreCase)
                 ? "TXT"
@@ -337,7 +353,7 @@ internal static class MockSeedSqlGenerator
             var raw = new Dictionary<string, string?>
             {
                 ["EventID"] = i % 11 == 0 ? "257" : "256",
-                ["EventRecordID"] = (7000 + i).ToString(),
+                ["EventRecordID"] = (7000 + i).ToString(CultureInfo.InvariantCulture),
                 ["TimeCreated"] = FormatIso(timestamp),
                 ["ClientIp"] = clientIp,
                 ["SourceIp"] = clientIp,
@@ -358,6 +374,19 @@ internal static class MockSeedSqlGenerator
         return BuildInsert(tableName, rows);
     }
 
+    private static DateTime ResolveBaseTime(DateTimeOffset? nowUtc)
+    {
+        var resolvedNowUtc = (nowUtc ?? DateTimeOffset.UtcNow)
+            .ToUniversalTime()
+            .UtcDateTime;
+
+        resolvedNowUtc = resolvedNowUtc.AddTicks(-(resolvedNowUtc.Ticks % TimeSpan.TicksPerSecond));
+
+        return DateTime.SpecifyKind(
+            resolvedNowUtc.Subtract(BaseOffsetFromNow),
+            DateTimeKind.Utc);
+    }
+
     private static Dictionary<string, string?> BuildSecurityEvent(
         string eventId,
         int index,
@@ -367,7 +396,7 @@ internal static class MockSeedSqlGenerator
         var baseEvent = new Dictionary<string, string?>
         {
             ["EventID"] = eventId,
-            ["EventRecordID"] = (5000 + index).ToString(),
+            ["EventRecordID"] = (5000 + index).ToString(CultureInfo.InvariantCulture),
             ["TimeCreated"] = FormatIso(timestamp),
             ["SubjectUserName"] = index % 6 == 0 ? "admin" : "-",
             ["SubjectDomainName"] = "CORP",
@@ -381,7 +410,7 @@ internal static class MockSeedSqlGenerator
                 baseEvent["TargetLogonId"] = $"0x{0x8000 + index:x}";
                 baseEvent["LogonType"] = index % 8 == 0 ? "10" : "3";
                 baseEvent["IpAddress"] = $"10.0.1.{20 + (index % 30)}";
-                baseEvent["IpPort"] = (54000 + index).ToString();
+                baseEvent["IpPort"] = (54000 + index).ToString(CultureInfo.InvariantCulture);
                 baseEvent["WorkstationName"] = Workstations[index % Workstations.Length];
                 baseEvent["AuthenticationPackageName"] = index % 4 == 0 ? "NTLM" : "Negotiate";
                 baseEvent["ProcessName"] = @"C:\Windows\System32\svchost.exe";
@@ -393,7 +422,7 @@ internal static class MockSeedSqlGenerator
                 baseEvent["FailureReason"] = "%%2313";
                 baseEvent["LogonType"] = "3";
                 baseEvent["IpAddress"] = $"10.0.1.{90 + (index % 5)}";
-                baseEvent["IpPort"] = (55000 + index).ToString();
+                baseEvent["IpPort"] = (55000 + index).ToString(CultureInfo.InvariantCulture);
                 baseEvent["WorkstationName"] = "UNKNOWN";
                 break;
 
@@ -451,15 +480,15 @@ internal static class MockSeedSqlGenerator
     {
         var json = JsonSerializer.Serialize(raw);
 
-        var ingestTimeSql = ingestTime.ToString(
+        var ingestTimeSql = ingestTime.ToUniversalTime().ToString(
             "yyyy-MM-dd HH:mm:ss",
-            System.Globalization.CultureInfo.InvariantCulture);
+            CultureInfo.InvariantCulture);
 
         return $"(TIMESTAMP '{ingestTimeSql}', '{Sql(sourceName)}', '{Sql(provider)}', '{Sql(host)}', CAST('{Sql(json)}' AS JSON), '')";
     }
 
     private static string FormatIso(DateTime value) =>
-        value.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", System.Globalization.CultureInfo.InvariantCulture);
+        value.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
 
     private static string Sql(string value) => value.Replace("'", "''", StringComparison.Ordinal);
 

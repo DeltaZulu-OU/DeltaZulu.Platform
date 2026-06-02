@@ -19,7 +19,8 @@ public static class MockDataSeeder
         };
 
     public static IReadOnlyList<SeedFixtureBatch> GetMedallionSeedFixtureBatches(
-        string? catalogVersion = null)
+        string? catalogVersion = null,
+        DateTimeOffset? nowUtc = null)
     {
         var sourceNameByTable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -29,7 +30,7 @@ public static class MockDataSeeder
         };
 
         return SeedFixtureBatchFactory.FromTableSeedSql(
-            GetMedallionSeedSqlByTable(),
+            GetMedallionSeedSqlByTable(nowUtc),
             GetExpectedMedallionRowCountsByTable(),
             sourceNameByTable,
             scenario: "development.baseline",
@@ -39,25 +40,48 @@ public static class MockDataSeeder
     public static IReadOnlyDictionary<string, long> GetExpectedMedallionRowCountsByTable() =>
         ExpectedRowsByTable;
 
-    public static IReadOnlyDictionary<string, string> GetMedallionSeedSqlByTable() =>
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    public static IReadOnlyDictionary<string, string> GetMedallionSeedSqlByTable(
+        DateTimeOffset? nowUtc = null)
+    {
+        var seedNowUtc = NormalizeNowUtc(nowUtc);
+
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            [WindowsSysmonTable] = GetWindowsSysmonSeedSql(),
-            [WindowsSecurityTable] = GetWindowsSecuritySeedSql(),
-            [DnsServerTable] = GetDnsServerSeedSql()
+            [WindowsSysmonTable] = GetWindowsSysmonSeedSql(seedNowUtc),
+            [WindowsSecurityTable] = GetWindowsSecuritySeedSql(seedNowUtc),
+            [DnsServerTable] = GetDnsServerSeedSql(seedNowUtc)
         };
+    }
 
-    public static string GetMedallionSeedSql() =>
-        string.Join("\n\n", GetMedallionSeedSqlByTable().Values.Select(EnsureStatementTerminated));
+    public static string GetMedallionSeedSql(DateTimeOffset? nowUtc = null) =>
+        string.Join("\n\n", GetMedallionSeedSqlByTable(nowUtc).Values.Select(EnsureStatementTerminated));
 
-    public static string GetWindowsSysmonSeedSql() =>
-        EnsureStatementTerminated(MockSeedSqlGenerator.BuildWindowsSysmonSeedSql(WindowsSysmonTable));
+    public static string GetWindowsSysmonSeedSql(DateTimeOffset? nowUtc = null) =>
+        EnsureStatementTerminated(
+            MockSeedSqlGenerator.BuildWindowsSysmonSeedSql(
+                WindowsSysmonTable,
+                NormalizeNowUtc(nowUtc)));
 
-    public static string GetWindowsSecuritySeedSql() =>
-        EnsureStatementTerminated(MockSeedSqlGenerator.BuildWindowsSecuritySeedSql(WindowsSecurityTable));
+    public static string GetWindowsSecuritySeedSql(DateTimeOffset? nowUtc = null) =>
+        EnsureStatementTerminated(
+            MockSeedSqlGenerator.BuildWindowsSecuritySeedSql(
+                WindowsSecurityTable,
+                NormalizeNowUtc(nowUtc)));
 
-    public static string GetDnsServerSeedSql() =>
-        EnsureStatementTerminated(MockSeedSqlGenerator.BuildDnsServerSeedSql(DnsServerTable));
+    public static string GetDnsServerSeedSql(DateTimeOffset? nowUtc = null) =>
+        EnsureStatementTerminated(
+            MockSeedSqlGenerator.BuildDnsServerSeedSql(
+                DnsServerTable,
+                NormalizeNowUtc(nowUtc)));
+
+    private static DateTimeOffset NormalizeNowUtc(DateTimeOffset? nowUtc)
+    {
+        var value = nowUtc ?? DateTimeOffset.UtcNow;
+
+        return value
+            .ToUniversalTime()
+            .AddTicks(-(value.ToUniversalTime().Ticks % TimeSpan.TicksPerSecond));
+    }
 
     private static string EnsureStatementTerminated(string sql)
     {
