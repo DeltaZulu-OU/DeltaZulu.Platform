@@ -59,7 +59,7 @@ public sealed partial class QueryToolbarState
             return false;
         }
 
-        if (SelectedResultLimit.HasValue && SelectedResultLimit.Value <= 0)
+        if (SelectedResultLimit <= 0)
         {
             warning = "Result limit must be a positive number.";
             return false;
@@ -156,7 +156,8 @@ public sealed partial class QueryToolbarState
         var kqlClause = to is null
             ? $"Timestamp >= datetime({from})"
             : $"Timestamp >= datetime({from}) and Timestamp <= datetime({to})";
-        return query + $"\n| where {kqlClause}";
+
+        return AppendKqlPipelineOperatorBeforeTerminalRender(query, $"where {kqlClause}");
     }
 
     private string ApplyResultLimit(string query)
@@ -171,7 +172,148 @@ public sealed partial class QueryToolbarState
             return query + $" LIMIT {SelectedResultLimit.Value}";
         }
 
-        return query + $"\n| take {SelectedResultLimit.Value}";
+        return AppendKqlPipelineOperatorBeforeTerminalRender(query, $"take {SelectedResultLimit.Value}");
+    }
+
+    private static string AppendKqlPipelineOperatorBeforeTerminalRender(string query, string operatorText)
+    {
+        var segments = SplitKqlPipeline(query);
+
+        if (segments.Count == 0)
+        {
+            return query;
+        }
+
+        var lastSegment = segments[^1].TrimStart();
+        var hasTerminalRender = lastSegment.StartsWith("render ", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(lastSegment, "render", StringComparison.OrdinalIgnoreCase);
+
+        if (!hasTerminalRender)
+        {
+            return query.TrimEnd() + "\n| " + operatorText;
+        }
+
+        segments.Insert(segments.Count - 1, operatorText);
+        return string.Join("\n| ", segments.Select(s => s.Trim()));
+    }
+
+    private static List<string> SplitKqlPipeline(string query)
+    {
+        var segments = new List<string>();
+        var start = 0;
+        var parenDepth = 0;
+        var bracketDepth = 0;
+        var braceDepth = 0;
+        var inSingleQuotedString = false;
+        var inDoubleQuotedString = false;
+        var inVerbatimString = false;
+
+        for (var i = 0; i < query.Length; i++)
+        {
+            var current = query[i];
+            var previous = i > 0 ? query[i - 1] : '\0';
+            var next = i + 1 < query.Length ? query[i + 1] : '\0';
+
+            if (inSingleQuotedString)
+            {
+                if (current == '\'' && next == '\'')
+                {
+                    i++;
+                    continue;
+                }
+
+                if (current == '\'' && previous != '\\')
+                {
+                    inSingleQuotedString = false;
+                }
+
+                continue;
+            }
+
+            if (inDoubleQuotedString)
+            {
+                if (current == '"' && next == '"')
+                {
+                    i++;
+                    continue;
+                }
+
+                if (current == '"' && previous != '\\')
+                {
+                    inDoubleQuotedString = false;
+                }
+
+                continue;
+            }
+
+            if (inVerbatimString)
+            {
+                if (current == '"' && next == '"')
+                {
+                    i++;
+                    continue;
+                }
+
+                if (current == '"')
+                {
+                    inVerbatimString = false;
+                }
+
+                continue;
+            }
+
+            if (current == '@' && next == '"')
+            {
+                inVerbatimString = true;
+                i++;
+                continue;
+            }
+
+            if (current == '\'')
+            {
+                inSingleQuotedString = true;
+                continue;
+            }
+
+            if (current == '"')
+            {
+                inDoubleQuotedString = true;
+                continue;
+            }
+
+            switch (current)
+            {
+                case '(':
+                    parenDepth++;
+                    break;
+                case ')':
+                    parenDepth = Math.Max(0, parenDepth - 1);
+                    break;
+                case '[':
+                    bracketDepth++;
+                    break;
+                case ']':
+                    bracketDepth = Math.Max(0, bracketDepth - 1);
+                    break;
+                case '{':
+                    braceDepth++;
+                    break;
+                case '}':
+                    braceDepth = Math.Max(0, braceDepth - 1);
+                    break;
+                case '|':
+                    if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0)
+                    {
+                        segments.Add(query[start..i].Trim());
+                        start = i + 1;
+                    }
+
+                    break;
+            }
+        }
+
+        segments.Add(query[start..].Trim());
+        return segments.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
     }
 
     private static bool IsSqlQuery(string query)
