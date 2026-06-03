@@ -1,16 +1,18 @@
 namespace Hunting.Web.Services;
 
+using Hunting.Data.Settings;
+
 public sealed class UserSettingsState
 {
-    private readonly UserSettingsStore _store;
+    private readonly IUserSettingsRepository _settings;
     private bool _isLoaded;
 
-    public UserSettingsState(UserSettingsStore store)
+    public UserSettingsState(IUserSettingsRepository settings)
     {
-        _store = store;
+        _settings = settings;
     }
 
-    public string DefaultTimeFilter { get; set; } = UserSettingsStore.DefaultTimeFilterKey;
+    public string DefaultTimeFilter { get; set; } = UserSettingsDefaults.DefaultTimeFilterKey;
     public int? DefaultResultLimit { get; set; }
 
     public IReadOnlyList<TimeFilterPreset> AvailableTimeFilters => QueryToolbarState.TimeFilterPresets;
@@ -23,7 +25,7 @@ public sealed class UserSettingsState
             return;
         }
 
-        var storedSettings = await _store.LoadAsync(cancellationToken);
+        var storedSettings = await _settings.LoadAsync(cancellationToken);
         DefaultTimeFilter = NormalizeTimeFilter(storedSettings.DefaultTimeFilter);
         DefaultResultLimit = NormalizeResultLimit(storedSettings.DefaultResultLimit);
         _isLoaded = true;
@@ -31,14 +33,15 @@ public sealed class UserSettingsState
 
     public Task SaveAsync(CancellationToken cancellationToken = default)
     {
-        return _store.SaveAsync(DefaultTimeFilter, DefaultResultLimit, cancellationToken);
+        var settings = new UserSettingsRecord(DefaultTimeFilter, DefaultResultLimit);
+        return _settings.SaveAsync(settings, cancellationToken);
     }
 
     private string NormalizeTimeFilter(string candidate)
     {
         return AvailableTimeFilters.Any(p => string.Equals(p.Key, candidate, StringComparison.OrdinalIgnoreCase))
             ? candidate
-            : UserSettingsStore.DefaultTimeFilterKey;
+            : UserSettingsDefaults.DefaultTimeFilterKey;
     }
 
     private int? NormalizeResultLimit(int? candidate)

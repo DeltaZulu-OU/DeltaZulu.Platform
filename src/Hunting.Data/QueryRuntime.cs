@@ -445,7 +445,7 @@ public sealed class QueryRuntime
                 columnData ??= CreateColumnData(reader.FieldCount);
                 for (var i = 0; i < reader.FieldCount; i++)
                 {
-                    columnData[i].Add(reader.IsDBNull(i) ? null : reader.GetValue(i));
+                    columnData[i].Add(DuckDbValueReader.ReadValue(reader, i));
                 }
 
                 return true;
@@ -539,7 +539,7 @@ public sealed class QueryRuntime
                 : fieldType == typeof(double) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetDouble(idx)
                 : fieldType == typeof(decimal) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetDecimal(idx)
                 : fieldType == typeof(DateTime) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetDateTime(idx)
-                : static (r, idx) => r.IsDBNull(idx) ? null : r.GetValue(idx);
+                : static (r, idx) => DuckDbValueReader.ReadValue(r, idx);
         }
 
         return readers;

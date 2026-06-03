@@ -1,5 +1,6 @@
 using Hunting.Core.Catalog;
 using Hunting.Data;
+using Hunting.Data.Persistence;
 using Hunting.Schema;
 using Hunting.Web.Services;
 using MudBlazor.Services;
@@ -45,8 +46,12 @@ builder.Services.AddSingleton<QueryService>();
 // Per-circuit channel bridging the layout sidebar to the editor page
 builder.Services.AddScoped<EditorBus>();
 builder.Services.AddScoped<LanguageService>();
-builder.Services.AddSingleton<UserSettingsStore>();
+
+var settingsDbPath = Path.Combine(builder.Environment.ContentRootPath, "settings.db");
+builder.Services.AddApplicationPersistence($"Data Source={settingsDbPath}");
+
 builder.Services.AddScoped<UserSettingsState>();
+builder.Services.AddScoped<QueryLibraryService>();
 builder.Services.AddScoped<Hunting.Data.Render.RenderChartBuilder>();
 builder.Services.AddScoped<RenderChartService>();
 
@@ -55,7 +60,7 @@ var app = builder.Build();
 // ─── Schema bootstrap ─────────────────────────────────────────────────────────
 
 await BootstrapSchemaAsync(app);
-await BootstrapSettingsStoreAsync(app);
+await BootstrapApplicationPersistenceAsync(app);
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
@@ -125,9 +130,8 @@ static void SeedMedallionSources(SchemaApplier applier, ILogger logger)
     }
 }
 
-static async Task BootstrapSettingsStoreAsync(WebApplication app)
+static async Task BootstrapApplicationPersistenceAsync(WebApplication app)
 {
-    var store = app.Services.GetRequiredService<UserSettingsStore>();
-    await store.EnsureInitializedAsync();
-    app.Logger.LogInformation("Settings store initialized (SQLite)");
+    await app.Services.InitializeApplicationPersistenceAsync();
+    app.Logger.LogInformation("Application persistence initialized");
 }

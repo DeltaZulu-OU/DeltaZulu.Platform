@@ -27,7 +27,7 @@ public sealed class MockDataSeederTests
     {
         var batches = MockDataSeeder.GetMedallionSeedFixtureBatches("test-catalog");
 
-        Assert.AreEqual(3, batches.Count);
+        Assert.HasCount(3, batches);
 
         var byTable = batches.ToDictionary(batch => batch.TableName, StringComparer.OrdinalIgnoreCase);
         Assert.AreEqual(320L, byTable[WindowsSysmonTable].RowCount);
