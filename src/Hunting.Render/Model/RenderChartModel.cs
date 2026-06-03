@@ -1,8 +1,4 @@
-namespace Hunting.Data.Render;
-
-using Hunting.Core.Render;
-
-public sealed record RenderSeries(string Name, IReadOnlyList<double> Values, string Color);
+namespace Hunting.Render.Model;
 
 public sealed record RenderChartModel(
     bool CanRender,

@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Hunting.Core\Hunting.Core.csproj" />
     <ProjectReference Include="..\Hunting.Data\Hunting.Data.csproj" />
+    <ProjectReference Include="..\Hunting.Render\Hunting.Render.csproj" />
     <ProjectReference Include="..\Hunting.Schema\Hunting.Schema.csproj" />
   </ItemGroup>
 

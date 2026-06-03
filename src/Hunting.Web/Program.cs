@@ -2,6 +2,7 @@ using Hunting.Core.Catalog;
 using Hunting.Data;
 using Hunting.Data.Persistence;
 using Hunting.Schema;
+using Hunting.Web.Rendering;
 using Hunting.Web.Services;
 using MudBlazor.Services;
 
@@ -14,14 +15,14 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddMudServices();
 
 // Schema catalog — singleton, shared across all Blazor circuits
-builder.Services.AddSingleton(sp => {
+builder.Services.AddSingleton(_ => {
     var catalog = new ApprovedViewCatalog();
     SchemaConventions.RegisterCanonicalViews(catalog);
     return catalog;
 });
 
 // DuckDB connection factory — singleton MVP model
-builder.Services.AddSingleton(sp =>
+builder.Services.AddSingleton(_ =>
     new DuckDbConnectionFactory("DataSource=hunting.db"));
 
 // Schema applier — used at startup to bootstrap schema
@@ -49,11 +50,10 @@ builder.Services.AddScoped<LanguageService>();
 
 var settingsDbPath = Path.Combine(builder.Environment.ContentRootPath, "settings.db");
 builder.Services.AddApplicationPersistence($"Data Source={settingsDbPath}");
+builder.Services.AddHuntingRenderWeb();
 
 builder.Services.AddScoped<UserSettingsState>();
 builder.Services.AddScoped<QueryLibraryService>();
-builder.Services.AddScoped<Hunting.Data.Render.RenderChartBuilder>();
-builder.Services.AddScoped<RenderChartService>();
 
 var app = builder.Build();
 

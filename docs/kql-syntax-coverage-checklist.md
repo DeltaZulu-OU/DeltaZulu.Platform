@@ -114,7 +114,7 @@ Editor metadata projection is structural only: the same Golden C# contracts used
 ### 1.9 Rendering and Visualization
 
 - [m] `render` — terminal parser/resolver/UI subset shipped for `timechart`, `linechart`, `areachart`, `scatterchart`, `barchart`, `columnchart`, `piechart`, and `card`; supports both `render kind key=value ...` and `render kind with (...)`; supports `kind=stacked`, legend suppression, `series=<column>`, downsampling warnings, and diagnostics-first table fallback.
-  - Note: chart-data shaping workload lives in `Hunting.Data.Render.RenderChartBuilder`; Web layer retains visualization adapter/UI concerns only.
+  - Note: render is now decoupled from the data runtime. `Hunting.Render` owns directive parsing, render binding resolution, tabular abstraction, and chart-model construction. `Hunting.Web` owns the concrete `QueryResult` adapter, rendered-query orchestration, and ECharts options.
   - Unsupported UI chart adapter kinds fail closed with a red UI error and disabled Render tab.
 
 ### 1.10 Search and Find

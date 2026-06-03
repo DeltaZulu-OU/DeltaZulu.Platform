@@ -1,13 +1,13 @@
 @page "/"
 @namespace Hunting.Web.Pages
 @using Hunting.Web.Components
-@inject Hunting.Web.Services.QueryService QueryService
+@inject Hunting.Web.Rendering.RenderedQueryRunner RenderedQueryRunner
 @inject Hunting.Core.Catalog.ApprovedViewCatalog Catalog
 @inject Hunting.Web.Services.EditorBus EditorBus
 @inject Hunting.Web.Services.LanguageService LanguageService
 @inject IJSRuntime JS
 @inject Hunting.Web.Services.UserSettingsState UserSettings
-@inject Hunting.Web.Services.RenderChartService RenderChartService
+@inject Hunting.Web.Rendering.EChartsRenderOptionsBuilder EChartsOptionsBuilder
 @inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
@@ -194,7 +194,8 @@
                         <div id="results-render-panel" role="tabpanel" aria-labelledby="results-render-tab" class="hunt-tab-content hunt-tab-active-content">
                             <div class="hunt-render-panel">
                                 @{
-                                    var chart = RenderChartService.CachedChart;
+                                    var chart = _chart;
+                                    var chartOptions = _chartOptions;
                                 }
                                 <div class="hunt-render-content">
                                     @if (!(chart?.CanRender ?? false))
@@ -205,7 +206,7 @@
                                     else
                                     {
                                         <div class="hunt-chart-wrapper">
-                                            @if (RenderChartService.CachedChartOptions is { } chartOptions)
+                                            @if (chartOptions is not null)
                                             {
                                                 <div class="hunt-echart" @ref="_chartHost">
                                                     <Vizor.ECharts.EChart @key="_chartRenderKey" Width="@_chartWidth" Height="@_chartHeight" Options="@chartOptions" />
@@ -218,12 +219,12 @@
                                         }
                                     }
                                 </div>
-                                @if (!(chart?.CanRender ?? false) || Hunting.Web.Services.RenderChartService.ShowLegend(chart))
+                                @if ((chart?.CanRender ?? false) && Hunting.Web.Rendering.EChartsRenderOptionsBuilder.ShouldShowLegend(chart))
                                 {
                                     <div class="hunt-render-legend">
                                         @foreach (var series in chart?.Series ?? [])
                                         {
-                                            <span><i style="background-color:@series.Color"></i>@series.Name</span>
+                                            <span>@series.Name</span>
                                         }
                                     </div>
                                 }
@@ -272,6 +273,10 @@
 
     private bool _running;
     private Hunting.Data.QueryResult? _result;
+    private Hunting.Web.Rendering.RenderedQueryResult? _renderedResult;
+    private Hunting.Render.Model.RenderChartModel? _chart;
+    private Vizor.ECharts.ChartOptions? _chartOptions;
+    private Hunting.Render.Model.RenderDirective _renderDirective = Hunting.Render.Model.RenderDirective.Table();
     private TimeSpan _elapsed;
     private List<Hunting.Core.Policy.QueryDiagnostic> _diagnostics = [];
     private bool _showDrawer;
@@ -316,6 +321,10 @@
 
         _running = true;
         _result = null;
+        _renderedResult = null;
+        _chart = null;
+        _chartOptions = null;
+        _renderDirective = Hunting.Render.Model.RenderDirective.Table();
         _diagnostics = [];
         _showDrawer = false;
         _drawerMode = DrawerMode.None;
@@ -329,16 +338,24 @@
         {
             if (_toolbar.TryBuildEffectiveQuery(_kql, out var effectiveQuery, out var warning))
             {
-                _result = await QueryService.ExecuteAsync(effectiveQuery, _cts.Token);
+                _renderedResult = await RenderedQueryRunner.RunAsync(effectiveQuery, _cts.Token);
+                _result = _renderedResult.QueryResult;
+                _renderDirective = _renderedResult.Directive;
+                _chart = _renderedResult.Chart;
                 _diagnostics = _result.Diagnostics.All.ToList();
-                RenderChartService.RebuildCache(_result);
-                if (RenderChartService.LastErrorMessage is { } renderErrorMessage)
+
+                try
                 {
+                    _chartOptions = _chart.CanRender ? EChartsOptionsBuilder.Build(_chart) : null;
+                }
+                catch (Exception ex)
+                {
+                    _chartOptions = null;
                     _diagnostics.Add(new Hunting.Core.Policy.QueryDiagnostic(
                         Hunting.Core.Policy.DiagnosticSeverity.Error,
                         Hunting.Core.Policy.DiagnosticPhase.Policy,
                         QueryDiagnosticCodes.Unspecified,
-                        renderErrorMessage));
+                        ex.Message));
                 }
 
                 _chartRenderKey++;
@@ -347,7 +364,7 @@
                 {
                     _activeTab = ResultTab.Table;
                 }
-                else if (_result.Success && _result.RowCount > 0 && RenderChartService.CachedChart?.CanRender == true)
+                else if (_result.Success && _result.RowCount > 0 && _chart?.CanRender == true)
                 {
                     _activeTab = ResultTab.Render;
                 }
@@ -485,10 +502,10 @@
     private bool HasRenderOutput
         => _result is not null
            && _result.Success
-           && _result.RenderSpec.Kind != Hunting.Core.Render.RenderKind.Table
-           && !_result.RenderSpec.IsFallback
-           && RenderChartService.CachedChart?.CanRender == true
-           && RenderChartService.CachedChartOptions is not null;
+           && _renderDirective.Kind != Hunting.Render.Model.RenderKind.Table
+           && !_renderDirective.IsFallback
+           && _chart?.CanRender == true
+           && _chartOptions is not null;
 
     private void SelectTab(ResultTab tab)
     {
@@ -537,9 +554,12 @@
         _kql = string.Empty;
         _cachedEditorText = string.Empty;
         _result = null;
+        _renderedResult = null;
+        _chart = null;
+        _chartOptions = null;
+        _renderDirective = Hunting.Render.Model.RenderDirective.Table();
         _diagnostics = [];
         _showDrawer = false;
-        RenderChartService.ClearCache();
         _chartRenderKey++;
         await LanguageService.SetEditorValueAsync(_kql);
     }
@@ -681,7 +701,7 @@
             _editorInitialized = true;
         }
 
-        if (_activeTab != ResultTab.Render || !HasRenderOutput || RenderChartService.CachedChartOptions is null)
+        if (_activeTab != ResultTab.Render || !HasRenderOutput || _chartOptions is null)
         {
             return;
         }

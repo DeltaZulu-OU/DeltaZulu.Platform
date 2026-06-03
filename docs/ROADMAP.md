@@ -202,16 +202,17 @@ Broad expansion before Phase 1B–1E is intentionally out of scope.
 
 ## Render Roadmap
 
-Render work remains a parallel track as long as it does not weaken schema semantics.
+Render work remains a parallel track as long as it does not weaken schema semantics. The render decoupling slice is complete: render parsing, contracts, resolver, tabular abstraction, and chart-model construction live in `Hunting.Render`; Web owns render orchestration and ECharts conversion; `Hunting.Data` runtime is data-only.
 
-| Phase | Objective |
-|---|---|
-| R0 | Align docs with current render implementation |
-| R1 | Terminal render parser and diagnostics |
-| R2 | Render resolver over result schema/data |
-| R3 | UI chart adapter |
-| R4 | Expand supported chart kinds/properties |
-| R5 | Performance and UX hardening |
+| Phase | Status | Objective |
+|---|---|---|
+| R0 | Complete | Align docs with current render implementation |
+| R1 | Complete | Terminal render parser and diagnostics in standalone `Hunting.Render` |
+| R2 | Complete | Render resolver over dependency-light result schema/data contracts |
+| R3 | Complete | Web-owned QueryResult adapter and ECharts chart adapter |
+| R4 | In progress | Expand supported chart kinds/properties only where semantics are clear |
+| R5 | In progress | Performance, UX hardening, and chart-host stability |
+| R6 | Deferred | Dashboard foundation after the decoupled render path is stable |
 
 ---
 
@@ -237,7 +238,7 @@ Render work remains a parallel track as long as it does not weaken schema semant
 5. Implement Phase 1E tolerant casting and Golden semantic normalization.
 6. Improve Monaco/schema-browser metadata under Phase 1F.
 7. Start controlled expansion under Phase 1G.
-8. Continue render roadmap work where it does not change schema semantics.
+8. Stabilize the decoupled render path and then start dashboard foundation work as a separate roadmap stream.
 
 ---
 
@@ -250,14 +251,15 @@ Render work remains a parallel track as long as it does not weaken schema semant
 
 1. Medallion hardening: structural migration planning, tolerant casting, Golden semantic normalization
 2. Monaco language-service quality improvements
-3. Controlled Golden contract expansion
-4. `mv-expand`
-5. Dynamic member access
-6. `format_datetime`
-7. `has_any` / `has_all`
-8. Planner admission + v2 relational optimizations
-9. One-off schema bootstrap import + generic model alignment
-10. Quack protocol migration
+3. Dashboard foundation over the decoupled render path
+4. Controlled Golden contract expansion
+5. `mv-expand`
+6. Dynamic member access
+7. `format_datetime`
+8. `has_any` / `has_all`
+9. Planner admission + v2 relational optimizations
+10. One-off schema bootstrap import + generic model alignment
+11. Quack protocol migration
 11. Scheduled query runner
 12. Multi-dialect backend architecture
 13. Render implementation track

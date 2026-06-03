@@ -1,0 +1,10 @@
+namespace Hunting.Render.Directives;
+
+using Hunting.Render.Model;
+
+public sealed record RenderDirectiveParseResult
+{
+    public required string QueryTextWithoutRender { get; init; }
+
+    public required RenderDirective Directive { get; init; }
+}

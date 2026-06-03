@@ -289,7 +289,7 @@ The catalog must not use legacy table names or relative time filters such as `ag
 ## Runtime Query Pipeline
 
 ```text
-KQL input
+Data query text
   -> Kusto.Language ParseAndAnalyze with ApprovedViewCatalog GlobalState
   -> Policy validation
   -> KustoToRelational compatibility adapter
@@ -302,6 +302,23 @@ KQL input
 ```
 
 Bronze and Silver are not part of the user-facing query surface. Only approved Golden contracts are registered in the KQL catalog.
+
+## Render Query Pipeline
+
+Render is deliberately outside the data runtime. The runtime receives data query text and returns `QueryResult`; it does not know about terminal render directives, chart kinds, chart bindings, or ECharts.
+
+```text
+User-entered KQL
+  -> Hunting.Web Rendering.RenderedQueryRunner
+      -> Hunting.Render.Directives.RenderDirectiveParser
+      -> QueryService.ExecuteDataOnlyAsync(stripped data query)
+      -> QueryResultRenderAdapter
+      -> Hunting.Render.Services.RenderChartBuilder
+      -> EChartsRenderOptionsBuilder
+      -> Render tab
+```
+
+`Hunting.Render` has no project reference to `Hunting.Core`, `Hunting.Data`, or `Hunting.Web`. It owns render contracts, terminal directive parsing, schema/data-independent render binding resolution, tabular input abstraction, and chart-model construction. `Hunting.Web` owns the concrete adapter from `Hunting.Data.QueryResult` to `IRenderTabularResult` and the conversion from `RenderChartModel` to Vizor.ECharts `ChartOptions`.
 
 ### Translator, planner, and optimizer naming boundary
 
@@ -331,9 +348,10 @@ Golden views must emit explicit canonical projections per Silver branch. `SELECT
 |---|---|
 | `Hunting.Core` | Query model, translation, planner, policy, catalog, SQL emission, sample-query catalog |
 | `Hunting.Schema` | C# schema definitions and active medallion catalog |
-| `Hunting.Data` | DuckDB connection factory, schema application, runtime orchestration, mock seeding |
-| `Hunting.Web` | Blazor UI, schema browser, query execution surface, render UI |
-| `Hunting.Tests` | Translation, emitter, runtime, schema, planner, sample, and E2E tests |
+| `Hunting.Data` | DuckDB connection factory, schema application, data-only runtime orchestration, application persistence, mock seeding |
+| `Hunting.Render` | Dependency-light render contracts, terminal directive parser, render resolver, tabular abstraction, chart-model builder; intentionally has no `Hunting.*` project references |
+| `Hunting.Web` | Blazor UI, schema browser, query execution surface, render orchestration, QueryResult render adapter, ECharts adapter |
+| `Hunting.Tests` | Translation, emitter, runtime, schema, planner, render, Web, sample, and E2E tests |
 
 ## SQL Artifact Policy
 
@@ -365,6 +383,7 @@ A new source or Golden family must not be added by changing only the catalog. It
 | Parser model | Implemented in Phase 1D as a validation/review layer over existing `ParserViewDef.Mapping` |
 | Parser-spec generation | Parser specs do not yet generate `MappingQueryDef` or parser-view SQL |
 | Fixture depth | More sample logs are needed, but should be added under fixture governance |
+| Dashboards | Deferred until render decoupling is merged and stabilized |
 
 ## Phase 1B–1D Boundary
 
