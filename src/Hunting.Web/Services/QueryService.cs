@@ -2,6 +2,7 @@ namespace Hunting.Web.Services;
 
 using Hunting.Core.Policy;
 using Hunting.Data;
+using Hunting.Data.QueryHistory;
 
 /// <summary>
 /// <para>
@@ -17,13 +18,19 @@ using Hunting.Data;
 public sealed class QueryService : IDisposable
 {
     private const int MaxMaterializedRows = 2000;
+    private readonly IQueryHistoryRepository _queryHistory;
     private readonly ILogger<QueryService> _logger;
     private readonly QueryRuntime _runtime;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-    public QueryService(QueryRuntime runtime, ILogger<QueryService> logger)
+
+    public QueryService(
+        QueryRuntime runtime,
+        ILogger<QueryService> logger,
+        IQueryHistoryRepository queryHistory)
     {
         _runtime = runtime;
         _logger = logger;
+        _queryHistory = queryHistory;
     }
 
     public void Dispose() => _semaphore.Dispose();
@@ -52,6 +59,9 @@ public sealed class QueryService : IDisposable
             return QueryResult.FromDiagnostics(bag);
         }
 
+        var startedAt = DateTime.UtcNow;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
         try
         {
             // Deliberately NOT passing ct to Task.Run: cancelling it would abandon
@@ -70,7 +80,7 @@ public sealed class QueryService : IDisposable
                 columnData ??= CreateColumnData(reader.FieldCount);
                 for (var i = 0; i < reader.FieldCount; i++)
                 {
-                    columnData[i].Add(reader.IsDBNull(i) ? null : reader.GetValue(i));
+                    columnData[i].Add(DuckDbValueReader.ReadValue(reader, i));
                 }
                 rowCount++;
                 return true;
@@ -119,6 +129,9 @@ public sealed class QueryService : IDisposable
                     string.Join(" | ", result.DebugTrace));
             }
 
+            sw.Stop();
+            await RecordQueryHistoryAsync(kql, startedAt, sw.ElapsedMilliseconds, result, ct);
+
             return result;
         }
         catch (Exception ex)
@@ -127,13 +140,53 @@ public sealed class QueryService : IDisposable
             var bag = new DiagnosticBag();
             bag.AddError(DiagnosticPhase.Execute,
                 "An unexpected error occurred. Check application logs.");
-            return QueryResult.FromDiagnostics(bag);
+
+            var result = QueryResult.FromDiagnostics(bag);
+            sw.Stop();
+            await RecordQueryHistoryAsync(kql, startedAt, sw.ElapsedMilliseconds, result, ct);
+
+            return result;
         }
         finally
         {
             _semaphore.Release();
         }
     }
+
+    private async Task RecordQueryHistoryAsync(
+        string kql,
+        DateTime startedAt,
+        long durationMs,
+        QueryResult result,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var diagnosticSummary = result.Diagnostics.All.Count == 0
+                ? null
+                : string.Join(" | ", result.Diagnostics.All.Select(d => d.Message));
+
+            await _queryHistory.AddAsync(
+                new QueryHistoryRecord(
+                    Guid.NewGuid().ToString("N"),
+                    kql,
+                    startedAt,
+                    result.Success,
+                    result.Success ? result.RowCount : null,
+                    durationMs,
+                    diagnosticSummary),
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to record query history.");
+        }
+    }
+
     private static List<object?>[] CreateColumnData(int count)
     {
         var columns = new List<object?>[count];

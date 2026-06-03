@@ -1,6 +1,6 @@
 namespace Hunting.Data;
 
-using DuckDB.NET.Data;
+using Dapper;
 using Hunting.Core.DuckDbSql;
 using Hunting.Core.Schema;
 
@@ -12,6 +12,31 @@ public sealed class SchemaProvenanceRecorder
 {
     public const string DefaultCatalogVersion = "phase-1b";
     public const string ProvenanceTable = "internal.schema_provenance";
+
+    private const string DeleteSql =
+        $"""
+        DELETE FROM {ProvenanceTable}
+        WHERE object_name = @ObjectName
+        """;
+
+    private const string InsertSql =
+        $"""
+        INSERT INTO {ProvenanceTable}
+            (object_name, object_kind, schema_hash, catalog_version, applied_at)
+        VALUES
+            (@ObjectName, @ObjectKind, @SchemaHash, @CatalogVersion, current_timestamp)
+        """;
+
+    private const string SelectSql =
+        """
+        SELECT
+            object_name AS ObjectName,
+            object_kind AS ObjectKind,
+            schema_hash AS SchemaHash,
+            catalog_version AS CatalogVersion
+        FROM internal.schema_provenance
+        ORDER BY object_name
+        """;
 
     private readonly DuckDbConnectionFactory _connectionFactory;
     private readonly SchemaEmitter _schemaEmitter;
@@ -40,40 +65,30 @@ public sealed class SchemaProvenanceRecorder
         var fingerprints = BuildFingerprints(rawTables, internalTables, parserViews, canonicalViews);
 
         var conn = _connectionFactory.GetConnection();
-        using var cmd = conn.CreateCommand();
+        using var tx = conn.BeginTransaction();
 
         foreach (var fingerprint in fingerprints)
         {
-            Upsert(cmd, fingerprint, catalogVersion);
+            var parameters = new
+            {
+                fingerprint.ObjectName,
+                fingerprint.ObjectKind,
+                fingerprint.SchemaHash,
+                CatalogVersion = catalogVersion
+            };
+
+            conn.Execute(DeleteSql, parameters, tx);
+            conn.Execute(InsertSql, parameters, tx);
         }
 
+        tx.Commit();
         return fingerprints;
     }
 
     public IReadOnlyList<SchemaProvenanceRow> ReadRecordedProvenance()
     {
-        var rows = new List<SchemaProvenanceRow>();
         var conn = _connectionFactory.GetConnection();
-
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText =
-            """
-            SELECT object_name, object_kind, schema_hash, catalog_version
-            FROM internal.schema_provenance
-            ORDER BY object_name
-            """;
-
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
-        {
-            rows.Add(new SchemaProvenanceRow(
-                reader.GetString(0),
-                reader.GetString(1),
-                reader.GetString(2),
-                reader.IsDBNull(3) ? null : reader.GetString(3)));
-        }
-
-        return rows;
+        return conn.Query<SchemaProvenanceRow>(SelectSql).AsList();
     }
 
     private IReadOnlyList<SchemaObjectFingerprint> BuildFingerprints(
@@ -108,35 +123,6 @@ public sealed class SchemaProvenanceRecorder
             .OrderBy(static fingerprint => fingerprint.ObjectName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
-
-    private static void Upsert(
-        DuckDBCommand cmd,
-        SchemaObjectFingerprint fingerprint,
-        string catalogVersion)
-    {
-        var objectName = EscapeSql(fingerprint.ObjectName);
-        var objectKind = EscapeSql(fingerprint.ObjectKind);
-        var schemaHash = EscapeSql(fingerprint.SchemaHash);
-        var version = EscapeSql(catalogVersion);
-
-        cmd.CommandText =
-            $"""
-            DELETE FROM {ProvenanceTable}
-            WHERE object_name = '{objectName}'
-            """;
-        cmd.ExecuteNonQuery();
-
-        cmd.CommandText =
-            $"""
-            INSERT INTO {ProvenanceTable}
-                (object_name, object_kind, schema_hash, catalog_version, applied_at)
-            VALUES
-                ('{objectName}', '{objectKind}', '{schemaHash}', '{version}', current_timestamp)
-            """;
-        cmd.ExecuteNonQuery();
-    }
-
-    private static string EscapeSql(string value) => value.Replace("'", "''");
 }
 
 public sealed record SchemaProvenanceRow(

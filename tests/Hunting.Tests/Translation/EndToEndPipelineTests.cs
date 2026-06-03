@@ -331,7 +331,7 @@ public sealed class EndToEndPipelineTests
                 var row = new object?[reader.FieldCount];
                 for (var i = 0; i < reader.FieldCount; i++)
                 {
-                    row[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                    row[i] = DuckDbValueReader.ReadValue(reader, i);
                 }
 
                 streamedRows.Add(row);

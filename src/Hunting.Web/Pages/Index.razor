@@ -1,5 +1,6 @@
 @page "/"
 @namespace Hunting.Web.Pages
+@using Hunting.Web.Components
 @inject Hunting.Web.Services.QueryService QueryService
 @inject Hunting.Core.Catalog.ApprovedViewCatalog Catalog
 @inject Hunting.Web.Services.EditorBus EditorBus
@@ -18,11 +19,14 @@
             <div class="hunt-editor-toolbar">
                 <span class="hunt-editor-label">KQL Query</span>
                 <div class="hunt-toolbar-actions">
+                    <QueryLibraryDrawer CurrentQueryText="@_cachedEditorText" QuerySelected="LoadQueryIntoEditor" />
+
                     <button class="hunt-btn hunt-btn-run"
                             disabled="@_running"
                             @onclick="RunQuery">
                         @(_running ? "Running…" : "▶ Run (Shift+Enter)")
                     </button>
+
                     <button class="hunt-btn hunt-btn-clear"
                             @onclick="Clear">
                         Clear
@@ -763,5 +767,12 @@
         _cts.Cancel();
         _cts.Dispose();
         await LanguageService.DisposeAsync();
+    }
+
+    private async Task LoadQueryIntoEditor(string queryText)
+    {
+        _kql = queryText;
+        _cachedEditorText = queryText;
+        await LanguageService.SetEditorValueAsync(queryText);
     }
 }

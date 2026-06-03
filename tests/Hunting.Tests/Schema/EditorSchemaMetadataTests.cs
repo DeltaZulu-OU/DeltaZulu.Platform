@@ -33,8 +33,8 @@ public class EditorSchemaMetadataTests
         CollectionAssert.AreEquivalent(
             SchemaConventions.CanonicalViews.Select(view => view.Name).ToArray(),
             metadata.Tables.Select(table => table.Name).ToArray());
-        Assert.IsFalse(metadata.Tables.Any(table => table.Name.StartsWith("v_", StringComparison.Ordinal)));
-        Assert.IsFalse(metadata.Tables.Any(table => table.Name.Contains("windows_", StringComparison.Ordinal)));
+        Assert.DoesNotContain(table => table.Name.StartsWith("v_", StringComparison.Ordinal), metadata.Tables);
+        Assert.DoesNotContain(table => table.Name.Contains("windows_", StringComparison.Ordinal), metadata.Tables);
     }
 
     [TestMethod]

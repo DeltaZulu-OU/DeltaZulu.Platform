@@ -1,6 +1,7 @@
 namespace Hunting.Tests.Spike;
 
 using DuckDB.NET.Data;
+using Hunting.Data;
 
 /// <summary>
 /// <para>
@@ -351,22 +352,11 @@ public sealed class DuckDbWindowSpecTests
             var row = new object?[reader.FieldCount];
             for (var i = 0; i < reader.FieldCount; i++)
             {
-                row[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                row[i] = DuckDbValueReader.ReadValue(reader, i);
             }
 
             rows.Add(row);
         }
         return rows;
     }
-
-    // ─── lead() — KQL: next() ───────────────────────────────────────
-    // ─── row_number() — KQL: row_number() ───────────────────────────
-    // ─── dense_rank() — KQL: row_rank_dense() ───────────────────────
-    // ─── rank() — KQL: row_rank_min() ───────────────────────────────
-    // ─── Cumulative sum — KQL: row_cumsum() ─────────────────────────
-    // ─── RANGE frame — sliding window pattern ───────────────────────
-    // ─── Gap detection pattern (beaconing) ──────────────────────────
-    // ─── Session window pattern ─────────────────────────────────────
-    // ─── first_value / last_value ───────────────────────────────────
-    // ─── nth_value ──────────────────────────────────────────────────
 }

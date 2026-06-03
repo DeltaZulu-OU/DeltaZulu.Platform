@@ -1,5 +1,6 @@
 namespace Hunting.Data;
 
+using Dapper;
 using DuckDB.NET.Data;
 
 /// <summary>
@@ -12,12 +13,13 @@ using DuckDB.NET.Data;
 /// condition. DuckDB itself, when embedded in-process, does not support fully
 /// concurrent multi-threaded access on a single connection. This factory is
 /// designed for single-user Blazor Server use. Concurrent query execution from
-/// multiple Blazor circuits will serialize at the DuckDB level but may still
-/// produce interleaved results on the same connection object.
+/// multiple Blazor circuits must serialize above this shared connection.
 /// </para>
 /// <para>
-/// Post-MVP: Quack protocol migration (targeted DuckDB v2.0, September 2026)
-/// will replace this with per-request connections and server-side authorization.
+/// Direct DuckDB.NET ownership is intentionally limited to connection lifecycle.
+/// SQL execution that does not require dynamic readers should go through Dapper.
+/// Dynamic KQL execution remains DuckDB.NET-based because it needs streaming,
+/// column metadata, custom extension types, and provider-specific value handling.
 /// </para>
 /// </summary>
 public sealed class DuckDbConnectionFactory : IDisposable
@@ -69,22 +71,16 @@ public sealed class DuckDbConnectionFactory : IDisposable
                     throw;
                 }
             }
+
             return _connection;
         }
     }
 
     private static void ApplyStartupSql(DuckDBConnection connection, IReadOnlyList<string> startupSql)
     {
-        if (startupSql.Count == 0)
+        foreach (var sql in startupSql.Where(static sql => !string.IsNullOrWhiteSpace(sql)))
         {
-            return;
-        }
-
-        using var cmd = connection.CreateCommand();
-        foreach (var sql in startupSql)
-        {
-            cmd.CommandText = sql;
-            cmd.ExecuteNonQuery();
+            connection.Execute(sql);
         }
     }
 }

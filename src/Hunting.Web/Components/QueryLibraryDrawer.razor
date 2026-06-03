@@ -1,0 +1,269 @@
+@namespace Hunting.Web.Components
+@inject Hunting.Web.Services.QueryLibraryService QueryLibrary
+
+<button class="hunt-btn hunt-btn-history"
+        @onclick="OpenAsync"
+        disabled="@_loading">
+    History
+</button>
+
+@if (_open)
+{
+    <button class="hunt-query-drawer-backdrop"
+            @onclick="Close"
+            aria-label="Close query history drawer"></button>
+
+    <aside class="hunt-query-drawer"
+           role="dialog"
+           aria-modal="true"
+           aria-label="Query history and saved queries">
+        <div class="hunt-query-drawer-header">
+            <div>
+                <div class="hunt-query-drawer-title">Query Library</div>
+                <div class="hunt-query-drawer-subtitle">Saved queries and recent executions</div>
+            </div>
+            <button class="hunt-btn hunt-btn-clear"
+                    @onclick="Close"
+                    aria-label="Close query history drawer">
+                Close
+            </button>
+        </div>
+
+        <div class="hunt-query-drawer-body">
+            <div class="hunt-query-library-save">
+                <input class="hunt-query-library-input"
+                       placeholder="Saved query name"
+                       @bind="_saveName"
+                       disabled="@_saving" />
+                <input class="hunt-query-library-input"
+                       placeholder="Description (optional)"
+                       @bind="_saveDescription"
+                       disabled="@_saving" />
+                <button class="hunt-btn hunt-btn-run"
+                        @onclick="SaveCurrentQueryAsync"
+                        disabled="@(!CanSaveCurrentQuery)">
+                    @(_saving ? "Saving…" : "Save current")
+                </button>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="hunt-query-library-message">@_message</div>
+            }
+
+            <section class="hunt-query-library-section">
+                <div class="hunt-query-library-section-title">Saved queries</div>
+                @if (_savedQueries.Count == 0)
+                {
+                    <div class="hunt-query-library-empty">No saved queries yet.</div>
+                }
+                else
+                {
+                    <div class="hunt-query-library-list">
+                        @foreach (var query in _savedQueries)
+                        {
+                            <div class="hunt-query-library-item">
+                                <div class="hunt-query-library-item-main">
+                                    <button class="hunt-query-library-link"
+                                            @onclick="() => SelectSavedQueryAsync(query.Id)">
+                                        @query.Name
+                                    </button>
+                                    @if (!string.IsNullOrWhiteSpace(query.Description))
+                                    {
+                                        <div class="hunt-query-library-description">@query.Description</div>
+                                    }
+                                    <div class="hunt-query-library-meta">
+                                        Updated @FormatTimestamp(query.UpdatedAt)
+                                        @if (query.LastRunAt is not null)
+                                        {
+                                            <span> · Last run @FormatTimestamp(query.LastRunAt.Value)</span>
+                                        }
+                                    </div>
+                                </div>
+                                <button class="hunt-btn hunt-btn-clear"
+                                        @onclick="() => DeleteSavedQueryAsync(query.Id)">
+                                    Delete
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+
+            <section class="hunt-query-library-section">
+                <div class="hunt-query-library-section-title">Recent history</div>
+                @if (_recentHistory.Count == 0)
+                {
+                    <div class="hunt-query-library-empty">No recent query history yet.</div>
+                }
+                else
+                {
+                    <div class="hunt-query-library-list">
+                        @foreach (var history in _recentHistory)
+                        {
+                            <div class="hunt-query-library-item">
+                                <div class="hunt-query-library-item-main">
+                                    <button class="hunt-query-library-link"
+                                            @onclick="() => SelectHistoryQueryAsync(history.Id)">
+                                        @TrimQuery(history.QueryText)
+                                    </button>
+                                    <div class="hunt-query-library-meta">
+                                        @FormatTimestamp(history.ExecutedAt)
+                                        · @(history.Succeeded ? "Succeeded" : "Failed")
+                                        @if (history.RowCount is not null)
+                                        {
+                                            <span> · @history.RowCount rows</span>
+                                        }
+                                        @if (history.DurationMs is not null)
+                                        {
+                                            <span> · @history.DurationMs ms</span>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(history.DiagnosticSummary))
+                                    {
+                                        <div class="hunt-query-library-description">@history.DiagnosticSummary</div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        </div>
+    </aside>
+}
+
+@code {
+    private bool _open;
+    private bool _loading;
+    private bool _saving;
+    private string _saveName = "";
+    private string? _saveDescription;
+    private string? _message;
+    private IReadOnlyList<Hunting.Data.SavedQueries.SavedQueryRecord> _savedQueries = [];
+    private IReadOnlyList<Hunting.Data.QueryHistory.QueryHistoryRecord> _recentHistory = [];
+
+    [Parameter]
+    public string CurrentQueryText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> QuerySelected { get; set; }
+
+    [Parameter]
+    public int RecentHistoryLimit { get; set; } = 25;
+
+    [Parameter]
+    public bool CloseAfterSelection { get; set; } = true;
+
+    private bool CanSaveCurrentQuery =>
+        !_saving
+        && !string.IsNullOrWhiteSpace(CurrentQueryText)
+        && !string.IsNullOrWhiteSpace(_saveName);
+
+    private async Task OpenAsync()
+    {
+        _open = true;
+        await RefreshAsync();
+    }
+
+    private void Close()
+    {
+        _open = false;
+        _message = null;
+    }
+
+    private async Task RefreshAsync()
+    {
+        _loading = true;
+        _message = null;
+
+        try
+        {
+            _savedQueries = await QueryLibrary.ListSavedQueriesAsync();
+            _recentHistory = await QueryLibrary.ListRecentHistoryAsync(RecentHistoryLimit);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SaveCurrentQueryAsync()
+    {
+        if (!CanSaveCurrentQuery)
+        {
+            return;
+        }
+
+        _saving = true;
+        _message = null;
+
+        try
+        {
+            await QueryLibrary.SaveQueryAsync(
+                id: null,
+                name: _saveName,
+                description: _saveDescription,
+                queryText: CurrentQueryText);
+
+            _saveName = "";
+            _saveDescription = null;
+            _message = "Query saved.";
+            await RefreshAsync();
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task SelectSavedQueryAsync(string id)
+    {
+        var queryText = await QueryLibrary.LoadSavedQueryTextAsync(id);
+        await SelectQueryTextAsync(queryText);
+    }
+
+    private async Task SelectHistoryQueryAsync(string id)
+    {
+        var queryText = await QueryLibrary.LoadHistoryQueryTextAsync(id);
+        await SelectQueryTextAsync(queryText);
+    }
+
+    private async Task SelectQueryTextAsync(string? queryText)
+    {
+        if (string.IsNullOrWhiteSpace(queryText))
+        {
+            return;
+        }
+
+        await QuerySelected.InvokeAsync(queryText);
+
+        if (CloseAfterSelection)
+        {
+            Close();
+        }
+    }
+
+    private async Task DeleteSavedQueryAsync(string id)
+    {
+        await QueryLibrary.DeleteSavedQueryAsync(id);
+        _message = "Saved query deleted.";
+        await RefreshAsync();
+    }
+
+    private static string FormatTimestamp(DateTime value)
+    {
+        return value.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+    }
+
+    private static string TrimQuery(string queryText)
+    {
+        var compact = string.Join(
+            " ",
+            queryText.Split(
+                ['\r', '\n', '\t', ' '],
+                StringSplitOptions.RemoveEmptyEntries));
+
+        return compact.Length <= 120 ? compact : $"{compact[..120]}…";
+    }
+}

@@ -13,12 +13,14 @@
     <PackageReference Include="MSTest.TestAdapter" Version="4.2.3" />
     <PackageReference Include="MSTest.TestFramework" Version="4.2.3" />
     <PackageReference Include="DuckDB.NET.Data.Full" Version="1.*" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Hunting.Core\Hunting.Core.csproj" />
     <ProjectReference Include="..\..\src\Hunting.Data\Hunting.Data.csproj" />
-      <ProjectReference Include="..\..\src\Hunting.Schema\Hunting.Schema.csproj" />
+    <ProjectReference Include="..\..\src\Hunting.Schema\Hunting.Schema.csproj" />
   </ItemGroup>
 
 </Project>

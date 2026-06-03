@@ -8,6 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.*" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
     <PackageReference Include="DuckDB.NET.Data.Full" Version="1.*" />
     <PackageReference Include="DuckDB.NET.Bindings.Full" Version="1.*" />
   </ItemGroup>
