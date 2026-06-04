@@ -1,0 +1,53 @@
+@using Workbench.Application.Services
+@using Workbench.Domain.Common
+@using Workbench.Domain.Enums
+@using Workbench.Domain.Identifiers
+@inject ChangeService ChangeService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="_key" Label="Change Key" HelperText="E.g. CHG-042" Required="true" Class="mb-3" />
+        <MudTextField @bind-Value="_title" Label="Title" Required="true" Class="mb-3" />
+        <MudSelect @bind-Value="_profileId" Label="Workflow Profile" Class="mb-3" T="WorkflowProfileId">
+            <MudSelectItem Value="WorkflowProfileId.QuickLab">QuickLab</MudSelectItem>
+            <MudSelectItem Value="WorkflowProfileId.ControlledReview">ControlledReview</MudSelectItem>
+        </MudSelect>
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-2">@_error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="_submitting">Open Change</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public DetectionId DetectionId { get; set; }
+    [Parameter] public UserId AuthorId { get; set; }
+
+    private string _key = "";
+    private string _title = "";
+    private WorkflowProfileId _profileId = WorkflowProfileId.QuickLab;
+    private string? _error;
+    private bool _submitting;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        _error = null;
+        _submitting = true;
+        try
+        {
+            var change = await ChangeService.OpenChangeAsync(_key.Trim(), _title.Trim(), DetectionId, AuthorId, _profileId);
+            Snackbar.Add($"Change '{_key}' opened.", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(change.Id));
+        }
+        catch (DomainException ex) { _error = ex.Message; }
+        finally { _submitting = false; }
+    }
+}

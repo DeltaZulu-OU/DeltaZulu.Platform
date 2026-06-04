@@ -1,0 +1,52 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+
+# Test results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage*.opencover.xml
+coverage*.cobertura.xml
+
+# Tooling
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+*.swp
+*.swo
+
+# Local content store (Git-backed accepted content) — keep out of host repo
+# The POC writes canonical detection files into a sibling working tree
+content-store/
+content-store-test/
+
+# SQLite (POC operational state)
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+logs/
+*.log
+
+# Secrets
+appsettings.Development.json
+appsettings.Local.json
+*.pfx
+*.snk
+secrets.json
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db

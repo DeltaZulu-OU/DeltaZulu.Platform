@@ -1,0 +1,29 @@
+@* Navigation — domain terms only. No Git verbs (ADR-0003). No emoji (DZ rule 4). *@
+<MudNavMenu>
+    <MudNavLink Href="/" Match="NavLinkMatch.All"
+                Icon="@Icons.Material.Outlined.Dashboard">Overview</MudNavLink>
+
+    <div style="padding: 16px 20px 6px; opacity: 0.55;">
+        <span class="eyebrow" style="font-size: 0.625rem;">Content</span>
+    </div>
+    <MudNavLink Href="/detections"
+                Icon="@Icons.Material.Outlined.Radar">Detections</MudNavLink>
+    <MudNavLink Href="/changes"
+                Icon="@Icons.Material.Outlined.MergeType">Changes</MudNavLink>
+    <MudNavLink Href="/versions"
+                Icon="@Icons.Material.Outlined.History">Versions</MudNavLink>
+
+    <div style="padding: 16px 20px 6px; opacity: 0.55;">
+        <span class="eyebrow" style="font-size: 0.625rem;">Work</span>
+    </div>
+    <MudNavLink Href="/issues"
+                Icon="@Icons.Material.Outlined.BugReport">Issues &amp; cases</MudNavLink>
+    <MudNavLink Href="/checks"
+                Icon="@Icons.Material.Outlined.PlaylistAddCheck">Checks</MudNavLink>
+    <MudNavLink Href="/reviews"
+                Icon="@Icons.Material.Outlined.RateReview">Reviews</MudNavLink>
+
+    <MudDivider Class="my-3 mx-4" Style="border-color: rgba(19,31,42,0.08);" />
+    <MudNavLink Href="/settings"
+                Icon="@Icons.Material.Outlined.Settings">Settings</MudNavLink>
+</MudNavMenu>

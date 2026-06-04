@@ -1,0 +1,43 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="0">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                       Color="Color.Inherit"
+                       Edge="Edge.Start"
+                       OnClick="@ToggleDrawer" />
+        <img src="logo-light.png" alt="DeltaZulu" height="28" class="ml-2 mr-3" style="opacity:0.92;" />
+        <MudText Typo="Typo.subtitle1" Style="color: rgba(255,255,255,0.78); font-weight: 500;">
+            Detection Content Workbench
+        </MudText>
+        <MudSpacer />
+        <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.45); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; font-size: 0.75rem;">
+            POC
+        </MudText>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="0">
+        <div style="padding: 16px 12px 8px 12px;">
+            <span class="eyebrow" style="font-size: 0.6875rem;">Navigation</span>
+        </div>
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent>
+        <div style="max-width: 1200px; margin: 0 auto; padding: 32px 24px;">
+            @Body
+        </div>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private static readonly MudTheme _theme = Workbench.Web.WorkbenchTheme.Create();
+    private bool _drawerOpen = true;
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+}

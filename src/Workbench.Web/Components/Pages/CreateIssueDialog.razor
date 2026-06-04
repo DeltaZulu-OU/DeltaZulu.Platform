@@ -1,0 +1,93 @@
+@using Workbench.Application.Services
+@using Workbench.Domain.Common
+@using Workbench.Domain.Enums
+@inject IssueService IssueService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="_key" Label="Key" HelperText="E.g. ISS-042" Required="true" Class="mb-3" />
+        <MudTextField @bind-Value="_title" Label="Title" Required="true" Class="mb-3" />
+
+        @if (!WithExternalCase)
+        {
+            <MudSelect @bind-Value="_type" Label="Type" Class="mb-3" T="IssueType">
+                @foreach (var t in Enum.GetValues<IssueType>())
+                {
+                    <MudSelectItem Value="t">@t</MudSelectItem>
+                }
+            </MudSelect>
+        }
+
+        <MudSelect @bind-Value="_priority" Label="Priority" Class="mb-3" T="Priority">
+            @foreach (var p in Enum.GetValues<Priority>())
+            {
+                <MudSelectItem Value="p">@p</MudSelectItem>
+            }
+        </MudSelect>
+
+        @if (WithExternalCase)
+        {
+            <MudDivider Class="my-3" />
+            <MudText Typo="Typo.subtitle2" Class="mb-2">External Case Reference</MudText>
+            <MudSelect @bind-Value="_extSystem" Label="System" Class="mb-3" T="string">
+                <MudSelectItem Value="@("flowintel")">FlowIntel</MudSelectItem>
+                <MudSelectItem Value="@("thehive")">TheHive</MudSelectItem>
+                <MudSelectItem Value="@("other")">Other</MudSelectItem>
+            </MudSelect>
+            <MudTextField @bind-Value="_extId" Label="Case ID" Required="true" Class="mb-3" />
+            <MudTextField @bind-Value="_extUrl" Label="URL (optional)" Class="mb-3" />
+        }
+
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-2">@_error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="_submitting">Create</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public bool WithExternalCase { get; set; }
+
+    private string _key = "";
+    private string _title = "";
+    private IssueType _type = IssueType.NewDetection;
+    private Priority _priority = Priority.Normal;
+    private string _extSystem = "flowintel";
+    private string _extId = "";
+    private string _extUrl = "";
+    private string? _error;
+    private bool _submitting;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        _error = null;
+        _submitting = true;
+        try
+        {
+            if (WithExternalCase)
+            {
+                await IssueService.CreateFromExternalCaseAsync(
+                    _key.Trim(), _title.Trim(), _priority,
+                    _extSystem.Trim(), _extId.Trim(),
+                    string.IsNullOrWhiteSpace(_extUrl) ? null : _extUrl.Trim());
+            }
+            else
+            {
+                await IssueService.CreateIssueAsync(_key.Trim(), _title.Trim(), _type, _priority);
+            }
+
+            Snackbar.Add($"Issue '{_key}' created.", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (DomainException ex) { _error = ex.Message; }
+        finally { _submitting = false; }
+    }
+}

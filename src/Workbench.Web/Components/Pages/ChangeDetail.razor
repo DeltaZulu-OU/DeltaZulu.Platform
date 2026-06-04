@@ -1,0 +1,377 @@
+@page "/changes/{Id}"
+@rendermode InteractiveServer
+@using Workbench.Application.Services
+@using Workbench.Application.Abstractions
+@using Workbench.Domain.Changes
+@using Workbench.Domain.Detections
+@using Workbench.Domain.Enums
+@using Workbench.Domain.Identifiers
+@using Workbench.Domain.Workflow
+@inject ChangeService ChangeService
+@inject DetectionContentService DetectionService
+@inject CheckPipelineRunner PipelineRunner
+@inject MergeService MergeService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Change — @(_change?.Key ?? "Loading")</PageTitle>
+
+@if (_change is null)
+{
+    <MudProgressLinear Indeterminate="true" />
+    return;
+}
+
+<MudBreadcrumbs Items="_breadcrumbs" Class="mb-2" />
+
+@* ── Header ── *@
+<MudGrid Spacing="3" Class="mb-4">
+    <MudItem xs="12" md="8">
+        <span class="eyebrow">Change</span>
+        <MudText Typo="Typo.h5" Class="mt-1" Style="font-weight: 700;">
+            <code style="font-size: 0.85em;">@_change.Key</code> @_change.Title
+        </MudText>
+        <div class="d-flex gap-2 mt-2 align-center">
+            <StatusChip ChangeStatus="_change.Status" />
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                     Style="color: var(--brand-slate); border-color: rgba(39,86,104,0.25);">
+                @_change.WorkflowProfileId
+            </MudChip>
+            @if (_change.IsStale)
+            {
+                <MudChip T="string" Size="Size.Small" Style="background: rgba(138,90,18,0.12); color: #8A5A12;">
+                    Stale
+                </MudChip>
+            }
+        </div>
+    </MudItem>
+    <MudItem xs="12" md="4" Class="d-flex justify-end align-start gap-2">
+        @if (!IsTerminal)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="RunChecks"
+                       Disabled="_running" StartIcon="@Icons.Material.Outlined.PlaylistAddCheck">
+                Run checks
+            </MudButton>
+            @if (_readiness?.IsReady == true)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Merge"
+                           Disabled="_running" StartIcon="@Icons.Material.Outlined.MergeType">
+                    Accept and merge
+                </MudButton>
+            }
+        }
+    </MudItem>
+</MudGrid>
+
+@* ── Merge readiness ── *@
+@if (_readiness is not null && !IsTerminal)
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <span class="eyebrow">Merge readiness</span>
+        @if (_readiness.IsReady)
+        {
+            <MudAlert Severity="Severity.Success" Dense="true" Class="mt-3">All gates satisfied. Ready to merge.</MudAlert>
+        }
+        else
+        {
+            <div class="mt-3">
+            @foreach (var gate in _readiness.UnmetGates)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
+                    <code style="font-size: 0.8em;">@gate.Code</code> — @gate.Message
+                </MudAlert>
+            }
+            </div>
+        }
+    </MudPaper>
+}
+
+<MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true">
+
+    @* ── Draft Files tab ── *@
+    <MudTabPanel Text="Draft files" BadgeData="@_change.DraftFiles.Count" BadgeColor="Color.Primary">
+        <div class="ma-3">
+            @if (!IsTerminal)
+            {
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.NoteAdd"
+                           OnClick="@(() => _showAddFile = !_showAddFile)" Class="mb-3">
+                    Add or edit file
+                </MudButton>
+            }
+
+            @if (_showAddFile)
+            {
+                <MudPaper Class="pa-3 mb-3" Elevation="0" Outlined="true">
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" md="4">
+                            <MudTextField @bind-Value="_newPath" Label="Logical path" HelperText="e.g. detection.yaml, notes/investigation.md" />
+                        </MudItem>
+                        <MudItem xs="12" md="3">
+                            <MudSelect @bind-Value="_newContentType" Label="Content type" T="DraftContentType">
+                                @foreach (var ct in Enum.GetValues<DraftContentType>())
+                                {
+                                    <MudSelectItem Value="ct">@ct</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_newContent" Label="Content" Lines="8" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary"
+                                       OnClick="SaveDraftFile">Save file</MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            }
+
+            @if (_change.DraftFiles.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">No draft files yet. Add content to begin.</MudAlert>
+            }
+            else
+            {
+                @foreach (var file in _change.DraftFiles)
+                {
+                    <MudExpansionPanels Class="mb-2">
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div class="d-flex align-center gap-2">
+                                    <MudIcon Icon="@Icons.Material.Outlined.InsertDriveFile" Size="Size.Small" />
+                                    <code>@file.Path.Value</code>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@file.ContentType</MudChip>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@file.SizeChars chars</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                @if (file.ContentType == DraftContentType.InvestigationNote)
+                                {
+                                    <MarkdownViewer Content="@file.Content" CurrentFilePath="@($"detections/{_detection?.Slug}/{file.Path.Value}")" />
+                                }
+                                else if (file.ContentType == DraftContentType.StaticAsset)
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Binary asset — @file.SizeChars chars (base64)</MudText>
+                                }
+                                else
+                                {
+                                    <pre style="white-space: pre-wrap; font-size: 0.85rem; max-height: 400px; overflow-y: auto;">@file.Content</pre>
+                                }
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+                }
+            }
+        </div>
+    </MudTabPanel>
+
+    @* ── Checks tab ── *@
+    <MudTabPanel Text="Checks" BadgeData="@_change.Checks.Count" BadgeColor="Color.Info">
+        <div class="ma-3">
+            @if (_change.Checks.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">No checks have been run yet. Run the pipeline to validate.</MudAlert>
+            }
+            else
+            {
+                <MudTable Items="_change.Checks" Dense="true" T="CheckRun">
+                    <HeaderContent>
+                        <MudTh>Check</MudTh>
+                        <MudTh>Blocking</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Summary</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Check"><code>@context.Name</code></MudTd>
+                        <MudTd DataLabel="Blocking">@(context.IsBlocking ? "Yes" : "No")</MudTd>
+                        <MudTd DataLabel="Status"><StatusChip CheckStatus="context.Status" /></MudTd>
+                        <MudTd DataLabel="Summary">
+                            <MudText Typo="Typo.body2">@context.Summary</MudText>
+                            @if (!string.IsNullOrWhiteSpace(context.LogsExcerpt))
+                            {
+                                <MudExpansionPanels Class="mt-1">
+                                    <MudExpansionPanel Text="Logs" Dense="true" IsInitiallyExpanded="false">
+                                        <pre style="white-space: pre-wrap; font-size: 0.8rem;">@context.LogsExcerpt</pre>
+                                    </MudExpansionPanel>
+                                </MudExpansionPanels>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </div>
+    </MudTabPanel>
+
+    @* ── Reviews tab ── *@
+    <MudTabPanel Text="Reviews" BadgeData="@_change.Reviews.Count" BadgeColor="Color.Secondary">
+        <div class="ma-3">
+            @if (!IsTerminal)
+            {
+                <MudPaper Class="pa-3 mb-3" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Record review</MudText>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" md="4">
+                            <MudSelect @bind-Value="_reviewDecision" Label="Decision" T="ReviewDecision">
+                                @foreach (var d in Enum.GetValues<ReviewDecision>())
+                                {
+                                    <MudSelectItem Value="d">@d</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" md="8">
+                            <MudTextField @bind-Value="_reviewComment" Label="Comment" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary"
+                                       OnClick="RecordReview">Submit review</MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            }
+
+            @if (_change.Reviews.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">No reviews recorded yet.</MudAlert>
+            }
+            else
+            {
+                <MudTimeline TimelinePosition="TimelinePosition.Start">
+                    @foreach (var review in _change.Reviews.OrderByDescending(r => r.CreatedAt))
+                    {
+                        <MudTimelineItem Color="@(review.Decision == ReviewDecision.Approved ? Color.Success : review.Decision == ReviewDecision.ChangesRequested ? Color.Error : Color.Default)"
+                                         Size="Size.Small">
+                            <ItemContent>
+                                <div class="d-flex gap-2 align-center">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                                             Color="@(review.Decision == ReviewDecision.Approved ? Color.Success : review.Decision == ReviewDecision.ChangesRequested ? Color.Error : Color.Default)">
+                                        @review.Decision
+                                    </MudChip>
+                                    @if (review.IsSuperseded)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Dark" Variant="Variant.Outlined">Superseded</MudChip>
+                                    }
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@review.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(review.Comment))
+                                {
+                                    <MudText Typo="Typo.body2" Class="mt-1">@review.Comment</MudText>
+                                }
+                            </ItemContent>
+                        </MudTimelineItem>
+                    }
+                </MudTimeline>
+            }
+        </div>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    [Parameter] public string Id { get; set; } = null!;
+
+    private ChangeRequest? _change;
+    private Detection? _detection;
+    private MergeReadiness? _readiness;
+    private bool _running;
+    private List<BreadcrumbItem> _breadcrumbs = [];
+
+    // Add file
+    private bool _showAddFile;
+    private string _newPath = "";
+    private DraftContentType _newContentType = DraftContentType.DetectionMetadata;
+    private string _newContent = "";
+
+    // Review
+    private ReviewDecision _reviewDecision = ReviewDecision.Approved;
+    private string _reviewComment = "";
+
+    // POC limitation (P3-1): No authentication. The reviewer ID is a fixed non-author value
+    // generated once per server lifetime. The self-approval block invariant cannot be
+    // demonstrated through the UI because the reviewer is always different from the author
+    // (which is also a generated ID per change-open). The domain invariant is tested in
+    // ChangeRequestTests and ChangeServiceTests.
+    private static readonly UserId ReviewerUserId = UserId.New();
+
+    private bool IsTerminal => _change?.Status is ChangeStatus.Merged or ChangeStatus.Closed;
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        if (!Guid.TryParse(Id, out var guid)) return;
+        var changeId = new ChangeRequestId(guid);
+
+        _change = await ChangeService.GetByIdAsync(changeId);
+        if (_change is null) return;
+
+        _detection = await DetectionService.GetByIdAsync(_change.DetectionId);
+        _readiness = _change.EvaluateMergeReadiness();
+
+        _breadcrumbs =
+        [
+            new("Changes", "/changes"),
+            new(_change.Key, null, disabled: true),
+        ];
+    }
+
+    private async Task SaveDraftFile()
+    {
+        if (_change is null || string.IsNullOrWhiteSpace(_newPath)) return;
+        _running = true;
+        try
+        {
+            await ChangeService.UpsertDraftFileAsync(
+                _change.Id, _newPath.Trim(), _newContentType, _newContent, _change.AuthorId);
+            _showAddFile = false;
+            _newPath = "";
+            _newContent = "";
+            Snackbar.Add("Draft file saved.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        finally { _running = false; }
+    }
+
+    private async Task RunChecks()
+    {
+        if (_change is null) return;
+        _running = true;
+        try
+        {
+            var results = await PipelineRunner.RunAsync(_change.Id);
+            var passed = results.Count(r => r.Outcome.Status == CheckStatus.Passed);
+            var failed = results.Count(r => r.Outcome.Status == CheckStatus.Failed);
+            Snackbar.Add($"Pipeline complete: {passed} passed, {failed} failed.", failed > 0 ? Severity.Warning : Severity.Success);
+            await LoadAsync();
+        }
+        catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        finally { _running = false; }
+    }
+
+    private async Task RecordReview()
+    {
+        if (_change is null) return;
+        _running = true;
+        try
+        {
+            await ChangeService.RecordReviewAsync(_change.Id, ReviewerUserId, _reviewDecision, _reviewComment);
+            _reviewComment = "";
+            Snackbar.Add("Review recorded.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        finally { _running = false; }
+    }
+
+    private async Task Merge()
+    {
+        if (_change is null) return;
+        _running = true;
+        try
+        {
+            var version = await MergeService.MergeAsync(_change.Id, "POC User", "poc@workbench.local");
+            Snackbar.Add($"Merged. Version {version.DisplayVersion} created.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        finally { _running = false; }
+    }
+}

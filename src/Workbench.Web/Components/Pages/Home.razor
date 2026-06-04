@@ -1,0 +1,52 @@
+@page "/"
+@rendermode InteractiveServer
+
+<PageTitle>Detection Content Workbench</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1" Style="font-weight: 700;">Detection Content Workbench</MudText>
+<MudText Typo="Typo.body1" Style="color: var(--color-text-secondary); max-width: 640px;" Class="mb-6">
+    PR-like governance over detection content, backed by Git.
+    Conceive detections, draft changes, run checks, review, and merge.
+</MudText>
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-5" Elevation="1" Style="height: 100%;">
+            <span class="eyebrow">Content</span>
+            <MudText Typo="Typo.h6" Class="mt-3 mb-2">Detections</MudText>
+            <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);">
+                Conceive, version, and manage detection content packages.
+            </MudText>
+            <MudButton Href="/detections" Variant="Variant.Text" Color="Color.Secondary"
+                       Class="mt-4 px-0" Style="font-weight: 600;">
+                Open detections
+            </MudButton>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-5" Elevation="1" Style="height: 100%;">
+            <span class="eyebrow">Work</span>
+            <MudText Typo="Typo.h6" Class="mt-3 mb-2">Issues and cases</MudText>
+            <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);">
+                Track detection work. Link to FlowIntel or TheHive cases.
+            </MudText>
+            <MudButton Href="/issues" Variant="Variant.Text" Color="Color.Secondary"
+                       Class="mt-4 px-0" Style="font-weight: 600;">
+                Open issues
+            </MudButton>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-5" Elevation="1" Style="height: 100%;">
+            <span class="eyebrow">Governance</span>
+            <MudText Typo="Typo.h6" Class="mt-3 mb-2">Changes</MudText>
+            <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);">
+                Draft content, run validation checks, collect reviews, merge.
+            </MudText>
+            <MudButton Href="/changes" Variant="Variant.Text" Color="Color.Secondary"
+                       Class="mt-4 px-0" Style="font-weight: 600;">
+                Open changes
+            </MudButton>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
