@@ -120,6 +120,9 @@ public sealed class MergeServiceTests : IDisposable
 
             loaded.RecordReview(ReviewId.New(), Reviewer, ReviewDecision.Approved, "lgtm", DateTimeOffset.UtcNow);
 
+            var changeRepo = _host.Resolve<IChangeRequestRepository>(scope);
+            changeRepo.Save(loaded);
+
             var uow = _host.Resolve<IUnitOfWork>(scope);
             await uow.SaveChangesAsync(TestContext.CancellationToken);
         }
@@ -371,6 +374,9 @@ public sealed class MergeServiceTests : IDisposable
             second.AfterCheckPipelineCompleted(DateTimeOffset.UtcNow);
 
             second.RecordReview(ReviewId.New(), Reviewer, ReviewDecision.Approved, "lgtm", DateTimeOffset.UtcNow);
+
+            var changeRepo = _host.Resolve<IChangeRequestRepository>(scope);
+            changeRepo.Save(second);
 
             var uow = _host.Resolve<IUnitOfWork>(scope);
             await uow.SaveChangesAsync(TestContext.CancellationToken);
