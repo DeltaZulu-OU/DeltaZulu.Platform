@@ -101,6 +101,45 @@ public sealed class CheckPipelineRunnerTests : IDisposable
         }
     }
 
+
+    [TestMethod]
+    public async Task Pipeline_ControlledReview_MissingRequiredQueryCheck_RemainsDraft()
+    {
+        var detId = await ConceiveDetection("metadata-only-det");
+        ChangeRequestId changeId;
+
+        using (var scope = _host.CreateScope())
+        {
+            var svc = _host.Resolve<ChangeService>(scope);
+            var c = await svc.OpenChangeAsync("CHG-MISS", "Metadata only", detId, Author,
+                WorkflowProfileId.ControlledReview, ct: TestContext.CancellationToken);
+            changeId = c.Id;
+            await svc.UpsertDraftFileAsync(changeId, "detection.yaml", DraftContentType.DetectionMetadata,
+                "id: metadata-only-det\ntitle: Metadata Only\ndescription: Missing query\nseverity: low\n",
+                Author, TestContext.CancellationToken);
+        }
+
+        using (var scope = _host.CreateScope())
+        {
+            var runner = _host.Resolve<CheckPipelineRunner>(scope);
+            var results = await runner.RunAsync(changeId, TestContext.CancellationToken);
+
+            Assert.Contains(r => r.CheckName == "package-schema" && r.Outcome.Status == CheckStatus.Passed, results);
+            Assert.DoesNotContain(r => r.CheckName == "query-syntax", results,
+                "The query check should be skipped because no query file is present.");
+        }
+
+        using (var scope = _host.CreateScope())
+        {
+            var svc = _host.Resolve<ChangeService>(scope);
+            var loaded = await svc.GetByIdAsync(changeId, TestContext.CancellationToken);
+            Assert.IsNotNull(loaded);
+            Assert.AreEqual(ChangeStatus.Draft, loaded.Status,
+                "ControlledReview must not advance when a configured required check was skipped.");
+            Assert.Contains(g => g.Code == "gate.checks_missing", loaded.EvaluateMergeReadiness().UnmetGates);
+        }
+    }
+
     [TestMethod]
     public async Task Pipeline_QuickLab_FailedCheckDoesNotBlock_ChangeAdvancesToReadyToAccept()
     {
@@ -255,6 +294,8 @@ public sealed class CheckPipelineRunnerTests : IDisposable
             var svc = _host.Resolve<ChangeService>(scope);
             await svc.UpsertDraftFileAsync(changeId, "detection.yaml", DraftContentType.DetectionMetadata,
                 "id: rerun-det\ntitle: Fixed\ndescription: Now complete\nseverity: low\n", Author, TestContext.CancellationToken);
+            await svc.UpsertDraftFileAsync(changeId, "rule.kql", DraftContentType.HuntingQuery,
+                "SigninLogs | take 1", Author, TestContext.CancellationToken);
         }
 
         // Second run: should pass — old failed check must not block.

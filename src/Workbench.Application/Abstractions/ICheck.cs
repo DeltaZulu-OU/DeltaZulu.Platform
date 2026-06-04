@@ -18,7 +18,7 @@ namespace Workbench.Application.Abstractions;
 public interface ICheck
 {
     /// <summary>
-    /// Stable name, e.g. <c>package-schema</c>, <c>kql-parse</c>. Used as the
+    /// Stable name, e.g. <c>package-schema</c>, <c>query-syntax</c>. Used as the
     /// <see cref="Domain.Changes.CheckRun.Name"/>.
     /// </summary>
     string Name { get; }

@@ -63,7 +63,7 @@ public sealed class ChangeRequestTests
     {
         var c = OpenChange(WorkflowProfileId.ControlledReview);
         SeedPackage(c);
-        RunPassingChecks(c, "package-schema", "kql-parse");
+        RunPassingChecks(c, "package-schema", "query-syntax");
 
         var ex = Assert.ThrowsExactly<DomainException>(() =>
             c.RecordReview(ReviewId.New(), Author, ReviewDecision.Approved, "lgtm", T0));
@@ -89,7 +89,7 @@ public sealed class ChangeRequestTests
     {
         var c = OpenChange(WorkflowProfileId.ControlledReview);
         SeedPackage(c);
-        RunPassingChecks(c, "package-schema", "kql-parse");
+        RunPassingChecks(c, "package-schema", "query-syntax");
 
         c.RecordReview(ReviewId.New(), OtherUser, ReviewDecision.Approved, "lgtm", T0);
         Assert.AreEqual(ChangeStatus.ReadyToAccept, c.Status);
@@ -136,7 +136,7 @@ public sealed class ChangeRequestTests
     {
         var c = OpenChange(WorkflowProfileId.ControlledReview, baseVersion: VersionId.New());
         SeedPackage(c);
-        RunPassingChecks(c, "package-schema", "kql-parse");
+        RunPassingChecks(c, "package-schema", "query-syntax");
         c.RecordReview(ReviewId.New(), OtherUser, ReviewDecision.Approved, "lgtm", T0);
         Assert.AreEqual(ChangeStatus.ReadyToAccept, c.Status);
 
@@ -170,7 +170,7 @@ public sealed class ChangeRequestTests
         var c = OpenChange(WorkflowProfileId.ControlledReview);
         SeedPackage(c);
 
-        var run = c.QueueCheck(CheckRunId.New(), "kql-parse", isBlocking: true, T0);
+        var run = c.QueueCheck(CheckRunId.New(), "query-syntax", isBlocking: true, T0);
         run.MarkRunning(T0);
         run.Complete(CheckStatus.Failed, "parse error at line 3", "{}", "", T0);
         c.AfterCheckPipelineCompleted(T0);
@@ -196,6 +196,38 @@ public sealed class ChangeRequestTests
             "Expected 'gate.no_checks' among unmet gates.");
     }
 
+
+    [TestMethod]
+    public void ControlledReview_MissingConfiguredRequiredCheck_BlocksMerge()
+    {
+        var c = OpenChange(WorkflowProfileId.ControlledReview);
+        SeedPackage(c);
+        RunPassingChecks(c, "package-schema");
+
+        c.RecordReview(ReviewId.New(), OtherUser, ReviewDecision.Approved, "metadata only", T0.AddMinutes(1));
+
+        var readiness = c.EvaluateMergeReadiness();
+        Assert.IsFalse(readiness.IsReady);
+        Assert.Contains(g => g.Code == "gate.checks_missing", readiness.UnmetGates,
+            "Expected 'gate.checks_missing' when query-syntax never ran.");
+        Assert.AreEqual(ChangeStatus.ReviewRequired, c.Status,
+            "Approval can still be recorded, but merge readiness must remain blocked.");
+    }
+
+    [TestMethod]
+    public void ControlledReview_SkippedRequiredCheck_RevertsToDraftAfterPipeline()
+    {
+        var c = OpenChange(WorkflowProfileId.ControlledReview);
+        c.UpsertDraftFile(LogicalPath.Parse("notes/context.md"), DraftContentType.InvestigationNote, "# Note", Author, T0);
+        c.AfterCheckPipelineCompleted(T0);
+
+        Assert.AreEqual(ChangeStatus.Draft, c.Status);
+        var readiness = c.EvaluateMergeReadiness();
+        Assert.IsFalse(readiness.IsReady);
+        Assert.Contains(g => g.Code == "gate.no_checks", readiness.UnmetGates,
+            "Expected 'gate.no_checks' when required checks were all skipped.");
+    }
+
     // -- controlled review: happy path --------------------------------------------------------
 
     [TestMethod]
@@ -203,7 +235,7 @@ public sealed class ChangeRequestTests
     {
         var c = OpenChange(WorkflowProfileId.ControlledReview);
         SeedPackage(c);
-        RunPassingChecks(c, "package-schema", "kql-parse", "fixture-parse");
+        RunPassingChecks(c, "package-schema", "query-syntax", "fixture-parse");
         c.RecordReview(ReviewId.New(), OtherUser, ReviewDecision.Approved, "lgtm", T0.AddMinutes(1));
 
         Assert.AreEqual(ChangeStatus.ReadyToAccept, c.Status);
@@ -253,8 +285,8 @@ public sealed class ChangeRequestTests
         var c = OpenChange(WorkflowProfileId.ControlledReview);
         SeedPackage(c);
 
-        // First run: one check fails.
-        var fail = c.QueueCheck(CheckRunId.New(), "schema", isBlocking: true, T0);
+        // First run: one required check fails.
+        var fail = c.QueueCheck(CheckRunId.New(), "package-schema", isBlocking: true, T0);
         fail.MarkRunning(T0);
         fail.Complete(CheckStatus.Failed, "bad", "{}", "", T0);
         c.AfterCheckPipelineCompleted(T0);
@@ -264,16 +296,20 @@ public sealed class ChangeRequestTests
         c.ClearChecksForNewRun(T0.AddMinutes(1));
         Assert.IsEmpty(c.Checks);
 
-        // Second run: same check passes.
-        var pass = c.QueueCheck(CheckRunId.New(), "schema", isBlocking: true, T0.AddMinutes(1));
-        pass.MarkRunning(T0.AddMinutes(1));
-        pass.Complete(CheckStatus.Passed, "ok", "{}", "", T0.AddMinutes(1));
+        // Second run: all configured required checks pass.
+        var schema = c.QueueCheck(CheckRunId.New(), "package-schema", isBlocking: true, T0.AddMinutes(1));
+        schema.MarkRunning(T0.AddMinutes(1));
+        schema.Complete(CheckStatus.Passed, "ok", "{}", "", T0.AddMinutes(1));
+
+        var query = c.QueueCheck(CheckRunId.New(), "query-syntax", isBlocking: true, T0.AddMinutes(1));
+        query.MarkRunning(T0.AddMinutes(1));
+        query.Complete(CheckStatus.Passed, "ok", "{}", "", T0.AddMinutes(1));
         c.AfterCheckPipelineCompleted(T0.AddMinutes(1));
 
-        // Only the second run's check should exist. Merge readiness should not be blocked by
+        // Only the second run's checks should exist. Merge readiness should not be blocked by
         // the first run's failure.
-        Assert.HasCount(1, c.Checks);
-        Assert.AreEqual(CheckStatus.Passed, c.Checks[0].Status);
+        Assert.HasCount(2, c.Checks);
+        Assert.IsTrue(c.Checks.All(check => check.Status == CheckStatus.Passed));
         Assert.AreEqual(ChangeStatus.ReviewRequired, c.Status);
     }
 }

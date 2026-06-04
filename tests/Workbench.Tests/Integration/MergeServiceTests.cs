@@ -92,7 +92,10 @@ public sealed class MergeServiceTests : IDisposable
             var changeSvc = _host.Resolve<ChangeService>(scope);
             var change = await changeSvc.OpenChangeAsync("CHG-M2", "Controlled change", detId, Author, WorkflowProfileId.ControlledReview, ct: TestContext.CancellationToken);
             changeId = change.Id;
-            await changeSvc.UpsertDraftFileAsync(changeId, "detection.yaml", DraftContentType.DetectionMetadata, "id: ctrl-merge", Author, TestContext.CancellationToken);
+            await changeSvc.UpsertDraftFileAsync(changeId, "detection.yaml", DraftContentType.DetectionMetadata,
+                "id: ctrl-merge\ntitle: Controlled Merge\ndescription: d\nseverity: high\n", Author, TestContext.CancellationToken);
+            await changeSvc.UpsertDraftFileAsync(changeId, "rule.kql", DraftContentType.HuntingQuery,
+                "SigninLogs | take 1", Author, TestContext.CancellationToken);
         }
 
         // Merge without checks or reviews — should fail.
@@ -113,9 +116,13 @@ public sealed class MergeServiceTests : IDisposable
             var loaded = await changeSvc.GetByIdAsync(changeId, TestContext.CancellationToken);
             Assert.IsNotNull(loaded);
 
-            var check = loaded.QueueCheck(CheckRunId.New(), "schema-check", isBlocking: true, DateTimeOffset.UtcNow);
-            check.MarkRunning(DateTimeOffset.UtcNow);
-            check.Complete(CheckStatus.Passed, "ok", "{}", "", DateTimeOffset.UtcNow);
+            var schemaCheck = loaded.QueueCheck(CheckRunId.New(), "package-schema", isBlocking: true, DateTimeOffset.UtcNow);
+            schemaCheck.MarkRunning(DateTimeOffset.UtcNow);
+            schemaCheck.Complete(CheckStatus.Passed, "ok", "{}", "", DateTimeOffset.UtcNow);
+
+            var queryCheck = loaded.QueueCheck(CheckRunId.New(), "query-syntax", isBlocking: true, DateTimeOffset.UtcNow);
+            queryCheck.MarkRunning(DateTimeOffset.UtcNow);
+            queryCheck.Complete(CheckStatus.Passed, "ok", "{}", "", DateTimeOffset.UtcNow);
             loaded.AfterCheckPipelineCompleted(DateTimeOffset.UtcNow);
 
             loaded.RecordReview(ReviewId.New(), Reviewer, ReviewDecision.Approved, "lgtm", DateTimeOffset.UtcNow);

@@ -46,13 +46,21 @@ public sealed class WorkflowProfile
     /// </summary>
     public bool BlocksStaleMerge { get; }
 
+    /// <summary>
+    /// Stable check names that must be recorded as blocking, terminal, and passed before merge
+    /// when <see cref="RequiresPassingChecks"/> is true. This makes skipped or absent required
+    /// checks explicit instead of allowing any arbitrary blocking check to satisfy the gate.
+    /// </summary>
+    public IReadOnlySet<string> RequiredBlockingCheckNames { get; }
+
     private WorkflowProfile(
         WorkflowProfileId id,
         bool requiresPassingChecks,
         bool requiresApproval,
         bool requiresNonAuthorApprover,
         bool resetsApprovalOnContentEdit,
-        bool blocksStaleMerge)
+        bool blocksStaleMerge,
+        IEnumerable<string>? requiredBlockingCheckNames = null)
     {
         if (requiresNonAuthorApprover && !requiresApproval)
         {
@@ -65,6 +73,16 @@ public sealed class WorkflowProfile
         RequiresApproval = requiresApproval;
         RequiresNonAuthorApprover = requiresNonAuthorApprover;
         ResetsApprovalOnContentEdit = resetsApprovalOnContentEdit;
+        RequiredBlockingCheckNames = new HashSet<string>(
+            requiredBlockingCheckNames ?? Enumerable.Empty<string>(),
+            StringComparer.OrdinalIgnoreCase);
+
+        if (!requiresPassingChecks && RequiredBlockingCheckNames.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "RequiredBlockingCheckNames can only be configured for profiles that require passing checks.");
+        }
+
         BlocksStaleMerge = blocksStaleMerge;
     }
 
@@ -88,7 +106,12 @@ public sealed class WorkflowProfile
             requiresApproval: true,
             requiresNonAuthorApprover: true,
             resetsApprovalOnContentEdit: true,
-            blocksStaleMerge: true),
+            blocksStaleMerge: true,
+            requiredBlockingCheckNames: new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "package-schema",
+                "query-syntax",
+            }),
 
         WorkflowProfileId.SoloValidated
             or WorkflowProfileId.StandardReview

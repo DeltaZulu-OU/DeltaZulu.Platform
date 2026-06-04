@@ -16,6 +16,7 @@ public sealed class WorkflowProfileTests
         Assert.IsFalse(p.RequiresNonAuthorApprover);
         Assert.IsFalse(p.ResetsApprovalOnContentEdit);
         Assert.IsFalse(p.BlocksStaleMerge);
+        Assert.IsEmpty(p.RequiredBlockingCheckNames);
     }
 
     [TestMethod]
@@ -29,6 +30,8 @@ public sealed class WorkflowProfileTests
         Assert.IsTrue(p.RequiresNonAuthorApprover);
         Assert.IsTrue(p.ResetsApprovalOnContentEdit);
         Assert.IsTrue(p.BlocksStaleMerge);
+        Assert.Contains("package-schema", p.RequiredBlockingCheckNames);
+        Assert.Contains("query-syntax", p.RequiredBlockingCheckNames);
     }
 
     [TestMethod]

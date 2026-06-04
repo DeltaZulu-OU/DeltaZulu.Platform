@@ -207,10 +207,13 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
             return;
         }
 
+        var readiness = EvaluateMergeReadiness();
         var profile = ResolveWorkflowProfile();
-        var blockingFailed = _checks.Any(c => c.IsBlocking && c.Status == CheckStatus.Failed);
 
-        if (profile.RequiresPassingChecks && blockingFailed)
+        var hasUnmetCheckGate = readiness.UnmetGates.Any(g =>
+            g.Code is "gate.no_checks" || g.Code.StartsWith("gate.checks", StringComparison.Ordinal));
+
+        if (profile.RequiresPassingChecks && hasUnmetCheckGate)
             Status = ChangeStatus.Draft;
         else if (profile.RequiresApproval)
             Status = ChangeStatus.ReviewRequired;
@@ -283,12 +286,44 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
         if (profile.RequiresPassingChecks)
         {
             var blocking = _checks.Where(c => c.IsBlocking).ToList();
+            var requiredNames = profile.RequiredBlockingCheckNames;
+
             if (blocking.Count == 0)
+            {
                 unmet.Add(new UnmetGate("gate.no_checks",
                     "Workflow profile requires passing checks, but no blocking checks have been run."));
+            }
+            else if (requiredNames.Count > 0)
+            {
+                var missingRequired = requiredNames
+                    .Where(name => !blocking.Any(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)))
+                    .Order(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (missingRequired.Count > 0)
+                {
+                    unmet.Add(new UnmetGate("gate.checks_missing",
+                        $"Required checks have not run: {string.Join(", ", missingRequired)}."));
+                }
+
+                var incompleteRequired = blocking
+                    .Where(c => requiredNames.Contains(c.Name) && c.Status != CheckStatus.Passed)
+                    .Select(c => c.Name)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Order(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (incompleteRequired.Count > 0)
+                {
+                    unmet.Add(new UnmetGate("gate.checks_not_passed",
+                        $"Required checks have not passed: {string.Join(", ", incompleteRequired)}."));
+                }
+            }
             else if (blocking.Any(c => c.Status != CheckStatus.Passed))
+            {
                 unmet.Add(new UnmetGate("gate.checks_not_passed",
                     "One or more required checks have not passed."));
+            }
         }
 
         if (profile.RequiresApproval)

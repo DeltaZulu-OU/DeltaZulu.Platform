@@ -123,6 +123,8 @@ public sealed class WorkflowOrchestratorTests : IDisposable
             changeId = c.Id;
             await svc.UpsertDraftFileAsync(changeId, "detection.yaml", DraftContentType.DetectionMetadata,
                 "id: ctrl-orch\ntitle: t\ndescription: d\nseverity: high\n", Author, TestContext.CancellationToken);
+            await svc.UpsertDraftFileAsync(changeId, "rule.kql", DraftContentType.HuntingQuery,
+                "SigninLogs | take 1", Author, TestContext.CancellationToken);
         }
 
         // Run checks.
