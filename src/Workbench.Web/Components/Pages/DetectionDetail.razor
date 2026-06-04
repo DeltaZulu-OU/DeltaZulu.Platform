@@ -7,7 +7,7 @@
 @using Workbench.Domain.Identifiers
 @inject DetectionContentService DetectionService
 @inject ChangeService ChangeService
-@inject IDetectionVersionRepository VersionRepo
+@inject VersionService VersionService
 @inject IAcceptedContentStore ContentStore
 @inject IDialogService DialogService
 @inject NavigationManager Nav
@@ -152,7 +152,7 @@ else
             new(_detection.Slug, null, disabled: true),
         ];
 
-        _versions = (await VersionRepo.ListByDetectionAsync(detId)).ToList();
+        _versions = (await VersionService.ListByDetectionAsync(detId)).ToList();
         _changes = (await ChangeService.ListByDetectionAsync(detId)).ToList();
 
         var prefix = Application.ContentPipeline.CanonicalPathResolver.DetectionPrefix(_detection.Slug);

@@ -1,0 +1,97 @@
+@page "/reviews"
+@rendermode InteractiveServer
+@using Workbench.Application.Services
+@using Workbench.Domain.Changes
+@using Workbench.Domain.Enums
+@using Workbench.Domain.Reviews
+@inject ChangeService ChangeService
+@inject NavigationManager Nav
+
+<PageTitle>Reviews</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-1">Reviews</MudText>
+<MudText Typo="Typo.body2" Class="mb-4" Style="color: var(--color-text-secondary); max-width: 720px;">
+    Review decisions across changes, including superseded approvals after draft content edits.
+</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (_rows.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">No reviews have been recorded yet. Open a change to record a review decision.</MudAlert>
+}
+else
+{
+    <MudTable Items="_rows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="ReviewRow">
+        <HeaderContent>
+            <MudTh>Change</MudTh>
+            <MudTh>Decision</MudTh>
+            <MudTh>State</MudTh>
+            <MudTh>Comment</MudTh>
+            <MudTh>Recorded</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Change">
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                           OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))"
+                           Class="px-0" Style="font-weight: 600; text-transform: none;">
+                    <code>@context.Change.Key</code>
+                </MudButton>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>
+            </MudTd>
+            <MudTd DataLabel="Decision">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@DecisionColor(context.Review.Decision)">
+                    @context.Review.Decision
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="State">
+                @if (context.Review.IsSuperseded)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Dark" Variant="Variant.Outlined">Superseded</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Effective</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Comment">
+                @if (string.IsNullOrWhiteSpace(context.Review.Comment))
+                {
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2">@context.Review.Comment</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="Recorded">
+                <MudText Typo="Typo.caption">@context.Review.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private readonly List<ReviewRow> _rows = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        var changes = await ChangeService.ListAsync();
+        _rows.AddRange(changes.SelectMany(change => change.Reviews.Select(review => new ReviewRow(change, review))));
+        _rows.Sort((left, right) => right.Review.CreatedAt.CompareTo(left.Review.CreatedAt));
+        _loading = false;
+    }
+
+    private static Color DecisionColor(ReviewDecision decision) => decision switch
+    {
+        ReviewDecision.Approved => Color.Success,
+        ReviewDecision.ChangesRequested => Color.Error,
+        _ => Color.Default,
+    };
+
+    private sealed record ReviewRow(ChangeRequest Change, Review Review);
+}

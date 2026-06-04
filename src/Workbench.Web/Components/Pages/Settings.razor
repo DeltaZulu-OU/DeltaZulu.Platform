@@ -1,0 +1,48 @@
+@page "/settings"
+@rendermode InteractiveServer
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+
+<PageTitle>Settings</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-1">Settings</MudText>
+<MudText Typo="Typo.body2" Class="mb-4" Style="color: var(--color-text-secondary); max-width: 720px;">
+    Current POC runtime configuration. Workflow engine and accepted content storage stay behind application abstractions.
+</MudText>
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+            <span class="eyebrow">Workflow</span>
+            <MudText Typo="Typo.h6" Class="mt-2 mb-2">Orchestration mode</MudText>
+            <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);">
+                @(_useElsa ? "Elsa adapter enabled" : "Domain-driven POC orchestrator enabled")
+            </MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+            <span class="eyebrow">Accepted content</span>
+            <MudText Typo="Typo.h6" Class="mt-2 mb-2">Canonical store path</MudText>
+            <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary); word-break: break-word;">
+                @_repositoryPath
+            </MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12">
+        <MudAlert Severity="Severity.Info">
+            Predefined workflow profiles are selected on changes. User-authored workflow definitions and repository branch operations are intentionally outside the POC UI.
+        </MudAlert>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private bool _useElsa;
+    private string _repositoryPath = "accepted-content";
+
+    protected override void OnInitialized()
+    {
+        _useElsa = Configuration.GetValue<bool>("Workflow:UseElsa");
+        _repositoryPath = Configuration.GetValue<string>("AcceptedContent:RepositoryPath") ?? "accepted-content";
+    }
+}

@@ -1,0 +1,100 @@
+@page "/versions"
+@rendermode InteractiveServer
+@using Workbench.Application.Services
+@using Workbench.Domain.Detections
+@inject DetectionContentService DetectionService
+@inject VersionService VersionService
+@inject NavigationManager Nav
+
+<PageTitle>Versions</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-1">Versions</MudText>
+<MudText Typo="Typo.body2" Class="mb-4" Style="color: var(--color-text-secondary); max-width: 720px;">
+    Accepted detection content history shown as user-friendly versions, not repository commits.
+</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (_rows.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">
+        No accepted versions yet. Merge an approved change to create the first version projection.
+    </MudAlert>
+}
+else
+{
+    <MudTable Items="_rows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="VersionRow">
+        <HeaderContent>
+            <MudTh>Detection</MudTh>
+            <MudTh>Version</MudTh>
+            <MudTh>Summary</MudTh>
+            <MudTh>Profile</MudTh>
+            <MudTh>Changed sections</MudTh>
+            <MudTh>Checks</MudTh>
+            <MudTh>Reviews</MudTh>
+            <MudTh>Accepted</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Detection">
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                           OnClick="@(() => Nav.NavigateTo($"/detections/{context.Detection.Id}"))"
+                           Class="px-0" Style="font-weight: 600; text-transform: none;">
+                    @context.Detection.Title
+                </MudButton>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary"><code>@context.Detection.Slug</code></MudText>
+            </MudTd>
+            <MudTd DataLabel="Version">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary">
+                    @context.Version.DisplayVersion
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Summary">@context.Version.ChangeSummary</MudTd>
+            <MudTd DataLabel="Profile">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.Version.WorkflowProfile</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Changed sections">
+                @if (context.Version.ChangedSections.Count == 0)
+                {
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-1">
+                        @foreach (var section in context.Version.ChangedSections)
+                        {
+                            <code>@section.Value</code>
+                        }
+                    </div>
+                }
+            </MudTd>
+            <MudTd DataLabel="Checks">@context.Version.ChecksSummary</MudTd>
+            <MudTd DataLabel="Reviews">@context.Version.ReviewSummary</MudTd>
+            <MudTd DataLabel="Accepted">
+                <MudText Typo="Typo.caption">@context.Version.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private readonly List<VersionRow> _rows = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        var detections = await DetectionService.ListAsync();
+        foreach (var detection in detections)
+        {
+            var versions = await VersionService.ListByDetectionAsync(detection.Id);
+            _rows.AddRange(versions.Select(version => new VersionRow(detection, version)));
+        }
+
+        _rows.Sort((left, right) => right.Version.AcceptedAt.CompareTo(left.Version.AcceptedAt));
+        _loading = false;
+    }
+
+    private sealed record VersionRow(Detection Detection, DetectionVersion Version);
+}

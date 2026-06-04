@@ -12,6 +12,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<IssueService>();
         services.AddScoped<ChangeService>();
         services.AddScoped<MergeService>();
+        services.AddScoped<VersionService>();
         services.AddScoped<CheckPipelineRunner>();
         return services;
     }
