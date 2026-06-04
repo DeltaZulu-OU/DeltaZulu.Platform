@@ -1,5 +1,7 @@
+using Dapper;
 using Workbench.Application.Abstractions;
 using Workbench.Application.Services;
+using Workbench.Persistence;
 
 namespace Workbench.Tests.Integration;
 
@@ -266,6 +268,123 @@ public sealed class MergeServiceTests : IDisposable
         Assert.IsNotNull(asset);
         Assert.IsTrue(asset.IsBinary);
         Assert.AreEqual(pngB64, asset.Content);
+    }
+
+    [TestMethod]
+    public async Task ControlledReview_BlocksMerge_WhenBaseVersionDrifted_WithoutIsStaleFlag()
+    {
+        var detId = await ConceiveDetection("stale-drift");
+
+        // Merge a first change to create v1.
+        ChangeRequestId firstId;
+        using (var scope = _host.CreateScope())
+        {
+            var svc = _host.Resolve<ChangeService>(scope);
+            var c = await svc.OpenChangeAsync("CHG-D1", "v1 content", detId, Author,
+                WorkflowProfileId.QuickLab, ct: TestContext.CancellationToken);
+            firstId = c.Id;
+            await svc.UpsertDraftFileAsync(firstId, "detection.yaml",
+                DraftContentType.DetectionMetadata, "id: stale-drift", Author, TestContext.CancellationToken);
+        }
+
+        using (var scope = _host.CreateScope())
+        {
+            var mergeSvc = _host.Resolve<MergeService>(scope);
+            await mergeSvc.MergeAsync(firstId, "u", "e@e.com", TestContext.CancellationToken);
+        }
+
+        // Open a controlled-review change based on v1.
+        ChangeRequestId secondId;
+        using (var scope = _host.CreateScope())
+        {
+            var svc = _host.Resolve<ChangeService>(scope);
+            var c = await svc.OpenChangeAsync("CHG-D2", "v2 attempt", detId, Author,
+                WorkflowProfileId.ControlledReview, ct: TestContext.CancellationToken);
+            secondId = c.Id;
+            await svc.UpsertDraftFileAsync(secondId, "detection.yaml",
+                DraftContentType.DetectionMetadata, "id: stale-drift-v2", Author, TestContext.CancellationToken);
+        }
+
+        // Merge another quick-lab change to advance detection to v2, making the
+        // controlled-review change's BaseVersionId stale. The sibling-stale side effect
+        // from MergeService will set IsStale on the second change, but the point of this
+        // test is that MergeService.MergeAsync also performs its own authoritative check.
+        // To prove the authoritative check works independently, we clear IsStale after
+        // the third merge.
+        ChangeRequestId thirdId;
+        using (var scope = _host.CreateScope())
+        {
+            var svc = _host.Resolve<ChangeService>(scope);
+            var c = await svc.OpenChangeAsync("CHG-D3", "v2 real", detId, Author,
+                WorkflowProfileId.QuickLab, ct: TestContext.CancellationToken);
+            thirdId = c.Id;
+            await svc.UpsertDraftFileAsync(thirdId, "detection.yaml",
+                DraftContentType.DetectionMetadata, "id: stale-drift-v2-real", Author, TestContext.CancellationToken);
+        }
+
+        using (var scope = _host.CreateScope())
+        {
+            var mergeSvc = _host.Resolve<MergeService>(scope);
+            await mergeSvc.MergeAsync(thirdId, "u", "e@e.com", TestContext.CancellationToken);
+        }
+
+        // Clear the IsStale flag that sibling-stale logic set, to isolate the
+        // authoritative base-version comparison in MergeService.
+        using (var scope = _host.CreateScope())
+        {
+            var changeSvc = _host.Resolve<ChangeService>(scope);
+            var second = await changeSvc.GetByIdAsync(secondId, TestContext.CancellationToken);
+            Assert.IsNotNull(second);
+            Assert.IsTrue(second.IsStale, "Sibling stale should have been set by prior merge.");
+
+            // Directly reset the flag via the DB to simulate the flag not being set.
+            var uow = _host.Resolve<IUnitOfWork>(scope);
+            var changeRepo = _host.Resolve<IChangeRequestRepository>(scope);
+
+            // Reconstitute with IsStale = false by re-opening the change with cleared flag.
+            // We use a raw SQL update to bypass domain protection.
+            var session = _host.Resolve<DapperSession>(scope);
+            await session.Connection.ExecuteAsync(
+                "UPDATE change_requests SET is_stale = 0, stale_reason = NULL WHERE id = @Id",
+                new { Id = secondId.Value.ToString("D") });
+        }
+
+        // Verify IsStale is now false.
+        using (var scope = _host.CreateScope())
+        {
+            var changeSvc = _host.Resolve<ChangeService>(scope);
+            var second = await changeSvc.GetByIdAsync(secondId, TestContext.CancellationToken);
+            Assert.IsNotNull(second);
+            Assert.IsFalse(second.IsStale, "IsStale should have been cleared by direct DB update.");
+        }
+
+        // Satisfy controlled-review gates (checks + non-author approval).
+        using (var scope = _host.CreateScope())
+        {
+            var changeSvc = _host.Resolve<ChangeService>(scope);
+            var second = await changeSvc.GetByIdAsync(secondId, TestContext.CancellationToken);
+            Assert.IsNotNull(second);
+
+            var check = second.QueueCheck(CheckRunId.New(), "test-check", isBlocking: true, DateTimeOffset.UtcNow);
+            check.MarkRunning(DateTimeOffset.UtcNow);
+            check.Complete(CheckStatus.Passed, "ok", "{}", "", DateTimeOffset.UtcNow);
+            second.AfterCheckPipelineCompleted(DateTimeOffset.UtcNow);
+
+            second.RecordReview(ReviewId.New(), Reviewer, ReviewDecision.Approved, "lgtm", DateTimeOffset.UtcNow);
+
+            var uow = _host.Resolve<IUnitOfWork>(scope);
+            await uow.SaveChangesAsync(TestContext.CancellationToken);
+        }
+
+        // Merge should be blocked by the authoritative base-version comparison,
+        // not by the IsStale flag (which we cleared).
+        using (var scope = _host.CreateScope())
+        {
+            var mergeSvc = _host.Resolve<MergeService>(scope);
+            var ex = await Assert.ThrowsExactlyAsync<DomainException>(
+                () => mergeSvc.MergeAsync(secondId, "u", "e@e.com", TestContext.CancellationToken));
+            Assert.AreEqual("gate.stale", ex.Code);
+        }
     }
 
     public void Dispose()

@@ -34,6 +34,18 @@ public sealed class MergeService(
         var detection = await detections.GetByIdAsync(change.DetectionId, ct)
             ?? throw new DomainException("detection.not_found", $"Detection '{change.DetectionId}' not found.");
 
+        // Authoritative stale check: compare base version to current accepted version.
+        var profile = change.ResolveWorkflowProfile();
+        if (profile.BlocksStaleMerge && change.BaseVersionId != detection.CurrentVersionId)
+        {
+            change.MarkStale(
+                "Base version does not match the current accepted version of the detection.", time.GetUtcNow());
+            changes.Save(change);
+            await uow.SaveChangesAsync(ct);
+            throw new DomainException("gate.stale",
+                "Detection changed after this change was opened. Review the latest version before accepting.");
+        }
+
         // Gate check.
         var readiness = change.EvaluateMergeReadiness();
         if (!readiness.IsReady)
