@@ -1,6 +1,6 @@
 using MudBlazor.Services;
 using Workbench.Application;
-using Workbench.Application.Abstractions;
+using Workbench.Infrastructure;
 using Workbench.Persistence;
 using Workbench.Validation;
 using Workbench.Web.Components;
@@ -27,7 +27,12 @@ if (useElsa)
 else
     builder.Services.AddWorkbenchDomainOrchestrator();
 
-builder.Services.AddSingleton<IAcceptedContentStore, Workbench.Web.PlaceholderContentStore>();
+var acceptedContentRepositoryPath = builder.Configuration.GetValue<string>("AcceptedContent:RepositoryPath")
+    ?? Path.Combine(builder.Environment.ContentRootPath, "accepted-content");
+builder.Services.AddWorkbenchGitAcceptedContentStore(options =>
+    options.RepositoryPath = Path.IsPathRooted(acceptedContentRepositoryPath)
+        ? acceptedContentRepositoryPath
+        : Path.Combine(builder.Environment.ContentRootPath, acceptedContentRepositoryPath));
 
 var app = builder.Build();
 

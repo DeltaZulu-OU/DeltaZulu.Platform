@@ -28,6 +28,7 @@ coverage*.cobertura.xml
 # The POC writes canonical detection files into a sibling working tree
 content-store/
 content-store-test/
+accepted-content/
 
 # SQLite (POC operational state)
 *.db

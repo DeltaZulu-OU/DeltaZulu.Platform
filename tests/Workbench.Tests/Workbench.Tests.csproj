@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\src\Workbench.Domain\Workbench.Domain.csproj" />
     <ProjectReference Include="..\..\src\Workbench.Application\Workbench.Application.csproj" />
     <ProjectReference Include="..\..\src\Workbench.Persistence\Workbench.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\Workbench.Infrastructure\Workbench.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Workbench.Validation\Workbench.Validation.csproj" />
   </ItemGroup>
 

@@ -10,6 +10,7 @@
     <ProjectReference Include="..\Workbench.Application\Workbench.Application.csproj" />
     <ProjectReference Include="..\Workbench.Domain\Workbench.Domain.csproj" />
     <ProjectReference Include="..\Workbench.Persistence\Workbench.Persistence.csproj" />
+    <ProjectReference Include="..\Workbench.Infrastructure\Workbench.Infrastructure.csproj" />
     <ProjectReference Include="..\Workbench.Workflow\Workbench.Workflow.csproj" />
     <ProjectReference Include="..\Workbench.Validation\Workbench.Validation.csproj" />
   </ItemGroup>
