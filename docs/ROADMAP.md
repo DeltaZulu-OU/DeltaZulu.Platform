@@ -2,107 +2,132 @@
 
 ## 1. Development strategy
 
-The project should be developed as a sequence of vertical slices. Each slice must preserve the core architectural boundary: database for operational collaboration state, Git for accepted content.
+Develop the workbench as a sequence of vertical slices. Each slice must preserve the core ownership boundary:
 
-Do not begin by building a workflow designer, SIEM runtime, publisher, or full SOAR automation layer. Begin with the smallest end-to-end content workflow that proves the product model.
+- **Database** owns operational collaboration state: issues, external case references, database-owned changes, draft content, checks, reviews, workflow projections, comments, locks, and read models.
+- **Git** owns accepted canonical detection content and accepted-content version history.
 
-## 2. POC definition
+Do not start by building a workflow designer, SIEM runtime, publisher, full SOAR automation layer, generic Git UI, or internal case-management system. The POC should prove the database-draft → checks → review → Git-backed accepted content → version projection loop.
+
+## 2. Current gap summary
+
+The refreshed gap analysis is maintained in [GAP_ANALYSIS.md](GAP_ANALYSIS.md). The highest-priority gaps are:
+
+1. The web host still uses an in-memory placeholder accepted-content store instead of a real Git-backed store.
+2. Merge must recheck base-version freshness against the current accepted version at merge time.
+3. Draft semantics must be made safe so partial edits cannot delete unrelated accepted files.
+4. Version compare and restore-as-new-change need application services and UI.
+5. Navigation must stop advertising missing pages, or those pages must be implemented.
+6. Controlled-review required-check policy must define and enforce required checks, including missing/skipped checks.
+7. Documentation and implementation should consistently treat cases as issue records with optional external case references, per ADR-0014.
+
+## 3. Revised POC definition
 
 The proof-of-concept is complete when this statement is true:
 
-> A user can manage detection work through issues, cases, and PR-like changes; edit KQL/tests/fixtures as database draft content; run predefined workflow checks; enforce approval in a controlled workflow; merge accepted content into Git as canonical files; and view the resulting version history without interacting with Git, workflow-engine internals, or any SIEM runtime.
+> A user can manage detection work through issues, external-case-linked issues, and database-owned changes; edit metadata/query/tests/fixtures as database draft content; run predefined checks; enforce controlled-review gates; merge accepted content into a real Git-backed canonical content store; and view, compare, and restore user-friendly versions without interacting with Git, workflow-engine internals, case-management internals, or any SIEM runtime.
 
-## 3. POC acceptance criteria
+## 4. POC acceptance criteria
 
-### 3.1 Product boundary
-
-| Criterion | Pass condition |
-|---|---|
-| Domain-focused UI | UI exposes detections, issues, cases, PRs/changes, checks, reviews, and versions. |
-| Git hidden | Main UI exposes no branch, rebase, checkout, staging, reset, or conflict-resolution concepts. |
-| Workflow engine hidden | Users see workflow states and gates, not Elsa/Wexflow objects. |
-| SIEM independent | No live SIEM runtime is required. |
-| Vendor-neutral | Core UI and domain objects avoid vendor product names. |
-
-### 3.2 Detection content
+### 4.1 Product boundary
 
 | Criterion | Pass condition |
 |---|---|
-| Create detection draft | User can create a detection draft in the database. |
-| Edit metadata | User can edit basic metadata. |
-| Edit KQL | User can edit query text. |
-| Edit tests | User can edit at least one YAML test. |
-| Edit fixture | User can edit at least one JSON/NDJSON fixture. |
+| Domain-focused UI | UI exposes detections, issues/external-case-linked issues, changes, checks, reviews, versions, and settings only where implemented. |
+| Git hidden | Main UI exposes no branch, rebase, checkout, staging, reset, tree, HEAD, or manual conflict-resolution concepts. |
+| Workflow engine hidden | Users see workflow states and gates, not Elsa workflow instance/activity/designer concepts. |
+| SIEM independent | No live SIEM runtime, alert generation, ingestion, or production scheduling is required. |
+| Case-management boundary | Case-triggered detection work is represented as `IssueType.Case` plus optional `ExternalCaseRef`; the POC does not implement internal case tasks, observables, or case lifecycle. |
+| Vendor-neutral | Core UI and domain objects avoid vendor product names except inside optional external adapter/reference metadata. |
+
+### 4.2 Detection content and draft safety
+
+| Criterion | Pass condition |
+|---|---|
+| Create detection identity | User can conceive a detection in the database before accepted content exists. |
+| Open database-owned change | User can open a change against a detection with a recorded base version. |
+| Edit metadata | User can edit detection metadata as draft database content. |
+| Edit query | User can edit a hunting query as draft database content. |
+| Edit tests | User can edit at least one YAML test definition as draft database content. |
+| Edit fixture | User can edit at least one JSON/NDJSON fixture as draft database content. |
+| Edit notes/assets | User can draft Markdown investigation notes and static assets where supported by ADR-0015. |
 | No Git write before merge | Draft edits do not modify Git. |
+| Safe draft semantics | Merging a partial edit cannot delete accepted files unless the user explicitly requested deletion. |
 
-### 3.3 Issues and cases
+### 4.3 Issues and external cases
 
 | Criterion | Pass condition |
 |---|---|
 | Create issue | User can create an issue in the database. |
-| Issue types | At minimum: `new_detection`, `tuning`, `bug`, `case`. |
-| Link issue | Issue can link to a detection and PR/change. |
-| Create case | User can create a case as an issue type. |
-| Case fields | Case supports summary, tasks, observables/notes, linked detections, and outcome. |
-| Close case | Case can be closed with outcome. |
+| Issue types | At minimum: `new_detection`, `tuning`, `bug`, `test_gap`, `research`, `documentation`, `maintenance`, `case`. |
+| Link issue | Issue can link to a detection and a change. |
+| External case reference | Any issue can optionally link to an external case system/id/url. |
+| Case issue | `IssueType.Case` signals detection work triggered by an external investigation; it does not enable internal case-management operations. |
 
-### 3.4 PR/change workflow
+### 4.4 PR/change workflow
 
 | Criterion | Pass condition |
 |---|---|
-| Create PR/change | User can create a database-owned change. |
-| Link work | Change can link to issue/case. |
-| Store draft content | Proposed content is stored in database. |
+| Create change | User can create a database-owned PR-like change. |
+| Link work | Change can link to an issue, including a case issue. |
+| Store draft content | Proposed content is stored in the database. |
 | Select workflow | User can select `quick_lab` or `controlled_review`. |
 | Run checks | User can run checks on draft content. |
 | Show changed content | UI shows changed sections or a file-level diff. |
-| Merge | Merge writes canonical content to Git. |
-| Link version | Merge creates a version projection linked to change/issue/case. |
+| Merge | Merge writes canonical content to a real Git-backed accepted-content store. |
+| Link version | Merge creates a database version projection linked to change, issue, checks, and reviews. |
 
-### 3.5 Workflow profiles
+### 4.5 Workflow profiles and safety gates
 
 | Criterion | Pass condition |
 |---|---|
-| Vendor-defined only | Users cannot define arbitrary workflows. |
-| Quick lab | Can accept/merge without approval. |
-| Controlled review | Requires passing checks and another user approval. |
-| Self-approval blocked | Author cannot approve own controlled review change. |
-| Stale change blocked | Controlled review blocks merge if base version is stale. |
-| Review reset | Editing content after approval invalidates approval. |
+| Vendor-defined only | Users cannot define arbitrary workflows, upload workflow YAML, or run unrestricted automation. |
+| Quick lab | Can accept/merge without approval; checks are optional or warning-only. |
+| Controlled review | Requires required checks and another user approval. |
+| Self-approval blocked | Author cannot approve their own controlled-review change in domain tests and UI demonstration. |
+| Stale change blocked | Controlled review blocks merge when `BaseVersionId` differs from the detection's current accepted version. |
+| Review reset | Editing content after approval invalidates approval in controlled review. |
+| Merge lock/recheck | Merge rechecks gates and base-version freshness immediately before writing accepted content. |
 
-### 3.6 Checks
+### 4.6 Checks
 
-Minimum checks:
+Minimum POC checks:
 
 ```text
 Package schema check
-KQL parse check
+Query syntax check (placeholder parser acceptable if clearly isolated)
 Fixture parse/load check
-Unit test/assertion check
+Test definition parse check
+Unit test/assertion check (may start minimal, but must be distinct from YAML parsing before POC completion)
+Note frontmatter check where investigation notes are supported
 ```
 
 | Criterion | Pass condition |
 |---|---|
-| Trigger checks | User can run checks on PR/change. |
-| Store results | Check results are stored in database. |
-| Show status | UI shows passed/failed status. |
-| Block merge | Controlled review blocks merge on failed required check. |
-| Re-run checks | User can re-run checks after draft edits. |
+| Trigger checks | User can run checks on a change. |
+| Store results | Check results are stored in the database. |
+| Show status | UI shows passed/failed/skipped status. |
+| Required-check policy | Controlled review knows which checks are required and treats missing/skipped required checks as unmet gates unless explicitly waived by a supported profile rule. |
+| Block merge | Controlled review blocks merge on missing, skipped, running, failed, or cancelled required checks. |
+| Re-run checks | User can re-run checks after draft edits; old runs do not pollute readiness. |
+| Test coverage | Each check implementation has direct unit tests for pass/fail/skip behavior. |
 
-### 3.7 Version history
+### 4.7 Git accepted content and version history
 
 | Criterion | Pass condition |
 |---|---|
+| Real Git store | Web host uses a durable LibGit2Sharp-backed accepted-content store, not the placeholder in-memory store. |
 | Auto version | Every accepted change creates a Git commit automatically. |
-| Projection | Git commit becomes a user-friendly detection version in DB. |
+| Projection | Git commit metadata becomes a user-friendly detection version in the database. |
 | Timeline | Detection page shows version timeline. |
-| Compare | User can compare two versions or current vs previous. |
-| Restore safely | Restore creates new change/version; history is not rewritten. |
-| Domain context | Version shows issue/case/change/check/review context. |
+| Compare | User can compare two versions or current vs previous without seeing Git primitives. |
+| Restore safely | Restore creates a new change populated from old accepted content; history is not rewritten. |
+| Domain context | Version shows issue/change/check/review context. |
+| Reconciliation | The system can detect or repair Git commits that were created before DB projection failed. |
 
-## 4. POC user stories
+## 5. POC user stories
 
-### 4.1 Quick lab flow
+### 5.1 Quick lab flow
 
 ```text
 As a detection author,
@@ -112,55 +137,73 @@ so that I can save accepted content without review during experimentation.
 
 Acceptance:
 
-1. User creates detection draft.
-2. User selects `quick_lab` workflow.
-3. User edits KQL, test, and fixture.
-4. User runs checks or skips non-required checks.
-5. User accepts the change.
-6. System writes canonical files to Git.
-7. UI shows a new version.
+1. User conceives a detection.
+2. User opens a database-owned change.
+3. User selects `quick_lab` workflow.
+4. User edits metadata, query, test, and fixture draft content.
+5. User runs checks or skips non-required checks.
+6. User accepts the change.
+7. System writes canonical files to Git.
+8. System creates a version projection.
+9. UI shows the new version.
 
-### 4.2 Controlled SOC review flow
+### 5.2 Controlled review flow
 
 ```text
-As a SOC detection engineer,
+As a detection engineer,
 I want detection changes to require passing checks and another engineer approval,
 so that shared content cannot be modified without basic quality gates.
 ```
 
 Acceptance:
 
-1. User creates issue or case.
-2. User creates linked PR/change.
+1. User creates an issue or a case issue with an external case reference.
+2. User creates a linked change.
 3. User selects `controlled_review` workflow.
 4. User edits draft content.
-5. Required checks fail.
+5. Required checks fail or are missing.
 6. User fixes draft content.
 7. Required checks pass.
 8. Author attempts self-approval and is blocked.
 9. Another user approves.
 10. User merges.
 11. Git receives canonical content.
-12. Version projection links issue/case/change/check/review context.
+12. Version projection links issue/change/check/review context.
 
-### 4.3 Stale-change flow
+### 5.3 Stale-change flow
 
 ```text
 As a user,
-I want stale PRs to be blocked,
+I want stale changes to be blocked,
 so that I do not accidentally overwrite newer accepted content.
 ```
 
 Acceptance:
 
-1. User opens change based on version v1.
+1. User opens a controlled-review change based on version v1.
 2. Another accepted change creates version v2.
-3. User attempts to merge original change.
-4. System blocks merge and marks change stale.
-5. UI explains that the detection changed after the PR was opened.
+3. User attempts to merge the original change.
+4. System compares the original change base version with the current accepted version.
+5. System blocks merge, marks the change stale, and explains that the detection changed after the change was opened.
 6. No Git conflict UI is shown.
 
-### 4.4 Restore flow
+### 5.4 Partial-edit safety flow
+
+```text
+As a detection maintainer,
+I want to edit one file without losing the rest of the accepted package,
+so that routine updates do not accidentally delete accepted metadata, tests, fixtures, or notes.
+```
+
+Acceptance:
+
+1. Accepted version v1 contains metadata, query, test, fixture, and note files.
+2. User opens a change and edits only the query.
+3. User merges after gates pass.
+4. System preserves every accepted file not explicitly changed or deleted.
+5. Version v2 contains the edited query plus all unchanged package files.
+
+### 5.5 Restore flow
 
 ```text
 As a maintainer,
@@ -173,131 +216,139 @@ Acceptance:
 1. User opens version timeline.
 2. User selects an older version.
 3. User chooses restore as new change.
-4. System creates a PR/change populated from old version content.
+4. System creates a change populated from old accepted version content.
 5. Normal workflow gates apply.
-6. Accepted restore creates a new version.
+6. Accepted restore creates a new Git commit and new user-friendly version.
 
-## 5. Phase plan
+## 6. Revised phase plan
 
-### Phase 0: Project skeleton
+### Phase 0: Documentation and architecture alignment
 
-Deliverables:
-
-- .NET solution structure.
-- Basic MudBlazor app shell.
-- Domain project.
-- Application project.
-- Persistence project.
-- Infrastructure project.
-- Test project.
-- Documentation copied into repository.
-
-Exit criteria:
-
-- Solution builds.
-- Basic test project runs.
-- README and ADRs present.
-
-### Phase 1: Domain and persistence foundation
+Status: mostly complete after this roadmap refresh.
 
 Deliverables:
 
-- Entities/enums for detection drafts, issues, cases, changes, checks, reviews, versions.
-- Database persistence.
-- Application services for create/read/update of issues, cases, detections, changes.
-- Basic read model queries.
+- Align ROADMAP and ARCHITECTURE with ADR-0014 external-case direction.
+- Maintain [GAP_ANALYSIS.md](GAP_ANALYSIS.md) as the source of current implementation gaps.
+- Keep docs explicit about what is POC scope vs post-POC scope.
 
 Exit criteria:
 
-- Create issue/case/change/detection draft through application-service tests.
-- Data persists and can be listed.
+- Docs no longer require internal case tasks/observables/outcomes for POC.
+- Gaps have priorities and concrete completion outcomes.
 
-### Phase 2: Draft content and checks
+### Phase 1: Safety fixes in the existing core
 
 Deliverables:
 
-- Draft content model.
-- Detection draft editor service.
-- Check pipeline abstraction.
-- Stub or minimal package schema check.
-- Stub or minimal KQL parse check.
-- Fixture parse/load check.
-- Unit test/assertion check placeholder.
+- Merge-time base-version comparison for stale controlled-review changes.
+- Safe draft semantics: full-snapshot draft seeding or patch-preserve merge behavior.
+- Tests proving partial edits preserve accepted files.
+- Tests proving stale merge is blocked even if the `IsStale` flag was not pre-set.
+- Required-check policy object or service for workflow profiles.
 
 Exit criteria:
 
-- Checks can run and store pass/fail results.
-- Failed checks are visible through application services.
+- Controlled review cannot overwrite newer accepted content.
+- One-file edits cannot delete unrelated accepted package files.
+- Missing/skipped required checks block controlled-review merge.
 
-### Phase 3: Workflow profiles and gate evaluation
+### Phase 2: Durable Git accepted-content store
 
 Deliverables:
 
-- Workflow profile catalog.
-- `quick_lab` profile.
-- `controlled_review` profile.
-- Gate evaluator.
-- Self-approval blocking.
-- Required-check blocking.
-- Stale-change blocking.
+- LibGit2Sharp-backed `IAcceptedContentStore` in `Workbench.Infrastructure`.
+- Configuration for repository path, author defaults, and initialization behavior.
+- Repository write lock or equivalent serialization for merge commits.
+- Read current content and read content at commit.
+- Integration tests using a temporary real Git repository.
+- Web host registration for the real Git store; placeholder limited to tests/development opt-in.
 
 Exit criteria:
 
-- Unit tests prove quick lab can merge without approval.
-- Unit tests prove controlled review requires checks and another user approval.
+- Merge in the web host writes canonical files to a real Git repository.
+- Accepted content survives process restart.
+- Version projection records real commit metadata.
 
-### Phase 4: Git accepted content store
+### Phase 3: Version services: compare, restore, and reconciliation
 
 Deliverables:
 
-- Git-backed content store abstraction.
-- Canonical writer.
-- Controlled commit creation.
-- Version projection service.
-- File-level diff support.
+- `VersionHistoryService` for timeline and version detail reads.
+- File-level diff service with domain labels and no Git UI primitives.
+- `RestoreService` implementing restore-as-new-change from accepted version content.
+- Merge intent/reconciliation mechanism for Git commit succeeds / DB update fails scenarios.
+- Tests for compare, restore, and reconciliation paths.
 
 Exit criteria:
 
-- Merge writes canonical files to Git.
-- Database version projection is created.
-- Detection version timeline can be read from DB.
+- User can compare current vs previous and arbitrary two versions.
+- User can restore an older version as a new database-owned change.
+- Restore acceptance creates a new Git commit and version projection without rewriting history.
 
-### Phase 5: UI vertical slice
+### Phase 4: UI contract completion
 
 Deliverables:
 
-- Home work queue.
-- Detection draft editor.
-- Issue detail.
-- Case detail.
-- PR/change detail.
-- Checks view.
-- Review/approval view.
-- Version history view.
+- Fix nav/page mismatch for `/versions`, `/checks`, `/reviews`, and `/settings` by adding pages or removing links until ready.
+- Detection version timeline with compare and restore actions.
+- Change detail diff/changed sections view.
+- Checks view showing passed/failed/skipped status and logs excerpts.
+- Review view showing effective/superseded approvals.
+- POC current-user provider/user switcher so self-approval blocking can be demonstrated.
+- Settings page for repository path/workflow toggle/status where appropriate.
 
 Exit criteria:
 
-- End-to-end quick lab and controlled review scenarios can be demonstrated manually.
+- End-to-end quick lab, controlled review, stale-change, partial-edit safety, and restore flows can be demonstrated manually.
+- No navigation link routes to a missing page.
 
-### Phase 6: Elsa integration
+### Phase 5: Check quality and test execution
 
 Deliverables:
 
-- `IWorkflowOrchestrator` abstraction.
-- Elsa adapter.
-- Change lifecycle workflow skeleton.
-- Events/signals integration.
-- Workflow timeline projection.
+- Direct unit tests for `QuerySyntaxCheck`, `TestDefinitionCheck`, and note checks.
+- Minimal unit test/assertion runner distinct from YAML parse.
+- Stronger fixture load checks.
+- Clear details JSON/log excerpts for every check.
+- Optional real parser integration remains post-POC unless needed for correctness.
 
 Exit criteria:
 
-- Existing gate behavior remains intact.
-- Workflow engine is invisible to UI users.
-- Workflow state survives application restart if persistence is configured.
+- Controlled-review required-check policy is backed by meaningful check results.
+- Check failures explain actionable remediation.
 
-## 6. Post-POC roadmap
+### Phase 6: Persistence/read-model completion for POC operations
 
-### 6.1 Better validation
+Deliverables:
+
+- Add users or POC identity table/provider if needed by UI role demonstration.
+- Add comments if the UI exposes discussion.
+- Add workflow instance/event projections if Elsa timeline is exposed.
+- Add activity events for audit timeline if shown in UI.
+- Add locks table or equivalent if process-level lock is insufficient.
+
+Exit criteria:
+
+- Every UI-exposed operational object has database persistence.
+- Architecture distinguishes implemented POC schema from future schema.
+
+### Phase 7: Optional Elsa hardening
+
+Deliverables:
+
+- Persist Elsa workflow state when `Workflow:UseElsa=true`.
+- Add workflow timeline projection if exposed to users.
+- Keep domain state authoritative and Elsa supplementary.
+
+Exit criteria:
+
+- Existing gate behavior remains intact with Elsa enabled or disabled.
+- Workflow engine internals remain invisible to normal users.
+
+## 7. Post-POC roadmap
+
+### 7.1 Better validation
 
 - Real KQL parser integration.
 - KQL-to-DuckDB validation path.
@@ -305,37 +356,37 @@ Exit criteria:
 - More assertion types.
 - Check artifacts and logs.
 
-### 6.2 Better version experience
+### 7.2 Better version experience
 
 - Semantic changed-section summaries.
-- Side-by-side KQL diff.
+- Side-by-side query diff.
 - YAML-aware diff.
 - Fixture diff summarization.
 - Version compare across content packs.
 
-### 6.3 Better case workflow
+### 7.3 External case integrations
 
-- Timeline.
-- Case task templates.
-- Observable normalization.
-- Detection gap creation from case.
-- Case-to-detection improvement report.
+- FlowIntel webhook/API connector.
+- TheHive webhook/API connector.
+- External case existence validation.
+- Optional import of investigation summary into issue descriptions or Markdown notes.
+- Case-to-detection improvement report derived from issue/change/version context.
 
-### 6.4 Background execution
+### 7.4 Background execution
 
 - Separate worker process if needed.
-- Hangfire for durable job queues if validation jobs require robust retries and dashboarding.
+- Hangfire for durable validation job queues if robust retries and dashboarding are required.
 - Quartz only if calendar-grade scheduling becomes important.
 
-### 6.5 Future runtime/publishing
+### 7.5 Future runtime/publishing
 
 - Vendor-neutral content package export.
 - Local runtime adapter.
-- External platform adapters.
+- External detection platform adapters.
 - Content pack/release management.
 - Predefined SOAR-like actions.
 
-## 7. Explicit out of scope until after POC
+## 8. Explicit out of scope until after POC
 
 - Full SIEM engine.
 - Live data ingestion.
@@ -343,8 +394,9 @@ Exit criteria:
 - Runtime scheduling of detections.
 - User-authored workflow YAML.
 - Arbitrary shell/script runner.
-- Vendor-specific terminology in core model.
+- Vendor-specific terminology in core model or workflow labels.
 - Full SOAR response automation.
 - Generic Git repository browser.
-- ITSM/CAB/SLA/CMDB features.
+- Internal ITSM/CAB/SLA/CMDB system.
+- Internal case task/observable/outcome management superseded by ADR-0014.
 - Remote Git synchronization in normal UI.

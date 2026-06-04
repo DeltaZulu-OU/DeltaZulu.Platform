@@ -82,9 +82,9 @@ A PR/change is a database-owned object containing proposed detection content, ba
 
 Merge/accept writes canonical files to Git and creates a domain version projection.
 
-### 7. Cases are rich issues
+### 7. Cases are external-case-linked issues
 
-A case is an issue type with case-specific fields such as observables, tasks, timeline, linked detections, linked changes, and outcome. Implement it on the same issue/change/check/review foundation.
+ADR-0014 supersedes the earlier built-in case-management model. A case is an `IssueType.Case` work item that can carry an `ExternalCaseRef` (`System`, `ExternalId`, optional `Url`) to FlowIntel, TheHive, or another external case system. Do not rebuild internal case tasks, observables, timelines, or case outcomes in the POC. Detection work triggered by a case still uses the same issue/change/check/review foundation.
 
 ### 8. Vendor-neutral terminology
 
@@ -140,7 +140,7 @@ Detection
 DetectionDraft
 DetectionVersion
 Issue
-CaseDetails
+ExternalCaseRef
 ChangeRequest
 CheckRun
 Review
@@ -159,7 +159,8 @@ The POC should support the following application-level commands:
 CreateDetectionDraft
 UpdateDetectionDraft
 CreateIssue
-CreateCase
+CreateCaseIssue
+LinkExternalCaseRef
 CreateChangeRequest
 UpdateChangeDraftContent
 SelectWorkflowProfile
@@ -224,7 +225,7 @@ Use domain labels:
 - Restore as new change.
 - Changed sections.
 - Linked issue.
-- Linked case.
+- Linked case issue / external case reference.
 
 Avoid normal user-facing Git labels:
 

@@ -2,7 +2,7 @@
 
 ## 1. System identity
 
-Detection Content Workbench is a Git-backed, database-driven content management and collaboration system for detection engineering and case-driven SOC work. The product centers on KQL detection content, YAML tests, JSON/NDJSON fixtures, issue/case workflow, PR-like changes, checks, reviews, and automatic version history.
+Detection Content Workbench is a Git-backed, database-driven content management and collaboration system for detection engineering and external-case-driven SOC work. The product centers on KQL detection content, YAML tests, JSON/NDJSON fixtures, issue workflow, external case references, PR-like changes, checks, reviews, and automatic version history.
 
 The system is deliberately decoupled from any SIEM runtime. The initial product does not execute scheduled detections against live telemetry, generate production alerts, or run response automation. It manages detection content and the work around that content.
 
@@ -17,7 +17,7 @@ Git      = accepted detection content and version history
 
 This split is the central design decision.
 
-Before merge, detection changes are operational workflow state. They live in the database with issues, cases, reviews, validation results, workflow status, comments, and draft content. At merge/accept time, the system canonicalizes the accepted content and writes it to Git. Git then becomes the durable version ledger for accepted detection content. The UI projects Git commits as user-friendly detection versions.
+Before merge, detection changes are operational workflow state. They live in the database with issues, external case references, reviews, validation results, workflow status, comments, and draft content. At merge/accept time, the system canonicalizes the accepted content and writes it to Git. Git then becomes the durable version ledger for accepted detection content. The UI projects Git commits as user-friendly detection versions.
 
 ## 3. Context diagram
 
@@ -78,8 +78,7 @@ User-visible areas:
 ```text
 Home
 Detections
-Issues
-Cases
+Issues / external-case-linked issues
 Pull Requests / Changes
 Checks
 Reviews
@@ -98,7 +97,6 @@ Core services:
 ```text
 DetectionContentService
 IssueService
-CaseService
 ChangeService
 ReviewService
 CheckRunService
@@ -119,7 +117,7 @@ Detection
 DetectionDraft
 DetectionVersion
 Issue
-CaseDetails
+ExternalCaseRef
 ChangeRequest
 CheckRun
 Review
@@ -145,7 +143,7 @@ Database-owned entities:
 ```text
 users
 issues
-case_details
+external_case_refs (owned by issues or issue columns)
 change_requests
 change_draft_files
 comments
@@ -153,7 +151,7 @@ reviews
 check_runs
 workflow_instances
 workflow_events
-detection_drafts
+detection_drafts or change_draft_files, depending on ADR-0013 implementation
 detection_versions
 activity_events
 locks
@@ -260,9 +258,9 @@ Initial profiles:
 
 The POC implements `quick_lab` and `controlled_review`.
 
-## 9. Issue and case model
+## 9. Issue and external case reference model
 
-Issues are database-owned work items. Cases are rich issue types.
+Issues are database-owned work items. ADR-0014 delegates full case management to external systems, so the POC does not model internal case tasks, observables, outcomes, or a dedicated case lifecycle. A case-triggered detection work item is represented as `IssueType.Case` with an optional `ExternalCaseRef`.
 
 ```mermaid
 classDiagram
@@ -274,34 +272,19 @@ classDiagram
       IssueStatus Status
       Priority Priority
       Guid? AssigneeId
+      Guid? LinkedDetectionId
+      ExternalCaseRef? ExternalCase
       DateTimeOffset CreatedAt
       DateTimeOffset UpdatedAt
     }
 
-    class CaseDetails {
-      Guid IssueId
-      string Summary
-      CaseStatus CaseStatus
-      string Outcome
+    class ExternalCaseRef {
+      string System
+      string ExternalId
+      string? Url
     }
 
-    class CaseTask {
-      Guid Id
-      Guid IssueId
-      string Title
-      TaskStatus Status
-    }
-
-    class Observable {
-      Guid Id
-      Guid IssueId
-      string Type
-      string Value
-    }
-
-    Issue "1" --> "0..1" CaseDetails
-    Issue "1" --> "0..*" CaseTask
-    Issue "1" --> "0..*" Observable
+    Issue "1" --> "0..1" ExternalCaseRef
 ```
 
 Issue types:
@@ -317,7 +300,7 @@ maintenance
 case
 ```
 
-The case workflow remains detection-content scoped. It does not attempt to become a full incident response system of record.
+`IssueType.Case` signals that detection-content work was triggered by an external investigation. The issue can link to FlowIntel, TheHive, or another external system by reference metadata, but the workbench remains focused on detection content changes, checks, reviews, and accepted versions.
 
 ## 10. PR/change model
 
@@ -546,7 +529,7 @@ None of these are required for the POC.
 
 The architecture is proven when:
 
-1. Users can create issues/cases and PR-like changes in the database.
+1. Users can create issues, external-case-linked issues, and PR-like changes in the database.
 2. Draft detection content remains in the database until merge.
 3. Checks run against draft content and store results in the database.
 4. Controlled workflow blocks merge without passing checks and another engineer approval.
