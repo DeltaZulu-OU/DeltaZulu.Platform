@@ -20,15 +20,14 @@ public static class CanonicalWriter
 {
     /// <summary>
     /// Produces a <see cref="CommitRequest"/> from the change request's draft files.
-    /// Files present in <paramref name="existingRepoPaths"/> but absent from the draft set
-    /// are included as deletes, ensuring the canonical state matches the draft exactly.
+    /// Draft files are patch-like: absent accepted files are preserved rather than deleted.
+    /// Explicit accepted-content deletion is intentionally not modeled in the current POC.
     /// </summary>
     public static CommitRequest BuildCommitRequest(
         ChangeRequest change,
         string detectionSlug,
         string authorName,
-        string authorEmail,
-        IReadOnlyList<string>? existingRepoPaths = null)
+        string authorEmail)
     {
         ArgumentNullException.ThrowIfNull(change);
         ArgumentException.ThrowIfNullOrWhiteSpace(detectionSlug);
@@ -36,28 +35,18 @@ public static class CanonicalWriter
         ArgumentException.ThrowIfNullOrWhiteSpace(authorEmail);
 
         var filesToWrite = new List<ContentFile>(change.DraftFiles.Count);
-        var newPaths = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var draft in change.DraftFiles)
         {
             var repoPath = CanonicalPathResolver.Resolve(detectionSlug, draft.Path);
             var isBinary = draft.ContentType == DraftContentType.StaticAsset;
             filesToWrite.Add(new ContentFile(repoPath, draft.Content, isBinary));
-            newPaths.Add(repoPath);
         }
 
-        // Compute deletes: files in the existing set that are not in the draft set.
-        var pathsToDelete = new List<string>();
-        if (existingRepoPaths is not null)
-        {
-            foreach (var existing in existingRepoPaths)
-            {
-                if (!newPaths.Contains(existing))
-                {
-                    pathsToDelete.Add(existing);
-                }
-            }
-        }
+        // Existing accepted files are intentionally preserved when they are absent from the
+        // draft. A change's draft content represents the files being added or updated, not
+        // a full package replacement. Until the domain models explicit deletion intent,
+        // automatic delete inference would let a partial edit remove unrelated content.
 
         var message = $"[{change.Key}] {change.Title}";
 
@@ -65,7 +54,6 @@ public static class CanonicalWriter
             message: message,
             authorName: authorName,
             authorEmail: authorEmail,
-            filesToWrite: filesToWrite,
-            pathsToDelete: pathsToDelete);
+            filesToWrite: filesToWrite);
     }
 }

@@ -54,11 +54,10 @@ public sealed class MergeService(
             throw new DomainException(first.Code, first.Message);
         }
 
-        // Build commit with delete computation.
-        var prefix = CanonicalPathResolver.DetectionPrefix(detection.Slug);
-        var existingFiles = await contentStore.ListFilesAsync(prefix, ct);
-        var existingPaths = existingFiles.Select(f => f.RepositoryPath).ToList();
-        var commitRequest = CanonicalWriter.BuildCommitRequest(change, detection.Slug, authorName, authorEmail, existingPaths);
+        // Build a patch-style commit: draft files add/update canonical content, while
+        // absent accepted files are preserved unless a future domain command records an
+        // explicit deletion. This prevents partial edits from deleting unrelated files.
+        var commitRequest = CanonicalWriter.BuildCommitRequest(change, detection.Slug, authorName, authorEmail);
 
         // Commit to Git.
         // KNOWN RISK: If the process crashes between this commit and the DB writes below,

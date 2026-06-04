@@ -274,6 +274,59 @@ public sealed class MergeServiceTests : IDisposable
     }
 
     [TestMethod]
+    public async Task Merge_PartialDraft_PreservesUnchangedAcceptedFiles()
+    {
+        var detId = await ConceiveDetection("partial-preserve");
+
+        // Create accepted v1 with two canonical files.
+        ChangeRequestId firstId;
+        using (var scope = _host.CreateScope())
+        {
+            var svc = _host.Resolve<ChangeService>(scope);
+            var c = await svc.OpenChangeAsync("CHG-P1", "initial content", detId, Author,
+                WorkflowProfileId.QuickLab, ct: TestContext.CancellationToken);
+            firstId = c.Id;
+            await svc.UpsertDraftFileAsync(firstId, "detection.yaml", DraftContentType.DetectionMetadata,
+                "id: partial-preserve\ntitle: v1", Author, TestContext.CancellationToken);
+            await svc.UpsertDraftFileAsync(firstId, "rule.kql", DraftContentType.HuntingQuery,
+                "SigninLogs | take 1", Author, TestContext.CancellationToken);
+        }
+
+        using (var scope = _host.CreateScope())
+        {
+            var mergeSvc = _host.Resolve<MergeService>(scope);
+            await mergeSvc.MergeAsync(firstId, "u", "e@e.com", TestContext.CancellationToken);
+        }
+
+        // Merge v2 with only metadata in the draft. The existing query must be preserved
+        // because draft content is patch-like, not a full package replacement.
+        ChangeRequestId secondId;
+        using (var scope = _host.CreateScope())
+        {
+            var svc = _host.Resolve<ChangeService>(scope);
+            var c = await svc.OpenChangeAsync("CHG-P2", "metadata-only edit", detId, Author,
+                WorkflowProfileId.QuickLab, ct: TestContext.CancellationToken);
+            secondId = c.Id;
+            await svc.UpsertDraftFileAsync(secondId, "detection.yaml", DraftContentType.DetectionMetadata,
+                "id: partial-preserve\ntitle: v2", Author, TestContext.CancellationToken);
+        }
+
+        using (var scope = _host.CreateScope())
+        {
+            var mergeSvc = _host.Resolve<MergeService>(scope);
+            await mergeSvc.MergeAsync(secondId, "u", "e@e.com", TestContext.CancellationToken);
+        }
+
+        var yaml = await _host.ContentStore.GetFileAsync("detections/partial-preserve/detection.yaml", TestContext.CancellationToken);
+        var query = await _host.ContentStore.GetFileAsync("detections/partial-preserve/rule.kql", TestContext.CancellationToken);
+
+        Assert.IsNotNull(yaml);
+        Assert.AreEqual("id: partial-preserve\ntitle: v2", yaml.Content);
+        Assert.IsNotNull(query);
+        Assert.AreEqual("SigninLogs | take 1", query.Content);
+    }
+
+    [TestMethod]
     public async Task ControlledReview_BlocksMerge_WhenBaseVersionDrifted_WithoutIsStaleFlag()
     {
         var detId = await ConceiveDetection("stale-drift");
