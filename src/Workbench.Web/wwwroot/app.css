@@ -89,15 +89,15 @@ pre {
     transition: background var(--duration-fast) var(--easing-standard);
 }
 
-.mud-nav-link:hover {
-    background: rgba(39, 86, 104, 0.06);
-}
+    .mud-nav-link:hover {
+        background: rgba(39, 86, 104, 0.06);
+    }
 
-.mud-nav-link.active {
-    background: rgba(39, 86, 104, 0.10);
-    color: var(--brand-slate);
-    font-weight: 600;
-}
+    .mud-nav-link.active {
+        background: rgba(39, 86, 104, 0.10);
+        color: var(--brand-slate);
+        font-weight: 600;
+    }
 
 /* --- Focus ring: accent-derived --- */
 *:focus-visible {
@@ -112,70 +112,78 @@ pre {
     color: var(--color-text-primary);
 }
 
-.markdown-viewer h1,
-.markdown-viewer h2,
-.markdown-viewer h3 {
-    font-family: var(--font-family-sans);
-    margin-top: 1.2em;
-    margin-bottom: 0.5em;
-    letter-spacing: -0.01em;
-    font-weight: 700;
-    color: var(--brand-ink);
-}
+    .markdown-viewer h1,
+    .markdown-viewer h2,
+    .markdown-viewer h3 {
+        font-family: var(--font-family-sans);
+        margin-top: 1.2em;
+        margin-bottom: 0.5em;
+        letter-spacing: -0.01em;
+        font-weight: 700;
+        color: var(--brand-ink);
+    }
 
-.markdown-viewer h1 { font-size: 1.75rem; }
-.markdown-viewer h2 { font-size: 1.25rem; }
-.markdown-viewer h3 { font-size: 1.1rem; }
+    .markdown-viewer h1 {
+        font-size: 1.75rem;
+    }
 
-.markdown-viewer code {
-    font-family: var(--font-family-mono);
-    background: #DEE5E8;
-    color: #1F4756;
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-size: 0.88em;
-    font-weight: 500;
-}
+    .markdown-viewer h2 {
+        font-size: 1.25rem;
+    }
 
-.markdown-viewer pre {
-    background: var(--brand-ink);
-    color: #FFFFFF;
-    padding: 18px 20px;
-    border-radius: 12px;
-    overflow-x: auto;
-    font-size: 0.875rem;
-    line-height: 1.55;
-}
+    .markdown-viewer h3 {
+        font-size: 1.1rem;
+    }
 
-.markdown-viewer pre code {
-    background: transparent;
-    color: inherit;
-    padding: 0;
-    border-radius: 0;
-    font-weight: 400;
-}
+    .markdown-viewer code {
+        font-family: var(--font-family-mono);
+        background: #DEE5E8;
+        color: #1F4756;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 0.88em;
+        font-weight: 500;
+    }
 
-.markdown-viewer img {
-    max-width: 100%;
-    border-radius: var(--radius-sm);
-}
+    .markdown-viewer pre {
+        background: var(--brand-ink);
+        color: #FFFFFF;
+        padding: 18px 20px;
+        border-radius: 12px;
+        overflow-x: auto;
+        font-size: 0.875rem;
+        line-height: 1.55;
+    }
 
-.markdown-viewer blockquote {
-    border-left: 3px solid var(--brand-slate);
-    padding-left: 1em;
-    margin-left: 0;
-    color: var(--color-text-secondary);
-}
+        .markdown-viewer pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+            border-radius: 0;
+            font-weight: 400;
+        }
 
-.markdown-viewer a {
-    color: var(--brand-slate);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-}
+    .markdown-viewer img {
+        max-width: 100%;
+        border-radius: var(--radius-sm);
+    }
 
-.markdown-viewer a:hover {
-    color: var(--brand-ink);
-}
+    .markdown-viewer blockquote {
+        border-left: 3px solid var(--brand-slate);
+        padding-left: 1em;
+        margin-left: 0;
+        color: var(--color-text-secondary);
+    }
+
+    .markdown-viewer a {
+        color: var(--brand-slate);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+        .markdown-viewer a:hover {
+            color: var(--brand-ink);
+        }
 
 /* --- Status chip adjustments --- */
 .mud-chip.mud-chip-filled {
@@ -201,7 +209,10 @@ pre {
 
 /* --- Reduced motion --- */
 @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
+    html {
+        scroll-behavior: auto;
+    }
+
     *, *::before, *::after {
         transition-duration: 0ms !important;
         animation-duration: 0ms !important;

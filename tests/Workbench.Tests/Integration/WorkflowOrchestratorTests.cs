@@ -1,6 +1,5 @@
 using Workbench.Application.Abstractions;
 using Workbench.Application.Services;
-using Workbench.Domain.Common;
 
 namespace Workbench.Tests.Integration;
 

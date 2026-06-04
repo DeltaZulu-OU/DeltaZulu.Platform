@@ -1,7 +1,6 @@
 using Elsa.Extensions;
 using Elsa.Workflows;
 using Elsa.Workflows.Activities;
-using Elsa.Workflows.Models;
 using Elsa.Workflows.Runtime.Activities;
 
 namespace Workbench.Workflow.Workflows;
@@ -15,6 +14,7 @@ public sealed class ChangeLifecycleWorkflow : WorkflowBase
 {
     // Event names used as bookmark stimuli. Must match the names used in ElsaWorkflowOrchestrator.
     public const string EventContentEdited = "ContentEdited";
+
     public const string EventChecksCompleted = "ChecksCompleted";
     public const string EventReviewRecorded = "ReviewRecorded";
     public const string EventMergeCompleted = "MergeCompleted";

@@ -6,5 +6,4 @@ public readonly record struct DetectionId(Guid Value)
     public static DetectionId New() => new(Guid.NewGuid());
 
     public override string ToString() => Value.ToString("D");
-
 }

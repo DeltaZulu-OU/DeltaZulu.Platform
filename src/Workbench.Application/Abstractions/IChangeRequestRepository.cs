@@ -10,8 +10,11 @@ namespace Workbench.Application.Abstractions;
 public interface IChangeRequestRepository
 {
     Task<ChangeRequest?> GetByIdAsync(ChangeRequestId id, CancellationToken ct = default);
+
     Task<IReadOnlyList<ChangeRequest>> ListByDetectionAsync(DetectionId detectionId, CancellationToken ct = default);
+
     Task<IReadOnlyList<ChangeRequest>> ListAsync(CancellationToken ct = default);
+
     void Add(ChangeRequest change);
 
     /// <summary>

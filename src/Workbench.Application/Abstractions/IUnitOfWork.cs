@@ -8,5 +8,6 @@ namespace Workbench.Application.Abstractions;
 public interface IUnitOfWork
 {
     void BeginTransaction();
+
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 }

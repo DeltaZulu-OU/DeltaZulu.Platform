@@ -76,14 +76,14 @@ internal sealed class ChangeRequestRepository(DapperSession session) : IChangeRe
                     content, updated_at, updated_by)
                 VALUES (@ChangeRequestId, @LogicalPath, @ContentType, @Content, @UpdatedAt, @UpdatedBy)
                 """, new
-                {
-                    ChangeRequestId = idStr,
-                    LogicalPath = f.Path.Value,
-                    ContentType = f.ContentType.ToString(),
-                    f.Content,
-                    UpdatedAt = f.UpdatedAt.ToString("O"),
-                    UpdatedBy = f.UpdatedBy.Value.ToString(),
-                }, session.Transaction);
+            {
+                ChangeRequestId = idStr,
+                LogicalPath = f.Path.Value,
+                ContentType = f.ContentType.ToString(),
+                f.Content,
+                UpdatedAt = f.UpdatedAt.ToString("O"),
+                UpdatedBy = f.UpdatedBy.Value.ToString(),
+            }, session.Transaction);
         }
 
         // Replace checks.
@@ -98,18 +98,18 @@ internal sealed class ChangeRequestRepository(DapperSession session) : IChangeRe
                 VALUES (@Id, @ChangeRequestId, @Name, @IsBlocking, @Status,
                     @StartedAt, @CompletedAt, @Summary, @DetailsJson, @LogsExcerpt)
                 """, new
-                {
-                    Id = c.Id.Value.ToString(),
-                    ChangeRequestId = idStr,
-                    c.Name,
-                    IsBlocking = c.IsBlocking ? 1 : 0,
-                    Status = c.Status.ToString(),
-                    StartedAt = c.StartedAt?.ToString("O"),
-                    CompletedAt = c.CompletedAt?.ToString("O"),
-                    c.Summary,
-                    c.DetailsJson,
-                    c.LogsExcerpt,
-                }, session.Transaction);
+            {
+                Id = c.Id.Value.ToString(),
+                ChangeRequestId = idStr,
+                c.Name,
+                IsBlocking = c.IsBlocking ? 1 : 0,
+                Status = c.Status.ToString(),
+                StartedAt = c.StartedAt?.ToString("O"),
+                CompletedAt = c.CompletedAt?.ToString("O"),
+                c.Summary,
+                c.DetailsJson,
+                c.LogsExcerpt,
+            }, session.Transaction);
         }
 
         // Replace reviews.
@@ -124,16 +124,16 @@ internal sealed class ChangeRequestRepository(DapperSession session) : IChangeRe
                 VALUES (@Id, @ChangeRequestId, @ReviewerId, @Decision, @Comment,
                     @CreatedAt, @IsSuperseded, @SupersededAt)
                 """, new
-                {
-                    Id = r.Id.Value.ToString(),
-                    ChangeRequestId = idStr,
-                    ReviewerId = r.ReviewerId.Value.ToString(),
-                    Decision = r.Decision.ToString(),
-                    r.Comment,
-                    CreatedAt = r.CreatedAt.ToString("O"),
-                    IsSuperseded = r.IsSuperseded ? 1 : 0,
-                    SupersededAt = r.SupersededAt?.ToString("O"),
-                }, session.Transaction);
+            {
+                Id = r.Id.Value.ToString(),
+                ChangeRequestId = idStr,
+                ReviewerId = r.ReviewerId.Value.ToString(),
+                Decision = r.Decision.ToString(),
+                r.Comment,
+                CreatedAt = r.CreatedAt.ToString("O"),
+                IsSuperseded = r.IsSuperseded ? 1 : 0,
+                SupersededAt = r.SupersededAt?.ToString("O"),
+            }, session.Transaction);
         }
     }
 
@@ -162,7 +162,8 @@ internal sealed class ChangeRequestRepository(DapperSession session) : IChangeRe
     private static object ToParams(ChangeRequest c) => new
     {
         Id = c.Id.Value.ToString(),
-        c.Key, c.Title,
+        c.Key,
+        c.Title,
         DetectionId = c.DetectionId.Value.ToString(),
         AuthorId = c.AuthorId.Value.ToString(),
         WorkflowProfileId = c.WorkflowProfileId.ToString(),

@@ -14,8 +14,8 @@ public abstract class Entity<TId>
         Id = id;
     }
 
-    public sealed override bool Equals(object? obj) =>
+    public override sealed bool Equals(object? obj) =>
         obj is Entity<TId> other && other.GetType() == GetType() && Id.Equals(other.Id);
 
-    public sealed override int GetHashCode() => HashCode.Combine(GetType(), Id);
+    public override sealed int GetHashCode() => HashCode.Combine(GetType(), Id);
 }

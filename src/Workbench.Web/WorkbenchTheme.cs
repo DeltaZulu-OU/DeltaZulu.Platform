@@ -1,5 +1,4 @@
 using MudBlazor;
-using MudBlazor.Extensions;
 
 namespace Workbench.Web;
 
@@ -12,6 +11,7 @@ public static class WorkbenchTheme
 {
     // Brand primitives
     private const string Ink = "#131F2A";
+
     private const string Paper = "#F6F5F3";
     private const string Navy = "#122F42";
     private const string Slate = "#275668";
@@ -20,12 +20,14 @@ public static class WorkbenchTheme
 
     // Semantic
     private const string SurfacePrimary = "#FFFFFF";
+
     private const string SurfaceSecondary = "#EEF2F4";
     private const string TextSecondary = "#44515B";
     private const string TextMuted = "#5C6770";
 
     // Status
     private const string Success = "#1F7A53";
+
     private const string Warning = "#8A5A12";
     private const string Error = "#B73E3E";
 

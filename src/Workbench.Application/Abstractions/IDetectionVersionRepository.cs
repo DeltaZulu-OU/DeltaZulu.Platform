@@ -7,7 +7,10 @@ namespace Workbench.Application.Abstractions;
 public interface IDetectionVersionRepository
 {
     Task<DetectionVersion?> GetByIdAsync(VersionId id, CancellationToken ct = default);
+
     Task<IReadOnlyList<DetectionVersion>> ListByDetectionAsync(DetectionId detectionId, CancellationToken ct = default);
+
     Task<int> GetNextSequenceNumberAsync(DetectionId detectionId, CancellationToken ct = default);
+
     void Add(DetectionVersion version);
 }

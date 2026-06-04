@@ -43,23 +43,23 @@ internal sealed class DetectionVersionRepository(DapperSession session) : IDetec
                 @AuthorId, @WorkflowProfile, @SourceChangeRequestId, @LinkedIssueId,
                 @AcceptedAt, @ChangedSections, @GitCommitSha, @ChecksSummary, @ReviewSummary)
             """, new
-            {
-                Id = version.Id.Value.ToString(),
-                DetectionId = version.DetectionId.Value.ToString(),
-                version.SequenceNumber,
-                version.DisplayVersion,
-                version.Title,
-                version.ChangeSummary,
-                AuthorId = version.AuthorId.Value.ToString(),
-                WorkflowProfile = version.WorkflowProfile.ToString(),
-                SourceChangeRequestId = version.SourceChangeRequestId.Value.ToString(),
-                LinkedIssueId = version.LinkedIssueId?.Value.ToString(),
-                AcceptedAt = version.AcceptedAt.ToString("O"),
-                ChangedSections = string.Join(';', version.ChangedSections.Select(p => p.Value)),
-                version.GitCommitSha,
-                version.ChecksSummary,
-                version.ReviewSummary,
-            }, session.Transaction);
+        {
+            Id = version.Id.Value.ToString(),
+            DetectionId = version.DetectionId.Value.ToString(),
+            version.SequenceNumber,
+            version.DisplayVersion,
+            version.Title,
+            version.ChangeSummary,
+            AuthorId = version.AuthorId.Value.ToString(),
+            WorkflowProfile = version.WorkflowProfile.ToString(),
+            SourceChangeRequestId = version.SourceChangeRequestId.Value.ToString(),
+            LinkedIssueId = version.LinkedIssueId?.Value.ToString(),
+            AcceptedAt = version.AcceptedAt.ToString("O"),
+            ChangedSections = string.Join(';', version.ChangedSections.Select(p => p.Value)),
+            version.GitCommitSha,
+            version.ChecksSummary,
+            version.ReviewSummary,
+        }, session.Transaction);
     }
 
     internal sealed class VersionRow

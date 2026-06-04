@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Workbench.Application.Abstractions;
-using Workbench.Domain.Changes;
 using Workbench.Domain.Common;
 using Workbench.Domain.Identifiers;
 

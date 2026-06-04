@@ -3,8 +3,8 @@ using Workbench.Application;
 using Workbench.Application.Abstractions;
 using Workbench.Persistence;
 using Workbench.Validation;
-using Workbench.Workflow;
 using Workbench.Web.Components;
+using Workbench.Workflow;
 
 var builder = WebApplication.CreateBuilder(args);
 
