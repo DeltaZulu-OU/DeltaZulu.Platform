@@ -33,6 +33,13 @@ public interface IAcceptedContentStore
     Task<IReadOnlyList<ContentFile>> ListFilesAsync(string directoryPrefix, CancellationToken ct = default);
 
     /// <summary>
+    /// Lists all files under the given repository-relative directory prefix at a specific commit.
+    /// Returns an empty list if the commit or directory does not exist.
+    /// </summary>
+    Task<IReadOnlyList<ContentFile>> ListFilesAtCommitAsync(
+        string directoryPrefix, string commitSha, CancellationToken ct = default);
+
+    /// <summary>
     /// Returns true if the given path exists at HEAD.
     /// </summary>
     Task<bool> ExistsAsync(string repositoryPath, CancellationToken ct = default);

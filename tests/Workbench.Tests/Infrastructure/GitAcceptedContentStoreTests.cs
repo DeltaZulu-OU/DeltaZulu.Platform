@@ -27,6 +27,12 @@ public sealed class GitAcceptedContentStoreTests
         Assert.IsNotNull(file);
         Assert.AreEqual("SigninLogs | take 1", file.Content);
         Assert.IsFalse(file.IsBinary);
+
+        var rawBytes = await File.ReadAllBytesAsync(
+            Path.Combine(temp.Path, "detections", "test", "rule.kql"),
+            TestContext.CancellationToken);
+        var utf8Bom = new byte[] { 0xEF, 0xBB, 0xBF };
+        Assert.IsFalse(rawBytes.Length >= utf8Bom.Length && rawBytes.Take(utf8Bom.Length).SequenceEqual(utf8Bom));
     }
 
     [TestMethod]
@@ -120,6 +126,36 @@ public sealed class GitAcceptedContentStoreTests
 
         Assert.HasCount(2, files);
         Assert.IsTrue(files.All(file => file.RepositoryPath.StartsWith("detections/one/", StringComparison.Ordinal)));
+    }
+
+
+    [TestMethod]
+    public async Task ListFilesAtCommit_ReturnsHistoricalFilesUnderPrefix()
+    {
+        using var temp = new TemporaryDirectory();
+        var store = CreateStore(temp.Path);
+
+        var first = await store.CommitAsync(new CommitRequest(
+            "v1",
+            "Test User",
+            "test@example.com",
+            [
+                new ContentFile("detections/test/rule.kql", "version-1"),
+                new ContentFile("detections/test/detection.yaml", "metadata-v1"),
+                new ContentFile("detections/other/rule.kql", "other")
+            ]), TestContext.CancellationToken);
+
+        await store.CommitAsync(new CommitRequest(
+            "v2",
+            "Test User",
+            "test@example.com",
+            [new ContentFile("detections/test/rule.kql", "version-2")]), TestContext.CancellationToken);
+
+        var files = await store.ListFilesAtCommitAsync("detections/test", first.CommitSha, TestContext.CancellationToken);
+
+        Assert.HasCount(2, files);
+        Assert.IsTrue(files.All(file => file.RepositoryPath.StartsWith("detections/test/", StringComparison.Ordinal)));
+        Assert.AreEqual("version-1", files.Single(file => file.RepositoryPath.EndsWith("rule.kql", StringComparison.Ordinal)).Content);
     }
 
     [TestMethod]

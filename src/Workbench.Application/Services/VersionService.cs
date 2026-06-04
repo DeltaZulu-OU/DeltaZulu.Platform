@@ -9,6 +9,9 @@ namespace Workbench.Application.Services;
 /// </summary>
 public sealed class VersionService(IDetectionVersionRepository versions)
 {
+    public Task<DetectionVersion?> GetByIdAsync(VersionId versionId, CancellationToken ct = default)
+        => versions.GetByIdAsync(versionId, ct);
+
     public Task<IReadOnlyList<DetectionVersion>> ListByDetectionAsync(
         DetectionId detectionId, CancellationToken ct = default)
         => versions.ListByDetectionAsync(detectionId, ct);

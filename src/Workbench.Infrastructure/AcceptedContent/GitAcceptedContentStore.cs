@@ -75,6 +75,29 @@ public sealed class GitAcceptedContentStore : IAcceptedContentStore
     }
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<ContentFile>> ListFilesAtCommitAsync(
+        string directoryPrefix, string commitSha, CancellationToken ct = default)
+    {
+        var normalizedPrefix = NormalizeDirectoryPrefix(directoryPrefix);
+        ArgumentException.ThrowIfNullOrWhiteSpace(commitSha);
+        ct.ThrowIfCancellationRequested();
+
+        lock (_lock)
+        {
+            using var repository = OpenOrCreateRepository();
+            var commit = repository.Lookup<Commit>(commitSha);
+            if (commit is null)
+            {
+                return Task.FromResult<IReadOnlyList<ContentFile>>([]);
+            }
+
+            var files = new List<ContentFile>();
+            CollectFiles(commit.Tree, normalizedPrefix, files, currentPrefix: string.Empty);
+            return Task.FromResult<IReadOnlyList<ContentFile>>(files);
+        }
+    }
+
+    /// <inheritdoc />
     public Task<bool> ExistsAsync(string repositoryPath, CancellationToken ct = default)
     {
         var normalizedPath = NormalizeRepositoryPath(repositoryPath);
@@ -121,7 +144,7 @@ public sealed class GitAcceptedContentStore : IAcceptedContentStore
                 }
                 else
                 {
-                    File.WriteAllText(absolutePath, file.Content, Encoding.UTF8);
+                    File.WriteAllText(absolutePath, file.Content, StrictUtf8);
                 }
             }
 

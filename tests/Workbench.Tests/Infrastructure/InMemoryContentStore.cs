@@ -69,6 +69,25 @@ internal sealed class InMemoryContentStore : IAcceptedContentStore
         }
     }
 
+    public Task<IReadOnlyList<ContentFile>> ListFilesAtCommitAsync(
+        string directoryPrefix, string commitSha, CancellationToken ct = default)
+    {
+        lock (_lock)
+        {
+            if (!_commits.TryGetValue(commitSha, out var snapshot))
+            {
+                return Task.FromResult<IReadOnlyList<ContentFile>>([]);
+            }
+
+            var prefix = directoryPrefix.EndsWith('/') ? directoryPrefix : directoryPrefix + "/";
+            var result = snapshot
+                .Where(kv => kv.Key.StartsWith(prefix, StringComparison.Ordinal))
+                .Select(kv => kv.Value)
+                .ToList();
+            return Task.FromResult<IReadOnlyList<ContentFile>>(result);
+        }
+    }
+
     public Task<bool> ExistsAsync(string repositoryPath, CancellationToken ct = default)
     {
         lock (_lock)
