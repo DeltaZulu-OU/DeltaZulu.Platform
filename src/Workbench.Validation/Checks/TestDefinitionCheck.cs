@@ -5,8 +5,8 @@ using YamlDotNet.RepresentationModel;
 namespace Workbench.Validation.Checks;
 
 /// <summary>
-/// Validates that test definition files are parseable YAML with at least one test case
-/// defined. Does not execute tests — test execution is a future pipeline stage.
+/// Validates that test definition files are non-empty, parseable YAML. Does not execute
+/// tests — test execution is a future pipeline stage.
 /// </summary>
 public sealed class TestDefinitionCheck : ICheck
 {
@@ -31,6 +31,12 @@ public sealed class TestDefinitionCheck : ICheck
 
         foreach (var test in tests)
         {
+            if (string.IsNullOrWhiteSpace(test.Content))
+            {
+                errors.Add($"{test.LogicalPath}: empty YAML document.");
+                continue;
+            }
+
             try
             {
                 var yaml = new YamlStream();
