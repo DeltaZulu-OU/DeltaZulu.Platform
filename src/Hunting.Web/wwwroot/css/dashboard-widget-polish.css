@@ -124,7 +124,8 @@
     flex: 1 1 auto;
 }
 
-.dashboard-widget-query {
+.dashboard-widget-query,
+.dashboard-markdown-viewer {
     max-height: 180px;
     overflow: auto;
 }

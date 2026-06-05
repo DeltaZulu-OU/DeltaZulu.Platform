@@ -9,7 +9,7 @@ window.huntingDashboardWidgetEditor = (() => {
         return null;
     }
 
-    function initialize(elementId, value) {
+    function initialize(elementId, value, language) {
         const monaco = getMonaco();
         const element = document.getElementById(elementId);
 
@@ -21,7 +21,7 @@ window.huntingDashboardWidgetEditor = (() => {
 
         const editor = monaco.editor.create(element, {
             value: value || "",
-            language: "kql",
+            language: normalizeLanguage(language),
             theme: "deltazulu-dark",
             automaticLayout: true,
             minimap: { enabled: false },
@@ -38,6 +38,27 @@ window.huntingDashboardWidgetEditor = (() => {
         window.setTimeout(() => editor.layout(), 0);
         window.setTimeout(() => editor.focus(), 50);
 
+        return true;
+    }
+
+    function normalizeLanguage(language) {
+        return language === "markdown" ? "markdown" : "kql";
+    }
+
+    function setLanguage(elementId, language) {
+        const monaco = getMonaco();
+        const editor = editors.get(elementId);
+
+        if (!monaco || !editor) {
+            return false;
+        }
+
+        const model = editor.getModel();
+        if (!model) {
+            return false;
+        }
+
+        monaco.editor.setModelLanguage(model, normalizeLanguage(language));
         return true;
     }
 
@@ -70,6 +91,7 @@ window.huntingDashboardWidgetEditor = (() => {
 
     return {
         initialize,
+        setLanguage,
         getValue,
         setValue,
         layout,

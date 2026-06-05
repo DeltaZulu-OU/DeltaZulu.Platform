@@ -470,9 +470,6 @@
     border-bottom: 0;
 }
 
-.dashboard-markdown-placeholder {
-    color: var(--text-dim);
-}
 
 .dashboard-widget-drag-handle {
     cursor: grab;
@@ -607,4 +604,79 @@
     padding: 12px;
     font-size: 13px;
     line-height: 1.45;
+}
+
+.dashboard-markdown-viewer,
+.dashboard-markdown-empty {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    color: var(--text-main);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.dashboard-markdown-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+}
+
+.dashboard-markdown-viewer h1,
+.dashboard-markdown-viewer h2,
+.dashboard-markdown-viewer h3,
+.dashboard-markdown-viewer h4,
+.dashboard-markdown-viewer h5,
+.dashboard-markdown-viewer h6 {
+    margin: 0 0 8px;
+    color: var(--text-main);
+    line-height: 1.2;
+}
+
+.dashboard-markdown-viewer p,
+.dashboard-markdown-viewer ul,
+.dashboard-markdown-viewer blockquote,
+.dashboard-markdown-viewer pre {
+    margin: 0 0 10px;
+}
+
+.dashboard-markdown-viewer ul {
+    padding-left: 20px;
+}
+
+.dashboard-markdown-viewer a {
+    color: var(--accent);
+}
+
+.dashboard-markdown-viewer code,
+.dashboard-markdown-viewer pre {
+    font-family: var(--font-mono);
+}
+
+.dashboard-markdown-viewer code {
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 1px 4px;
+    background: var(--bg-input);
+}
+
+.dashboard-markdown-viewer pre {
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    background: var(--bg-input);
+}
+
+.dashboard-markdown-viewer pre code {
+    border: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.dashboard-markdown-viewer blockquote {
+    border-left: 3px solid var(--accent);
+    padding-left: 10px;
+    color: var(--text-dim);
 }

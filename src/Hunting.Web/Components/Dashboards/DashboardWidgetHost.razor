@@ -46,11 +46,9 @@
     </header>
 
     <section class="dashboard-widget-body">
-        @if (Widget.Kind != DashboardWidgetKind.Query)
+        @if (Widget.Kind == DashboardWidgetKind.Markdown)
         {
-            <div class="dashboard-markdown-placeholder">
-                <p>Markdown widget placeholder.</p>
-            </div>
+            <DashboardMarkdownWidget Markdown="@Widget.QueryText" />
         }
         else if (Result is null || Result.Status == DashboardWidgetRunStatus.NotRun)
         {

@@ -182,9 +182,9 @@ Implemented:
 - SQLite-backed dashboard repository
 - dashboard list/detail pages
 - dashboard settings editor
-- widget editor with Monaco-backed query text
+- widget editor with Monaco-backed query/markdown text and kind-aware language mode
 - query widgets executing through `DashboardWidgetRunner`
-- table and chart widget rendering
+- table, chart, and Markdig-backed markdown widget rendering
 - icon-only refresh split buttons for dashboard and widgets
 - JSON export helper
 - dashboard-level auto-refresh

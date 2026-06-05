@@ -25,6 +25,8 @@ Emitter decomposition is structural only and is now complete: `DuckDbQueryEmitte
 
 Translator decomposition is also structural only: public `KustoToRelational` remains the compatibility adapter over internal `KustoQueryTranslator`. Document analysis, management-command guarding, approved-table policy, Kusto SDK syntax adaptation, projection naming, function validation, and integer-literal reading are isolated internal services. This refactor does not change construct coverage or translation semantics.
 
+Dashboard markdown widgets are UI-only: Markdown content is rendered by the Web dashboard host with Markdig 1.2.0, Monaco switches the widget editor between `kql` and `markdown` language modes by widget kind, and this does not change construct coverage or KQL translation semantics.
+
 Editor metadata projection is structural only: the same Golden C# contracts used by SQL view generation now project into a UI-agnostic `EditorSchemaMetadata` snapshot for Monaco hosts. The snapshot also carries a C#-owned supported-language subset for Monaco keywords, operators, and render kinds. Monaco tokenizes and replaces supported hyphenated terms such as `sample-distinct` as one unit, preserves underscore terms such as `contains_cs`, and does not suggest deferred constructs such as `mv-expand`, `fork`, or `union`. This removes duplicated Web/JavaScript metadata ownership, does not expose Bronze/Silver objects as query targets, and does not change construct coverage or translation semantics.
  
 ---

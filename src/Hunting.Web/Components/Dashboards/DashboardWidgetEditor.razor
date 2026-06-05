@@ -36,7 +36,7 @@
 
                 <label>
                     <span>Kind</span>
-                    <select class="dashboard-editor-input" @bind="KindValue">
+                    <select class="dashboard-editor-input" value="@KindValue" @onchange="KindChangedAsync">
                         <option value="@DashboardWidgetKind.Query">Query</option>
                         <option value="@DashboardWidgetKind.Markdown">Markdown</option>
                     </select>
@@ -44,7 +44,7 @@
 
                 <div class="dashboard-editor-wide">
                     <div class="dashboard-editor-label-row">
-                        <span>Query text</span>
+                        <span>@EditorTextLabel</span>
                         @if (_monacoReady)
                         {
                             <span class="dashboard-editor-mode">Monaco</span>
@@ -104,13 +104,14 @@
     private string Title
         => Widget is null ? "Add widget" : "Edit widget";
 
+    private string EditorTextLabel
+        => _kind == DashboardWidgetKind.Markdown ? "Markdown content" : "Query text";
+
+    private string EditorLanguage
+        => _kind == DashboardWidgetKind.Markdown ? "markdown" : "kql";
+
     private string KindValue
-    {
-        get => _kind.ToString();
-        set => _kind = Enum.TryParse<DashboardWidgetKind>(value, out var parsed)
-            ? parsed
-            : DashboardWidgetKind.Query;
-    }
+        => _kind.ToString();
 
     public ValueTask DisposeAsync()
     {
@@ -184,7 +185,8 @@ ProcessEvent
             _monacoReady = await JS.InvokeAsync<bool>(
                 "huntingDashboardWidgetEditor.initialize",
                 _editorElementId,
-                _queryText);
+                _queryText,
+                EditorLanguage);
             _editorInitialized = _monacoReady;
         }
         catch (JSDisconnectedException ex)
@@ -221,6 +223,27 @@ ProcessEvent
         await RequestRenderAsync();
     }
 
+
+    private async Task KindChangedAsync(ChangeEventArgs args)
+    {
+        var nextKind = Enum.TryParse<DashboardWidgetKind>(args.Value?.ToString(), out var parsed)
+            ? parsed
+            : DashboardWidgetKind.Query;
+
+        if (_kind == nextKind)
+        {
+            return;
+        }
+
+        _queryText = await GetQueryTextAsync();
+        _kind = nextKind;
+
+        if (_editorInitialized)
+        {
+            await SetEditorLanguageAsync();
+        }
+    }
+
     private async Task SaveAsync()
     {
         _errors.Clear();
@@ -254,6 +277,50 @@ ProcessEvent
         }
 
         await SaveWidget.InvokeAsync(widget);
+    }
+
+
+    private async Task SetEditorLanguageAsync()
+    {
+        try
+        {
+            await JS.InvokeAsync<bool>(
+                "huntingDashboardWidgetEditor.setLanguage",
+                _editorElementId,
+                EditorLanguage);
+        }
+        catch (JSDisconnectedException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "setLanguage");
+            MarkEditorDisposed();
+        }
+        catch (TaskCanceledException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "setLanguage");
+            MarkEditorDisposed();
+        }
+        catch (OperationCanceledException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "setLanguage");
+            MarkEditorDisposed();
+        }
+        catch (JSException ex)
+        {
+            Logger.LogDebug(
+                ex,
+                "Dashboard widget editor JS interop setLanguage failed for {EditorElementId}; keeping the current editor language.",
+                _editorElementId);
+        }
+        catch (ObjectDisposedException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "setLanguage");
+            MarkEditorDisposed();
+        }
+        catch (InvalidOperationException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "setLanguage");
+            MarkEditorDisposed();
+        }
     }
 
     private async Task<string> GetQueryTextAsync()
