@@ -5,6 +5,7 @@ using Hunting.Application.SavedQueries;
 using Hunting.Application.Visualizations;
 using Hunting.Render.Directives;
 using Hunting.Render.Model;
+using Hunting.Web.Dashboards.Persistence;
 
 /// <summary>
 /// Application-facing service for saved visualization definitions.
@@ -15,6 +16,7 @@ public sealed class VisualizationLibraryService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    private readonly IDashboardRepository _dashboards;
     private readonly IRenderDirectiveParser _renderDirectiveParser;
     private readonly ISavedQueryRepository _savedQueries;
     private readonly IVisualizationRepository _visualizations;
@@ -22,11 +24,13 @@ public sealed class VisualizationLibraryService
     public VisualizationLibraryService(
         ISavedQueryRepository savedQueries,
         IVisualizationRepository visualizations,
-        IRenderDirectiveParser renderDirectiveParser)
+        IRenderDirectiveParser renderDirectiveParser,
+        IDashboardRepository dashboards)
     {
         _savedQueries = savedQueries ?? throw new ArgumentNullException(nameof(savedQueries));
         _visualizations = visualizations ?? throw new ArgumentNullException(nameof(visualizations));
         _renderDirectiveParser = renderDirectiveParser ?? throw new ArgumentNullException(nameof(renderDirectiveParser));
+        _dashboards = dashboards ?? throw new ArgumentNullException(nameof(dashboards));
     }
 
     public Task<IReadOnlyList<VisualizationRecord>> ListVisualizationsAsync(
@@ -146,12 +150,67 @@ public sealed class VisualizationLibraryService
         return record;
     }
 
-    public Task DeleteVisualizationAsync(
+    public async Task<IReadOnlyList<VisualizationDashboardUsage>> ListDashboardUsagesAsync(
+        string visualizationId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(visualizationId);
+
+        var usages = new List<VisualizationDashboardUsage>();
+        var summaries = await _dashboards.ListAsync(cancellationToken);
+        foreach (var summary in summaries)
+        {
+            var dashboard = await _dashboards.GetAsync(summary.Id, cancellationToken);
+            if (dashboard is null)
+            {
+                continue;
+            }
+
+            foreach (var widget in dashboard.Widgets)
+            {
+                if (!string.Equals(widget.VisualizationId, visualizationId, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                usages.Add(new VisualizationDashboardUsage(
+                    dashboard.Id,
+                    dashboard.Name,
+                    widget.Id,
+                    widget.Title));
+            }
+        }
+
+        return usages;
+    }
+
+    public async Task DeleteVisualizationAsync(
         string id,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        return _visualizations.DeleteAsync(id, cancellationToken);
+
+        var usages = await ListDashboardUsagesAsync(id, cancellationToken);
+        if (usages.Count > 0)
+        {
+            throw new InvalidOperationException(CreateInUseDeleteMessage(id, usages));
+        }
+
+        await _visualizations.DeleteAsync(id, cancellationToken);
+    }
+
+    private static string CreateInUseDeleteMessage(
+        string visualizationId,
+        IReadOnlyList<VisualizationDashboardUsage> usages)
+    {
+        var dashboardNames = usages
+            .Select(usage => string.IsNullOrWhiteSpace(usage.DashboardName) ? usage.DashboardId : usage.DashboardName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(3)
+            .ToArray();
+
+        var suffix = usages.Count > dashboardNames.Length ? "…" : string.Empty;
+        return $"Visualization '{visualizationId}' is used by {usages.Count} dashboard widget(s): {string.Join(", ", dashboardNames)}{suffix}. Remove it from dashboards before deleting it.";
     }
 
     private static VisualizationSpec ToVisualizationSpec(RenderDirective directive)
@@ -200,3 +259,9 @@ public sealed class VisualizationLibraryService
 public sealed record SavedVisualizationResult(
     SavedQueryRecord Query,
     VisualizationRecord Visualization);
+
+public sealed record VisualizationDashboardUsage(
+    string DashboardId,
+    string DashboardName,
+    string WidgetId,
+    string WidgetTitle);

@@ -5,6 +5,8 @@ using Hunting.Application.SavedQueries;
 using Hunting.Application.Visualizations;
 using Hunting.Render.Directives;
 using Hunting.Render.Model;
+using Hunting.Web.Dashboards;
+using Hunting.Web.Dashboards.Persistence;
 using Hunting.Web.Services;
 
 [TestClass]
@@ -213,10 +215,72 @@ public sealed class VisualizationLibraryServiceTests
         Assert.AreEqual("viz-1", result[0].Id);
     }
 
+    [TestMethod]
+    public async Task DeleteVisualizationAsync_UnusedVisualization_DeletesRecord()
+    {
+        var visualizations = new InMemoryVisualizationRepository();
+        var service = CreateService(new InMemorySavedQueryRepository(), visualizations);
+        var now = DateTime.UtcNow;
+        await visualizations.SaveAsync(new VisualizationRecord(
+            "viz-1",
+            "query-1",
+            "Visualization",
+            null,
+            nameof(RenderKind.Barchart),
+            "{}",
+            now,
+            now), TestContext.CancellationToken);
+
+        await service.DeleteVisualizationAsync("viz-1", TestContext.CancellationToken);
+
+        Assert.IsNull(await visualizations.GetAsync("viz-1", TestContext.CancellationToken));
+    }
+
+    [TestMethod]
+    public async Task DeleteVisualizationAsync_UsedByDashboard_ThrowsAndKeepsRecord()
+    {
+        var visualizations = new InMemoryVisualizationRepository();
+        var dashboards = new InMemoryDashboardRepository(new DashboardDefinition
+        {
+            Id = "dashboard-1",
+            Name = "SOC Overview",
+            Widgets =
+            [
+                new DashboardWidgetDefinition
+                {
+                    Id = "widget-1",
+                    Title = "Events by account",
+                    VisualizationId = "viz-1",
+                    QueryText = string.Empty
+                }
+            ],
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow
+        });
+        var service = CreateService(new InMemorySavedQueryRepository(), visualizations, dashboards);
+        var now = DateTime.UtcNow;
+        await visualizations.SaveAsync(new VisualizationRecord(
+            "viz-1",
+            "query-1",
+            "Visualization",
+            null,
+            nameof(RenderKind.Barchart),
+            "{}",
+            now,
+            now), TestContext.CancellationToken);
+
+        var ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            service.DeleteVisualizationAsync("viz-1", TestContext.CancellationToken));
+
+        Assert.Contains("SOC Overview", ex.Message);
+        Assert.IsNotNull(await visualizations.GetAsync("viz-1", TestContext.CancellationToken));
+    }
+
     private static VisualizationLibraryService CreateService(
         ISavedQueryRepository savedQueries,
-        IVisualizationRepository visualizations)
-        => new(savedQueries, visualizations, new RenderDirectiveParser());
+        IVisualizationRepository visualizations,
+        IDashboardRepository? dashboards = null)
+        => new(savedQueries, visualizations, new RenderDirectiveParser(), dashboards ?? new InMemoryDashboardRepository());
 
     private sealed class InMemorySavedQueryRepository : ISavedQueryRepository
     {
@@ -289,6 +353,51 @@ public sealed class VisualizationLibraryServiceTests
         public Task SaveAsync(VisualizationRecord visualization, CancellationToken cancellationToken = default)
         {
             _records[visualization.Id] = visualization;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class InMemoryDashboardRepository : IDashboardRepository
+    {
+        private readonly Dictionary<string, DashboardDefinition> _dashboards = new(StringComparer.OrdinalIgnoreCase);
+
+        public InMemoryDashboardRepository(params DashboardDefinition[] dashboards)
+        {
+            foreach (var dashboard in dashboards)
+            {
+                _dashboards[dashboard.Id] = dashboard;
+            }
+        }
+
+        public Task DeleteAsync(string id, CancellationToken ct = default)
+        {
+            _dashboards.Remove(id);
+            return Task.CompletedTask;
+        }
+
+        public Task<DashboardDefinition?> GetAsync(string id, CancellationToken ct = default)
+        {
+            _dashboards.TryGetValue(id, out var dashboard);
+            return Task.FromResult(dashboard);
+        }
+
+        public Task<IReadOnlyList<DashboardSummary>> ListAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<DashboardSummary>>(
+                _dashboards.Values
+                    .Select(dashboard => new DashboardSummary
+                    {
+                        Id = dashboard.Id,
+                        Name = dashboard.Name,
+                        Description = dashboard.Description,
+                        WidgetCount = dashboard.Widgets.Count,
+                        CreatedAtUtc = dashboard.CreatedAtUtc,
+                        UpdatedAtUtc = dashboard.UpdatedAtUtc
+                    })
+                    .ToArray());
+
+        public Task SaveAsync(DashboardDefinition dashboard, CancellationToken ct = default)
+        {
+            _dashboards[dashboard.Id] = dashboard;
             return Task.CompletedTask;
         }
     }

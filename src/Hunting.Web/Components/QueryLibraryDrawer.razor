@@ -337,9 +337,16 @@
 
     private async Task DeleteVisualizationAsync(string id)
     {
-        await VisualizationLibrary.DeleteVisualizationAsync(id);
-        _message = "Saved visualization deleted.";
-        await RefreshAsync();
+        try
+        {
+            await VisualizationLibrary.DeleteVisualizationAsync(id);
+            _message = "Saved visualization deleted.";
+            await RefreshAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _message = ex.Message;
+        }
     }
 
     private static string FormatTimestamp(DateTime value)
