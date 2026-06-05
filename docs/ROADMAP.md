@@ -308,7 +308,7 @@ Exit criteria:
 Deliverables:
 
 - Direct unit tests for `QuerySyntaxCheck`, `TestDefinitionCheck`, and note checks.
-- Minimal unit test/assertion runner distinct from YAML parse.
+- Minimal unit test/assertion runner distinct from YAML parse (first static query assertion slice is implemented; fixture-backed execution remains future work).
 - Stronger fixture load checks.
 - Clear details JSON/log excerpts for every check.
 - Optional real parser integration remains post-POC unless needed for correctness.
