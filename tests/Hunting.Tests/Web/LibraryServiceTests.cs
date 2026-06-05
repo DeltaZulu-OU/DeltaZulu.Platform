@@ -310,12 +310,14 @@ public sealed class LibraryServiceTests
         public Task<IReadOnlyList<DashboardSummary>> ListAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<DashboardSummary>>(
                 _dashboards.Values
-                    .Select(dashboard => new DashboardSummary(
-                        dashboard.Id,
-                        dashboard.Name,
-                        dashboard.Description,
-                        dashboard.Widgets.Count,
-                        dashboard.UpdatedAtUtc))
+                    .Select(dashboard => new DashboardSummary
+                    {
+                        Id = dashboard.Id,
+                        Name = dashboard.Name,
+                        Description = dashboard.Description,
+                        WidgetCount = dashboard.Widgets.Count,
+                        UpdatedAtUtc = dashboard.UpdatedAtUtc
+                    })
                     .OrderByDescending(summary => summary.UpdatedAtUtc)
                     .ToArray());
 
