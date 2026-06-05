@@ -12,6 +12,8 @@ using Hunting.Web.Services;
 [TestClass]
 public sealed class VisualizationLibraryServiceTests
 {
+    private static readonly JsonSerializerOptions opt = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+
     [TestMethod]
     public async Task SaveVisualizationAsync_PersistsVisualizationForExistingSavedQuery()
     {
@@ -55,7 +57,7 @@ public sealed class VisualizationLibraryServiceTests
 
         var spec = JsonSerializer.Deserialize<VisualizationSpec>(
             record.SpecJson,
-            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            opt);
 
         Assert.IsNotNull(spec);
         Assert.AreEqual("Launches by account", spec.Title);
@@ -96,7 +98,7 @@ public sealed class VisualizationLibraryServiceTests
 
         var spec = JsonSerializer.Deserialize<VisualizationSpec>(
             result.Visualization.SpecJson,
-            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            opt);
 
         Assert.IsNotNull(spec);
         Assert.AreEqual("Events by account", spec.Title);
@@ -139,7 +141,7 @@ public sealed class VisualizationLibraryServiceTests
                     YColumns = ["Count"],
                     IsStacked = true
                 },
-                new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+                opt),
             now,
             now), TestContext.CancellationToken);
 
@@ -220,7 +222,7 @@ public sealed class VisualizationLibraryServiceTests
             TestContext.CancellationToken);
 
         Assert.AreEqual(createdAt, updated.CreatedAt);
-        Assert.IsTrue(updated.UpdatedAt >= createdAt);
+        Assert.IsGreaterThanOrEqualTo(createdAt, updated.UpdatedAt);
         Assert.AreEqual("Updated", updated.Name);
         Assert.AreEqual(nameof(RenderKind.Piechart), updated.Kind);
     }
