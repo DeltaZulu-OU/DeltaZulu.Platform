@@ -70,6 +70,9 @@ This repository uses the following documentation files as development constraint
 | [ARCHITECTURE.md](ARCHITECTURE.md) | High-level architecture, module boundaries, data ownership, workflow model, and runtime shape. |
 | [ROADMAP.md](ROADMAP.md) | Revised POC acceptance criteria, implementation phases, and out-of-scope boundaries. |
 | [GAP_ANALYSIS.md](GAP_ANALYSIS.md) | Current implementation gaps and priority ordering against the docs and ADRs. |
+| [USER_STORIES.md](USER_STORIES.md) | User-centered capability stories for destructuring the tool and supporting gap analysis. |
+| [UI_ACTIVITY_DIAGRAM.md](UI_ACTIVITY_DIAGRAM.md) | UI activity diagram and navigation implications derived from the user stories. |
+| [UX_REDESIGN_ANALYSIS.md](UX_REDESIGN_ANALYSIS.md) | UX bottleneck analysis and interaction redesign guidance for smoother user flows. |
 | [adr/](adr/) | Architecture Decision Records. Each ADR captures a design decision that should not be silently reversed. |
 
 ## Architecture decisions

@@ -9,6 +9,9 @@ This gap analysis was refreshed after re-reading the documentation set:
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [ROADMAP.md](ROADMAP.md)
 - [AGENT.md](AGENT.md)
+- [USER_STORIES.md](USER_STORIES.md)
+- [UI_ACTIVITY_DIAGRAM.md](UI_ACTIVITY_DIAGRAM.md)
+- [UX_REDESIGN_ANALYSIS.md](UX_REDESIGN_ANALYSIS.md)
 - All ADRs under [adr/](adr/)
 
 ADRs remain binding constraints. Later ADRs supersede earlier roadmap or architecture text where they conflict. In particular, [ADR-0014](adr/0014-delegate-case-management-to-external-systems.md) supersedes the earlier built-in case-management model from ADR-0007 and older roadmap language.
@@ -35,6 +38,7 @@ ADRs remain binding constraints. Later ADRs supersede earlier roadmap or archite
 | P1 | Git-backed accepted content store needs operational hardening beyond local POC durability. | The web host now uses a LibGit2Sharp-backed local repository, but production-grade repository initialization, repair/reconciliation, and remote synchronization are not yet in scope. | Keep the local Git store wired for the POC, then add reconciliation/outbox and explicit remote-sync decisions in later slices. |
 | P1 | Version compare and restore-as-new-change UI need follow-on hardening. | User-facing version actions are now present, but still need richer diff display, reconciliation handling, and end-to-end UX testing before POC completion. | Keep the current compare/restore path, then add richer diffs and repair paths in later slices. |
 | P1 | Version/check/review/settings pages still need end-to-end hardening. | The nav targets now exist and settings now includes a merge-reconciliation operator surface, but the pages still need richer workflow actions and demo-path validation before POC completion. | Complete the page actions or hide capabilities until each workflow is implemented. |
+| P1 | UX flow is object-first instead of task-first. | Users must understand separate pages for issues, changes, checks, reviews, and versions before they can complete one detection-content task. | Redesign Home as an action queue, consolidate issues/changes into a Work area, make Change Detail the primary workspace, and move infrastructure repair to operator Settings. |
 | P1 | Controlled-review required checks need broader policy coverage. | Required check names are now explicit for controlled review, but future profiles and any new required checks need the same missing/skipped enforcement. | Extend required-check policy as new profiles and check types become POC scope. |
 | P1 | File-level diff service is basic. | ROADMAP Phase 4 and version actions require compare/diff support; the current service reports file status and content snapshots, but not inline hunks. | Add domain-friendly inline diff hunks over accepted version content. |
 | P2 | Unit test/assertion check is intentionally minimal. | The check can now execute simple static query assertions from test-definition YAML, but it still does not run fixtures through a detection runtime. | Add fixture-backed assertion execution or document the static assertion limit for the POC. |
@@ -44,13 +48,28 @@ ADRs remain binding constraints. Later ADRs supersede earlier roadmap or archite
 | P2 | Persistence schema is narrower than architecture’s eventual database-owned list. | Users/comments/workflow projections/activity events/locks are either missing or intentionally deferred. | Clarify POC schema vs future schema and add tables as slices require them. |
 | P3 | Documentation was inconsistent about internal case management. | ROADMAP/ARCHITECTURE/AGENTS text still referenced `CaseDetails`, tasks, observables, and case outcomes even though ADR-0014 removed built-in case management. | Documentation now treats cases as issue types with optional external case references. |
 
-## 3. Revised POC definition
+## 3. User-story destructuring lens
+
+Use [USER_STORIES.md](USER_STORIES.md), [UI_ACTIVITY_DIAGRAM.md](UI_ACTIVITY_DIAGRAM.md), and [UX_REDESIGN_ANALYSIS.md](UX_REDESIGN_ANALYSIS.md) as the primary lens for deciding whether a visible capability should stay, be simplified, be moved to operator-only settings, or be deferred. Each current screen or feature should be tagged as one of the following:
+
+| Tag | Gap-analysis decision |
+|---|---|
+| Core | Keep if it directly supports creating, validating, reviewing, accepting, versioning, comparing, or restoring detection content. |
+| Context | Keep lightweight if it explains why work exists or links to an external case. |
+| Governance | Keep visible as statuses, blockers, checks, and approvals; hide workflow-engine details. |
+| Infrastructure | Hide from normal users and expose only in operator/settings views when needed. |
+| Future | Defer or explicitly mark as not part of the POC loop. |
+| Drift | Remove or redesign if it turns the workbench into a Git UI, SIEM runtime, workflow designer, or case-management system. |
+
+The minimum coherent POC story set is: home queue, create issue, open change, edit detection package content, run/enforce checks, review controlled changes, accept into version history, compare/restore versions, and expose operator-only reconciliation visibility. The UI activity should route users through that loop from Home rather than presenting each implementation object as an equal top-level destination.
+
+## 4. Revised POC definition
 
 The POC is complete when this statement is true:
 
 > A user can manage detection work through issues, external-case-linked issues, and database-owned changes; edit metadata/query/tests/fixtures as database draft content; run predefined checks; enforce controlled-review gates; merge accepted content into a real Git-backed canonical content store; and view, compare, and restore user-friendly versions without seeing Git, workflow-engine internals, or SIEM runtime concepts.
 
-## 4. POC completion checklist
+## 5. POC completion checklist
 
 | Area | Current status | Completion requirement |
 |---|---|---|
@@ -63,4 +82,3 @@ The POC is complete when this statement is true:
 | UI | Partial | Nav routes, basic version/check/review/settings views, a POC user switcher, and a settings-based merge-reconciliation operator surface exist; deepen workflow actions and end-to-end UX coverage. |
 | Cases | Aligned after docs refresh | Keep cases as `IssueType.Case` with optional `ExternalCaseRef`; no internal case-management scope in POC. |
 | Workflow engine | Good for POC | Keep domain state canonical; Elsa remains optional/toggled. |
-
