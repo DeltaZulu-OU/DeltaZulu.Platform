@@ -1,9 +1,8 @@
 @page "/library"
 @namespace Hunting.Web.Pages
+@using Hunting.Web.Library
 @using Hunting.Web.Services
-@inject LibraryService LibraryItems
-@inject EditorBus EditorBus
-@inject NavigationManager Navigation
+@inject LibraryPageController Controller
 
 <div class="dashboard-list-page">
     <header class="dashboard-page-header dashboard-list-header">
@@ -16,82 +15,82 @@
             <label class="dashboard-search" aria-label="Search library">
                 <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" />
                 <input placeholder="Search library"
-                       value="@_searchText"
+                       value="@State.SearchText"
                        @oninput="OnSearchChanged" />
             </label>
 
             <div class="dashboard-list-actions-primary">
-                <button class="hunt-btn dashboard-primary-action" @onclick="CreateSavedSearch">New saved search</button>
-                <button class="hunt-btn" @onclick="CreateVisualization">New visualization</button>
-                <button class="hunt-btn" @onclick="CreateDashboard">New dashboard</button>
+                <button class="hunt-btn dashboard-primary-action" @onclick="Controller.CreateSavedSearch">New saved search</button>
+                <button class="hunt-btn" @onclick="Controller.CreateVisualization">New visualization</button>
+                <button class="hunt-btn" @onclick="Controller.CreateDashboard">New dashboard</button>
             </div>
         </div>
     </header>
 
-    @if (!string.IsNullOrWhiteSpace(_error))
+    @if (State.HasError)
     {
-        <div class="dashboard-error">@_error</div>
+        <div class="dashboard-error">@State.Error</div>
     }
 
-    @if (!string.IsNullOrWhiteSpace(_message))
+    @if (State.HasMessage)
     {
-        <div class="hunt-query-library-message">@_message</div>
+        <div class="hunt-query-library-message">@State.Message</div>
     }
 
     <section class="dashboard-list-panel" aria-label="Library panel">
         <div class="dashboard-list-panel-header">
             <div>
-                <h2>@FilterTitle</h2>
-                <p>@RangeText</p>
+                <h2>@State.FilterTitle</h2>
+                <p>@State.RangeText</p>
             </div>
 
             <div class="dashboard-list-actions-primary">
-                <button class="@FilterButtonClass(null)" @onclick="() => SetFilter(null)">All</button>
-                <button class="@FilterButtonClass(LibraryItemKind.SavedSearch)" @onclick="() => SetFilter(LibraryItemKind.SavedSearch)">Saved searches</button>
-                <button class="@FilterButtonClass(LibraryItemKind.Visualization)" @onclick="() => SetFilter(LibraryItemKind.Visualization)">Visualizations</button>
-                <button class="@FilterButtonClass(LibraryItemKind.Dashboard)" @onclick="() => SetFilter(LibraryItemKind.Dashboard)">Dashboards</button>
+                <button class="@Controller.FilterButtonClass(null)" @onclick="() => Controller.SetFilter(null)">All</button>
+                <button class="@Controller.FilterButtonClass(LibraryItemKind.SavedSearch)" @onclick="() => Controller.SetFilter(LibraryItemKind.SavedSearch)">Saved searches</button>
+                <button class="@Controller.FilterButtonClass(LibraryItemKind.Visualization)" @onclick="() => Controller.SetFilter(LibraryItemKind.Visualization)">Visualizations</button>
+                <button class="@Controller.FilterButtonClass(LibraryItemKind.Dashboard)" @onclick="() => Controller.SetFilter(LibraryItemKind.Dashboard)">Dashboards</button>
             </div>
         </div>
 
-        @if (!_loading && FilteredItems.Count > PageSize)
+        @if (State.HasPagination)
         {
             <nav class="dashboard-pagination" aria-label="Library pages">
                 <button class="hunt-btn dashboard-page-button"
-                        disabled="@(_page <= 1)"
-                        @onclick="PreviousPage">
+                        disabled="@(State.Page <= 1)"
+                        @onclick="Controller.PreviousPage">
                     Previous
                 </button>
-                <span>Page @_page of @TotalPages</span>
+                <span>Page @State.Page of @State.TotalPages</span>
                 <button class="hunt-btn dashboard-page-button"
-                        disabled="@(_page >= TotalPages)"
-                        @onclick="NextPage">
+                        disabled="@(State.Page >= State.TotalPages)"
+                        @onclick="Controller.NextPage">
                     Next
                 </button>
             </nav>
         }
 
-        @if (_loading)
+        @if (State.Loading)
         {
             <section class="dashboard-empty-state">
                 <h2>Loading library…</h2>
                 <p>Reading saved searches, visualizations, and dashboards from local application persistence.</p>
             </section>
         }
-        else if (FilteredItems.Count == 0)
+        else if (State.HasNoMatches)
         {
             <section class="dashboard-empty-state dashboard-list-empty">
                 <h2>No matching library items</h2>
                 <p>Create a new item or adjust the search/filter.</p>
                 <div class="dashboard-empty-actions">
-                    <button class="hunt-btn" @onclick="ClearSearch">Clear search</button>
-                    <button class="hunt-btn dashboard-primary-action" @onclick="CreateSavedSearch">Create saved search</button>
+                    <button class="hunt-btn" @onclick="Controller.ClearSearch">Clear search</button>
+                    <button class="hunt-btn dashboard-primary-action" @onclick="Controller.CreateSavedSearch">Create saved search</button>
                 </div>
             </section>
         }
         else
         {
             <div class="dashboard-list" aria-label="Library items">
-                @foreach (var item in PagedItems)
+                @foreach (var item in State.PagedItems)
                 {
                     <article class="dashboard-list-card">
                         <div class="dashboard-card-main">
@@ -111,7 +110,7 @@
                         <dl class="dashboard-list-meta">
                             <div>
                                 <dt>Type</dt>
-                                <dd>@KindLabel(item.Kind)</dd>
+                                <dd>@LibraryLabels.KindLabel(item.Kind)</dd>
                             </div>
                             <div>
                                 <dt>Source</dt>
@@ -119,7 +118,7 @@
                             </div>
                             <div>
                                 <dt>Status</dt>
-                                <dd>@StatusLabel(item.Status)</dd>
+                                <dd>@LibraryLabels.StatusLabel(item.Status)</dd>
                             </div>
                             <div>
                                 <dt>Updated</dt>
@@ -128,12 +127,12 @@
                         </dl>
 
                         <div class="dashboard-card-actions">
-                            <button class="hunt-btn dashboard-primary-action" @onclick="() => OpenItemAsync(item)">Open</button>
-                            <button class="@DeleteButtonClass(item)"
-                                    disabled="@_deleting"
-                                    title="@DeleteButtonTitle(item)"
-                                    @onclick="() => DeleteItemAsync(item)">
-                                @DeleteButtonText(item)
+                            <button class="hunt-btn dashboard-primary-action" @onclick="() => Controller.OpenItemAsync(item)">Open</button>
+                            <button class="@Controller.DeleteButtonClass(item)"
+                                    disabled="@State.Deleting"
+                                    title="@Controller.DeleteButtonTitle(item)"
+                                    @onclick="() => Controller.DeleteItemAsync(item)">
+                                @Controller.DeleteButtonText(item)
                             </button>
                         </div>
                     </article>
@@ -144,333 +143,15 @@
 </div>
 
 @code {
-    private const int PageSize = 12;
-
-    private readonly List<LibraryItem> _items = [];
-    private string _searchText = string.Empty;
-    private string? _error;
-    private string? _message;
-    private string? _pendingDeleteId;
-    private LibraryItemKind? _pendingDeleteKind;
-    private bool _loading = true;
-    private bool _deleting;
-    private int _page = 1;
-    private LibraryItemKind? _kindFilter;
-
-    private IReadOnlyList<LibraryItem> FilteredItems
-    {
-        get
-        {
-            IEnumerable<LibraryItem> query = _items;
-
-            if (_kindFilter is not null)
-            {
-                query = query.Where(item => item.Kind == _kindFilter);
-            }
-
-            if (!string.IsNullOrWhiteSpace(_searchText))
-            {
-                query = query.Where(item =>
-                    ContainsSearchText(item.Name)
-                    || ContainsSearchText(item.Description)
-                    || ContainsSearchText(item.DependencyLabel)
-                    || ContainsSearchText(KindLabel(item.Kind)));
-            }
-
-            return query.ToArray();
-        }
-    }
-
-    private IReadOnlyList<LibraryItem> PagedItems
-        => FilteredItems
-            .Skip((_page - 1) * PageSize)
-            .Take(PageSize)
-            .ToArray();
-
-    private int TotalPages
-        => Math.Max(1, (int)Math.Ceiling(FilteredItems.Count / (double)PageSize));
-
-    private string FilterTitle
-        => _kindFilter switch
-        {
-            LibraryItemKind.SavedSearch => "Saved searches",
-            LibraryItemKind.Visualization => "Visualizations",
-            LibraryItemKind.Dashboard => "Dashboards",
-            _ => "All library items"
-        };
-
-    private string RangeText
-    {
-        get
-        {
-            if (_loading)
-            {
-                return "Loading library items.";
-            }
-
-            var filteredCount = FilteredItems.Count;
-            if (filteredCount == 0)
-            {
-                return _items.Count == 0
-                    ? "No library items yet."
-                    : "No library items match the current filter.";
-            }
-
-            var first = ((_page - 1) * PageSize) + 1;
-            var last = Math.Min(filteredCount, _page * PageSize);
-            var suffix = filteredCount == _items.Count
-                ? $"{filteredCount} item(s)"
-                : $"{filteredCount} of {_items.Count} item(s)";
-
-            return $"Showing {first}-{last} of {suffix}.";
-        }
-    }
+    private LibraryPageState State => Controller.State;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAsync();
+        await Controller.LoadAsync();
     }
-
-    private async Task LoadAsync()
-    {
-        _loading = true;
-        _error = null;
-
-        try
-        {
-            var items = await LibraryItems.ListAsync();
-            _items.Clear();
-            _items.AddRange(items);
-            ClampPage();
-        }
-        catch (Exception ex)
-        {
-            _error = $"Could not load library. {ex.Message}";
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
-
-    private async Task OpenItemAsync(LibraryItem item)
-    {
-        ResetPendingDelete();
-
-        switch (item.Kind)
-        {
-            case LibraryItemKind.Dashboard:
-                Navigation.NavigateTo($"/dashboards/{item.Id}");
-                return;
-
-            case LibraryItemKind.SavedSearch:
-                await OpenSavedSearchAsync(item.Id);
-                return;
-
-            case LibraryItemKind.Visualization:
-                await OpenVisualizationAsync(item.Id);
-                return;
-        }
-    }
-
-    private async Task DeleteItemAsync(LibraryItem item)
-    {
-        if (!IsDeletePendingFor(item))
-        {
-            _error = null;
-            _pendingDeleteId = item.Id;
-            _pendingDeleteKind = item.Kind;
-            _message = $"Click Confirm delete to delete {KindLabel(item.Kind).ToLowerInvariant()} '{item.Name}'.";
-            return;
-        }
-
-        _deleting = true;
-        _error = null;
-        _message = null;
-
-        try
-        {
-            await LibraryItems.DeleteAsync(item);
-            _message = $"{KindLabel(item.Kind)} '{item.Name}' deleted.";
-            ResetPendingDelete();
-            await LoadAsync();
-        }
-        catch (InvalidOperationException ex)
-        {
-            _message = ex.Message;
-            ResetPendingDelete();
-        }
-        catch (Exception ex)
-        {
-            _error = $"Could not delete {KindLabel(item.Kind).ToLowerInvariant()} '{item.Name}'. {ex.Message}";
-            ResetPendingDelete();
-        }
-        finally
-        {
-            _deleting = false;
-        }
-    }
-
-    private async Task OpenSavedSearchAsync(string id)
-    {
-        var queryText = await LibraryItems.LoadSavedSearchTextAsync(id);
-        if (string.IsNullOrWhiteSpace(queryText))
-        {
-            _error = "Saved search could not be opened because its query text was not found.";
-            return;
-        }
-
-        EditorBus.RequestInsert(queryText);
-        Navigation.NavigateTo("/threat-hunting");
-    }
-
-    private async Task OpenVisualizationAsync(string id)
-    {
-        var queryText = await LibraryItems.LoadVisualizationTextAsync(id);
-        if (string.IsNullOrWhiteSpace(queryText))
-        {
-            _error = "Visualization could not be opened because its saved query or visualization definition was not found.";
-            return;
-        }
-
-        EditorBus.RequestInsert(queryText);
-        Navigation.NavigateTo("/threat-hunting");
-    }
-
-    private void CreateSavedSearch()
-    {
-        ResetPendingDelete();
-        EditorBus.RequestInsert(
-            """
-            ProcessEvent
-            | where FileName has "powershell"
-            | project Timestamp, DeviceName, AccountName, ProcessCommandLine
-            | take 50
-            """);
-        Navigation.NavigateTo("/threat-hunting");
-    }
-
-    private void CreateVisualization()
-    {
-        ResetPendingDelete();
-        EditorBus.RequestInsert(
-            """
-            ProcessEvent
-            | summarize Count = count() by AccountName
-            | render barchart xcolumn=AccountName ycolumns=Count title='Events by account'
-            """);
-        Navigation.NavigateTo("/threat-hunting");
-    }
-
-    private void CreateDashboard()
-    {
-        ResetPendingDelete();
-        Navigation.NavigateTo("/dashboards");
-    }
-
-    private void SetFilter(LibraryItemKind? kind)
-    {
-        _kindFilter = kind;
-        _page = 1;
-        ResetPendingDelete();
-    }
-
-    private string FilterButtonClass(LibraryItemKind? kind)
-        => _kindFilter == kind
-            ? "hunt-btn dashboard-primary-action"
-            : "hunt-btn";
 
     private void OnSearchChanged(ChangeEventArgs args)
     {
-        _searchText = args.Value?.ToString() ?? string.Empty;
-        _page = 1;
-        ResetPendingDelete();
+        Controller.SetSearchText(args.Value?.ToString());
     }
-
-    private void ClearSearch()
-    {
-        _searchText = string.Empty;
-        _kindFilter = null;
-        _page = 1;
-        ResetPendingDelete();
-    }
-
-    private void PreviousPage()
-    {
-        if (_page <= 1)
-        {
-            return;
-        }
-
-        _page--;
-        ResetPendingDelete();
-    }
-
-    private void NextPage()
-    {
-        if (_page >= TotalPages)
-        {
-            return;
-        }
-
-        _page++;
-        ResetPendingDelete();
-    }
-
-    private void ClampPage()
-    {
-        if (_page > TotalPages)
-        {
-            _page = TotalPages;
-        }
-
-        if (_page < 1)
-        {
-            _page = 1;
-        }
-    }
-
-    private bool IsDeletePendingFor(LibraryItem item)
-        => string.Equals(_pendingDeleteId, item.Id, StringComparison.OrdinalIgnoreCase)
-            && _pendingDeleteKind == item.Kind;
-
-    private string DeleteButtonText(LibraryItem item)
-        => IsDeletePendingFor(item) ? "Confirm delete" : "Delete";
-
-    private string DeleteButtonTitle(LibraryItem item)
-        => IsDeletePendingFor(item)
-            ? $"Confirm deleting {KindLabel(item.Kind).ToLowerInvariant()} '{item.Name}'"
-            : $"Delete {KindLabel(item.Kind).ToLowerInvariant()} '{item.Name}'";
-
-    private string DeleteButtonClass(LibraryItem item)
-        => IsDeletePendingFor(item)
-            ? "hunt-btn dashboard-primary-action"
-            : "hunt-btn hunt-btn-clear";
-
-    private void ResetPendingDelete()
-    {
-        _pendingDeleteId = null;
-        _pendingDeleteKind = null;
-    }
-
-    private bool ContainsSearchText(string? value)
-        => !string.IsNullOrWhiteSpace(value)
-            && value.Contains(_searchText, StringComparison.OrdinalIgnoreCase);
-
-    private static string KindLabel(LibraryItemKind kind)
-        => kind switch
-        {
-            LibraryItemKind.SavedSearch => "Saved search",
-            LibraryItemKind.Visualization => "Visualization",
-            LibraryItemKind.Dashboard => "Dashboard",
-            _ => kind.ToString()
-        };
-
-    private static string StatusLabel(LibraryItemStatus status)
-        => status switch
-        {
-            LibraryItemStatus.Ok => "OK",
-            LibraryItemStatus.MissingDependency => "Missing dependency",
-            _ => status.ToString()
-        };
 }

@@ -3,6 +3,7 @@ using Hunting.Data;
 using Hunting.Data.Persistence;
 using Hunting.Schema;
 using Hunting.Web.Dashboards.DependencyInjection;
+using Hunting.Web.Library;
 using Hunting.Web.Rendering;
 using Hunting.Web.Services;
 using MudBlazor.Services;
@@ -58,6 +59,7 @@ builder.Services.AddScoped<UserSettingsState>();
 builder.Services.AddScoped<QueryLibraryService>();
 builder.Services.AddScoped<VisualizationLibraryService>();
 builder.Services.AddScoped<LibraryService>();
+builder.Services.AddScoped<LibraryPageController>();
 
 var app = builder.Build();
 
