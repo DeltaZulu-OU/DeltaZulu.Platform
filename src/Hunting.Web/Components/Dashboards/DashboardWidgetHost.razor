@@ -14,7 +14,7 @@
     <header class="dashboard-widget-header">
         <div>
             <h2>@Widget.Title</h2>
-            <p>@Widget.Kind</p>
+            <p>@SourceLabel</p>
         </div>
         <div class="dashboard-widget-actions">
             <div class="dashboard-widget-split" role="group" aria-label="@WidgetActionLabel">
@@ -23,8 +23,8 @@
                            Size="Size.Small"
                            Disabled="@(!CanRunWidget)"
                            OnClick="RunAsync"
-                           title="Refresh widget"
-                           aria-label="Refresh widget">
+                           title="@RefreshTitle"
+                           aria-label="@RefreshTitle">
                     <MudIcon Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" />
                 </MudButton>
                 <MudMenu Class="dashboard-widget-menu"
@@ -112,8 +112,29 @@
 
     private bool CanRunWidget
         => Widget.Kind == DashboardWidgetKind.Query
-            && !string.IsNullOrWhiteSpace(Widget.QueryText)
+            && HasExecutableSource
             && Result?.Status != DashboardWidgetRunStatus.Running;
+
+    private bool HasExecutableSource
+        => !string.IsNullOrWhiteSpace(Widget.QueryText)
+            || !string.IsNullOrWhiteSpace(Widget.VisualizationId);
+
+    private bool UsesSavedVisualization
+        => !string.IsNullOrWhiteSpace(Widget.VisualizationId);
+
+    private string SourceLabel
+        => Widget.Kind switch
+        {
+            DashboardWidgetKind.Markdown => "Markdown",
+            DashboardWidgetKind.Query when UsesSavedVisualization => $"Saved visualization · {ShortId(Widget.VisualizationId)}",
+            DashboardWidgetKind.Query => "Query text",
+            _ => Widget.Kind.ToString()
+        };
+
+    private string RefreshTitle
+        => CanRunWidget
+            ? "Refresh widget"
+            : "Widget has no executable query or visualization source.";
 
     private string WidgetClass
         => IsEditMode
@@ -150,4 +171,14 @@
         => DeleteWidget.HasDelegate
             ? DeleteWidget.InvokeAsync(Widget)
             : Task.CompletedTask;
+
+    private static string ShortId(string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return "(none)";
+        }
+
+        return id.Length <= 8 ? id : id[..8];
+    }
 }
