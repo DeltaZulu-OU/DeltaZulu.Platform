@@ -13,9 +13,9 @@ Do not start by building a workflow designer, SIEM runtime, publisher, full SOAR
 
 The refreshed gap analysis is maintained in [GAP_ANALYSIS.md](GAP_ANALYSIS.md). The highest-priority gaps are:
 
-1. Merge reconciliation repair now needs an operator-facing UI/command surface for committed-but-unprojected accepted content.
-2. Version compare and restore-as-new-change need deeper end-to-end UI hardening.
-3. Version, check, review, and settings pages remain thin read models.
+1. Version compare and restore-as-new-change need deeper end-to-end UI hardening.
+2. Version, check, review, and settings pages need richer workflow actions and demo-path validation.
+3. Merge reconciliation has a basic settings operator surface, but still needs deeper failure-state guidance and end-to-end operational hardening.
 4. Controlled-review required-check policy must expand as future profiles/check types enter POC scope.
 5. Check quality remains intentionally minimal for static assertions and placeholder query parsing.
 6. Persistence/read-model scope still needs explicit POC deferrals for users, comments, workflow projections, activity events, and locks.
@@ -278,7 +278,7 @@ Deliverables:
 - `RestoreService` implementing restore-as-new-change from accepted version content.
 - Merge intent records for Git commit succeeds / DB update fails scenarios.
 - Application-level repair workflow for committed-but-unprojected merge intents.
-- Operator-facing UI/command surface for unresolved merge intents and repair outcomes.
+- Basic settings operator surface for unresolved merge intents and repair outcomes. Further failure-state guidance remains a hardening item.
 - Tests for compare, restore, intent detection, and reconciliation repair paths.
 
 Exit criteria:
@@ -286,7 +286,7 @@ Exit criteria:
 - User can compare current vs previous and arbitrary two versions.
 - User can restore an older version as a new database-owned change.
 - Restore acceptance creates a new Git commit and version projection without rewriting history.
-- Operators can see unresolved merge intents and repair committed accepted content without manually editing database rows.
+- Operators can see unresolved merge intents and repair accepted content projections without manually editing database rows; deeper failure-state guidance remains a hardening item.
 
 ### Phase 4: UI contract completion
 

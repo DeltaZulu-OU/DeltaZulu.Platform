@@ -1,8 +1,13 @@
 @page "/settings"
 @rendermode InteractiveServer
 @using Microsoft.Extensions.Configuration
+@using Workbench.Application.Abstractions
+@using Workbench.Application.Services
+@using Workbench.Domain.Identifiers
 @inject IConfiguration Configuration
 @inject PocUserContext UserContext
+@inject MergeReconciliationService MergeReconciliation
+@inject ISnackbar Snackbar
 
 <PageTitle>Settings</PageTitle>
 
@@ -46,8 +51,79 @@
         </MudPaper>
     </MudItem>
     <MudItem xs="12">
+        <MudPaper Class="pa-4" Elevation="1">
+            <div class="d-flex align-center justify-space-between gap-2 flex-wrap mb-3">
+                <div>
+                    <span class="eyebrow">Operations</span>
+                    <MudText Typo="Typo.h6" Class="mt-2">Merge reconciliation</MudText>
+                    <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary); max-width: 760px;">
+                        Unresolved merge intents are database-owned recovery markers for accepted-content writes that have not completed their version projection.
+                        Accepted writes can be repaired here without exposing storage internals to normal users.
+                    </MudText>
+                </div>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Disabled="_loadingIntents" OnClick="LoadMergeIntentsAsync" StartIcon="@Icons.Material.Outlined.Refresh">
+                    Refresh
+                </MudButton>
+            </div>
+
+            @if (_loadingIntents)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else if (_mergeIntents.Count == 0)
+            {
+                <MudAlert Severity="Severity.Success" Dense="true">No unresolved merge intents were found.</MudAlert>
+            }
+            else
+            {
+                <MudTable Items="_mergeIntents" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="MergeIntent">
+                    <HeaderContent>
+                        <MudTh>Change</MudTh>
+                        <MudTh>Detection</MudTh>
+                        <MudTh>Recovery state</MudTh>
+                        <MudTh>Requested</MudTh>
+                        <MudTh>Accepted snapshot</MudTh>
+                        <MudTh>Action</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Change"><code>@context.ChangeId.Value</code></MudTd>
+                        <MudTd DataLabel="Detection">
+                            <MudText Typo="Typo.body2">@context.DetectionSlug</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary"><code>@context.DetectionId.Value</code></MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Recovery state">
+                            <MudChip T="string" Size="Size.Small" Color="@IntentStateColor(context.State)" Variant="Variant.Filled">@IntentStateLabel(context.State)</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Requested">
+                            <MudText Typo="Typo.caption">@context.RequestedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Accepted snapshot">
+                            @if (string.IsNullOrWhiteSpace(context.CommitSha))
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">No accepted snapshot recorded.</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption"><code>@ShortSha(context.CommitSha)</code></MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@(context.CommittedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Accepted time unavailable")</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Action">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                       Disabled="@(!CanRepair(context) || _repairingChangeId == context.ChangeId)"
+                                       OnClick="@(() => RepairIntentAsync(context.ChangeId))"
+                                       StartIcon="@Icons.Material.Outlined.Healing">
+                                Repair projection
+                            </MudButton>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12">
         <MudAlert Severity="Severity.Info">
-            Predefined workflow profiles are selected on changes. User-authored workflow definitions and repository branch operations are intentionally outside the POC UI.
+            Predefined workflow profiles are selected on changes. User-authored workflow definitions and low-level accepted-content storage operations are intentionally outside the POC UI.
         </MudAlert>
     </MudItem>
 </MudGrid>
@@ -55,15 +131,72 @@
 @code {
     private bool _useElsa;
     private string _repositoryPath = "accepted-content";
+    private readonly List<MergeIntent> _mergeIntents = [];
+    private bool _loadingIntents = true;
+    private ChangeRequestId? _repairingChangeId;
 
     private void SwitchUser(PocUserPersona persona)
     {
         UserContext.SwitchTo(persona);
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         _useElsa = Configuration.GetValue<bool>("Workflow:UseElsa");
         _repositoryPath = Configuration.GetValue<string>("AcceptedContent:RepositoryPath") ?? "accepted-content";
+        await LoadMergeIntentsAsync();
     }
+
+    private async Task LoadMergeIntentsAsync()
+    {
+        _loadingIntents = true;
+        try
+        {
+            _mergeIntents.Clear();
+            _mergeIntents.AddRange(await MergeReconciliation.ListUnresolvedAsync());
+        }
+        finally
+        {
+            _loadingIntents = false;
+        }
+    }
+
+    private async Task RepairIntentAsync(ChangeRequestId changeId)
+    {
+        _repairingChangeId = changeId;
+        try
+        {
+            var result = await MergeReconciliation.RepairCommittedAsync(changeId);
+            Snackbar.Add(result.Message, result.IsSuccess ? Severity.Success : Severity.Warning);
+            await LoadMergeIntentsAsync();
+        }
+        catch (Domain.Common.DomainException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _repairingChangeId = null;
+        }
+    }
+
+    private static bool CanRepair(MergeIntent intent)
+        => intent.State == MergeIntentState.Committed && !string.IsNullOrWhiteSpace(intent.CommitSha);
+
+    private static string ShortSha(string commitSha)
+        => commitSha.Length <= 12 ? commitSha : commitSha[..12];
+
+    private static string IntentStateLabel(MergeIntentState state) => state switch
+    {
+        MergeIntentState.Committed => "Accepted write recorded",
+        MergeIntentState.Pending => "Waiting for accepted write",
+        _ => state.ToString(),
+    };
+
+    private static Color IntentStateColor(MergeIntentState state) => state switch
+    {
+        MergeIntentState.Committed => Color.Warning,
+        MergeIntentState.Pending => Color.Info,
+        _ => Color.Default,
+    };
 }
