@@ -14,6 +14,35 @@ public enum VersionFileDiffStatus
 }
 
 /// <summary>
+/// User-facing line status within a version comparison hunk.
+/// </summary>
+public enum VersionDiffLineType
+{
+    Context,
+    Added,
+    Removed,
+}
+
+/// <summary>
+/// One user-facing line within a version comparison hunk.
+/// </summary>
+public sealed record VersionDiffLine(
+    VersionDiffLineType Type,
+    int? BeforeLineNumber,
+    int? AfterLineNumber,
+    string Text);
+
+/// <summary>
+/// A contiguous set of changed and surrounding lines in a file comparison.
+/// </summary>
+public sealed record VersionDiffHunk(
+    int BeforeStartLine,
+    int BeforeLineCount,
+    int AfterStartLine,
+    int AfterLineCount,
+    IReadOnlyList<VersionDiffLine> Lines);
+
+/// <summary>
 /// File-level comparison result that intentionally avoids exposing repository internals.
 /// </summary>
 public sealed record VersionFileDiff(
@@ -22,7 +51,8 @@ public sealed record VersionFileDiff(
     string? BeforeContent,
     string? AfterContent,
     bool BeforeIsBinary,
-    bool AfterIsBinary)
+    bool AfterIsBinary,
+    IReadOnlyList<VersionDiffHunk> Hunks)
 {
     public bool IsBinary => BeforeIsBinary || AfterIsBinary;
 }

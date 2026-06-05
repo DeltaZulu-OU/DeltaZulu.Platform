@@ -80,6 +80,7 @@ else
                     <MudTh>Status</MudTh>
                     <MudTh>Before</MudTh>
                     <MudTh>After</MudTh>
+                    <MudTh>Inline hunks</MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="File"><code>@context.LogicalPath</code></MudTd>
@@ -90,8 +91,56 @@ else
                     </MudTd>
                     <MudTd DataLabel="Before">@Preview(context.BeforeContent, context.BeforeIsBinary)</MudTd>
                     <MudTd DataLabel="After">@Preview(context.AfterContent, context.AfterIsBinary)</MudTd>
+                    <MudTd DataLabel="Inline hunks">
+                        @if (context.IsBinary)
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Binary file</MudText>
+                        }
+                        else if (context.Hunks.Count == 0)
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">No line changes</MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption">@context.Hunks.Sum(hunk => hunk.Lines.Count(line => line.Type is not VersionDiffLineType.Context)) changed lines</MudText>
+                        }
+                    </MudTd>
                 </RowTemplate>
             </MudTable>
+
+            @if (_comparison.ChangedFiles.Any(file => file.Hunks.Count > 0))
+            {
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.subtitle1" Class="mb-3">Inline diff hunks</MudText>
+                <MudStack Spacing="3">
+                    @foreach (var file in _comparison.ChangedFiles.Where(file => file.Hunks.Count > 0))
+                    {
+                        <MudPaper Class="pa-0" Elevation="0" Outlined="true">
+                            <div class="d-flex align-center justify-space-between px-3 py-2" style="background: var(--color-surface-muted);">
+                                <code>@file.LogicalPath</code>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@StatusColor(file.Status)">@file.Status</MudChip>
+                            </div>
+                            @foreach (var hunk in file.Hunks)
+                            {
+                                <div class="px-3 py-2 mud-text-secondary" style="font-family: var(--font-mono); font-size: 0.75rem; border-top: 1px solid var(--mud-palette-divider);">
+                                    @@ -@hunk.BeforeStartLine,@hunk.BeforeLineCount +@hunk.AfterStartLine,@hunk.AfterLineCount
+                                </div>
+                                <div style="font-family: var(--font-mono); font-size: 0.8125rem; overflow-x: auto;">
+                                    @foreach (var line in hunk.Lines)
+                                    {
+                                        <div class="d-flex px-3 py-1" style="background: @LineBackground(line.Type);">
+                                            <span style="width: 3rem; color: var(--color-text-secondary);">@LineNumber(line.BeforeLineNumber)</span>
+                                            <span style="width: 3rem; color: var(--color-text-secondary);">@LineNumber(line.AfterLineNumber)</span>
+                                            <span style="width: 1.5rem; font-weight: 700;">@LineMarker(line.Type)</span>
+                                            <span style="white-space: pre;">@line.Text</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </MudPaper>
+                    }
+                </MudStack>
+            }
         }
     </MudPaper>
 }
@@ -171,4 +220,20 @@ else
         var singleLine = content.Replace("\r", "", StringComparison.Ordinal).Replace("\n", " ⏎ ", StringComparison.Ordinal);
         return singleLine.Length <= 120 ? singleLine : singleLine[..120] + "…";
     }
+
+    private static string LineNumber(int? lineNumber) => lineNumber?.ToString() ?? "";
+
+    private static string LineMarker(VersionDiffLineType type) => type switch
+    {
+        VersionDiffLineType.Added => "+",
+        VersionDiffLineType.Removed => "-",
+        _ => " "
+    };
+
+    private static string LineBackground(VersionDiffLineType type) => type switch
+    {
+        VersionDiffLineType.Added => "rgba(46, 125, 50, 0.12)",
+        VersionDiffLineType.Removed => "rgba(198, 40, 40, 0.12)",
+        _ => "transparent"
+    };
 }

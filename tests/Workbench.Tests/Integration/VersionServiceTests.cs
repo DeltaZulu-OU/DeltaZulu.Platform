@@ -77,6 +77,90 @@ public sealed class VersionServiceTests : IDisposable
         Assert.HasCount(2, comparison.ChangedFiles);
     }
 
+    [TestMethod]
+    public async Task CompareWithPrevious_ModifiedTextFile_IncludesInlineDiffHunk()
+    {
+        var detectionId = await ConceiveDetectionAsync("compare-inline");
+        await MergeQuickLabAsync(
+            detectionId,
+            "CHG-C3A",
+            "Initial accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, "SigninLogs\n| where ResultType == 0\n| take 1"),
+            });
+        var version2 = await MergeQuickLabAsync(
+            detectionId,
+            "CHG-C3B",
+            "Second accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, "SigninLogs\n| where ResultType != 0\n| summarize count()"),
+            });
+
+        using var scope = _host.CreateScope();
+        var versionSvc = _host.Resolve<VersionService>(scope);
+        var comparison = await versionSvc.CompareWithPreviousAsync(version2.Id, TestContext.CancellationToken);
+
+        var file = comparison.Files.Single(file => file.LogicalPath == "rule.kql");
+        Assert.AreEqual(VersionFileDiffStatus.Modified, file.Status);
+        Assert.HasCount(1, file.Hunks);
+
+        var hunk = file.Hunks.Single();
+        Assert.AreEqual(1, hunk.BeforeStartLine);
+        Assert.AreEqual(3, hunk.BeforeLineCount);
+        Assert.AreEqual(1, hunk.AfterStartLine);
+        Assert.AreEqual(3, hunk.AfterLineCount);
+        CollectionAssert.AreEqual(
+            new[]
+            {
+                VersionDiffLineType.Context,
+                VersionDiffLineType.Added,
+                VersionDiffLineType.Added,
+                VersionDiffLineType.Removed,
+                VersionDiffLineType.Removed,
+            },
+            hunk.Lines.Select(line => line.Type).ToArray());
+        Assert.AreEqual("| where ResultType != 0", hunk.Lines[1].Text);
+        Assert.AreEqual("| where ResultType == 0", hunk.Lines[3].Text);
+    }
+
+    [TestMethod]
+    public async Task CompareWithPrevious_UnchangedTextFile_DoesNotCreateInlineHunks()
+    {
+        var detectionId = await ConceiveDetectionAsync("compare-inline-unchanged");
+        await MergeQuickLabAsync(
+            detectionId,
+            "CHG-C4A",
+            "Initial accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, "SigninLogs | take 1"),
+            });
+        var version2 = await MergeQuickLabAsync(
+            detectionId,
+            "CHG-C4B",
+            "Second accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, "SigninLogs | take 1"),
+                ("tests/added.yaml", DraftContentType.TestDefinition, "expectedRows: 1"),
+            });
+
+        using var scope = _host.CreateScope();
+        var versionSvc = _host.Resolve<VersionService>(scope);
+        var comparison = await versionSvc.CompareWithPreviousAsync(version2.Id, TestContext.CancellationToken);
+
+        var unchanged = comparison.Files.Single(file => file.LogicalPath == "rule.kql");
+        Assert.AreEqual(VersionFileDiffStatus.Unchanged, unchanged.Status);
+        Assert.HasCount(0, unchanged.Hunks);
+
+        var added = comparison.Files.Single(file => file.LogicalPath == "tests/added.yaml");
+        Assert.AreEqual(VersionFileDiffStatus.Added, added.Status);
+        Assert.HasCount(1, added.Hunks);
+        Assert.AreEqual(VersionDiffLineType.Added, added.Hunks.Single().Lines.Single().Type);
+    }
+
     private async Task<DetectionId> ConceiveDetectionAsync(string slug)
     {
         using var scope = _host.CreateScope();

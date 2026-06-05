@@ -126,6 +126,114 @@ public sealed class VersionService(
             before?.Content,
             after?.Content,
             before?.IsBinary ?? false,
-            after?.IsBinary ?? false);
+            after?.IsBinary ?? false,
+            CreateHunks(status, before, after));
+    }
+
+    private static IReadOnlyList<VersionDiffHunk> CreateHunks(
+        VersionFileDiffStatus status,
+        ContentFile? before,
+        ContentFile? after)
+    {
+        if (status is VersionFileDiffStatus.Unchanged || (before?.IsBinary ?? false) || (after?.IsBinary ?? false))
+        {
+            return [];
+        }
+
+        var beforeLines = SplitLines(before?.Content);
+        var afterLines = SplitLines(after?.Content);
+        if (beforeLines.Length == 0 && afterLines.Length == 0)
+        {
+            return [];
+        }
+
+        var lines = CreateDiffLines(beforeLines, afterLines);
+        var beforeLineCount = lines.Count(line => line.BeforeLineNumber is not null);
+        var afterLineCount = lines.Count(line => line.AfterLineNumber is not null);
+
+        return
+        [
+            new VersionDiffHunk(
+                lines.FirstOrDefault(line => line.BeforeLineNumber is not null)?.BeforeLineNumber ?? 1,
+                beforeLineCount,
+                lines.FirstOrDefault(line => line.AfterLineNumber is not null)?.AfterLineNumber ?? 1,
+                afterLineCount,
+                lines),
+        ];
+    }
+
+    private static string[] SplitLines(string? content)
+    {
+        if (string.IsNullOrEmpty(content))
+        {
+            return [];
+        }
+
+        return content
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Split('\n');
+    }
+
+    private static IReadOnlyList<VersionDiffLine> CreateDiffLines(string[] beforeLines, string[] afterLines)
+    {
+        var lengths = BuildLongestCommonSubsequenceLengths(beforeLines, afterLines);
+        var result = new List<VersionDiffLine>();
+        var beforeIndex = 0;
+        var afterIndex = 0;
+
+        while (beforeIndex < beforeLines.Length || afterIndex < afterLines.Length)
+        {
+            if (beforeIndex < beforeLines.Length
+                && afterIndex < afterLines.Length
+                && beforeLines[beforeIndex] == afterLines[afterIndex])
+            {
+                result.Add(new VersionDiffLine(
+                    VersionDiffLineType.Context,
+                    beforeIndex + 1,
+                    afterIndex + 1,
+                    beforeLines[beforeIndex]));
+                beforeIndex++;
+                afterIndex++;
+            }
+            else if (afterIndex < afterLines.Length
+                && (beforeIndex == beforeLines.Length
+                    || lengths[beforeIndex, afterIndex + 1] >= lengths[beforeIndex + 1, afterIndex]))
+            {
+                result.Add(new VersionDiffLine(
+                    VersionDiffLineType.Added,
+                    null,
+                    afterIndex + 1,
+                    afterLines[afterIndex]));
+                afterIndex++;
+            }
+            else
+            {
+                result.Add(new VersionDiffLine(
+                    VersionDiffLineType.Removed,
+                    beforeIndex + 1,
+                    null,
+                    beforeLines[beforeIndex]));
+                beforeIndex++;
+            }
+        }
+
+        return result;
+    }
+
+    private static int[,] BuildLongestCommonSubsequenceLengths(string[] beforeLines, string[] afterLines)
+    {
+        var lengths = new int[beforeLines.Length + 1, afterLines.Length + 1];
+        for (var beforeIndex = beforeLines.Length - 1; beforeIndex >= 0; beforeIndex--)
+        {
+            for (var afterIndex = afterLines.Length - 1; afterIndex >= 0; afterIndex--)
+            {
+                lengths[beforeIndex, afterIndex] = beforeLines[beforeIndex] == afterLines[afterIndex]
+                    ? lengths[beforeIndex + 1, afterIndex + 1] + 1
+                    : Math.Max(lengths[beforeIndex + 1, afterIndex], lengths[beforeIndex, afterIndex + 1]);
+            }
+        }
+
+        return lengths;
     }
 }
