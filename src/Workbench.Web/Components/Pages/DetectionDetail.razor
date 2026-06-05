@@ -72,12 +72,19 @@ else
                         <MudTh>Summary</MudTh>
                         <MudTh>Profile</MudTh>
                         <MudTh>Accepted</MudTh>
+                        <MudTh>Actions</MudTh>
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="Version"><MudText Typo="Typo.body2"><strong>@context.DisplayVersion</strong></MudText></MudTd>
                         <MudTd DataLabel="Summary">@context.ChangeSummary</MudTd>
                         <MudTd DataLabel="Profile"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.WorkflowProfile</MudChip></MudTd>
                         <MudTd DataLabel="Accepted"><MudText Typo="Typo.caption">@context.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                                       OnClick="@(() => Nav.NavigateTo($"/versions/{context.Id}"))">
+                                Compare / restore
+                            </MudButton>
+                        </MudTd>
                     </RowTemplate>
                 </MudTable>
             }

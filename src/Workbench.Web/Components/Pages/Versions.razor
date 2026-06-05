@@ -35,6 +35,7 @@ else
             <MudTh>Checks</MudTh>
             <MudTh>Reviews</MudTh>
             <MudTh>Accepted</MudTh>
+            <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Detection">
@@ -73,6 +74,12 @@ else
             <MudTd DataLabel="Reviews">@context.Version.ReviewSummary</MudTd>
             <MudTd DataLabel="Accepted">
                 <MudText Typo="Typo.caption">@context.Version.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                           OnClick="@(() => Nav.NavigateTo($"/versions/{context.Version.Id}"))">
+                    Compare / restore
+                </MudButton>
             </MudTd>
         </RowTemplate>
     </MudTable>

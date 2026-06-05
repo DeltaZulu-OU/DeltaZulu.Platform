@@ -1,0 +1,174 @@
+@page "/versions/{Id}"
+@rendermode InteractiveServer
+@using Workbench.Application.Services
+@using Workbench.Domain.Common
+@using Workbench.Domain.Enums
+@using Workbench.Domain.Identifiers
+@inject VersionService VersionService
+@inject RestoreService RestoreService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Version — @(_comparison?.AfterVersion.DisplayVersion ?? "Loading")</PageTitle>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (_comparison is null)
+{
+    <MudAlert Severity="Severity.Error">Version not found.</MudAlert>
+}
+else
+{
+    <MudBreadcrumbs Items="_breadcrumbs" Class="mb-2" />
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="8">
+            <span class="eyebrow">Accepted version</span>
+            <MudText Typo="Typo.h5" Class="mt-1" Style="font-weight: 700;">
+                @_comparison.AfterVersion.DisplayVersion — @_comparison.Detection.Title
+            </MudText>
+            <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);" Class="mt-2 mb-4">
+                @_comparison.AfterVersion.ChangeSummary
+            </MudText>
+            <MudStack Row="true" Spacing="2" Class="mb-4" AlignItems="AlignItems.Center">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                           StartIcon="@Icons.Material.Outlined.Restore" Disabled="_restoring" OnClick="RestoreVersion">
+                    Restore as new change
+                </MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small"
+                           OnClick="@(() => Nav.NavigateTo($"/detections/{_comparison.Detection.Id}"))">
+                    Back to detection
+                </MudButton>
+            </MudStack>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4" Elevation="1">
+                <span class="eyebrow" style="font-size: 0.625rem;">Comparison</span>
+                <div class="mt-3">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Before</MudText>
+                    <MudText Typo="Typo.body2" Class="mt-1">
+                        @(_comparison.BeforeVersion?.DisplayVersion ?? "No earlier version")
+                    </MudText>
+                </div>
+                <MudDivider Class="my-3" />
+                <div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">After</MudText>
+                    <MudText Typo="Typo.body2" Class="mt-1">@_comparison.AfterVersion.DisplayVersion</MudText>
+                </div>
+                <MudDivider Class="my-3" />
+                <div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Changed files</MudText>
+                    <MudText Typo="Typo.body2" Class="mt-1">@_comparison.ChangedFiles.Count</MudText>
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pa-4 mt-4" Elevation="1">
+        <MudText Typo="Typo.h6" Class="mb-3">File comparison</MudText>
+        @if (_comparison.Files.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">This accepted version has no files to compare.</MudAlert>
+        }
+        else
+        {
+            <MudTable Items="_comparison.Files" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="VersionFileDiff">
+                <HeaderContent>
+                    <MudTh>File</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Before</MudTh>
+                    <MudTh>After</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="File"><code>@context.LogicalPath</code></MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@StatusColor(context.Status)">
+                            @context.Status
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Before">@Preview(context.BeforeContent, context.BeforeIsBinary)</MudTd>
+                    <MudTd DataLabel="After">@Preview(context.AfterContent, context.AfterIsBinary)</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = null!;
+
+    private VersionComparison? _comparison;
+    private List<BreadcrumbItem> _breadcrumbs = [];
+    private bool _loading = true;
+    private bool _restoring;
+    private readonly UserId _pocUserId = UserId.New();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _comparison = null;
+
+        if (Guid.TryParse(Id, out var guid))
+        {
+            try
+            {
+                _comparison = await VersionService.CompareWithPreviousAsync(new VersionId(guid));
+                _breadcrumbs =
+                [
+                    new("Versions", "/versions"),
+                    new(_comparison.Detection.Slug, $"/detections/{_comparison.Detection.Id}"),
+                    new(_comparison.AfterVersion.DisplayVersion, null, disabled: true),
+                ];
+            }
+            catch (DomainException ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
+        }
+
+        _loading = false;
+    }
+
+    private async Task RestoreVersion()
+    {
+        if (_comparison is null) return;
+
+        _restoring = true;
+        try
+        {
+            var change = await RestoreService.RestoreVersionAsChangeAsync(
+                _comparison.AfterVersion.Id,
+                _pocUserId,
+                WorkflowProfileId.QuickLab);
+            Snackbar.Add($"Opened {change.Key} from {_comparison.AfterVersion.DisplayVersion}.", Severity.Success);
+            Nav.NavigateTo($"/changes/{change.Id}");
+        }
+        catch (DomainException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _restoring = false;
+        }
+    }
+
+    private static Color StatusColor(VersionFileDiffStatus status) => status switch
+    {
+        VersionFileDiffStatus.Added => Color.Success,
+        VersionFileDiffStatus.Modified => Color.Warning,
+        VersionFileDiffStatus.Removed => Color.Error,
+        _ => Color.Default,
+    };
+
+    private static string Preview(string? content, bool isBinary)
+    {
+        if (content is null) return "—";
+        if (isBinary) return $"Binary content ({content.Length} encoded chars)";
+
+        var singleLine = content.Replace("\r", "", StringComparison.Ordinal).Replace("\n", " ⏎ ", StringComparison.Ordinal);
+        return singleLine.Length <= 120 ? singleLine : singleLine[..120] + "…";
+    }
+}
