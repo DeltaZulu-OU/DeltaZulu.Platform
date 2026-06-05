@@ -118,7 +118,7 @@
                                         <div class="hunt-query-library-description">@visualization.Description</div>
                                     }
                                     <div class="hunt-query-library-meta">
-                                        @visualization.Kind · Query @ShortId(visualization.QueryId) · Updated @FormatTimestamp(visualization.UpdatedAt)
+                                        @visualization.Kind · Query @GetSavedQueryDisplayName(visualization.QueryId) · Updated @FormatTimestamp(visualization.UpdatedAt)
                                     </div>
                                 </div>
                                 <button class="hunt-btn hunt-btn-clear"
@@ -186,6 +186,7 @@
     private string? _saveDescription;
     private string? _message;
     private IReadOnlyList<Hunting.Application.SavedQueries.SavedQueryRecord> _savedQueries = [];
+    private IReadOnlyDictionary<string, string> _savedQueryNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<Hunting.Application.Visualizations.VisualizationRecord> _savedVisualizations = [];
     private IReadOnlyList<Hunting.Application.QueryHistory.QueryHistoryRecord> _recentHistory = [];
 
@@ -230,6 +231,10 @@
         try
         {
             _savedQueries = await QueryLibrary.ListSavedQueriesAsync();
+            _savedQueryNames = _savedQueries.ToDictionary(
+                query => query.Id,
+                query => string.IsNullOrWhiteSpace(query.Name) ? query.Id : query.Name,
+                StringComparer.OrdinalIgnoreCase);
             _savedVisualizations = await VisualizationLibrary.ListVisualizationsAsync();
             _recentHistory = await QueryLibrary.ListRecentHistoryAsync(RecentHistoryLimit);
         }
@@ -361,6 +366,18 @@
         {
             _message = ex.Message;
         }
+    }
+
+    private string GetSavedQueryDisplayName(string queryId)
+    {
+        if (string.IsNullOrWhiteSpace(queryId))
+        {
+            return "(none)";
+        }
+
+        return _savedQueryNames.TryGetValue(queryId, out var name)
+            ? name
+            : ShortId(queryId);
     }
 
     private static string FormatTimestamp(DateTime value)
