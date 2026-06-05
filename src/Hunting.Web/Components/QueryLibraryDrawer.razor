@@ -121,10 +121,6 @@
                                         @visualization.Kind · Query @ShortId(visualization.QueryId) · Updated @FormatTimestamp(visualization.UpdatedAt)
                                     </div>
                                 </div>
-                                <button class="hunt-btn"
-                                        @onclick="() => SelectVisualizationAsync(visualization.Id)">
-                                    Open
-                                </button>
                                 <button class="hunt-btn hunt-btn-clear"
                                         @onclick="() => DeleteVisualizationAsync(visualization.Id)">
                                     Delete
@@ -314,15 +310,8 @@
 
     private async Task SelectVisualizationAsync(string id)
     {
-        try
-        {
-            var queryText = await VisualizationLibrary.LoadVisualizationQueryTextAsync(id);
-            await SelectQueryTextAsync(queryText);
-        }
-        catch (InvalidOperationException ex)
-        {
-            _message = ex.Message;
-        }
+        var queryText = await VisualizationLibrary.LoadVisualizationQueryTextAsync(id);
+        await SelectQueryTextAsync(queryText);
     }
 
     private async Task SelectHistoryQueryAsync(string id)
@@ -348,9 +337,16 @@
 
     private async Task DeleteSavedQueryAsync(string id)
     {
-        await QueryLibrary.DeleteSavedQueryAsync(id);
-        _message = "Saved query deleted.";
-        await RefreshAsync();
+        try
+        {
+            await QueryLibrary.DeleteSavedQueryAsync(id);
+            _message = "Saved query deleted.";
+            await RefreshAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _message = ex.Message;
+        }
     }
 
     private async Task DeleteVisualizationAsync(string id)

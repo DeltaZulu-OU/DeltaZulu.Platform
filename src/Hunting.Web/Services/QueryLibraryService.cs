@@ -2,6 +2,7 @@ namespace Hunting.Web.Services;
 
 using Hunting.Application.QueryHistory;
 using Hunting.Application.SavedQueries;
+using Hunting.Application.Visualizations;
 
 /// <summary>
 /// Application-facing service for saved queries and recent query history.
@@ -13,13 +14,16 @@ public sealed class QueryLibraryService
 
     private readonly IQueryHistoryRepository _queryHistory;
     private readonly ISavedQueryRepository _savedQueries;
+    private readonly IVisualizationRepository _visualizations;
 
     public QueryLibraryService(
         ISavedQueryRepository savedQueries,
-        IQueryHistoryRepository queryHistory)
+        IQueryHistoryRepository queryHistory,
+        IVisualizationRepository visualizations)
     {
-        _savedQueries = savedQueries;
-        _queryHistory = queryHistory;
+        _savedQueries = savedQueries ?? throw new ArgumentNullException(nameof(savedQueries));
+        _queryHistory = queryHistory ?? throw new ArgumentNullException(nameof(queryHistory));
+        _visualizations = visualizations ?? throw new ArgumentNullException(nameof(visualizations));
     }
 
     public Task<IReadOnlyList<SavedQueryRecord>> ListSavedQueriesAsync(
@@ -48,7 +52,7 @@ public sealed class QueryLibraryService
         var now = DateTime.UtcNow;
         var normalizedId = string.IsNullOrWhiteSpace(id)
             ? Guid.NewGuid().ToString("N")
-            : id;
+            : id.Trim();
 
         var existing = await _savedQueries.GetAsync(normalizedId, cancellationToken);
         var record = new SavedQueryRecord(
@@ -64,11 +68,19 @@ public sealed class QueryLibraryService
         return record;
     }
 
-    public Task DeleteSavedQueryAsync(
+    public async Task DeleteSavedQueryAsync(
         string id,
         CancellationToken cancellationToken = default)
     {
-        return _savedQueries.DeleteAsync(id, cancellationToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        var visualizations = await _visualizations.ListByQueryAsync(id.Trim(), cancellationToken);
+        if (visualizations.Count > 0)
+        {
+            throw new InvalidOperationException(CreateInUseDeleteMessage(id, visualizations));
+        }
+
+        await _savedQueries.DeleteAsync(id, cancellationToken);
     }
 
     public async Task<string?> LoadSavedQueryTextAsync(
@@ -92,6 +104,20 @@ public sealed class QueryLibraryService
         CancellationToken cancellationToken = default)
     {
         return _savedQueries.MarkRunAsync(id, DateTime.UtcNow, cancellationToken);
+    }
+
+    private static string CreateInUseDeleteMessage(
+        string queryId,
+        IReadOnlyList<VisualizationRecord> visualizations)
+    {
+        var names = visualizations
+            .Select(visualization => string.IsNullOrWhiteSpace(visualization.Name) ? visualization.Id : visualization.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(3)
+            .ToArray();
+
+        var suffix = visualizations.Count > names.Length ? "…" : string.Empty;
+        return $"Saved query '{queryId}' is used by {visualizations.Count} saved visualization(s): {string.Join(", ", names)}{suffix}. Delete or reassign those visualizations before deleting the query.";
     }
 
     private static string? NormalizeOptionalText(string? value)
