@@ -8,7 +8,9 @@
 @using Workbench.Domain.Enums
 @using Workbench.Domain.Identifiers
 @using Workbench.Domain.Workflow
+@using Workbench.Application.ContentPipeline
 @inject ChangeService ChangeService
+@inject IAcceptedContentStore ContentStore
 @inject DetectionContentService DetectionService
 @inject IssueService IssueService
 @inject CheckPipelineRunner PipelineRunner
@@ -213,6 +215,63 @@
                             </MudExpansionPanel>
                         </MudExpansionPanels>
                     }
+                }
+            }
+        </div>
+    </MudTabPanel>
+
+    @* ── Draft vs Accepted tab ── *@
+    <MudTabPanel Text="Draft vs accepted" BadgeData="@_draftComparisons.Count(c => c.Status != DraftComparisonStatus.Unchanged)" BadgeColor="Color.Warning">
+        <div class="ma-3">
+            @if (_draftComparisons.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">No draft files to compare.</MudAlert>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Class="mb-3" Style="color: var(--color-text-secondary);">
+                    Compares each draft file against the current accepted content for this detection.
+                </MudText>
+                @foreach (var comp in _draftComparisons)
+                {
+                    <MudExpansionPanels Class="mb-2">
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div class="d-flex align-center gap-2">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@DraftComparisonColor(comp.Status)">
+                                        @comp.Status
+                                    </MudChip>
+                                    <code>@comp.LogicalPath</code>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                @if (comp.Status == DraftComparisonStatus.Unchanged)
+                                {
+                                    <MudAlert Severity="Severity.Info" Dense="true">Draft content is identical to the accepted version.</MudAlert>
+                                }
+                                else
+                                {
+                                    <MudGrid Spacing="2">
+                                        <MudItem xs="12" md="6">
+                                            <MudText Typo="Typo.subtitle2" Class="mb-1" Style="color: var(--color-text-secondary);">Accepted</MudText>
+                                            @if (comp.AcceptedContent is null)
+                                            {
+                                                <MudAlert Severity="Severity.Info" Dense="true">No accepted version of this file exists yet.</MudAlert>
+                                            }
+                                            else
+                                            {
+                                                <pre style="white-space: pre-wrap; font-size: 0.8125rem; max-height: 400px; overflow-y: auto; background: rgba(19,31,42,0.03); padding: 0.75rem; border-radius: 4px;">@comp.AcceptedContent</pre>
+                                            }
+                                        </MudItem>
+                                        <MudItem xs="12" md="6">
+                                            <MudText Typo="Typo.subtitle2" Class="mb-1" Style="color: var(--color-text-secondary);">Draft</MudText>
+                                            <pre style="white-space: pre-wrap; font-size: 0.8125rem; max-height: 400px; overflow-y: auto; background: rgba(46,125,50,0.06); padding: 0.75rem; border-radius: 4px;">@comp.DraftContent</pre>
+                                        </MudItem>
+                                    </MudGrid>
+                                }
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
                 }
             }
         </div>
@@ -432,6 +491,9 @@
     private List<BreadcrumbItem> _breadcrumbs = [];
     private MudTabs? _tabs;
 
+    // Draft vs accepted comparison
+    private List<DraftComparison> _draftComparisons = [];
+
     // Add file
     private bool _showAddFile;
     private string _newPath = "";
@@ -483,6 +545,40 @@
             new("Work", "/work"),
             new(_change.Key, null, disabled: true),
         ];
+
+        await LoadDraftComparisonsAsync();
+    }
+
+    private async Task LoadDraftComparisonsAsync()
+    {
+        _draftComparisons = [];
+        if (_change is null || _detection is null) return;
+
+        var prefix = CanonicalPathResolver.DetectionPrefix(_detection.Slug);
+        var acceptedFiles = await ContentStore.ListFilesAsync(prefix);
+        var acceptedByLogical = new Dictionary<string, ContentFile>(StringComparer.Ordinal);
+        var prefixWithSlash = prefix.TrimEnd('/') + "/";
+        foreach (var file in acceptedFiles)
+        {
+            if (file.RepositoryPath.StartsWith(prefixWithSlash, StringComparison.Ordinal))
+            {
+                acceptedByLogical[file.RepositoryPath[prefixWithSlash.Length..]] = file;
+            }
+        }
+
+        foreach (var draft in _change.DraftFiles.OrderBy(f => f.Path.Value))
+        {
+            var logicalPath = draft.Path.Value;
+            acceptedByLogical.TryGetValue(logicalPath, out var accepted);
+
+            var status = accepted is null
+                ? DraftComparisonStatus.New
+                : draft.Content == accepted.Content
+                    ? DraftComparisonStatus.Unchanged
+                    : DraftComparisonStatus.Modified;
+
+            _draftComparisons.Add(new DraftComparison(logicalPath, status, accepted?.Content, draft.Content));
+        }
     }
 
     private async Task SaveDraftFile()
@@ -524,7 +620,7 @@
     {
         if (_tabs is not null)
         {
-            _tabs.ActivatePanelAsync(2);
+            _tabs.ActivatePanelAsync(3);
         }
     }
 
@@ -653,4 +749,18 @@
 
         return DraftContentType.DetectionMetadata;
     }
+
+    // ── Draft vs Accepted comparison ──
+
+    private static Color DraftComparisonColor(DraftComparisonStatus status) => status switch
+    {
+        DraftComparisonStatus.New => Color.Success,
+        DraftComparisonStatus.Modified => Color.Warning,
+        DraftComparisonStatus.Unchanged => Color.Default,
+        _ => Color.Default,
+    };
+
+    private enum DraftComparisonStatus { New, Modified, Unchanged }
+
+    private sealed record DraftComparison(string LogicalPath, DraftComparisonStatus Status, string? AcceptedContent, string DraftContent);
 }
