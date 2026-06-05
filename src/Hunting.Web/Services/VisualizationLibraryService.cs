@@ -3,6 +3,7 @@ namespace Hunting.Web.Services;
 using System.Text.Json;
 using Hunting.Application.SavedQueries;
 using Hunting.Application.Visualizations;
+using Hunting.Render.Directives;
 using Hunting.Render.Model;
 
 /// <summary>
@@ -14,15 +15,18 @@ public sealed class VisualizationLibraryService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    private readonly IRenderDirectiveParser _renderDirectiveParser;
     private readonly ISavedQueryRepository _savedQueries;
     private readonly IVisualizationRepository _visualizations;
 
     public VisualizationLibraryService(
         ISavedQueryRepository savedQueries,
-        IVisualizationRepository visualizations)
+        IVisualizationRepository visualizations,
+        IRenderDirectiveParser renderDirectiveParser)
     {
         _savedQueries = savedQueries ?? throw new ArgumentNullException(nameof(savedQueries));
         _visualizations = visualizations ?? throw new ArgumentNullException(nameof(visualizations));
+        _renderDirectiveParser = renderDirectiveParser ?? throw new ArgumentNullException(nameof(renderDirectiveParser));
     }
 
     public Task<IReadOnlyList<VisualizationRecord>> ListVisualizationsAsync(
@@ -45,6 +49,59 @@ public sealed class VisualizationLibraryService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         return _visualizations.GetAsync(id, cancellationToken);
+    }
+
+    public async Task<SavedVisualizationResult> SaveVisualizationFromRenderedQueryAsync(
+        string? queryId,
+        string? visualizationId,
+        string name,
+        string? description,
+        string queryText,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(queryText);
+
+        var parsed = _renderDirectiveParser.Parse(queryText);
+        if (string.Equals(parsed.QueryTextWithoutRender, queryText, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "The current query must include a terminal render clause before it can be saved as a visualization.");
+        }
+
+        if (parsed.Directive.IsFallback)
+        {
+            throw new InvalidOperationException(
+                parsed.Directive.FallbackReason ?? "The render directive could not be parsed.");
+        }
+
+        var now = DateTime.UtcNow;
+        var normalizedQueryId = string.IsNullOrWhiteSpace(queryId)
+            ? Guid.NewGuid().ToString("N")
+            : queryId.Trim();
+
+        var existingQuery = await _savedQueries.GetAsync(normalizedQueryId, cancellationToken);
+        var savedQuery = new SavedQueryRecord(
+            normalizedQueryId,
+            name.Trim(),
+            NormalizeOptionalText(description),
+            parsed.QueryTextWithoutRender.Trim(),
+            existingQuery?.CreatedAt ?? now,
+            now,
+            existingQuery?.LastRunAt);
+
+        await _savedQueries.SaveAsync(savedQuery, cancellationToken);
+
+        var visualization = await SaveVisualizationAsync(
+            visualizationId,
+            savedQuery.Id,
+            name,
+            description,
+            parsed.Directive.Kind,
+            ToVisualizationSpec(parsed.Directive),
+            cancellationToken);
+
+        return new SavedVisualizationResult(savedQuery, visualization);
     }
 
     public async Task<VisualizationRecord> SaveVisualizationAsync(
@@ -97,6 +154,17 @@ public sealed class VisualizationLibraryService
         return _visualizations.DeleteAsync(id, cancellationToken);
     }
 
+    private static VisualizationSpec ToVisualizationSpec(RenderDirective directive)
+        => new()
+        {
+            Title = NormalizeOptionalText(directive.Title),
+            XColumn = NormalizeOptionalText(directive.Binding.XColumn),
+            YColumns = NormalizeColumnList(directive.Binding.YColumns),
+            SeriesColumn = NormalizeOptionalText(directive.Binding.SeriesColumn),
+            Legend = NormalizeOptionalText(directive.Legend),
+            IsStacked = directive.IsStacked
+        };
+
     private static VisualizationSpec NormalizeSpec(VisualizationSpec spec)
         => new()
         {
@@ -128,3 +196,7 @@ public sealed class VisualizationLibraryService
             .ToArray();
     }
 }
+
+public sealed record SavedVisualizationResult(
+    SavedQueryRecord Query,
+    VisualizationRecord Visualization);

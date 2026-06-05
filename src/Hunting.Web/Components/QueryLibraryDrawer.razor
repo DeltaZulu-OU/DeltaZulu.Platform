@@ -1,5 +1,6 @@
 @namespace Hunting.Web.Components
 @inject Hunting.Web.Services.QueryLibraryService QueryLibrary
+@inject Hunting.Web.Services.VisualizationLibraryService VisualizationLibrary
 
 <button class="hunt-btn hunt-btn-history"
         @onclick="OpenAsync"
@@ -20,7 +21,7 @@
         <div class="hunt-drawer-header">
             <div>
                 <div class="hunt-drawer-title">Query Library</div>
-                <div class="hunt-drawer-subtitle">Saved queries and recent executions</div>
+                <div class="hunt-drawer-subtitle">Saved queries and reusable visualizations</div>
             </div>
             <button class="hunt-drawer-close"
                     @onclick="Close"
@@ -34,15 +35,20 @@
                 <input class="hunt-query-library-input"
                        placeholder="Saved query name"
                        @bind="_saveName"
-                       disabled="@_saving" />
+                       disabled="@IsSaving" />
                 <input class="hunt-query-library-input"
                        placeholder="Description (optional)"
                        @bind="_saveDescription"
-                       disabled="@_saving" />
+                       disabled="@IsSaving" />
                 <button class="hunt-btn hunt-btn-run"
                         @onclick="SaveCurrentQueryAsync"
                         disabled="@(!CanSaveCurrentQuery)">
                     @(_saving ? "Saving…" : "Save current")
+                </button>
+                <button class="hunt-btn"
+                        @onclick="SaveCurrentVisualizationAsync"
+                        disabled="@(!CanSaveCurrentVisualization)">
+                    @(_savingVisualization ? "Saving visualization…" : "Save visualization")
                 </button>
             </div>
 
@@ -140,6 +146,7 @@
     private bool _open;
     private bool _loading;
     private bool _saving;
+    private bool _savingVisualization;
     private string _saveName = "";
     private string? _saveDescription;
     private string? _message;
@@ -158,10 +165,14 @@
     [Parameter]
     public bool CloseAfterSelection { get; set; } = true;
 
+    private bool IsSaving => _saving || _savingVisualization;
+
     private bool CanSaveCurrentQuery =>
-        !_saving
+        !IsSaving
         && !string.IsNullOrWhiteSpace(CurrentQueryText)
         && !string.IsNullOrWhiteSpace(_saveName);
+
+    private bool CanSaveCurrentVisualization => CanSaveCurrentQuery;
 
     private async Task OpenAsync()
     {
@@ -217,6 +228,40 @@
         finally
         {
             _saving = false;
+        }
+    }
+
+    private async Task SaveCurrentVisualizationAsync()
+    {
+        if (!CanSaveCurrentVisualization)
+        {
+            return;
+        }
+
+        _savingVisualization = true;
+        _message = null;
+
+        try
+        {
+            await VisualizationLibrary.SaveVisualizationFromRenderedQueryAsync(
+                queryId: null,
+                visualizationId: null,
+                name: _saveName,
+                description: _saveDescription,
+                queryText: CurrentQueryText);
+
+            _saveName = "";
+            _saveDescription = null;
+            _message = "Visualization saved. It can now be selected from dashboard widgets.";
+            await RefreshAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _message = ex.Message;
+        }
+        finally
+        {
+            _savingVisualization = false;
         }
     }
 

@@ -3,6 +3,7 @@ namespace Hunting.Tests.Web;
 using System.Text.Json;
 using Hunting.Application.SavedQueries;
 using Hunting.Application.Visualizations;
+using Hunting.Render.Directives;
 using Hunting.Render.Model;
 using Hunting.Web.Services;
 
@@ -14,7 +15,7 @@ public sealed class VisualizationLibraryServiceTests
     {
         var savedQueries = new InMemorySavedQueryRepository();
         var visualizations = new InMemoryVisualizationRepository();
-        var service = new VisualizationLibraryService(savedQueries, visualizations);
+        var service = CreateService(savedQueries, visualizations);
 
         var now = new DateTime(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
         await savedQueries.SaveAsync(new SavedQueryRecord(
@@ -65,11 +66,66 @@ public sealed class VisualizationLibraryServiceTests
     }
 
     [TestMethod]
+    public async Task SaveVisualizationFromRenderedQueryAsync_SavesQueryWithoutRenderAndVisualizationSpec()
+    {
+        var savedQueries = new InMemorySavedQueryRepository();
+        var visualizations = new InMemoryVisualizationRepository();
+        var service = CreateService(savedQueries, visualizations);
+
+        var result = await service.SaveVisualizationFromRenderedQueryAsync(
+            queryId: null,
+            visualizationId: null,
+            name: "Events by account",
+            description: "Dashboard chart.",
+            queryText:
+            """
+            ProcessEvent
+            | summarize Count = count() by AccountName
+            | render barchart xcolumn=AccountName ycolumns=Count title='Events by account'
+            """,
+            TestContext.CancellationToken);
+
+        Assert.IsFalse(string.IsNullOrWhiteSpace(result.Query.Id));
+        Assert.AreEqual(result.Query.Id, result.Visualization.QueryId);
+        Assert.DoesNotContain("| render", result.Query.QueryText, StringComparison.OrdinalIgnoreCase);
+        Assert.AreEqual("Events by account", result.Query.Name);
+        Assert.AreEqual("Events by account", result.Visualization.Name);
+        Assert.AreEqual(nameof(RenderKind.Barchart), result.Visualization.Kind);
+
+        var spec = JsonSerializer.Deserialize<VisualizationSpec>(
+            result.Visualization.SpecJson,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.IsNotNull(spec);
+        Assert.AreEqual("Events by account", spec.Title);
+        Assert.AreEqual("AccountName", spec.XColumn);
+        Assert.HasCount(1, spec.YColumns);
+        Assert.AreEqual("Count", spec.YColumns[0]);
+    }
+
+    [TestMethod]
+    public async Task SaveVisualizationFromRenderedQueryAsync_QueryWithoutRender_Throws()
+    {
+        var service = CreateService(
+            new InMemorySavedQueryRepository(),
+            new InMemoryVisualizationRepository());
+
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            service.SaveVisualizationFromRenderedQueryAsync(
+                null,
+                null,
+                "No render",
+                null,
+                "ProcessEvent | take 10",
+                TestContext.CancellationToken));
+    }
+
+    [TestMethod]
     public async Task SaveVisualizationAsync_UpdatesExistingVisualizationAndPreservesCreatedAt()
     {
         var savedQueries = new InMemorySavedQueryRepository();
         var visualizations = new InMemoryVisualizationRepository();
-        var service = new VisualizationLibraryService(savedQueries, visualizations);
+        var service = CreateService(savedQueries, visualizations);
 
         var createdAt = new DateTime(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
         await savedQueries.SaveAsync(new SavedQueryRecord(
@@ -109,7 +165,7 @@ public sealed class VisualizationLibraryServiceTests
     [TestMethod]
     public async Task SaveVisualizationAsync_MissingSavedQuery_Throws()
     {
-        var service = new VisualizationLibraryService(
+        var service = CreateService(
             new InMemorySavedQueryRepository(),
             new InMemoryVisualizationRepository());
 
@@ -129,7 +185,7 @@ public sealed class VisualizationLibraryServiceTests
     {
         var savedQueries = new InMemorySavedQueryRepository();
         var visualizations = new InMemoryVisualizationRepository();
-        var service = new VisualizationLibraryService(savedQueries, visualizations);
+        var service = CreateService(savedQueries, visualizations);
 
         var now = DateTime.UtcNow;
         await visualizations.SaveAsync(new VisualizationRecord(
@@ -156,6 +212,11 @@ public sealed class VisualizationLibraryServiceTests
         Assert.HasCount(1, result);
         Assert.AreEqual("viz-1", result[0].Id);
     }
+
+    private static VisualizationLibraryService CreateService(
+        ISavedQueryRepository savedQueries,
+        IVisualizationRepository visualizations)
+        => new(savedQueries, visualizations, new RenderDirectiveParser());
 
     private sealed class InMemorySavedQueryRepository : ISavedQueryRepository
     {
