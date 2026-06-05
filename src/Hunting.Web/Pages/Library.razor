@@ -53,6 +53,23 @@
             </div>
         </div>
 
+        @if (!_loading && FilteredItems.Count > PageSize)
+        {
+            <nav class="dashboard-pagination" aria-label="Library pages">
+                <button class="hunt-btn dashboard-page-button"
+                        disabled="@(_page <= 1)"
+                        @onclick="PreviousPage">
+                    Previous
+                </button>
+                <span>Page @_page of @TotalPages</span>
+                <button class="hunt-btn dashboard-page-button"
+                        disabled="@(_page >= TotalPages)"
+                        @onclick="NextPage">
+                    Next
+                </button>
+            </nav>
+        }
+
         @if (_loading)
         {
             <section class="dashboard-empty-state">
@@ -74,7 +91,7 @@
         else
         {
             <div class="dashboard-list" aria-label="Library items">
-                @foreach (var item in FilteredItems)
+                @foreach (var item in PagedItems)
                 {
                     <article class="dashboard-list-card">
                         <div class="dashboard-card-main">
@@ -127,6 +144,8 @@
 </div>
 
 @code {
+    private const int PageSize = 12;
+
     private readonly List<LibraryItem> _items = [];
     private string _searchText = string.Empty;
     private string? _error;
@@ -135,6 +154,7 @@
     private LibraryItemKind? _pendingDeleteKind;
     private bool _loading = true;
     private bool _deleting;
+    private int _page = 1;
     private LibraryItemKind? _kindFilter;
 
     private IReadOnlyList<LibraryItem> FilteredItems
@@ -161,6 +181,15 @@
         }
     }
 
+    private IReadOnlyList<LibraryItem> PagedItems
+        => FilteredItems
+            .Skip((_page - 1) * PageSize)
+            .Take(PageSize)
+            .ToArray();
+
+    private int TotalPages
+        => Math.Max(1, (int)Math.Ceiling(FilteredItems.Count / (double)PageSize));
+
     private string FilterTitle
         => _kindFilter switch
         {
@@ -180,12 +209,20 @@
             }
 
             var filteredCount = FilteredItems.Count;
-            if (filteredCount == _items.Count)
+            if (filteredCount == 0)
             {
-                return $"{filteredCount} item(s).";
+                return _items.Count == 0
+                    ? "No library items yet."
+                    : "No library items match the current filter.";
             }
 
-            return $"{filteredCount} of {_items.Count} item(s).";
+            var first = ((_page - 1) * PageSize) + 1;
+            var last = Math.Min(filteredCount, _page * PageSize);
+            var suffix = filteredCount == _items.Count
+                ? $"{filteredCount} item(s)"
+                : $"{filteredCount} of {_items.Count} item(s)";
+
+            return $"Showing {first}-{last} of {suffix}.";
         }
     }
 
@@ -204,6 +241,7 @@
             var items = await LibraryItems.ListAsync();
             _items.Clear();
             _items.AddRange(items);
+            ClampPage();
         }
         catch (Exception ex)
         {
@@ -333,6 +371,7 @@
     private void SetFilter(LibraryItemKind? kind)
     {
         _kindFilter = kind;
+        _page = 1;
         ResetPendingDelete();
     }
 
@@ -344,6 +383,7 @@
     private void OnSearchChanged(ChangeEventArgs args)
     {
         _searchText = args.Value?.ToString() ?? string.Empty;
+        _page = 1;
         ResetPendingDelete();
     }
 
@@ -351,7 +391,43 @@
     {
         _searchText = string.Empty;
         _kindFilter = null;
+        _page = 1;
         ResetPendingDelete();
+    }
+
+    private void PreviousPage()
+    {
+        if (_page <= 1)
+        {
+            return;
+        }
+
+        _page--;
+        ResetPendingDelete();
+    }
+
+    private void NextPage()
+    {
+        if (_page >= TotalPages)
+        {
+            return;
+        }
+
+        _page++;
+        ResetPendingDelete();
+    }
+
+    private void ClampPage()
+    {
+        if (_page > TotalPages)
+        {
+            _page = TotalPages;
+        }
+
+        if (_page < 1)
+        {
+            _page = 1;
+        }
     }
 
     private bool IsDeletePendingFor(LibraryItem item)
