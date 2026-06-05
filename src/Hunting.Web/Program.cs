@@ -2,6 +2,7 @@ using Hunting.Core.Catalog;
 using Hunting.Data;
 using Hunting.Data.Persistence;
 using Hunting.Schema;
+using Hunting.Web.Dashboards.DependencyInjection;
 using Hunting.Web.Rendering;
 using Hunting.Web.Services;
 using MudBlazor.Services;
@@ -50,6 +51,7 @@ builder.Services.AddScoped<LanguageService>();
 
 var settingsDbPath = Path.Combine(builder.Environment.ContentRootPath, "settings.db");
 builder.Services.AddApplicationPersistence($"Data Source={settingsDbPath}");
+builder.Services.AddDashboards();
 builder.Services.AddHuntingRenderWeb();
 
 builder.Services.AddScoped<UserSettingsState>();

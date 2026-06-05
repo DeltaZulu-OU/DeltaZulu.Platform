@@ -6,10 +6,9 @@ using Hunting.Render.Directives;
 using Hunting.Render.Services;
 using Hunting.Web.Rendering;
 
-[TestClass]
-public sealed class RenderedQueryRunnerTests
+[TestClass]public sealed class RenderedQueryRunnerTests
 {
-    [TestMethod]
+    [TestMethod]
     public async Task RunAsync_RenderDirective_ExecutesStrippedDataQueryAndBuildsChart()
     {
         var queryService = new CapturingDataOnlyQueryService(CreateResult());
@@ -29,7 +28,7 @@ public sealed class RenderedQueryRunnerTests
         Assert.AreEqual("LaunchCount", rendered.Chart.Series[0].Name);
     }
 
-    [TestMethod]
+    [TestMethod]
     public async Task RunAsync_NoRenderDirective_ExecutesOriginalQueryAndReturnsTableFallbackChart()
     {
         var queryService = new CapturingDataOnlyQueryService(CreateResult());
@@ -46,7 +45,7 @@ public sealed class RenderedQueryRunnerTests
         Assert.AreEqual("Render fell back to table.", rendered.Chart.Message);
     }
 
-    [TestMethod]
+    [TestMethod]
     public async Task RunAsync_QueryFailure_ReturnsFailedResultAndFallbackChart()
     {
         var bag = new DiagnosticBag();
@@ -67,7 +66,7 @@ public sealed class RenderedQueryRunnerTests
         Assert.AreEqual("No render data.", rendered.Chart.Message);
     }
 
-    [TestMethod]
+    [TestMethod]
     public async Task RunAsync_PassesCancellationTokenToDataOnlyQueryService()
     {
         using var cts = new CancellationTokenSource();
@@ -82,7 +81,7 @@ public sealed class RenderedQueryRunnerTests
         Assert.AreEqual(cts.Token, queryService.LastCancellationToken);
     }
 
-    [TestMethod]
+    [TestMethod]
     public async Task RunAsync_BlankQuery_Throws()
     {
         var runner = new RenderedQueryRunner(
@@ -133,4 +132,4 @@ public sealed class RenderedQueryRunnerTests
     }
 
     public TestContext TestContext { get; set; }
-}
+}

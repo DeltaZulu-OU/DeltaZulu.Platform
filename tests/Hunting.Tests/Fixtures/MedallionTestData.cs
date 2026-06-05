@@ -21,6 +21,7 @@ public static class MedallionTestData
     public const string WindowsSecurityTable = "bronze.windows_security_event";
     public const long WindowsSysmonRows = 16;
     public const string WindowsSysmonTable = "bronze.windows_sysmon_event";
+
     public static readonly IReadOnlyDictionary<string, long> ExpectedRowsByTable =
         new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
         {
@@ -29,9 +30,8 @@ public static class MedallionTestData
             [DnsServerTable] = DnsServerRows
         };
 
-        public static string CreateBronzeSchemaAndTablesSql() => """
+    public static string CreateBronzeSchemaAndTablesSql() => """
 CREATE SCHEMA IF NOT EXISTS bronze;
-
 CREATE TABLE IF NOT EXISTS bronze.windows_sysmon_event (
     ingest_time TIMESTAMP,
     source_name VARCHAR,
@@ -40,7 +40,6 @@ CREATE TABLE IF NOT EXISTS bronze.windows_sysmon_event (
     raw_log JSON,
     raw_text VARCHAR
 );
-
 CREATE TABLE IF NOT EXISTS bronze.windows_security_event (
     ingest_time TIMESTAMP,
     source_name VARCHAR,
@@ -49,7 +48,6 @@ CREATE TABLE IF NOT EXISTS bronze.windows_security_event (
     raw_log JSON,
     raw_text VARCHAR
 );
-
 CREATE TABLE IF NOT EXISTS bronze.dns_server_event (
     ingest_time TIMESTAMP,
     source_name VARCHAR,
@@ -60,7 +58,7 @@ CREATE TABLE IF NOT EXISTS bronze.dns_server_event (
 );
 """;
 
-        public static string GetDnsServerSeedSql() => """
+    public static string GetDnsServerSeedSql() => """
 INSERT INTO bronze.dns_server_event (ingest_time, source_name, provider, host, raw_log, raw_text) VALUES
 (TIMESTAMP '2024-06-15 08:20:00', 'dns-server', 'Microsoft-Windows-DNS-Server-Service', 'DNS-001',
  CAST('{"EventID":"256","TimeCreated":"2024-06-15T08:20:00Z","EventRecordID":"7001","QueryName":"beacon.example.test","QueryType":"A","ResponseCode":"NOERROR","ResponseName":"beacon.example.test","ResponseIP":"203.0.113.77","ClientIp":"10.0.1.21","ClientPort":"53001","Protocol":"UDP"}' AS JSON), ''),
@@ -72,18 +70,19 @@ INSERT INTO bronze.dns_server_event (ingest_time, source_name, provider, host, r
  CAST('{"EventID":"256","TimeCreated":"2024-06-15T08:23:00Z","EventRecordID":"7004","QueryName":"normal.corp.local","QueryType":"A","ResponseCode":"NOERROR","ResponseName":"normal.corp.local","ResponseIP":"10.0.2.20","ClientIp":"10.0.1.20","ClientPort":"53004","Protocol":"UDP"}' AS JSON), '');
 """;
 
-        public static string GetMedallionSeedSql() =>
-    string.Join(Environment.NewLine + Environment.NewLine, GetSeedSqlByTable().Values);
+    public static string GetMedallionSeedSql() =>
+string.Join(Environment.NewLine + Environment.NewLine, GetSeedSqlByTable().Values);
 
-        public static string GetSeedSql() => GetMedallionSeedSql();
+    public static string GetSeedSql() => GetMedallionSeedSql();
 
-        public static IReadOnlyDictionary<string, string> GetSeedSqlByTable() =>
-                        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            [WindowsSysmonTable] = GetWindowsSysmonSeedSql(),
-            [WindowsSecurityTable] = GetWindowsSecuritySeedSql(),
-            [DnsServerTable] = GetDnsServerSeedSql()
-        };
+    public static IReadOnlyDictionary<string, string> GetSeedSqlByTable() =>
+                    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        [WindowsSysmonTable] = GetWindowsSysmonSeedSql(),
+                        [WindowsSecurityTable] = GetWindowsSecuritySeedSql(),
+                        [DnsServerTable] = GetDnsServerSeedSql()
+                    };
+
     public static string GetWindowsSecuritySeedSql() => """
 INSERT INTO bronze.windows_security_event (ingest_time, source_name, provider, host, raw_log, raw_text) VALUES
 (TIMESTAMP '2024-06-15 08:40:00', 'windows-security', 'Microsoft-Windows-Security-Auditing', 'WS-004', CAST('{"EventID":"5156","TimeCreated":"2024-06-15T08:40:00Z","EventRecordID":"4001","SourceAddress":"10.0.1.24","SourcePort":"53000","DestAddress":"203.0.113.60","DestPort":"443","Protocol":"tcp","Application":"C:\\Windows\\System32\\svchost.exe"}' AS JSON), ''),

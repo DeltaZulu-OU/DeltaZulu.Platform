@@ -13,7 +13,7 @@ public sealed class QueryHistoryRepositoryTests
         var repository = CreateRepository(out var dbPath);
         try
         {
-            var history = await repository.ListRecentAsync();
+            var history = await repository.ListRecentAsync(cancellationToken: TestContext.CancellationToken);
 
             Assert.IsEmpty(history);
         }
@@ -38,12 +38,12 @@ public sealed class QueryHistoryRepositoryTests
                 true,
                 10,
                 42,
-                null));
+                null), TestContext.CancellationToken);
 
             var secondRepository = new DapperQueryHistoryRepository(
                 new SqliteAppDbConnectionFactory(BuildConnectionString(dbPath)));
 
-            var history = await secondRepository.ListRecentAsync();
+            var history = await secondRepository.ListRecentAsync(cancellationToken: TestContext.CancellationToken);
 
             Assert.HasCount(1, history);
             Assert.AreEqual("history-1", history[0].Id);
@@ -73,7 +73,7 @@ public sealed class QueryHistoryRepositoryTests
                 true,
                 1,
                 10,
-                null));
+                null), TestContext.CancellationToken);
 
             await repository.AddAsync(new QueryHistoryRecord(
                 "new",
@@ -82,9 +82,9 @@ public sealed class QueryHistoryRepositoryTests
                 true,
                 2,
                 20,
-                null));
+                null), TestContext.CancellationToken);
 
-            var history = await repository.ListRecentAsync(limit: 1);
+            var history = await repository.ListRecentAsync(limit: 1, TestContext.CancellationToken);
 
             Assert.HasCount(1, history);
             Assert.AreEqual("new", history[0].Id);
@@ -108,9 +108,9 @@ public sealed class QueryHistoryRepositoryTests
                 false,
                 null,
                 12,
-                "The referenced table or column does not exist."));
+                "The referenced table or column does not exist."), TestContext.CancellationToken);
 
-            var history = await repository.ListRecentAsync();
+            var history = await repository.ListRecentAsync(cancellationToken: TestContext.CancellationToken);
 
             Assert.HasCount(1, history);
             Assert.IsFalse(history[0].Succeeded);
@@ -136,11 +136,11 @@ public sealed class QueryHistoryRepositoryTests
                 true,
                 10,
                 42,
-                null));
+                null), TestContext.CancellationToken);
 
-            await repository.ClearAsync();
+            await repository.ClearAsync(TestContext.CancellationToken);
 
-            var history = await repository.ListRecentAsync();
+            var history = await repository.ListRecentAsync(cancellationToken: TestContext.CancellationToken);
 
             Assert.IsEmpty(history);
         }
@@ -178,4 +178,6 @@ public sealed class QueryHistoryRepositoryTests
             File.Delete(path);
         }
     }
+
+    public TestContext TestContext { get; set; }
 }

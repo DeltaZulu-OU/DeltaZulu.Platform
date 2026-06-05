@@ -1,0 +1,151 @@
+@page "/dashboards/{DashboardId}"
+@namespace Hunting.Web.Pages
+@using Hunting.Web.Components.Dashboards
+@using Hunting.Web.Dashboards.PageState
+@inject DashboardPageController Controller
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<div class="dashboard-detail-page">
+    @if (State.Loading)
+    {
+        <section class="dashboard-empty-state">
+            <h1>Loading dashboard…</h1>
+            <p>Reading the dashboard definition from local application persistence.</p>
+        </section>
+    }
+    else if (!string.IsNullOrWhiteSpace(State.Error))
+    {
+        <section class="dashboard-empty-state dashboard-error-state">
+            <h1>Dashboard unavailable</h1>
+            <p>@State.Error</p>
+            <button class="hunt-btn" @onclick="BackToDashboards">Back to dashboards</button>
+        </section>
+    }
+    else if (State.Dashboard is not null)
+    {
+        <header class="dashboard-page-header dashboard-detail-header">
+            <div>
+                <p class="dashboard-eyebrow">Dashboard</p>
+                <h1>@State.Dashboard.Name</h1>
+                @if (!string.IsNullOrWhiteSpace(State.Dashboard.Description))
+                {
+                    <p class="dashboard-page-subtitle">@State.Dashboard.Description</p>
+                }
+                else
+                {
+                    <p class="dashboard-page-subtitle">Run, edit, import, export, and refresh dashboard widgets.</p>
+                }
+                @if (State.AutoRefreshEnabled)
+                {
+                    <p class="dashboard-page-subtitle">@State.AutoRefreshStatus</p>
+                }
+                @if (State.LayoutEditMode)
+                {
+                    <p class="dashboard-page-subtitle">Layout edit mode is active. Drag widgets by the handle and resize them from the edges.</p>
+                }
+            </div>
+            <div class="dashboard-toolbar">
+                <div class="dashboard-toolbar-split" role="group" aria-label="Dashboard actions">
+                    <MudButton Class="dashboard-toolbar-primary"
+                               Variant="Variant.Outlined"
+                               Size="Size.Small"
+                               Disabled="@(!State.CanRunDashboard)"
+                               OnClick="Controller.RunAllWidgetsAsync"
+                               title="Refresh dashboard"
+                               aria-label="Refresh dashboard">
+                        <MudIcon Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" />
+                    </MudButton>
+                    <MudMenu Class="dashboard-toolbar-menu"
+                             Dense="true"
+                             AnchorOrigin="Origin.BottomRight"
+                             TransformOrigin="Origin.TopRight"
+                             Icon="@Icons.Material.Filled.ArrowDropDown"
+                             Size="Size.Small"
+                             Variant="Variant.Outlined">
+                        <MudMenuItem Disabled="@(!State.CanStartAutoRefresh)" OnClick="Controller.ToggleAutoRefreshAsync">
+                            @(State.AutoRefreshEnabled ? "Stop auto-refresh" : "Start auto-refresh")
+                        </MudMenuItem>
+                        <MudMenuItem OnClick="Controller.ToggleLayoutEditMode">
+                            @(State.LayoutEditMode ? "Done editing layout" : "Edit layout")
+                        </MudMenuItem>
+                        <MudMenuItem OnClick="Controller.OpenDashboardSettingsEditor">Edit dashboard</MudMenuItem>
+                        <MudMenuItem OnClick="Controller.OpenAddWidgetEditor">Add widget</MudMenuItem>
+                        <MudMenuItem OnClick="ExportDashboardAsync">Export JSON</MudMenuItem>
+                    </MudMenu>
+                </div>
+            </div>
+        </header>
+
+        @if (!string.IsNullOrWhiteSpace(State.SaveError))
+        {
+            <div class="dashboard-error">@State.SaveError</div>
+        }
+
+        <DashboardGrid Dashboard="State.Dashboard"
+                       Results="State.WidgetResults"
+                       IsEditMode="State.LayoutEditMode"
+                       RunWidget="Controller.RunWidgetAsync"
+                       LayoutChanged="Controller.SaveWidgetLayoutAsync"
+                       EditWidget="Controller.OpenEditWidgetEditor"
+                       DeleteWidget="Controller.DeleteWidgetAsync" />
+
+        <DashboardWidgetEditor IsOpen="State.EditorOpen"
+                               Widget="State.EditingWidget"
+                               SuggestedLayout="State.NextWidgetLayout"
+                               SaveWidget="Controller.SaveWidgetAsync"
+                               Cancel="Controller.CloseWidgetEditor" />
+
+        <DashboardSettingsEditor IsOpen="State.SettingsEditorOpen"
+                                 Dashboard="State.Dashboard"
+                                 SaveDashboard="Controller.SaveDashboardSettingsAsync"
+                                 Cancel="Controller.CloseDashboardSettingsEditor" />
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string? DashboardId { get; set; }
+
+    private DashboardPageState State => Controller.State;
+
+    public void Dispose()
+    {
+        Controller.StateChanged -= OnControllerStateChanged;
+        Controller.Deactivate();
+    }
+
+    protected override void OnInitialized()
+        => Controller.StateChanged += OnControllerStateChanged;
+
+    protected override Task OnParametersSetAsync()
+        => Controller.LoadAsync(DashboardId);
+
+    private async Task ExportDashboardAsync()
+    {
+        var dashboardExport = Controller.BuildDashboardExport();
+        if (dashboardExport is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync(
+                "huntingDashboardTransfer.downloadJson",
+                dashboardExport.FileName,
+                dashboardExport.Json);
+        }
+        catch (Exception ex)
+        {
+            Controller.SetSaveError($"Could not export dashboard. {ex.Message}");
+        }
+    }
+
+    private void OnControllerStateChanged()
+        => _ = InvokeAsync(StateHasChanged);
+
+    private void BackToDashboards()
+        => Navigation.NavigateTo("/dashboards");
+}

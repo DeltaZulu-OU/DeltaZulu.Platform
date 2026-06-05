@@ -19,7 +19,7 @@ public sealed class RenderResolverTests
         Assert.AreEqual(RenderKind.Table, plan.Kind);
         Assert.AreEqual("Raw rows", plan.Title);
         Assert.IsNull(plan.XColumn);
-        Assert.AreEqual(0, plan.YColumns.Count);
+        Assert.IsEmpty(plan.YColumns);
         Assert.IsTrue(plan.IsFallback);
         Assert.AreEqual("Already table.", plan.FallbackReason);
     }

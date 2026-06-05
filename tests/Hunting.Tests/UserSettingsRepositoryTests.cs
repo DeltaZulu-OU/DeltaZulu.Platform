@@ -13,7 +13,7 @@ public sealed class UserSettingsRepositoryTests
         var repository = CreateRepository(out var dbPath);
         try
         {
-            var settings = await repository.LoadAsync();
+            var settings = await repository.LoadAsync(TestContext.CancellationToken);
 
             Assert.AreEqual(UserSettingsDefaults.DefaultTimeFilterKey, settings.DefaultTimeFilter);
             Assert.IsNull(settings.DefaultResultLimit);
@@ -30,12 +30,12 @@ public sealed class UserSettingsRepositoryTests
         var repository = CreateRepository(out var dbPath);
         try
         {
-            await repository.SaveAsync(new UserSettingsRecord("last24h", 500));
+            await repository.SaveAsync(new UserSettingsRecord("last24h", 500), TestContext.CancellationToken);
 
             var secondRepository = new DapperUserSettingsRepository(
                 new SqliteAppDbConnectionFactory(BuildConnectionString(dbPath)));
 
-            var settings = await secondRepository.LoadAsync();
+            var settings = await secondRepository.LoadAsync(TestContext.CancellationToken);
 
             Assert.AreEqual("last24h", settings.DefaultTimeFilter);
             Assert.AreEqual(500, settings.DefaultResultLimit);
@@ -74,4 +74,6 @@ public sealed class UserSettingsRepositoryTests
             File.Delete(path);
         }
     }
+
+    public TestContext TestContext { get; set; }
 }

@@ -14,6 +14,7 @@ public static class HuntingRenderWebServiceCollectionExtensions
         services.AddScoped<IDataOnlyQueryService>(sp => sp.GetRequiredService<QueryService>());
         services.AddScoped<EChartsRenderOptionsBuilder>();
         services.AddScoped<RenderedQueryRunner>();
+        services.AddScoped<IRenderedQueryRunner>(sp => sp.GetRequiredService<RenderedQueryRunner>());
 
         return services;
     }

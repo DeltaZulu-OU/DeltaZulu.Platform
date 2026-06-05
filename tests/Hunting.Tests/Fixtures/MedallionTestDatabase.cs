@@ -17,7 +17,6 @@ internal static class MedallionTestDatabase
     {
         ArgumentNullException.ThrowIfNull(connection);
         ArgumentException.ThrowIfNullOrWhiteSpace(tableName);
-
         using var command = connection.CreateCommand();
         command.CommandText = $"SELECT count(*) FROM {tableName};";
         return Convert.ToInt64(command.ExecuteScalar());
@@ -37,15 +36,16 @@ internal static class MedallionTestDatabase
         SeedMedallionTestData(connection);
         return connection;
     }
+
     public static void SeedMedallionTestData(DuckDBConnection connection)
     {
         ArgumentNullException.ThrowIfNull(connection);
-
         foreach (var sql in MedallionTestData.GetSeedSqlByTable().Values)
         {
             ExecuteNonQuery(connection, sql);
         }
     }
+
     private static void ExecuteNonQuery(DuckDBConnection connection, string sql)
     {
         using var command = connection.CreateCommand();

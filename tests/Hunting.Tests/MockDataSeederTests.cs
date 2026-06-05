@@ -80,14 +80,14 @@ public sealed class MockDataSeederTests
     {
         var sql = MockDataSeeder.GetMedallionSeedSql();
 
-        StringAssert.Contains(sql, "suspicious-powershell");
-        StringAssert.Contains(sql, "credential-access");
-        StringAssert.Contains(sql, "lateral-movement");
-        StringAssert.Contains(sql, "persistence-scheduled-task");
-        StringAssert.Contains(sql, "exfiltration");
-        StringAssert.Contains(sql, "4625");
-        StringAssert.Contains(sql, "4728");
-        StringAssert.Contains(sql, "dGhpcy1sb29rcy1saWtlLXR1bm5lbA.example.test");
+        Assert.Contains("suspicious-powershell", sql);
+        Assert.Contains("credential-access", sql);
+        Assert.Contains("lateral-movement", sql);
+        Assert.Contains("persistence-scheduled-task", sql);
+        Assert.Contains("exfiltration", sql);
+        Assert.Contains("4625", sql);
+        Assert.Contains("4728", sql);
+        Assert.Contains("dGhpcy1sb29rcy1saWtlLXR1bm5lbA.example.test", sql);
     }
 
     private static int CountInsertRows(string sql) =>

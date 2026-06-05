@@ -1,0 +1,325 @@
+@page "/dashboards"
+@namespace Hunting.Web.Pages
+@using Hunting.Web.Dashboards
+@using Hunting.Web.Dashboards.Persistence
+@inject IDashboardRepository DashboardRepository
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+<div class="dashboard-list-page">
+    <header class="dashboard-page-header dashboard-list-header">
+        <div>
+            <p class="dashboard-eyebrow">Dashboards</p>
+            <h1>Dashboards</h1>
+            <p class="dashboard-page-subtitle">Create, import, open, and manage local dashboard definitions.</p>
+        </div>
+        <div class="dashboard-list-toolbar">
+            <label class="dashboard-search" aria-label="Search dashboards">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" />
+                <input placeholder="Search dashboards"
+                       value="@_searchText"
+                       @oninput="OnSearchChanged" />
+            </label>
+
+            <div class="dashboard-list-actions-primary">
+                <button class="hunt-btn dashboard-primary-action" @onclick="CreateDashboardAsync">New dashboard</button>
+                <button class="hunt-btn" @onclick="ImportDashboardAsync">Import JSON</button>
+            </div>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="dashboard-error">@_error</div>
+    }
+
+    @if (_loading)
+    {
+        <section class="dashboard-empty-state">
+            <h2>Loading dashboards…</h2>
+            <p>Reading dashboard summaries from local application persistence.</p>
+        </section>
+    }
+    else if (_dashboards.Count == 0)
+    {
+        <section class="dashboard-empty-state dashboard-list-empty">
+            <h2>No dashboards</h2>
+            <p>Create a dashboard or import one from JSON.</p>
+            <div class="dashboard-empty-actions">
+                <button class="hunt-btn dashboard-primary-action" @onclick="CreateDashboardAsync">Create dashboard</button>
+                <button class="hunt-btn" @onclick="ImportDashboardAsync">Import JSON</button>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="dashboard-list-panel" aria-label="Dashboard list panel">
+            <div class="dashboard-list-panel-header">
+                <div>
+                    <h2>Local dashboards</h2>
+                    <p>@DashboardRangeText</p>
+                </div>
+
+                @if (TotalPages > 1)
+                {
+                    <nav class="dashboard-pagination" aria-label="Dashboard pages">
+                        <button class="hunt-btn dashboard-page-button"
+                                disabled="@(_page <= 1)"
+                                @onclick="PreviousPage">
+                            Previous
+                        </button>
+                        <span>Page @_page of @TotalPages</span>
+                        <button class="hunt-btn dashboard-page-button"
+                                disabled="@(_page >= TotalPages)"
+                                @onclick="NextPage">
+                            Next
+                        </button>
+                    </nav>
+                }
+            </div>
+
+            @if (FilteredDashboards.Count == 0)
+            {
+                <section class="dashboard-empty-state dashboard-list-empty">
+                    <h2>No matching dashboards</h2>
+                    <p>Clear the search text or use a different term.</p>
+                    <div class="dashboard-empty-actions">
+                        <button class="hunt-btn" @onclick="ClearSearch">Clear search</button>
+                    </div>
+                </section>
+            }
+            else
+            {
+                <div class="dashboard-list" aria-label="Dashboard cards">
+                    @foreach (var dashboard in PagedDashboards)
+                    {
+                        <article class="dashboard-list-card">
+                            <div class="dashboard-card-main">
+                                <div class="dashboard-card-title-row">
+                                    <h2>@dashboard.Name</h2>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(dashboard.Description))
+                                {
+                                    <p>@dashboard.Description</p>
+                                }
+                                else
+                                {
+                                    <p class="dashboard-muted">No description.</p>
+                                }
+                            </div>
+
+                            <dl class="dashboard-list-meta">
+                                <div>
+                                    <dt>Widgets</dt>
+                                    <dd>@dashboard.WidgetCount</dd>
+                                </div>
+                                <div>
+                                    <dt>Updated</dt>
+                                    <dd>@dashboard.UpdatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</dd>
+                                </div>
+                            </dl>
+
+                            <div class="dashboard-card-actions">
+                                <button class="hunt-btn dashboard-primary-action" @onclick="() => OpenDashboard(dashboard.Id)">Open</button>
+                                <MudMenu Class="dashboard-card-menu"
+                                         Dense="true"
+                                         AnchorOrigin="Origin.BottomRight"
+                                         TransformOrigin="Origin.TopRight"
+                                         Icon="@Icons.Material.Filled.MoreVert"
+                                         Size="Size.Small"
+                                         Variant="Variant.Outlined">
+                                    <MudMenuItem OnClick="() => DeleteDashboardAsync(dashboard.Id)">Delete</MudMenuItem>
+                                </MudMenu>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private const int PageSize = 8;
+
+    private readonly List<DashboardSummary> _dashboards = [];
+    private string _searchText = string.Empty;
+    private string? _error;
+    private bool _loading = true;
+    private int _page = 1;
+
+    private IReadOnlyList<DashboardSummary> FilteredDashboards
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_searchText))
+            {
+                return _dashboards;
+            }
+
+            return _dashboards
+                .Where(summary =>
+                    ContainsSearchText(summary.Name)
+                    || ContainsSearchText(summary.Description))
+                .ToArray();
+        }
+    }
+
+    private IReadOnlyList<DashboardSummary> PagedDashboards
+        => FilteredDashboards
+            .Skip((_page - 1) * PageSize)
+            .Take(PageSize)
+            .ToArray();
+
+    private int TotalPages
+        => Math.Max(1, (int)Math.Ceiling(FilteredDashboards.Count / (double)PageSize));
+
+    private string DashboardRangeText
+    {
+        get
+        {
+            var filteredCount = FilteredDashboards.Count;
+            if (filteredCount == 0)
+            {
+                return "No dashboards match the current filter.";
+            }
+
+            var first = ((_page - 1) * PageSize) + 1;
+            var last = Math.Min(filteredCount, _page * PageSize);
+            var suffix = filteredCount == _dashboards.Count
+                ? $"{filteredCount} dashboard(s)"
+                : $"{filteredCount} of {_dashboards.Count} dashboard(s)";
+
+            return $"Showing {first}-{last} of {suffix}.";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardsAsync();
+    }
+
+    private async Task LoadDashboardsAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            var dashboards = await DashboardRepository.ListAsync();
+            _dashboards.Clear();
+            _dashboards.AddRange(dashboards.OrderByDescending(dashboard => dashboard.UpdatedAtUtc));
+            ClampPage();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not load dashboards. {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task CreateDashboardAsync()
+    {
+        _error = null;
+
+        var now = DateTime.UtcNow;
+        var dashboard = new DashboardDefinition
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            Name = "New dashboard",
+            Description = "Local dashboard",
+            Refresh = DashboardRefreshPolicy.Manual(),
+            Widgets = [],
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
+        };
+
+        try
+        {
+            await DashboardRepository.SaveAsync(dashboard);
+            Navigation.NavigateTo($"/dashboards/{dashboard.Id}");
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not create dashboard. {ex.Message}";
+        }
+    }
+
+    private async Task ImportDashboardAsync()
+    {
+        _error = null;
+
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("huntingDashboardTransfer.pickJson");
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return;
+            }
+
+            var dashboard = DashboardJsonTransfer.ImportAsCopy(json);
+            await DashboardRepository.SaveAsync(dashboard);
+            Navigation.NavigateTo($"/dashboards/{dashboard.Id}");
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not import dashboard. {ex.Message}";
+        }
+    }
+
+    private async Task DeleteDashboardAsync(string dashboardId)
+    {
+        _error = null;
+
+        try
+        {
+            await DashboardRepository.DeleteAsync(dashboardId);
+            await LoadDashboardsAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not delete dashboard. {ex.Message}";
+        }
+    }
+
+    private void OnSearchChanged(ChangeEventArgs args)
+    {
+        _searchText = args.Value?.ToString() ?? string.Empty;
+        _page = 1;
+    }
+
+    private void ClearSearch()
+    {
+        _searchText = string.Empty;
+        _page = 1;
+    }
+
+    private void PreviousPage()
+    {
+        if (_page > 1)
+        {
+            _page--;
+        }
+    }
+
+    private void NextPage()
+    {
+        if (_page < TotalPages)
+        {
+            _page++;
+        }
+    }
+
+    private void ClampPage()
+        => _page = Math.Clamp(_page, 1, TotalPages);
+
+    private bool ContainsSearchText(string? value)
+        => !string.IsNullOrWhiteSpace(value)
+            && value.Contains(_searchText, StringComparison.OrdinalIgnoreCase);
+
+    private void OpenDashboard(string dashboardId)
+        => Navigation.NavigateTo($"/dashboards/{dashboardId}");
+}

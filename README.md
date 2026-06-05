@@ -13,12 +13,10 @@ Analysts write KQL against logical security tables (for example, `ProcessEvent`)
 - Phase 5 (Planner v1 + emitter SQL-shape simplification) is complete.
 - Phase 1A medallion checkpoint is complete: active Bronze/Silver/Golden contracts are documented, legacy vertical-slice names are removed from the active branch, and sample queries use the active Golden surface.
 - Phase 1E semantic-hardening baseline is in progress: Silver parsers now extract source-specific event timestamps with explicit `ingest_time` fallback and use tolerant DuckDB conversions for optional numeric telemetry; Golden contract documentation records the current normalization boundary.
+- Render implementation is decoupled from `Hunting.Core` and `Hunting.Data`. `Hunting.Render` owns dependency-light render contracts, terminal directive parsing, binding resolution, tabular render abstraction, and chart-model construction. `Hunting.Web` owns query/render orchestration, `QueryResult` adaptation, and Vizor.ECharts option construction.
+- Runtime execution is data-only. The Web layer parses terminal `| render ...` directives, passes the stripped data query through `QueryService.ExecuteDataOnlyAsync(...)`, adapts the returned `QueryResult`, and builds render output separately.
+- Dashboard foundation is implemented on `dashboard-rewrite`: persisted dashboards, query widgets, chart/table widgets, dashboard settings, JSON export, dashboard-level refresh, coordinate-grid edit mode, collision-safe move/resize, model-level layout validation, and a scoped dashboard page controller/state model.
 - End-to-end pipeline coverage currently includes 17 hunting scenarios in `EndToEndPipelineTests`.
-- Developer-mode query debug trace is now logged on successful executions, not only failures, to support optimization telemetry.
-- `parse_path()` output is now emitted as JSON text so dynamic path components render as readable strings in the UI/results grid.
-- Long/structured result cells now show an inline chevron affordance that opens the right-side drawer with beautified, syntax-highlighted JSON content when applicable.
-- The long/structured cell heuristic controls **chevron visibility only**; opening the drawer is an explicit chevron action.
-- Feature parity snapshot from `docs/kql-syntax-coverage-checklist.md` uses an in-scope-only statistics table. Out-of-scope constructs are excluded. Current code-backed promotions include scalar `let`, multiple scalar `let` chains, `in`/`!in` list predicates, `url_encode`/`url_decode`, `array_concat`, `array_slice`, string-input `hash_sha256`, string-input `hash_md5`, and `translate`; direct RelNode emission validates these mappings defensively.
 
 | Feature parity status (in scope only) | Count | Percent of in-scope total |
 |---|---:|---:|
@@ -44,51 +42,6 @@ Active source-family Bronze tables are:
 
 Active Silver parser views map the current source/event shapes into the Golden contracts. Legacy vertical-slice names such as `ProcessEvents`, `NetworkSessions`, `DeviceProcessEvents`, `DeviceNetworkEvents`, and `windows_event_json` have been removed from the active branch.
 
-- Mock seeding and UI sample queries now use the active medallion surface. Sample queries are centralized in `Hunting.Core.Samples.SampleQueryCatalog` and are validated against seeded Phase 1A data.
-- Hot-path latency review and optimization plan is documented in `docs/HOTPATH-LATENCY-REVIEW.md`.
-- Emitter hot-path optimization is in progress: stage-name index and reference-count caches were added to reduce repeated stage scans during SQL-shape rewrites.
-- Controlled emitter decomposition is complete without changing the public `DuckDbQueryEmitter` API or emitted SQL shape. The façade retains immutable options and publishes `LastRunStats`, while each `Emit(RelNode)` call constructs a fresh `DuckDbEmitterContext` plus run-scoped `DuckDbFunctionEmitter`, `DuckDbScalarEmitter`, `DuckDbJoinEmitter`, and `DuckDbRelNodeEmitter` collaborators. `DuckDbStageRegistry` owns stage state and statistics, `DuckDbSqlShapeRewriter` owns SQL-shape simplification, and the stateless `DuckDbSqlText` helper owns escaping and indentation. Function mapping, scalar rendering, join and lookup rendering, and relational orchestration now live behind narrow collaborator boundaries. Statistics assembly remains a trivial context adapter, so no separate stats builder was added. Removing façade context storage does not claim shared-emitter thread safety because `LastRunStats` remains mutable publication state.
-- Developer-mode debug trace now includes per-query emitter cache/rewrite counters to support optimization benchmarking across future patches.
-- Planner is now always enabled in the runtime execution path with no feature-flag gating.
-- Planner hot-path trimming is in progress: filter pushdown is intentionally kept to linear projection wrappers, and common-scalar hoisting is now threshold-gated to repeated complex expressions.
-- Runtime compile-cache v1 added in `QueryRuntime`: bounded in-memory cache for emitted SQL keyed by KQL + catalog version + planner/default-limit settings, reducing repeat parse/plan/emit cost while preserving freshness for hot ingest data.
-- Runtime compile-cache key now includes explicit policy/compiler epochs, in addition to KQL + catalog/planner/limit dimensions, to allow safe invalidation when policy or compile semantics change. `SetCompileEpochs(...)` can rotate epochs and flush compile cache explicitly at runtime.
-- Runtime now includes a streamed execution path (`ExecuteStreamed`) and the Blazor `QueryService` now executes through it by default with bounded UI materialization (`MaxMaterializedRows`) to avoid unbounded full-result buffering in the primary web path. Non-web callers can also bound buffered execution via `Execute(kql, maxRows)`, or use the new columnar `ExecuteTabular(...)` result contract to consume buffered data without `object[]` row arrays. Tabular execution now populates columns directly during reader scan with no intermediate row-array materialization.
-- Added a dedicated `/settings` page in `Hunting.Web` with structured controls for default time-filter and result-limit preferences, both defaulting to `None`, and a sidebar navigation entry. The hunt page now initializes toolbar defaults from per-circuit settings state.
-- Settings defaults are now persisted in a local SQLite store (`settings.db`) via `UserSettingsStore`; both default time-filter and default item-limit survive app restarts and new circuits.
-- Settings persistence code paths were refactored for clarity, with centralized SQL constants/helpers and explicit normalization in `UserSettingsState`, with no behavior change.
-- Main shell navigation now uses a proper MudBlazor `MudAppBar`/`MudIconButton` composition for top-level app chrome and settings access.
-- Dashboard shell layout was corrected for MudBlazor app-bar flow (`Fixed="false"` + flex-based content region sizing) so the sidebar/main panels render as a coherent full-height workspace without overlap/cropping.
-- Runtime result materialization now uses a typed-reader plan per column, with string/numeric/bool/datetime fast paths and null-aware delegates, instead of unconditional `GetValue` calls for every cell.
-- Planner hot-path allocation trimming is in progress: several output-name paths now avoid LINQ `Concat(...).ToHashSet(...)` chains in favor of direct case-insensitive set population. Column-remap/substitution now short-circuit when no relevant references exist to avoid unnecessary recursive rewrites, and pass-stat materialization now uses loop-based list population instead of LINQ `ToArray()` snapshots.
-- Emitter aggregate-alias predicate rewrite now parses projection aliases with a small structured parser, using top-level comma split + `AS` alias extraction before replacement, removing one regex-heavy projection parsing hotspot. Stage-reference counting now uses structured token scanning instead of regex matches.
-- Emitter output-column/projection helper paths now use loop-based list/set population instead of LINQ `ToArray()` in lookup payload and output-column discovery flows.
-- Emitter `in`/`!in` list emission no longer snapshots scalar item SQL with LINQ `ToArray()` before `string.Join`, trimming one more allocation hotspot on expression emission paths.
-- Runtime `QueryResult` is now columnar-first (`ColumnData` + `GetValue(row, col)`) and buffered/runtime/web materialization paths were migrated off `IReadOnlyList<object?[]>` row-array contracts.
-- Render implementation is now decoupled from `Hunting.Core` and `Hunting.Data`. `Hunting.Render` owns dependency-light render contracts, terminal directive parsing, binding resolution, tabular render abstraction, and chart-model construction. `Hunting.Web` owns query/render orchestration, `QueryResult` adaptation, and Vizor.ECharts option construction.
-- Runtime execution is data-only. The Web layer parses terminal `| render ...` directives, passes the stripped data query through `QueryService.ExecuteDataOnlyAsync(...)`, adapts the returned `QueryResult`, and builds render output separately.
-- The Render tab draws subset charts for resolved `timechart`/`linechart`/`areachart`/`scatterchart`/`barchart`/`columnchart`/`piechart` specs, supports `kind=stacked` on bar/column/area chart families, `legend=hidden|hide|none|off` legend suppression, and `series=<column>` grouping for multi-series rendering. Oversized charts are downsampled with explicit degrade warnings, and resolution failures fall back to the table view.
-- Render tab UX behaves as a true tab control: the Render tab is disabled unless the executed query includes a supported terminal `| render ...` clause and a chart can be built. The UI keeps table view as default otherwise, instantiates the EChart component only when the Render tab is active, and keys chart rendering per query refresh to avoid stale/disposed component paths.
-- Render host compatibility fix: removed unsupported `class` parameter usage on `Vizor.ECharts.EChart` and moved sizing hook to a wrapper element to avoid Blazor `InvalidOperationException` circuit crashes while preserving chart sizing behavior.
-- Render SVG null-dimension fix: `Vizor.ECharts.EChart` now receives explicit height and host-measured pixel width so the generated `<svg>` never gets `width="null"` / `height="null"` in Blazor render-tab hosting.
-- Render sizing correction: chart width **and height** are now measured from the actual tab host element via JS interop and passed to `Vizor.ECharts.EChart` as pixel dimensions, preventing both `100px` fallback sizing and short 320px-only chart occupancy in tall render panels.
-- Render adapter fault hardening: unsupported render kinds, for example `render card`, now surface a red UI error, keep the Render tab disabled, and avoid throwing an unhandled exception that breaks the Blazor circuit.
-- Hunt workspace vertical panels are now user-resizable via a draggable splitter between the Monaco editor section and results tabs section.
-- Monaco render autocomplete now avoids duplicate `render` token insertion when completing chart kinds/snippets after typing `| render`, and render-kind/template suggestions no longer appear as confusing duplicate labels.
-- Monaco editor bootstrap now preserves cached query text across editor re-initialization attempts and retry/failure paths, so transient init errors do not wipe analyst query text.
-- Monaco schema and supported-language autocomplete metadata are now generated by C#. The UI consumes a library-owned, editor-agnostic metadata snapshot with Golden table descriptions, Silver contributors, typed nullable/dynamic column details, supported keywords/operators, and render kinds instead of maintaining Web-owned schema or language lists. Hyphenated supported terms such as `sample-distinct` tokenize and complete as one term, while deferred terms such as `mv-expand`, `fork`, and `union` are not suggested.
-- DuckDB connection initialization now loads the packaged core `inet` extension by default to enable pragmatic IP/CIDR-native function mappings without adding a community-extension dependency.
-
-The repository currently includes:
-
-- `Hunting.Core`: translation, relational model, planner, catalog/policy, sample-query catalog, and DuckDB SQL emitter.
-- `Hunting.Schema`: dedicated schema-definition project, public view schemas, and parser mappings.
-- `Hunting.Data`: connection factory, schema application, data-only runtime orchestration, application persistence, and mock seeding.
-- `Hunting.Render`: standalone render contracts, terminal directive parsing, render binding resolution, tabular abstraction, and chart-model construction; no `Hunting.*` project references.
-- `Hunting.Web`: Blazor Server host, analyst UI, render orchestration, QueryResult-to-render adapter, and Vizor.ECharts adapter.
-- `Hunting.Tests`: MSTest test suite across translation/emitter/runtime/planner seams.
-- Translation API compatibility is preserved: public `KustoToRelational` delegates to the internal `KustoQueryTranslator` façade, while document analysis, management-command guarding, table-reference policy, SDK syntax helpers, projection naming, function validation, and integer-literal reading are isolated internal services.
-
 ## Architecture at a Glance
 
 ```text
@@ -103,6 +56,19 @@ KQL query
   -> DuckDB execution
   -> tabular results + diagnostics
   -> optional Web render adapter + Hunting.Render chart model + ECharts options
+  -> Render tab or dashboard widget
+```
+
+Dashboard composition uses the same render-aware query path:
+
+```text
+Dashboard.razor
+  -> DashboardPageController
+  -> DashboardWidgetRunner
+  -> RenderedQueryRunner
+  -> data-only QueryService execution
+  -> Hunting.Render chart model
+  -> Dashboard widget host
 ```
 
 Key constraints:
@@ -112,6 +78,7 @@ Key constraints:
 3. MVP Golden contracts may be ASIM-shaped as a provisional bootstrap contract; post-MVP names/fields are project-governed by schema review.
 4. Unsupported KQL constructs are rejected with diagnostics, not silently approximated.
 5. Translator and emitter are validated with a two-seam test strategy.
+6. Dashboards are a Web-layer composition feature and do not introduce a second query runtime.
 
 ## Repository Layout
 
@@ -121,18 +88,29 @@ src/
   Hunting.Schema/      # Schema definitions for active medallion Bronze/Silver/Golden contracts
   Hunting.Data/        # Data-only DuckDB runtime, schema application, and application persistence
   Hunting.Render/      # Dependency-light render contracts, directive parsing, resolver, and chart-model builder
-  Hunting.Web/         # Blazor Server app host, UI components, render orchestration, and ECharts adapter
+  Hunting.Web/         # Blazor Server app host, UI components, render orchestration, dashboard UI, and ECharts adapter
 
 tests/
-  Hunting.Tests/       # MSTest suite across translation, emitter, runtime, planner seams
+  Hunting.Tests/       # MSTest suite across translation, emitter, runtime, planner, render, Web, dashboard, and E2E seams
 
 docs/
   ARCHITECTURE.md
+  DASHBOARD-ARCHITECTURE.md
+  DASHBOARD-PR-CHECKLIST.md
   ROADMAP.md
   KQL-to-DuckDB-translation-spec.md
   kql-syntax-coverage-checklist.md
   /adr                 # Architecture Decision Records (ADRs) documenting key design decisions and trade-offs
 ```
+
+The repository currently includes:
+
+- `Hunting.Core`: translation, relational model, planner, catalog/policy, sample-query catalog, and DuckDB SQL emitter.
+- `Hunting.Schema`: dedicated schema-definition project, public view schemas, and parser mappings.
+- `Hunting.Data`: connection factory, schema application, data-only runtime orchestration, application persistence, and mock seeding.
+- `Hunting.Render`: standalone render contracts, terminal directive parsing, render binding resolution, tabular abstraction, and chart-model construction; no `Hunting.*` project references.
+- `Hunting.Web`: Blazor Server host, analyst UI, render orchestration, QueryResult-to-render adapter, dashboard UI/persistence/controller, and Vizor.ECharts adapter.
+- `Hunting.Tests`: MSTest test suite across translation/emitter/runtime/planner/render/dashboard seams.
 
 ## Prerequisites
 
@@ -144,15 +122,17 @@ From the repository root:
 
 ```bash
 # Restore solution packages
- dotnet restore
+dotnet restore
 
 # Run MSTest suite
- dotnet test
+dotnet test
 ```
 
 ## Documentation
 
 - Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- Dashboard architecture: [`docs/DASHBOARD-ARCHITECTURE.md`](docs/DASHBOARD-ARCHITECTURE.md)
+- Dashboard PR checklist: [`docs/DASHBOARD-PR-CHECKLIST.md`](docs/DASHBOARD-PR-CHECKLIST.md)
 - Translation specification: [`docs/KQL-to-DuckDB-translation-spec.md`](docs/KQL-to-DuckDB-translation-spec.md)
 - KQL coverage checklist: [`docs/kql-syntax-coverage-checklist.md`](docs/kql-syntax-coverage-checklist.md)
 - Delivery plan: [`docs/ROADMAP.md`](docs/ROADMAP.md)

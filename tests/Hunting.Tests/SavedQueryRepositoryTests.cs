@@ -13,7 +13,7 @@ public sealed class SavedQueryRepositoryTests
         var repository = CreateRepository(out var dbPath);
         try
         {
-            var savedQueries = await repository.ListAsync();
+            var savedQueries = await repository.ListAsync(TestContext.CancellationToken);
 
             Assert.IsEmpty(savedQueries);
         }
@@ -39,12 +39,12 @@ public sealed class SavedQueryRepositoryTests
                 "ProcessEvent | where FileName has \"powershell\"",
                 createdAt,
                 updatedAt,
-                null));
+                null), TestContext.CancellationToken);
 
             var secondRepository = new DapperSavedQueryRepository(
                 new SqliteAppDbConnectionFactory(BuildConnectionString(dbPath)));
 
-            var saved = await secondRepository.GetAsync("query-1");
+            var saved = await secondRepository.GetAsync("query-1", TestContext.CancellationToken);
 
             Assert.IsNotNull(saved);
             Assert.AreEqual("Recent PowerShell", saved.Name);
@@ -77,7 +77,7 @@ public sealed class SavedQueryRepositoryTests
                 "ProcessEvent | take 10",
                 createdAt,
                 firstUpdatedAt,
-                null));
+                null), TestContext.CancellationToken);
 
             await repository.SaveAsync(new SavedQueryRecord(
                 "query-1",
@@ -86,9 +86,9 @@ public sealed class SavedQueryRepositoryTests
                 "ProcessEvent | take 25",
                 createdAt,
                 secondUpdatedAt,
-                null));
+                null), TestContext.CancellationToken);
 
-            var saved = await repository.GetAsync("query-1");
+            var saved = await repository.GetAsync("query-1", TestContext.CancellationToken);
 
             Assert.IsNotNull(saved);
             Assert.AreEqual("Updated", saved.Name);
@@ -120,11 +120,11 @@ public sealed class SavedQueryRepositoryTests
                 "ProcessEvent | take 10",
                 createdAt,
                 updatedAt,
-                null));
+                null), TestContext.CancellationToken);
 
-            await repository.MarkRunAsync("query-1", runAt);
+            await repository.MarkRunAsync("query-1", runAt, TestContext.CancellationToken);
 
-            var saved = await repository.GetAsync("query-1");
+            var saved = await repository.GetAsync("query-1", TestContext.CancellationToken);
 
             Assert.IsNotNull(saved);
             Assert.AreEqual(runAt, saved.LastRunAt);
@@ -151,11 +151,11 @@ public sealed class SavedQueryRepositoryTests
                 "ProcessEvent | take 10",
                 now,
                 now,
-                null));
+                null), TestContext.CancellationToken);
 
-            await repository.DeleteAsync("query-1");
+            await repository.DeleteAsync("query-1", TestContext.CancellationToken);
 
-            var saved = await repository.GetAsync("query-1");
+            var saved = await repository.GetAsync("query-1", TestContext.CancellationToken);
 
             Assert.IsNull(saved);
         }
@@ -193,4 +193,6 @@ public sealed class SavedQueryRepositoryTests
             File.Delete(path);
         }
     }
+
+    public TestContext TestContext { get; set; }
 }

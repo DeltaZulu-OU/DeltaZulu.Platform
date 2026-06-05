@@ -3,7 +3,7 @@ namespace Hunting.Web.Rendering;
 using Hunting.Render.Directives;
 using Hunting.Render.Services;
 
-public sealed class RenderedQueryRunner
+public sealed class RenderedQueryRunner : IRenderedQueryRunner
 {
     private readonly IRenderChartBuilder _chartBuilder;
     private readonly IDataOnlyQueryService _queryService;

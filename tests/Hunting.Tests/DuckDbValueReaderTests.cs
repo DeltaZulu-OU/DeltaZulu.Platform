@@ -64,6 +64,6 @@ public sealed class DuckDbValueReaderTests
         var value = DuckDbValueReader.ReadValue(reader, 0);
 
         Assert.IsInstanceOfType<string>(value);
-        StringAssert.Contains((string)value!, "127.0.0.1");
+        Assert.Contains("127.0.0.1", (string)value!);
     }
 }

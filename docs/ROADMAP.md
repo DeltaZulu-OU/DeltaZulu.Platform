@@ -44,24 +44,6 @@ Implemented:
 - default blocking guard for unsafe drift
 - explicit `AllowUnsafe` policy for development/reset workflows
 
-Drift statuses:
-
-| Status | Meaning |
-|---|---|
-| `Unchanged` | Expected hash matches recorded provenance |
-| `NewObject` | Expected object has no recorded row |
-| `ChangedObject` | Expected object hash differs from recorded provenance |
-| `MissingObject` | Recorded object no longer exists in active catalog |
-
-Safety policy:
-
-| Status | Safety |
-|---|---|
-| `Unchanged` | Safe |
-| `NewObject` | Safe |
-| `ChangedObject` | Unsafe |
-| `MissingObject` | Unsafe |
-
 Remaining limitations:
 
 - no structural table/view diffs yet
@@ -83,14 +65,6 @@ Implemented:
 - duplicate-prevention behavior on repeated apply
 - default blocking of mismatched recorded metadata
 - explicit allow policy for development/reset workflows
-
-Current granularity:
-
-| Batch granularity | Status |
-|---|---|
-| One batch per active Bronze table | Implemented |
-| Scenario-level fixture batches | Deferred |
-| External fixture files | Deferred |
 
 Remaining limitations:
 
@@ -125,13 +99,6 @@ Current boundary:
 | Parser-spec-driven SQL generation | Deferred |
 | Structured selector/projection expression language | Deferred |
 
-Remaining limitations:
-
-- parser specs are a validation/review layer, not the runtime mapping source
-- actual parser behavior still lives in `ParserViewDef.Mapping`
-- Phase 1E tolerant-conversion and Golden semantic baseline is active; additional source-specific formats remain follow-up work
-- malformed JSON policy remains deferred
-
 ### Phase 1E — Tolerant casting and Golden semantic normalization 🚧 IN PROGRESS
 
 **Objective:** Prevent messy telemetry values from breaking queries and make Golden semantics explicit across source contributors.
@@ -146,38 +113,24 @@ Implemented baseline:
 - focused source-shape regressions for timestamp precedence, timestamp fallback, hexadecimal process IDs, and malformed optional numeric values
 - documented active Golden semantic boundaries
 
-**Remaining scope:**
+Remaining scope:
 
 - Extend source-specific conversion helpers only when future formats are not handled by DuckDB tolerant conversion.
 - Continue refining Golden value-domain documentation as new contributors introduce materially different semantics.
 - Define malformed JSON policy.
 - Extend source-specific timestamp parsing as new audit, syslog, web-server, CEF, and other log families are onboarded.
 
-**Exit criteria:**
-
-- Malformed optional numeric telemetry does not break entire Golden views.
-- Type drift fails tests where fields are required.
-- Golden semantic fields have documented meaning.
-- Source-specific meanings are not silently merged under one field name.
-
 ### Phase 1F — Monaco and schema-browser quality
 
 **Objective:** Keep the editor useful as the schema grows.
 
-**Scope:**
+Scope:
 
 - Generate table and column metadata from Golden contracts.
 - Add descriptions, examples, nullable/dynamic hints, source/contributor metadata, and table-specific snippets.
 - Scope completions by active table context where practical.
 - Show Golden-to-Silver contribution relationships without exposing Bronze/Silver as query targets.
 - Keep sample queries centralized in `SampleQueryCatalog`.
-
-**Exit criteria:**
-
-- Metadata exactly matches active Golden views.
-- Completions do not become noisy as more Golden tables are added.
-- Sample queries execute against seeded fixtures.
-- Bronze and Silver are not suggested as queryable tables.
 
 ### Phase 1G — Controlled source and event-family expansion
 
@@ -196,8 +149,6 @@ Candidate order:
 | 5 | Web/session events | Needs source-specific semantics |
 | 6 | Alerts/incidents | Product workflow layer, not just telemetry schema |
 
-Broad expansion before Phase 1B–1E is intentionally out of scope.
-
 ---
 
 ## Render Roadmap
@@ -212,7 +163,65 @@ Render work remains a parallel track as long as it does not weaken schema semant
 | R3 | Complete | Web-owned QueryResult adapter and ECharts chart adapter |
 | R4 | In progress | Expand supported chart kinds/properties only where semantics are clear |
 | R5 | In progress | Performance, UX hardening, and chart-host stability |
-| R6 | Deferred | Dashboard foundation after the decoupled render path is stable |
+| R6 | Baseline complete on `dashboard-rewrite` | Dashboard foundation after the decoupled render path is stable |
+
+---
+
+## Dashboard Roadmap
+
+The dashboard foundation is implemented on `dashboard-rewrite`. It is a Web-layer composition surface over the decoupled render pipeline, not a separate query runtime.
+
+### D0 — Dashboard foundation ✅ BASELINE COMPLETE
+
+Implemented:
+
+- persisted dashboard definitions
+- SQLite-backed dashboard repository
+- dashboard list/detail pages
+- dashboard settings editor
+- widget editor with Monaco-backed query text
+- query widgets executing through `DashboardWidgetRunner`
+- table and chart widget rendering
+- icon-only refresh split buttons for dashboard and widgets
+- JSON export helper
+- dashboard-level auto-refresh
+- coordinate-grid widget layout
+- widget move and resize in edit mode
+- collision prevention during move/resize
+- model-level 12-column grid and overlap validation
+- scoped `DashboardPageController` and explicit `DashboardPageState`
+- JS lifecycle hardening and debug-level logging
+
+Architecture note: `MudDropZone` is retained only as a passive dashboard surface. It does not own widget ordering or placement. Persisted `X/Y/Width/Height` layout remains authoritative.
+
+### D1 — Dashboard test hardening
+
+Recommended next work:
+
+- unit tests for `DashboardPageController`
+- manual or automated smoke tests for move/resize collision behavior
+- export error-path tests
+- deactivation/cancellation tests
+- layout validation regression coverage around imported dashboard JSON
+
+### D2 — Dashboard import and library workflow
+
+Candidate scope:
+
+- import dashboard JSON from the UI
+- duplicate dashboard
+- dashboard list search/filter
+- dashboard metadata polish
+- optional dashboard templates or starter dashboards
+
+### D3 — Dashboard governance and operational polish
+
+Candidate scope:
+
+- dashboard versioning or change history
+- explicit dashboard ownership/permissions if multi-user operation becomes relevant
+- widget-level refresh policy if dashboard-level refresh is insufficient
+- server-side layout repair suggestions for invalid imports
 
 ---
 
@@ -231,14 +240,12 @@ Render work remains a parallel track as long as it does not weaken schema semant
 
 ## Suggested delivery order
 
-1. Complete Phase 1A documentation merge.
-2. Complete Phase 1B schema provenance and migration safety.
-3. Complete Phase 1C governed seed fixtures.
-4. Complete Phase 1D parser specs and source-shape correctness.
-5. Implement Phase 1E tolerant casting and Golden semantic normalization.
-6. Improve Monaco/schema-browser metadata under Phase 1F.
-7. Start controlled expansion under Phase 1G.
-8. Stabilize the decoupled render path and then start dashboard foundation work as a separate roadmap stream.
+1. Complete Phase 1E tolerant casting and Golden semantic normalization.
+2. Improve Monaco/schema-browser metadata under Phase 1F.
+3. Harden dashboard controller and lifecycle tests under D1.
+4. Continue render R4/R5 only where chart semantics and stability are clear.
+5. Start controlled expansion under Phase 1G.
+6. Add dashboard import/library workflow under D2.
 
 ---
 
@@ -251,27 +258,10 @@ Render work remains a parallel track as long as it does not weaken schema semant
 
 1. Medallion hardening: structural migration planning, tolerant casting, Golden semantic normalization
 2. Monaco language-service quality improvements
-3. Dashboard foundation over the decoupled render path
+3. Dashboard test hardening and import workflow
 4. Controlled Golden contract expansion
 5. `mv-expand`
 6. Dynamic member access
 7. `format_datetime`
 8. `has_any` / `has_all`
 9. Planner admission + v2 relational optimizations
-10. One-off schema bootstrap import + generic model alignment
-11. Quack protocol migration
-11. Scheduled query runner
-12. Multi-dialect backend architecture
-13. Render implementation track
-14. Controlled `DuckDbQueryEmitter` decomposition is complete: the public façade retains immutable options and mutable `LastRunStats` publication only; each emission constructs a fresh context and run-scoped function, scalar, join, and relational-node collaborators; `DuckDbStageRegistry`, `DuckDbSqlShapeRewriter`, and `DuckDbSqlText` retain their focused responsibilities; `StageFrom` lives with relational orchestration; statistics assembly remains a trivial context adapter, so a separate stats builder was not justified; shared-emitter thread safety remains a separate backlog item because `LastRunStats` is mutable façade state
-15. Preserve the public `KustoToRelational` API while incrementally decomposing the internal `KustoQueryTranslator`; document analysis, command guarding, table policy, syntax adaptation, projection naming, function validation, and integer-literal reading are extracted, while tabular/join/scalar extraction remains optional follow-up refactoring with no KQL coverage change.
-
-## Key Risks
-
-| Risk | Mitigation | Status |
-|------|-----------|--------|
-| Medallion migration/data safety | Phase 1B schema provenance and migration guardrails | Implemented at object-fingerprint level; structural migration planning deferred |
-| Seed duplication or partial seed state | Phase 1C seed batch tracking and fixture governance | Implemented for governed development fixtures |
-| Parser switch-sprawl | Phase 1D first-class parser specs | Implemented as validation/review layer |
-| JSON/source-shape parser bugs | Phase 1D source-shape guards | Implemented for active contributors |
-| Golden semantic drift | Phase 1E semantic normalization rules and branch mappings | Planned |

@@ -8,7 +8,7 @@ Users query logical Golden event contracts. They do not write SQL, do not query 
 
 ## ADR Alignment Snapshot
 
-The current implementation aligns with accepted ADRs for parser-view SQL boundaries, Golden-only query surface, two-seam testing, semantics-preserving planner rewrites, single-connection DuckDB MVP runtime, semantic-safety rejection policy, medallion schema direction, schema provenance, governed seed fixtures, and parser specifications as a validation layer.
+The current implementation aligns with accepted ADRs for parser-view SQL boundaries, Golden-only query surface, two-seam testing, semantics-preserving planner rewrites, single-connection DuckDB MVP runtime, semantic-safety rejection policy, medallion schema direction, schema provenance, governed seed fixtures, parser specifications as a validation layer, and render decoupling.
 
 Phase 1A is the accepted medallion checkpoint. It is not a broad schema expansion milestone. Its purpose is to prove the Bronze/Silver/Golden shape, remove legacy vertical-slice assumptions, and establish the active contracts before hardening and expansion.
 
@@ -46,245 +46,7 @@ The database is organized into medallion schemas:
 | `internal` | Internal only | Schema provenance, seed fixture metadata, and other control-plane tables |
 | `accelerator` | Internal only, optional | Future derived/optimized tables behind Golden views |
 
-```text
-bronze = source-shaped evidence preservation
-silver = source/event-specific interpretation
-golden = operator-facing semantics
-internal = control-plane metadata
-```
-
 Bronze stores source-shaped records. Silver interprets those records using source/event filters and parser-specific projections. Golden consolidates Silver outputs into operator-facing contracts. Golden may perform thin harmonization but must not hide source-specific payload parsing.
-
-### Silver semantic-normalization baseline
-
-Bronze does not normalize source event timestamps or optional payload values into a universal ingestion shape. Timestamp location and representation differ across Windows event records, DNS records, audit logs, syslog, web-server logs, CEF, and future source families. Each Silver parser owns extraction and interpretation for its source/event shape.
-
-The active timestamp rule is:
-
-```text
-Golden.Timestamp = Silver-extracted source event time
-                   or Bronze.ingest_time when extraction is absent or invalid
-```
-
-The `ingest_time` fallback is explicit in generated Silver SQL so it remains reviewable. It is an ingestion fallback, not the preferred event-time semantic. Optional numeric telemetry uses tolerant conversion so one malformed process identifier or port does not invalidate otherwise useful rows. Selector fields remain strict parser-eligibility inputs.
-
-Current Golden field semantics:
-
-| Field | Active semantic boundary |
-|---|---|
-| `Timestamp` | Source event time extracted and normalized by Silver, with explicit Bronze `ingest_time` fallback. |
-| `ActionType` | Golden event-family action label assigned by the contributing Silver parser. |
-| `ReportId` | Source-local event or record identifier; consumers must not assume global uniqueness. |
-| `AccountName` | Source-provided account identity when present; broader identity normalization remains source-specific follow-up work. |
-| DNS response fields | Source-provided response status/name/address values; fields may remain null when a contributor does not supply an equivalent value. |
-
-## Phase 1A Medallion Checkpoint
-
-Phase 1A is the first active medallion checkpoint.
-
-Active Golden contracts:
-
-```text
-golden.ProcessEvent
-golden.NetworkSession
-golden.Dns
-```
-
-Active Bronze source-family tables:
-
-```text
-bronze.windows_sysmon_event
-bronze.windows_security_event
-bronze.dns_server_event
-```
-
-Active Silver parser views:
-
-```text
-silver.v_processevent_windows_sysmon_eid1
-silver.v_processevent_windows_security_eid4688
-silver.v_networksession_windows_sysmon_eid3
-silver.v_networksession_windows_security_eid5156
-silver.v_dns_windows_sysmon_eid22
-silver.v_dns_server_query_event
-```
-
-```mermaid
-flowchart LR
-    Bsys["bronze.windows_sysmon_event"] --> Sproc1["silver.v_processevent_windows_sysmon_eid1"]
-    Bsec["bronze.windows_security_event"] --> Sproc4688["silver.v_processevent_windows_security_eid4688"]
-    Bsys --> Snet3["silver.v_networksession_windows_sysmon_eid3"]
-    Bsec --> Snet5156["silver.v_networksession_windows_security_eid5156"]
-    Bsys --> Sdns22["silver.v_dns_windows_sysmon_eid22"]
-    Bdns["bronze.dns_server_event"] --> SdnsServer["silver.v_dns_server_query_event"]
-
-    Sproc1 --> Gproc["golden.ProcessEvent"]
-    Sproc4688 --> Gproc
-    Snet3 --> Gnet["golden.NetworkSession"]
-    Snet5156 --> Gnet
-    Sdns22 --> Gdns["golden.Dns"]
-    SdnsServer --> Gdns
-```
-
-Removed or rejected legacy names:
-
-```text
-golden.ProcessEvents
-golden.NetworkSessions
-golden.DeviceProcessEvents
-golden.DeviceNetworkEvents
-bronze.windows_event_json
-silver.v_process_sysmon_create
-MockDataSeeder.GetProcessSeedSql()
-```
-
-These names should not return accidentally. If compatibility aliases are needed later, they must be introduced deliberately with tests and documentation.
-
-## Phase 1B Schema Provenance and Migration Safety
-
-Phase 1B adds an internal provenance layer for schema evolution.
-
-The active internal metadata table is:
-
-```text
-internal.schema_provenance
-```
-
-It records one row per applied schema object:
-
-| Column | Purpose |
-|---|---|
-| `object_name` | Fully qualified object name |
-| `object_kind` | Object kind such as raw table, parser view, canonical view, or internal table |
-| `schema_hash` | Stable SHA-256 fingerprint of the schema object |
-| `catalog_version` | Catalog/application schema version label |
-| `applied_at` | Timestamp when provenance was recorded |
-
-The provenance pipeline is:
-
-```text
-Schema definitions
-  -> generated fingerprints
-  -> recorded provenance
-  -> drift detection
-  -> safety classification
-  -> guard enforcement component
-```
-
-Drift states are:
-
-```text
-Unchanged
-NewObject
-ChangedObject
-MissingObject
-```
-
-Safety classification is conservative. `Unchanged` and `NewObject` are safe. `ChangedObject` and `MissingObject` are unsafe by default because Phase 1B does not yet include structural table/view diffs.
-
-`SchemaMigrationSafetyGuard` blocks unsafe drift under the default `BlockUnsafe` policy. `AllowUnsafe` exists only for explicit development/reset workflows.
-
-## Phase 1C Governed Seed Fixtures
-
-Phase 1C governs development/test seed data through internal fixture batch metadata.
-
-The active internal seed metadata table is:
-
-```text
-internal.seed_batches
-```
-
-It records one row per governed seed fixture batch:
-
-| Column | Purpose |
-|---|---|
-| `batch_id` | Stable seed batch identifier |
-| `table_name` | Fully qualified target table |
-| `source_name` | Source family or source system |
-| `scenario` | Scenario label |
-| `row_count` | Expected row count inserted by the batch |
-| `content_hash` | Stable SHA-256 hash of the batch metadata and SQL/content |
-| `catalog_version` | Optional seed/catalog version |
-| `applied_at` | Timestamp when the batch was recorded |
-
-The seed governance pipeline is:
-
-```text
-Existing medallion seed SQL
-  -> SeedFixtureBatch objects
-  -> content hashes
-  -> internal.seed_batches recording
-  -> idempotent application through SeedFixtureBatchApplier
-```
-
-The current medallion baseline exposes one governed batch per active Bronze source table. Reapplying the same governed batches skips execution and avoids duplicate rows. Mismatched recorded metadata is blocked by default, with an explicit allow policy for development/reset workflows.
-
-The governed seed path does not replace production ingestion. It exists to make development/test fixtures explicit, repeatable, and inspectable.
-
-## Phase 1D Parser Specification Model and Source-Shape Correctness
-
-Phase 1D makes the active Silver parser surface reviewable and testable without replacing the existing parser-view generation path.
-
-The parser specification layer introduces:
-
-```text
-ParserSpec
-ParserProjectionSpec
-ParserIntentionalNullSpec
-ParserSpecValidator
-Phase1DParserSpecCatalog
-Phase1DParserSpecCatalogValidator
-ParserSpecViewBridge
-```
-
-The active parser spec catalog exposes one spec per active Silver parser view:
-
-```text
-silver.v_processevent_windows_sysmon_eid1
-silver.v_processevent_windows_security_eid4688
-silver.v_networksession_windows_sysmon_eid3
-silver.v_networksession_windows_security_eid5156
-silver.v_dns_windows_sysmon_eid22
-silver.v_dns_server_query_event
-```
-
-The Phase 1D parser pipeline is:
-
-```text
-Active ParserViewDef catalog
-  -> derived ParserSpec catalog
-  -> catalog validation
-  -> source-shape behavior guards
-  -> bridge back to existing ParserViewDef
-```
-
-`ParserSpec` is currently a review and validation layer. Runtime parser SQL generation still uses `ParserViewDef.Mapping`. The bridge validates that a parser spec describes an existing parser view; it does not regenerate mapping SQL from placeholder parser-spec expressions.
-
-Phase 1D source-shape guards verify that active parser views accept only their intended event/source shapes and reject wrong-source, wrong-event, and missing-selector records.
-
-## Development Seed Boundary
-
-`MockDataSeeder` is development/test bootstrap data only. It supports local execution, end-to-end tests, and UI sample queries. It is not production ingestion and does not define production fixture semantics.
-
-The current governed seed fixture path wraps the active medallion development seed SQL with batch metadata, row counts, content hashes, and idempotent application. The older direct seed SQL path remains for compatibility with existing tests and utilities, but new repeatable medallion bootstrap tests should prefer `SeedFixtureBatchApplier`.
-
-Current seed coverage includes representative rows for encoded PowerShell, credential-access tooling, persistence tooling, suspicious network ports, SMB activity, beaconing without hostname, DNS test domains, and NXDOMAIN responses.
-
-Future seed work should move from table-level batches toward scenario-level fixture batches with clearer source-shape and analytic intent.
-
-## UI Sample Query Boundary
-
-UI sample queries are centralized in `Hunting.Core.Samples.SampleQueryCatalog` and rendered by `SchemaBrowser.razor`.
-
-The sample catalog must use only active Golden names:
-
-```text
-ProcessEvent
-NetworkSession
-Dns
-```
-
-The catalog must not use legacy table names or relative time filters such as `ago(...)` against fixed seed data. Numeric fields such as `ProcessId`, `LocalPort`, and `RemotePort` should use numeric predicates, not string-empty checks.
 
 ## Runtime Query Pipeline
 
@@ -315,16 +77,53 @@ User-entered KQL
       -> QueryResultRenderAdapter
       -> Hunting.Render.Services.RenderChartBuilder
       -> EChartsRenderOptionsBuilder
-      -> Render tab
+      -> Render tab or dashboard widget
 ```
 
 `Hunting.Render` has no project reference to `Hunting.Core`, `Hunting.Data`, or `Hunting.Web`. It owns render contracts, terminal directive parsing, schema/data-independent render binding resolution, tabular input abstraction, and chart-model construction. `Hunting.Web` owns the concrete adapter from `Hunting.Data.QueryResult` to `IRenderTabularResult` and the conversion from `RenderChartModel` to Vizor.ECharts `ChartOptions`.
 
-### Translator, planner, and optimizer naming boundary
+## Dashboard Architecture Boundary
 
-`KustoQueryTranslator` is the internal KQL/Kusto-syntax-to-`RelNode` translation façade. The public `KustoToRelational` type remains as a compatibility adapter until a deliberate breaking API change is accepted. Translation does not perform relational rewrite decisions. `RelationalPlanner` remains the name for semantics-preserving `RelNode` rewrite passes. Optimizer terminology is reserved for future cost- or rule-based optimization work rather than AST lowering.
+Dashboards are a Web-layer composition feature over the existing query and render seams. They do not introduce a second query engine and do not move render logic into `Hunting.Data`.
 
-Document parsing and diagnostics, management-command blocking, approved table-reference policy, Kusto SDK syntax adaptation, projection naming, function argument validation, and integer-literal reading are isolated internal translation collaborators. Tabular, join, and scalar translation remain in the internal façade for now and may be extracted incrementally without changing the compatibility surface.
+```text
+Dashboard.razor
+  -> DashboardPageController
+      -> DashboardPageState
+      -> IDashboardRepository
+      -> DashboardWidgetRunner
+          -> RenderedQueryRunner
+          -> QueryService.ExecuteDataOnlyAsync(...)
+          -> Hunting.Render chart model
+```
+
+The dashboard model is persisted as application UI state. Query results remain transient.
+
+| Component | Responsibility |
+|---|---|
+| `DashboardPageController` | Dashboard loading, widget execution, cancellation, auto-refresh, persistence, and export preparation |
+| `DashboardPageState` | Mutable UI state exposed to `Dashboard.razor` |
+| `DashboardGrid` | Dashboard layout surface and widget host composition |
+| `DashboardWidgetHost` | Widget chrome, refresh/menu actions, and chart/table body |
+| `DashboardWidgetRunner` | Widget execution through the render-aware query path |
+| `SqliteDashboardRepository` | Local SQLite dashboard persistence |
+| `dashboard-grid-layout.js` | Pointer-based move/resize, grid snapping, and collision prevention |
+| `dashboard-chart-resize.js` | Best-effort ECharts resize observation |
+
+Dashboard layout is a 12-column persisted coordinate model:
+
+```text
+X      = zero-based grid column
+Y      = zero-based grid row
+Width  = number of grid columns
+Height = number of grid rows
+```
+
+The model validator rejects layouts that exceed the 12-column grid or overlap another widget. Runtime move/resize uses the same rectangle-overlap rule and keeps widgets at the last valid non-overlapping position.
+
+MudBlazor components are UI primitives in this feature. `MudDropZone` is a passive dashboard surface only. It does not own widget ordering or placement.
+
+See `docs/DASHBOARD-ARCHITECTURE.md` for the detailed dashboard architecture notes.
 
 ## Schema Pipeline
 
@@ -350,8 +149,8 @@ Golden views must emit explicit canonical projections per Silver branch. `SELECT
 | `Hunting.Schema` | C# schema definitions and active medallion catalog |
 | `Hunting.Data` | DuckDB connection factory, schema application, data-only runtime orchestration, application persistence, mock seeding |
 | `Hunting.Render` | Dependency-light render contracts, terminal directive parser, render resolver, tabular abstraction, chart-model builder; intentionally has no `Hunting.*` project references |
-| `Hunting.Web` | Blazor UI, schema browser, query execution surface, render orchestration, QueryResult render adapter, ECharts adapter |
-| `Hunting.Tests` | Translation, emitter, runtime, schema, planner, render, Web, sample, and E2E tests |
+| `Hunting.Web` | Blazor UI, schema browser, query execution surface, render orchestration, QueryResult render adapter, ECharts adapter, dashboard UI/persistence/controller |
+| `Hunting.Tests` | Translation, emitter, runtime, schema, planner, render, Web, sample, dashboard, and E2E tests |
 
 ## SQL Artifact Policy
 
@@ -383,8 +182,4 @@ A new source or Golden family must not be added by changing only the catalog. It
 | Parser model | Implemented in Phase 1D as a validation/review layer over existing `ParserViewDef.Mapping` |
 | Parser-spec generation | Parser specs do not yet generate `MappingQueryDef` or parser-view SQL |
 | Fixture depth | More sample logs are needed, but should be added under fixture governance |
-| Dashboards | Deferred until render decoupling is merged and stabilized |
-
-## Phase 1B–1D Boundary
-
-Phase 1B resolves the absence of a basic schema provenance ledger and object-level drift guard. Phase 1C resolves governed development seed fixture metadata and idempotent application. Phase 1D adds parser specifications as a validation and review layer. Structural migration planning, tolerant casting, and Golden semantic normalization remain deferred.
+| Dashboards | Baseline foundation exists; controller-focused tests, import UI, and dashboard library workflow remain follow-up work |

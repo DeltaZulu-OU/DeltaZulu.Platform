@@ -3,15 +3,21 @@
 
 <div class="hunt-app">
     <MudAppBar Dense="true" Fixed="false" Elevation="1" Class="hunt-topbar">
-        <NavLink href="/" Match="NavLinkMatch.All" class="hunt-brand">classified</NavLink>
+        <NavLink href="/" Match="NavLinkMatch.All" class="hunt-brand" aria-label="Open query workbench"/>
+
+        <nav class="hunt-primary-nav" aria-label="Primary navigation">
+            <NavLink href="/dashboards" class="hunt-nav-link">Dashboards</NavLink>
+        </nav>
+
         <MudSpacer />
-        <MudIconButton
-            Icon="@Icons.Material.Filled.Settings"
-            Color="Color.Inherit"
-            Size="Size.Medium"
-            Href="/settings"
-            AriaLabel="Settings"
-            Class="hunt-settings-link" />
+
+        <MudIconButton Icon="@Icons.Material.Filled.Settings"
+                       Color="Color.Inherit"
+                       Size="Size.Medium"
+                       Href="/settings"
+                       aria-label="Settings"
+                       Class="hunt-settings-link"
+                       Edge="Edge.End" />
     </MudAppBar>
 
     <div class="hunt-shell">
@@ -24,5 +30,3 @@
         </main>
     </div>
 </div>
-
-<MudSnackbarProvider />

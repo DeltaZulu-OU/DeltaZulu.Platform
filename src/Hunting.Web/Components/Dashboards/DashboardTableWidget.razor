@@ -1,0 +1,145 @@
+@namespace Hunting.Web.Components.Dashboards
+@using Hunting.Data
+@using Hunting.Web.Dashboards.Runtime
+
+<div class="dashboard-table-widget">
+    @if (Result is null)
+    {
+        <div class="dashboard-widget-state dashboard-widget-state-muted">
+            No run result is available.
+        </div>
+    }
+    else if (Result.Status == DashboardWidgetRunStatus.NotRun)
+    {
+        <div class="dashboard-widget-state dashboard-widget-state-muted">
+            Widget has not run yet.
+        </div>
+    }
+    else if (Result.Status == DashboardWidgetRunStatus.Running)
+    {
+        <div class="dashboard-widget-state dashboard-widget-state-muted">
+            Running query…
+        </div>
+    }
+    else if (Result.Status == DashboardWidgetRunStatus.Cancelled)
+    {
+        <div class="dashboard-widget-state dashboard-widget-state-warning">
+            Query was cancelled.
+        </div>
+    }
+    else if (Result.Status == DashboardWidgetRunStatus.Failed || Result.QueryResult?.Success == false)
+    {
+        <div class="dashboard-widget-state dashboard-widget-state-error">
+            <strong>Query failed.</strong>
+            @if (Result.Diagnostics.Count > 0)
+            {
+                <ul class="dashboard-widget-diagnostics">
+                    @foreach (var diagnostic in Result.Diagnostics.Take(MaxDiagnostics))
+                    {
+                        <li><span>[@diagnostic.Phase]</span> @diagnostic.Message</li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+    else if (Result.QueryResult is null)
+    {
+        <div class="dashboard-widget-state dashboard-widget-state-error">
+            Query result is missing.
+        </div>
+    }
+    else if (Result.QueryResult.RowCount == 0 || Result.QueryResult.ColumnCount == 0)
+    {
+        <div class="dashboard-widget-state dashboard-widget-state-muted">
+            Query returned no rows.
+        </div>
+    }
+    else
+    {
+        var queryResult = Result.QueryResult;
+        var visibleColumns = GetVisibleColumns(queryResult).ToArray();
+        var visibleRows = GetVisibleRows(queryResult).ToArray();
+
+        <div class="dashboard-table-meta">
+            <span>@queryResult.RowCount rows</span>
+            <span>@queryResult.ColumnCount columns</span>
+            @if (Result.Duration > TimeSpan.Zero)
+            {
+                <span>@Result.Duration.TotalMilliseconds.ToString("F0") ms</span>
+            }
+        </div>
+
+        <div class="dashboard-table-scroll">
+            <table class="dashboard-table">
+                <thead>
+                    <tr>
+                        @foreach (var columnIndex in visibleColumns)
+                        {
+                            <th title="@queryResult.Columns[columnIndex].TypeName">
+                                @queryResult.Columns[columnIndex].Name
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var rowIndex in visibleRows)
+                    {
+                        <tr>
+                            @foreach (var columnIndex in visibleColumns)
+                            {
+                                <td title="@FormatCell(queryResult.GetValue(rowIndex, columnIndex))">
+                                    @FormatCell(queryResult.GetValue(rowIndex, columnIndex))
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (queryResult.RowCount > visibleRows.Length || queryResult.ColumnCount > visibleColumns.Length)
+        {
+            <div class="dashboard-table-truncation">
+                Showing @visibleRows.Length of @queryResult.RowCount rows and @visibleColumns.Length of @queryResult.ColumnCount columns.
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public DashboardWidgetRunResult? Result { get; set; }
+
+    [Parameter]
+    public int MaxRows { get; set; } = 100;
+
+    [Parameter]
+    public int MaxColumns { get; set; } = 20;
+
+    [Parameter]
+    public int MaxDiagnostics { get; set; } = 5;
+
+    private IEnumerable<int> GetVisibleColumns(QueryResult result)
+    {
+        var count = Math.Clamp(MaxColumns, 1, result.ColumnCount);
+        return Enumerable.Range(0, count);
+    }
+
+    private IEnumerable<int> GetVisibleRows(QueryResult result)
+    {
+        var count = Math.Clamp(MaxRows, 1, result.RowCount);
+        return Enumerable.Range(0, count);
+    }
+
+    private static string FormatCell(object? value)
+    {
+        return value switch
+        {
+            null => string.Empty,
+            DateTime dateTime => dateTime.ToString("O"),
+            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("O"),
+            bool boolean => boolean ? "true" : "false",
+            _ => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty
+        };
+    }
+}

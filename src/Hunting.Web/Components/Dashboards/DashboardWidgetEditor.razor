@@ -1,0 +1,388 @@
+@namespace Hunting.Web.Components.Dashboards
+@using Hunting.Web.Dashboards
+@inject IJSRuntime JS
+@inject ILogger<DashboardWidgetEditor> Logger
+@implements IAsyncDisposable
+
+@if (IsOpen)
+{
+    <div class="dashboard-editor-backdrop" role="presentation">
+        <section class="dashboard-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="dashboard-widget-editor-title">
+            <header class="dashboard-editor-header">
+                <div>
+                    <p class="dashboard-eyebrow">Widget</p>
+                    <h2 id="dashboard-widget-editor-title">@Title</h2>
+                </div>
+                <button class="hunt-btn" @onclick="CancelAsync">Close</button>
+            </header>
+
+            @if (_errors.Count > 0)
+            {
+                <div class="dashboard-editor-errors">
+                    <ul>
+                        @foreach (var error in _errors)
+                        {
+                            <li>@error</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <div class="dashboard-editor-form">
+                <label>
+                    <span>Title</span>
+                    <input class="dashboard-editor-input" @bind="_title" />
+                </label>
+
+                <label>
+                    <span>Kind</span>
+                    <select class="dashboard-editor-input" @bind="KindValue">
+                        <option value="@DashboardWidgetKind.Query">Query</option>
+                        <option value="@DashboardWidgetKind.Markdown">Markdown</option>
+                    </select>
+                </label>
+
+                <div class="dashboard-editor-wide">
+                    <div class="dashboard-editor-label-row">
+                        <span>Query text</span>
+                        @if (_monacoReady)
+                        {
+                            <span class="dashboard-editor-mode">Monaco</span>
+                        }
+                        else
+                        {
+                            <span class="dashboard-editor-mode">Textarea fallback</span>
+                        }
+                    </div>
+
+                    <div id="@_editorElementId" class="dashboard-editor-monaco" hidden="@(!_monacoReady)"></div>
+
+                    <textarea class="dashboard-editor-textarea"
+                              rows="10"
+                              hidden="@_monacoReady"
+                              @bind="_queryText"></textarea>
+                </div>
+            </div>
+
+            <footer class="dashboard-editor-footer">
+                <button class="hunt-btn" @onclick="CancelAsync">Cancel</button>
+                <button class="hunt-btn dashboard-primary-action" @onclick="SaveAsync">Save widget</button>
+            </footer>
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public DashboardWidgetDefinition? Widget { get; set; }
+
+    [Parameter]
+    public DashboardLayout SuggestedLayout { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<DashboardWidgetDefinition> SaveWidget { get; set; }
+
+    [Parameter]
+    public EventCallback Cancel { get; set; }
+
+    private readonly List<string> _errors = [];
+    private readonly string _editorElementId = $"dashboard-widget-editor-{Guid.NewGuid():N}";
+    private string _id = string.Empty;
+    private string _queryText = string.Empty;
+    private string _title = string.Empty;
+    private DashboardWidgetKind _kind = DashboardWidgetKind.Query;
+    private DashboardLayout _layout = new();
+    private bool _editorInitialized;
+    private bool _editorNeedsInitialize;
+    private bool _loadedIsOpen;
+    private bool _monacoReady;
+    private string? _loadedWidgetId;
+
+    private string Title
+        => Widget is null ? "Add widget" : "Edit widget";
+
+    private string KindValue
+    {
+        get => _kind.ToString();
+        set => _kind = Enum.TryParse<DashboardWidgetKind>(value, out var parsed)
+            ? parsed
+            : DashboardWidgetKind.Query;
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        MarkEditorDisposed();
+        return ValueTask.CompletedTask;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!IsOpen)
+        {
+            _loadedIsOpen = false;
+            _loadedWidgetId = null;
+            return;
+        }
+
+        var widgetId = Widget?.Id ?? "<new>";
+        if (_loadedIsOpen && string.Equals(_loadedWidgetId, widgetId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _loadedIsOpen = true;
+        _loadedWidgetId = widgetId;
+        _errors.Clear();
+        _monacoReady = false;
+        _editorNeedsInitialize = true;
+
+        if (Widget is not null)
+        {
+            _id = Widget.Id;
+            _title = Widget.Title;
+            _kind = Widget.Kind;
+            _queryText = Widget.QueryText;
+            _layout = Widget.Layout;
+            return;
+        }
+
+        _id = Guid.NewGuid().ToString("N");
+        _title = "New widget";
+        _kind = DashboardWidgetKind.Query;
+        _queryText = """
+ProcessEvent
+| summarize Count = count() by AccountName
+| render barchart xcolumn=AccountName ycolumns=Count title='Events by account'
+""";
+        _layout = SuggestedLayout;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!IsOpen)
+        {
+            if (_editorInitialized)
+            {
+                await DisposeEditorWithJsAsync();
+            }
+
+            return;
+        }
+
+        if (!_editorNeedsInitialize)
+        {
+            return;
+        }
+
+        _editorNeedsInitialize = false;
+
+        try
+        {
+            _monacoReady = await JS.InvokeAsync<bool>(
+                "huntingDashboardWidgetEditor.initialize",
+                _editorElementId,
+                _queryText);
+            _editorInitialized = _monacoReady;
+        }
+        catch (JSDisconnectedException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "initialize");
+            MarkEditorDisposed();
+        }
+        catch (TaskCanceledException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "initialize");
+            MarkEditorDisposed();
+        }
+        catch (OperationCanceledException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "initialize");
+            MarkEditorDisposed();
+        }
+        catch (JSException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "initialize");
+            MarkEditorDisposed();
+        }
+        catch (ObjectDisposedException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "initialize");
+            MarkEditorDisposed();
+        }
+        catch (InvalidOperationException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "initialize");
+            MarkEditorDisposed();
+        }
+
+        await RequestRenderAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        _errors.Clear();
+
+        var queryText = await GetQueryTextAsync();
+
+        var widget = new DashboardWidgetDefinition
+        {
+            Id = _id,
+            Title = _title.Trim(),
+            Kind = _kind,
+            QueryText = queryText.Trim(),
+            Layout = _layout,
+            Refresh = DashboardRefreshPolicy.Manual()
+        };
+
+        var validationErrors = DashboardModelValidator.Validate(new DashboardDefinition
+        {
+            Id = "widget-editor-validation",
+            Name = "Widget editor validation",
+            Refresh = DashboardRefreshPolicy.Manual(),
+            Widgets = [widget],
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow
+        });
+
+        if (validationErrors.Count > 0)
+        {
+            _errors.AddRange(validationErrors);
+            return;
+        }
+
+        await SaveWidget.InvokeAsync(widget);
+    }
+
+    private async Task<string> GetQueryTextAsync()
+    {
+        if (!_editorInitialized)
+        {
+            return _queryText;
+        }
+
+        try
+        {
+            _queryText = await JS.InvokeAsync<string>(
+                "huntingDashboardWidgetEditor.getValue",
+                _editorElementId);
+        }
+        catch (JSDisconnectedException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "getValue");
+            MarkEditorDisposed();
+        }
+        catch (TaskCanceledException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "getValue");
+            MarkEditorDisposed();
+        }
+        catch (OperationCanceledException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "getValue");
+            MarkEditorDisposed();
+        }
+        catch (JSException ex)
+        {
+            // Keep the last textarea/model value if the Monaco instance is unavailable.
+            Logger.LogDebug(
+                ex,
+                "Dashboard widget editor JS interop getValue failed for {EditorElementId}; keeping the last known query text.",
+                _editorElementId);
+        }
+        catch (ObjectDisposedException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "getValue");
+            MarkEditorDisposed();
+        }
+        catch (InvalidOperationException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "getValue");
+            MarkEditorDisposed();
+        }
+
+        return _queryText;
+    }
+
+    private async Task CancelAsync()
+    {
+        if (_editorInitialized)
+        {
+            await DisposeEditorWithJsAsync();
+        }
+
+        await Cancel.InvokeAsync();
+    }
+
+    private async Task DisposeEditorWithJsAsync()
+    {
+        if (!_editorInitialized)
+        {
+            return;
+        }
+
+        MarkEditorDisposed();
+
+        try
+        {
+            await JS.InvokeVoidAsync(
+                "huntingDashboardWidgetEditor.dispose",
+                _editorElementId);
+        }
+        catch (JSDisconnectedException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "dispose");
+        }
+        catch (TaskCanceledException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "dispose");
+        }
+        catch (OperationCanceledException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "dispose");
+        }
+        catch (JSException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "dispose");
+        }
+        catch (ObjectDisposedException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "dispose");
+        }
+        catch (InvalidOperationException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "dispose");
+        }
+    }
+
+    private async Task RequestRenderAsync()
+    {
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (ObjectDisposedException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "render");
+        }
+        catch (InvalidOperationException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "render");
+        }
+    }
+
+    private void MarkEditorDisposed()
+    {
+        _editorInitialized = false;
+        _monacoReady = false;
+    }
+
+    private void LogEditorInteropLifecycleDebug(Exception exception, string operation)
+        => Logger.LogDebug(
+            exception,
+            "Dashboard widget editor JS interop {Operation} was skipped or cancelled for {EditorElementId}.",
+            operation,
+            _editorElementId);
+}

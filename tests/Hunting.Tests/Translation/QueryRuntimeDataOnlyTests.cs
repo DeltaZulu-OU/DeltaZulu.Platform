@@ -6,16 +6,15 @@ using Hunting.Data;
 using Hunting.Schema;
 using Hunting.Tests.Fixtures;
 
-[TestClass]
-public sealed class QueryRuntimeDataOnlyTests
+[TestClass]public sealed class QueryRuntimeDataOnlyTests
 {
     private static DuckDbConnectionFactory _factory = null!;
     private static QueryRuntime _runtime = null!;
 
-    [ClassCleanup]
+    [ClassCleanup]
     public static void Cleanup() => _factory.Dispose();
 
-    [ClassInitialize]
+    [ClassInitialize]
     public static void Init(TestContext _)
     {
         _factory = new DuckDbConnectionFactory("DataSource=:memory:");
@@ -34,7 +33,7 @@ public sealed class QueryRuntimeDataOnlyTests
         _runtime = new QueryRuntime(CreateMedallionCatalog(), _factory, defaultLimit: 10_000, developerMode: true);
     }
 
-    [TestMethod]
+    [TestMethod]
     public void ExecuteDataOnly_PureKql_Succeeds()
     {
         var result = _runtime.ExecuteDataOnly("ProcessEvent | project Timestamp, DeviceName | take 3");
@@ -44,7 +43,7 @@ public sealed class QueryRuntimeDataOnlyTests
         Assert.IsNotNull(result.GeneratedSql);
     }
 
-    [TestMethod]
+    [TestMethod]
     public void ExecuteDataOnly_RenderDirective_IsNotStripped()
     {
         var result = _runtime.ExecuteDataOnly("ProcessEvent | take 1 | render barchart");
@@ -52,7 +51,7 @@ public sealed class QueryRuntimeDataOnlyTests
         Assert.IsFalse(result.Success, "Data-only execution must treat render as part of the KQL input, not strip it.");
     }
 
-    [TestMethod]
+    [TestMethod]
     public void ExecuteStreamedDataOnly_PureKql_Succeeds()
     {
         var seen = 0;
@@ -69,7 +68,7 @@ public sealed class QueryRuntimeDataOnlyTests
         Assert.IsNotNull(result.GeneratedSql);
     }
 
-    [TestMethod]
+    [TestMethod]
     public void ExecuteStreamedDataOnly_RenderDirective_IsNotStripped()
     {
         var seen = 0;
@@ -84,7 +83,7 @@ public sealed class QueryRuntimeDataOnlyTests
         Assert.AreEqual(0, seen);
     }
 
-    [TestMethod]
+    [TestMethod]
     public void LegacyExecuteMethods_AreNowDataOnly()
     {
         var result = _runtime.Execute("ProcessEvent | take 1 | render barchart");
@@ -107,4 +106,4 @@ public sealed class QueryRuntimeDataOnlyTests
         SchemaConventions.RegisterCanonicalViews(catalog);
         return catalog;
     }
-}
+}
