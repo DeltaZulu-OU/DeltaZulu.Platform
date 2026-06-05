@@ -73,6 +73,51 @@ else
                     <MudText Typo="Typo.caption" Class="mud-text-secondary">Changed files</MudText>
                     <MudText Typo="Typo.body2" Class="mt-1">@_comparison.ChangedFiles.Count</MudText>
                 </div>
+                <MudDivider Class="my-3" />
+                <div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Source change</MudText>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                               OnClick="@(() => Nav.NavigateTo($"/changes/{_comparison.AfterVersion.SourceChangeRequestId}"))"
+                               Class="px-0 mt-1" Style="font-weight: 600; text-transform: none;">
+                        View change
+                    </MudButton>
+                </div>
+                <MudDivider Class="my-3" />
+                <div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Linked issue</MudText>
+                    @if (_comparison.AfterVersion.LinkedIssueId is not null)
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                   OnClick="@(() => Nav.NavigateTo($"/issues/{_comparison.AfterVersion.LinkedIssueId}"))"
+                                   Class="px-0 mt-1" Style="font-weight: 600; text-transform: none;">
+                            View issue
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Class="mt-1" Style="color: var(--color-text-secondary);">None</MudText>
+                    }
+                </div>
+                <MudDivider Class="my-3" />
+                <div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Workflow profile</MudText>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="mt-1">@_comparison.AfterVersion.WorkflowProfile</MudChip>
+                </div>
+                <MudDivider Class="my-3" />
+                <div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Checks</MudText>
+                    <MudText Typo="Typo.body2" Class="mt-1">@_comparison.AfterVersion.ChecksSummary</MudText>
+                </div>
+                <MudDivider Class="my-3" />
+                <div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Reviews</MudText>
+                    <MudText Typo="Typo.body2" Class="mt-1">@_comparison.AfterVersion.ReviewSummary</MudText>
+                </div>
+                <MudDivider Class="my-3" />
+                <div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Accepted</MudText>
+                    <MudText Typo="Typo.body2" Class="mt-1">@_comparison.AfterVersion.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                </div>
             </MudPaper>
         </MudItem>
     </MudGrid>

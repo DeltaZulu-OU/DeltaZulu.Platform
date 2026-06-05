@@ -116,6 +116,16 @@
     @* ── Content tab ── *@
     <MudTabPanel Text="Content" BadgeData="@_change.DraftFiles.Count" BadgeColor="Color.Primary">
         <div class="ma-3">
+            @if (ChecksMayBeStale && !IsTerminal)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
+                    Content was modified after the last check run. Results may be outdated.
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Warning"
+                               OnClick="RunChecks" Disabled="_running" Class="ml-2">
+                        Re-run checks
+                    </MudButton>
+                </MudAlert>
+            }
             @if (!IsTerminal)
             {
                 <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.NoteAdd"
@@ -211,6 +221,16 @@
     @* ── Validation tab ── *@
     <MudTabPanel Text="Validation" BadgeData="@_change.Checks.Count" BadgeColor="Color.Info">
         <div class="ma-3">
+            @if (ChecksMayBeStale && !IsTerminal)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
+                    Content was modified after the last check run. Results may be outdated.
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Warning"
+                               OnClick="RunChecks" Disabled="_running" Class="ml-2">
+                        Re-run checks
+                    </MudButton>
+                </MudAlert>
+            }
             @if (_change.Checks.Count > 0)
             {
                 var passed = _change.Checks.Count(c => c.Status == CheckStatus.Passed);
@@ -435,6 +455,10 @@
 
     private bool IsTerminal => _change?.Status is ChangeStatus.Merged or ChangeStatus.Closed;
     private bool IsCurrentUserAuthor => _change?.AuthorId == UserContext.CurrentUser.Id;
+    private bool ChecksMayBeStale => _change is not null
+        && _change.Checks.Count > 0
+        && _change.Checks.Any(c => c.CompletedAt is not null)
+        && _change.UpdatedAt > _change.Checks.Where(c => c.CompletedAt is not null).Max(c => c.CompletedAt!.Value);
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 

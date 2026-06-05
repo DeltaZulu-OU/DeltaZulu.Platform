@@ -4,10 +4,14 @@
 @using Workbench.Application.Abstractions
 @using Workbench.Application.Services
 @using Workbench.Domain.Common
+@using Workbench.Domain.Enums
 @using Workbench.Domain.Identifiers
 @inject IConfiguration Configuration
 @inject PocUserContext UserContext
 @inject MergeReconciliationService MergeReconciliation
+@inject DetectionContentService DetectionService
+@inject ChangeService ChangeService
+@inject VersionService VersionService
 @inject ISnackbar Snackbar
 
 <PageTitle>Settings</PageTitle>
@@ -16,6 +20,37 @@
 <MudText Typo="Typo.body2" Class="mb-4" Style="color: var(--color-text-secondary); max-width: 720px;">
     Current POC runtime configuration. Workflow engine and accepted content storage stay behind application abstractions.
 </MudText>
+
+<MudGrid Spacing="3" Class="mb-4">
+    <MudItem xs="6" md="3">
+        <MudPaper Class="pa-4 text-center" Elevation="1">
+            <MudIcon Icon="@Icons.Material.Outlined.Shield" Size="Size.Large" Style="color: var(--brand-slate);" />
+            <MudText Typo="Typo.h4" Class="mt-2" Style="font-weight: 700;">@_totalDetections</MudText>
+            <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Detections</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6" md="3">
+        <MudPaper Class="pa-4 text-center" Elevation="1">
+            <MudIcon Icon="@Icons.Material.Outlined.EditNote" Size="Size.Large" Style="color: var(--color-info);" />
+            <MudText Typo="Typo.h4" Class="mt-2" Style="font-weight: 700;">@_openChanges</MudText>
+            <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Open changes</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6" md="3">
+        <MudPaper Class="pa-4 text-center" Elevation="1">
+            <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Large" Style="color: var(--color-success);" />
+            <MudText Typo="Typo.h4" Class="mt-2" Style="font-weight: 700;">@_acceptedVersions</MudText>
+            <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Accepted versions</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6" md="3">
+        <MudPaper Class="pa-4 text-center" Elevation="1">
+            <MudIcon Icon="@Icons.Material.Outlined.Error" Size="Size.Large" Style="color: var(--color-error);" />
+            <MudText Typo="Typo.h4" Class="mt-2" Style="font-weight: 700;">@_failedCheckChanges</MudText>
+            <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Changes with failed checks</MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
 
 <MudGrid Spacing="3">
     <MudItem xs="12" md="6">
@@ -148,6 +183,11 @@
     private string? _lastRepairMessage;
     private Severity _lastRepairSeverity = Severity.Info;
 
+    private int _totalDetections;
+    private int _openChanges;
+    private int _acceptedVersions;
+    private int _failedCheckChanges;
+
     private void SwitchUser(PocUserPersona persona)
     {
         UserContext.SwitchTo(persona);
@@ -157,6 +197,19 @@
     {
         _useElsa = Configuration.GetValue<bool>("Workflow:UseElsa");
         _repositoryPath = Configuration.GetValue<string>("AcceptedContent:RepositoryPath") ?? "accepted-content";
+
+        var detections = await DetectionService.ListAsync();
+        _totalDetections = detections.Count;
+
+        var allChanges = await ChangeService.ListAsync();
+        _openChanges = allChanges.Count(c => c.Status is not ChangeStatus.Merged and not ChangeStatus.Closed);
+
+        var recentVersions = await VersionService.ListRecentAsync(int.MaxValue);
+        _acceptedVersions = recentVersions.Count;
+
+        var failedChanges = await ChangeService.ListWithFailedChecksAsync();
+        _failedCheckChanges = failedChanges.Count;
+
         await LoadMergeIntentsAsync();
     }
 

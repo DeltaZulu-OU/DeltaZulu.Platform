@@ -5,7 +5,10 @@
 @using Workbench.Domain.Detections
 @using Workbench.Domain.Changes
 @using Workbench.Domain.Identifiers
+@using Workbench.Domain.Issues
+@using Workbench.Domain.Enums
 @inject DetectionContentService DetectionService
+@inject IssueService IssueService
 @inject ChangeService ChangeService
 @inject VersionService VersionService
 @inject IAcceptedContentStore ContentStore
@@ -136,6 +139,34 @@ else
             }
         </MudTabPanel>
 
+        <MudTabPanel Text="Related issues" BadgeData="@_relatedIssues.Count" BadgeColor="Color.Info">
+            @if (_relatedIssues.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Class="ma-3">No issues linked to this detection.</MudAlert>
+            }
+            else
+            {
+                <MudTable Items="_relatedIssues" Dense="true" Hover="true" Class="ma-3"
+                          OnRowClick="@(args => Nav.NavigateTo($"/issues/{args.Item.Id}"))"
+                          T="Issue" RowClass="cursor-pointer">
+                    <HeaderContent>
+                        <MudTh>Key</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Type</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Updated</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
+                        <MudTd DataLabel="Title">@context.Title</MudTd>
+                        <MudTd DataLabel="Type"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.Type</MudChip></MudTd>
+                        <MudTd DataLabel="Status"><StatusChip IssueStatus="context.Status" /></MudTd>
+                        <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudTabPanel>
+
         <MudTabPanel Text="Files">
             @if (_acceptedFiles.Count == 0)
             {
@@ -165,6 +196,7 @@ else
     private List<DetectionVersion> _versions = [];
     private List<ChangeRequest> _changes = [];
     private List<ContentFile> _acceptedFiles = [];
+    private List<Issue> _relatedIssues = [];
     private List<BreadcrumbItem> _breadcrumbs = [];
 
     protected override async Task OnParametersSetAsync()
@@ -188,6 +220,9 @@ else
 
         var prefix = Application.ContentPipeline.CanonicalPathResolver.DetectionPrefix(_detection.Slug);
         _acceptedFiles = (await ContentStore.ListFilesAsync(prefix)).ToList();
+
+        var allIssues = await IssueService.ListAsync();
+        _relatedIssues = allIssues.Where(i => i.LinkedDetectionId == detId).ToList();
     }
 
     private async Task OpenChangeDialog()
