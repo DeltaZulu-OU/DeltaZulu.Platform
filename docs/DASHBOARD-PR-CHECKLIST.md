@@ -1,6 +1,6 @@
-# Dashboard Rewrite PR Checklist
+# Dashboard QA Checklist
 
-This checklist is for the `dashboard-rewrite` branch before merge.
+This checklist records the build, automated coverage, manual smoke, and architecture checks expected for dashboard changes.
 
 ## Build and test gate
 
@@ -12,17 +12,18 @@ dotnet build
 dotnet test
 ```
 
-The PR should not be merged if the MSTest suite fails.
+Dashboard changes should not be merged if the MSTest suite fails.
 
 ## Focused automated coverage
 
-The branch should include coverage for the following dashboard seams:
+Dashboard changes should include coverage for the following seams:
 
 | Seam | Expected coverage |
 |---|---|
 | `DashboardModelValidator` | 12-column bounds, invalid width, overlap rejection, non-overlap on touching edges |
-| `DashboardWidgetRunner` | query success, table fallback, query failure, non-query widget rejection, invalid widget rejection, runner exception, cancellation |
+| `DashboardWidgetRunner` | query success, visualization-backed query success, table fallback, query failure, missing visualization, non-query widget rejection, invalid widget rejection, runner exception, cancellation |
 | `DashboardPageController` | load success, load missing dashboard, save widget and rerun, delete widget, layout validation failure, export preparation, deactivation cancellation |
+| `DashboardListPageController` | load success, create, import, malformed import failure, delete, search, pagination, clear search, open navigation |
 
 ## Manual smoke test
 
@@ -31,6 +32,11 @@ Use a local seeded database and run the Blazor app.
 | Flow | Expected result |
 |---|---|
 | Open dashboards page | Dashboard list loads without circuit errors |
+| Search dashboards | Dashboard list filters by name or description and can be cleared |
+| Page dashboard list | Previous and Next buttons move through dashboard pages without losing filter state |
+| Create dashboard | New dashboard is persisted and opened |
+| Import dashboard JSON | Dashboard JSON is imported as a copy and opened |
+| Delete dashboard | Dashboard is removed and the list refreshes |
 | Open dashboard detail | Widgets execute automatically after load |
 | Refresh dashboard | All executable widgets rerun; no transient running-count subtitle appears |
 | Refresh widget | Only that widget reruns |
@@ -54,7 +60,7 @@ Expected non-fatal lifecycle cases may appear in server debug logs only. They sh
 
 ## Architecture checks
 
-Before merge, verify these boundaries:
+Before merging dashboard changes, verify these boundaries:
 
 | Boundary | Rule |
 |---|---|
@@ -62,20 +68,21 @@ Before merge, verify these boundaries:
 | Render | `Hunting.Render` remains dependency-light and has no `Hunting.*` project references |
 | Web | Dashboard orchestration remains in `Hunting.Web` |
 | Razor page | `Dashboard.razor` remains mostly UI composition |
+| List page | `Dashboards.razor` remains UI composition over `DashboardListPageController` |
 | Layout | Persisted `X/Y/Width/Height` remains authoritative |
 | MudBlazor | `MudDropZone` remains passive and does not own placement |
 | SQL | Dashboard implementation does not introduce durable hand-authored runtime SQL |
 
 ## Known acceptable follow-up work
 
-These are not merge blockers for the dashboard foundation:
+These are not blockers for the dashboard foundation:
 
 | Follow-up | Reason |
 |---|---|
-| Import dashboard JSON UI | Useful workflow, but export and persistence foundation are already present |
+| Dashboard import error-path tests | Import exists, but malformed/invalid JSON coverage should be hardened |
+| Dashboard list controller tests | Search, pagination, create, import, delete, and navigation behavior should be covered directly |
 | Dashboard duplication | Convenience feature |
-| Dashboard list filtering/search | Needed when dashboard count grows |
 | Dashboard templates | Productization feature |
 | Dashboard version history | Governance feature |
 | Multi-user permissions | Out of current local/dev MVP scope |
-| Browser automation for layout behavior | Valuable, but manual smoke test is acceptable for this PR |
+| Browser automation for layout behavior | Valuable, but manual smoke test is acceptable for the current dashboard foundation |

@@ -181,18 +181,25 @@ Implemented:
 - persisted dashboard definitions
 - SQLite-backed dashboard repository
 - dashboard list/detail pages
+- dashboard list search/filter
+- dashboard list pagination and range text
+- dashboard list metadata cards with widget count and updated timestamp
+- dashboard creation and deletion
+- dashboard JSON export
+- dashboard JSON import as copy
 - dashboard settings editor
 - widget editor with Monaco-backed query/markdown text and kind-aware language mode
 - query widgets executing through `DashboardWidgetRunner`
+- visualization-backed query widgets
 - table, chart, and Markdig-backed markdown widget rendering
 - icon-only refresh split buttons for dashboard and widgets
-- JSON export helper
 - dashboard-level auto-refresh
 - coordinate-grid widget layout
 - widget move and resize in edit mode
 - collision prevention during move/resize
 - model-level 12-column grid and overlap validation
 - scoped `DashboardPageController` and explicit `DashboardPageState`
+- scoped `DashboardListPageController` and explicit `DashboardListPageState`
 - JS lifecycle hardening and debug-level logging
 - standard right-side drawer base shell shared by generated-SQL/cell-detail drawers and the query library drawer
 
@@ -202,70 +209,21 @@ Architecture note: `MudDropZone` is retained only as a passive dashboard surface
 
 Recommended next work:
 
-- unit tests for `DashboardPageController`
+- unit tests for `DashboardListPageController`
+- additional unit tests for dashboard import error paths
 - manual or automated smoke tests for move/resize collision behavior
-- export error-path tests
+- export/import round-trip tests
 - deactivation/cancellation tests
 - layout validation regression coverage around imported dashboard JSON
+- browser automation for layout behavior when the UI stabilizes
 
-### D2 — Dashboard import and library workflow
+### D2 — Dashboard library workflow and productization
 
 Candidate scope:
 
-- import dashboard JSON from the UI
 - duplicate dashboard
-- dashboard list search/filter
-- dashboard metadata polish
-- optional dashboard templates or starter dashboards
-
-### D3 — Dashboard governance and operational polish
-
-Candidate scope:
-
-- dashboard versioning or change history
-- explicit dashboard ownership/permissions if multi-user operation becomes relevant
-- widget-level refresh policy if dashboard-level refresh is insufficient
-- server-side layout repair suggestions for invalid imports
-
----
-
-## Completed Baseline Phases
-
-| Phase | Status | Notes |
-|---|---|---|
-| Phase 0 | Complete | Gate spike and scaffolding |
-| Phase 1 | Complete, superseded by medallion hardening | Basic schema pipeline complete; next work is 1B–1G |
-| Phase 2 | Complete | Translation pipeline |
-| Phase 3 | Complete | Blazor UI |
-| Phase 4 | Complete for pre-medallion MVP | New medallion hardening is tracked under 1B–1E |
-| Phase 5 | Complete | Planner v1; latest maintenance keeps single computed-column `where | extend | project[/take]` and `sample-distinct` shapes CTE-free in optimized emitter output |
-
----
-
-## Suggested delivery order
-
-1. Complete Phase 1E tolerant casting and Golden semantic normalization.
-2. Improve Monaco/schema-browser metadata under Phase 1F.
-3. Harden dashboard controller and lifecycle tests under D1.
-4. Continue render R4/R5 only where chart semantics and stability are clear.
-5. Start controlled expansion under Phase 1G.
-6. Add dashboard import/library workflow under D2.
-
----
-
-## Completed KQL Coverage Quick Wins
-
-- Added DuckDB scalar mappings for string-input `hash_sha256(string)`, string-input `hash_md5(string)`, and KQL-compatible `translate(searchList, replacementList, source)`.
-- Hash functions reject non-string inputs until KQL scalar serialization is implemented; direct RelNode emission validates the new mappings defensively; generic `hash(s, mod)` remains deferred until KQL-compatible hash semantics are verified.
-
-## Post-MVP Priorities
-
-1. Medallion hardening: structural migration planning, tolerant casting, Golden semantic normalization
-2. Monaco language-service quality improvements
-3. Dashboard test hardening and import workflow
-4. Controlled Golden contract expansion
-5. `mv-expand`
-6. Dynamic member access
-7. `format_datetime`
-8. `has_any` / `has_all`
-9. Planner admission + v2 relational optimizations
+- dashboard templates or starter dashboards
+- dashboard version history
+- dashboard-level permission model
+- richer dashboard metadata
+- saved visualization library UX refinement
