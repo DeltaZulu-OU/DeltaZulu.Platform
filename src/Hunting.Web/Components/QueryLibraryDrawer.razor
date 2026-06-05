@@ -4,7 +4,7 @@
 <button class="hunt-btn hunt-btn-history"
         @onclick="OpenAsync"
         disabled="@_loading">
-    History
+    @ButtonText
 </button>
 
 @if (_open)
@@ -134,6 +134,9 @@
 }
 
 @code {
+    [Parameter]
+    public string ButtonText { get; set; } = "History";
+
     private bool _open;
     private bool _loading;
     private bool _saving;

@@ -1,4 +1,4 @@
-@page "/"
+@page "/threat-hunting"
 @namespace Hunting.Web.Pages
 @using Hunting.Web.Components
 @inject Hunting.Web.Rendering.RenderedQueryRunner RenderedQueryRunner
@@ -12,15 +12,30 @@
 @implements IAsyncDisposable
 
 
-<div class="hunt-page">
-    <div class="hunt-page-content" id="hunt-page-content">
+<div class="threat-hunting-page">
+    <aside class="threat-hunting-secondary-nav" aria-label="Threat hunting navigation">
+        <div class="threat-hunting-secondary-header">Threat Hunting</div>
+
+        <section class="threat-hunting-secondary-section" aria-labelledby="threat-hunting-schemas-heading">
+            <h2 id="threat-hunting-schemas-heading" class="threat-hunting-secondary-title">Schemas, saved queries, and samples</h2>
+            <SchemaBrowser />
+        </section>
+
+        <section class="threat-hunting-secondary-section threat-hunting-saved-section" aria-labelledby="threat-hunting-library-heading">
+            <h2 id="threat-hunting-library-heading" class="threat-hunting-secondary-title">Query library</h2>
+            <p class="threat-hunting-secondary-help">Save the current editor contents or open recent executions without leaving the hunting page.</p>
+            <QueryLibraryDrawer CurrentQueryText="@_cachedEditorText" QuerySelected="LoadQueryIntoEditor" ButtonText="Open query library" />
+        </section>
+    </aside>
+
+    <main class="threat-hunting-workbench">
+        <div class="hunt-page">
+            <div class="hunt-page-content" id="hunt-page-content">
         <!-- ─── Editor panel ──────────────────────────────────────────────────────── -->
         <section class="hunt-editor-panel" id="hunt-editor-panel">
             <div class="hunt-editor-toolbar">
                 <span class="hunt-editor-label">KQL Query</span>
                 <div class="hunt-toolbar-actions">
-                    <QueryLibraryDrawer CurrentQueryText="@_cachedEditorText" QuerySelected="LoadQueryIntoEditor" />
-
                     <button class="hunt-btn hunt-btn-run"
                             disabled="@_running"
                             @onclick="RunQuery">
@@ -238,7 +253,9 @@
                 <div class="hunt-empty">Query returned no rows.</div>
             }
         </section>
-    </div>
+            </div>
+        </div>
+    </main>
 </div>
 
 @if (_showDrawer)

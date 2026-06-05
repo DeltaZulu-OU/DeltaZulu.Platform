@@ -126,11 +126,14 @@ Remaining scope:
 
 Scope:
 
+- Keep the global navigation shell separate from the Threat Hunting page-local secondary navigation.
+- Keep schemas, sample queries, and saved-query access inside the Threat Hunting secondary navigation rather than the global rail.
 - Generate table and column metadata from Golden contracts.
 - Add descriptions, examples, nullable/dynamic hints, source/contributor metadata, and table-specific snippets.
 - Scope completions by active table context where practical.
 - Show Golden-to-Silver contribution relationships without exposing Bronze/Silver as query targets.
 - Keep sample queries centralized in `SampleQueryCatalog`.
+- Use MudBlazor `MudNavMenu` sections to keep Schema, Saved queries, and Sample queries discoverable from the left workbench navigation.
 
 ### Phase 1G — Controlled source and event-family expansion
 

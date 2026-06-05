@@ -52,6 +52,17 @@ public sealed class SchemaBrowserSampleQueryGuardTests
         Assert.DoesNotContain("new(\"DNS:", source);
     }
 
+    [TestMethod]
+    public void SchemaBrowser_UsesMudNavMenuForWorkbenchSections()
+    {
+        var source = ReadSchemaBrowserSource();
+
+        Assert.Contains("<MudNavMenu", source);
+        Assert.Contains("Title=\"Schema\"", source);
+        Assert.Contains("Title=\"Saved queries\"", source);
+        Assert.Contains("Title=\"Sample queries\"", source);
+    }
+
     private static string ReadSchemaBrowserSource()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

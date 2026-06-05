@@ -1,48 +1,83 @@
 @namespace Hunting.Web.Shared
 @using Hunting.Core.Schema
 @using Hunting.Core.Samples
+@using Hunting.Data.SavedQueries
 @inject Hunting.Core.Catalog.ApprovedViewCatalog Catalog
 @inject Hunting.Web.Services.EditorBus EditorBus
+@inject Hunting.Web.Services.QueryLibraryService QueryLibrary
 
-<nav class="schema-browser">
-    <div class="schema-browser-header">Schema</div>
+<nav class="schema-browser" aria-label="Workbench navigation">
+    <MudNavMenu Dense="true" Color="Color.Info" Class="schema-nav-menu">
+        <MudNavGroup Title="Schema" Expanded="true">
+            @foreach (var (name, view) in Catalog.Views.OrderBy(kv => kv.Key))
+            {
+                <MudNavGroup Title="@name" Expanded="false">
+                    <MudNavLink OnClick="@(() => OnTableClick(name))">
+                        Insert table name
+                    </MudNavLink>
 
-    @foreach (var (name, view) in Catalog.Views.OrderBy(kv => kv.Key))
-    {
-        <details class="schema-table">
-            <summary class="schema-table-name" @onclick="() => OnTableClick(name)">
-                <span class="schema-icon">▶</span> @name
-            </summary>
-            <ul class="schema-columns">
-                @foreach (var col in view.Columns)
-                {
-                    <li class="schema-column" @onclick="() => OnColumnClick(col.Name)">
-                        <span class="schema-col-name">@col.Name</span>
-                        <span class="schema-col-type">@col.KustoType.ToKustoName()</span>
-                    </li>
-                }
-            </ul>
-        </details>
-    }
+                    @foreach (var col in view.Columns)
+                    {
+                        <MudNavLink OnClick="@(() => OnColumnClick(col.Name))">
+                            <span class="schema-column-nav-item">
+                                <span class="schema-col-name">@col.Name</span>
+                                <span class="schema-col-type">@col.KustoType.ToKustoName()</span>
+                            </span>
+                        </MudNavLink>
+                    }
+                </MudNavGroup>
+            }
 
-    @if (!Catalog.Views.Any())
-    {
-        <p class="schema-empty">No tables registered.</p>
-    }
+            @if (!Catalog.Views.Any())
+            {
+                <MudText Typo="Typo.body2" Class="schema-empty">No tables registered.</MudText>
+            }
+        </MudNavGroup>
+
+        <MudNavGroup Title="Saved queries" Expanded="false">
+            <MudNavLink OnClick="RefreshSavedQueriesAsync" Disabled="@_loadingSavedQueries">
+                @(_loadingSavedQueries ? "Refreshing…" : "Refresh saved queries")
+            </MudNavLink>
+
+            @if (_savedQueries.Count == 0 && !_loadingSavedQueries)
+            {
+                <MudText Typo="Typo.body2" Class="schema-empty">No saved queries yet.</MudText>
+            }
+
+            @foreach (var query in _savedQueries)
+            {
+                <MudNavLink OnClick="@(() => OnSavedQueryClickAsync(query.Id))">
+                    <span class="schema-saved-query-nav-item">
+                        <span class="schema-saved-query-name">@query.Name</span>
+                        @if (!string.IsNullOrWhiteSpace(query.Description))
+                        {
+                            <span class="schema-saved-query-description">@query.Description</span>
+                        }
+                    </span>
+                </MudNavLink>
+            }
+        </MudNavGroup>
+
+        <MudNavGroup Title="Sample queries" Expanded="false">
+            @foreach (var sample in _samples)
+            {
+                <MudNavLink OnClick="@(() => OnSampleClick(sample.Kql))">
+                    @sample.Label
+                </MudNavLink>
+            }
+        </MudNavGroup>
+    </MudNavMenu>
 </nav>
-
-<div class="schema-samples">
-    <div class="schema-samples-header">Sample Queries</div>
-    @foreach (var sample in _samples)
-    {
-        <button class="schema-sample" @onclick="() => OnSampleClick(sample.Kql)">
-            @sample.Label
-        </button>
-    }
-</div>
 
 @code {
     private readonly IReadOnlyList<SampleQuery> _samples = SampleQueryCatalog.All;
+    private IReadOnlyList<SavedQueryRecord> _savedQueries = [];
+    private bool _loadingSavedQueries;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshSavedQueriesAsync();
+    }
 
     private void OnTableClick(string table)
         => EditorBus.RequestInsert(table);
@@ -52,4 +87,28 @@
 
     private void OnSampleClick(string kql)
         => EditorBus.RequestInsert(kql);
+
+    private async Task RefreshSavedQueriesAsync()
+    {
+        _loadingSavedQueries = true;
+
+        try
+        {
+            _savedQueries = await QueryLibrary.ListSavedQueriesAsync();
+        }
+        finally
+        {
+            _loadingSavedQueries = false;
+        }
+    }
+
+    private async Task OnSavedQueryClickAsync(string id)
+    {
+        var queryText = await QueryLibrary.LoadSavedQueryTextAsync(id);
+
+        if (!string.IsNullOrWhiteSpace(queryText))
+        {
+            EditorBus.RequestInsert(queryText);
+        }
+    }
 }

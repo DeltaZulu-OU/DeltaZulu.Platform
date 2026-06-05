@@ -108,3 +108,7 @@
         font-size: 11px;
     }
 }
+
+.hunt-global-nav-toggle {
+    flex: 0 0 auto;
+}
