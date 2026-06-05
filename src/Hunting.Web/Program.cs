@@ -3,6 +3,7 @@ using Hunting.Data;
 using Hunting.Data.Persistence;
 using Hunting.Schema;
 using Hunting.Web.Dashboards.DependencyInjection;
+using Hunting.Web.Dashboards.PageState;
 using Hunting.Web.Library;
 using Hunting.Web.Rendering;
 using Hunting.Web.Services;
@@ -60,6 +61,7 @@ builder.Services.AddScoped<QueryLibraryService>();
 builder.Services.AddScoped<VisualizationLibraryService>();
 builder.Services.AddScoped<LibraryService>();
 builder.Services.AddScoped<LibraryPageController>();
+builder.Services.AddScoped<DashboardListPageController>();
 
 var app = builder.Build();
 

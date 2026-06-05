@@ -512,7 +512,7 @@
             _kql = queryText;
             _cachedEditorText = queryText;
 
-            Snackbar.Add($"Saved visualization '{visualization.Name}'.", Severity.Success);
+            Snackbar.Add($"Saved visualization '{visualization.Visualization.Name}'.", Severity.Success);
         }
         catch (InvalidOperationException ex)
         {
