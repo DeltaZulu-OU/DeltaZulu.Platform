@@ -23,14 +23,28 @@
     </MudButton>
 </div>
 
+<div class="d-flex align-center gap-3 mb-3 flex-wrap">
+    <MudTextField Value="_searchText" ValueChanged="OnSearchChanged" Placeholder="Search by slug or title"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                  Immediate="true" DebounceInterval="200" Class="flex-grow-1" Style="max-width: 360px;"
+                  T="string" />
+    <MudChipSet T="string" SelectionMode="SelectionMode.SingleSelection" SelectedValue="_lifecycleFilter"
+                SelectedValueChanged="OnLifecycleFilterChanged">
+        <MudChip T="string" Value="@("all")" Variant="Variant.Outlined" SelectedColor="Color.Primary">All</MudChip>
+        <MudChip T="string" Value="@("Conceived")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Conceived</MudChip>
+        <MudChip T="string" Value="@("Accepted")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Accepted</MudChip>
+        <MudChip T="string" Value="@("Deprecated")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Deprecated</MudChip>
+    </MudChipSet>
+</div>
+
 @if (_loading)
 {
     <MudProgressLinear Indeterminate="true" Color="Color.Secondary" />
 }
-else if (_detections.Count == 0)
+else if (_filteredDetections.Count == 0)
 {
     <MudPaper Class="pa-6" Elevation="1" Style="text-align: center;">
-        <MudText Typo="Typo.body1" Style="color: var(--color-text-muted);">No detections yet.</MudText>
+        <MudText Typo="Typo.body1" Style="color: var(--color-text-muted);">No detections match the current filter.</MudText>
         <MudText Typo="Typo.body2" Style="color: var(--color-text-muted);" Class="mt-1">
             Conceive one to begin building detection content.
         </MudText>
@@ -38,7 +52,7 @@ else if (_detections.Count == 0)
 }
 else
 {
-    <MudTable Items="_detections" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="1"
+    <MudTable Items="_filteredDetections" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="1"
               OnRowClick="@(args => Nav.NavigateTo($"/detections/{args.Item.Id}"))"
               T="Detection" RowClass="cursor-pointer">
         <HeaderContent>
@@ -60,6 +74,9 @@ else
 
 @code {
     private List<Detection> _detections = [];
+    private List<Detection> _filteredDetections = [];
+    private string _searchText = "";
+    private string _lifecycleFilter = "all";
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
@@ -68,7 +85,31 @@ else
     {
         _loading = true;
         _detections = (await DetectionService.ListAsync()).ToList();
+        ApplyFilter();
         _loading = false;
+    }
+
+    private void OnSearchChanged(string text)
+    {
+        _searchText = text ?? "";
+        ApplyFilter();
+    }
+
+    private void OnLifecycleFilterChanged(string filter)
+    {
+        _lifecycleFilter = filter ?? "all";
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        var query = _searchText?.Trim() ?? "";
+        _filteredDetections = _detections
+            .Where(d => _lifecycleFilter == "all" || d.Lifecycle.ToString() == _lifecycleFilter)
+            .Where(d => string.IsNullOrEmpty(query)
+                || d.Slug.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || d.Title.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     private async Task OpenConceiveDialog()

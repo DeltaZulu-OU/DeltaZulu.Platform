@@ -49,8 +49,19 @@ public sealed class IssueService(IIssueRepository issues, TimeProvider time)
     public Task<Issue?> GetByIdAsync(IssueId id, CancellationToken ct = default)
         => issues.GetByIdAsync(id, ct);
 
+    public async Task TransitionStatusAsync(
+        IssueId issueId, IssueStatus newStatus, CancellationToken ct = default)
+    {
+        var issue = await GetOrThrowAsync(issueId, ct);
+        issue.TransitionStatus(newStatus, time.GetUtcNow());
+        issues.Save(issue);
+    }
+
     public Task<IReadOnlyList<Issue>> ListAsync(CancellationToken ct = default)
         => issues.ListAsync(ct);
+
+    public Task<IReadOnlyList<Issue>> ListOpenAsync(CancellationToken ct = default)
+        => issues.ListOpenAsync(ct);
 
     private async Task<Issue> GetOrThrowAsync(IssueId id, CancellationToken ct)
         => await issues.GetByIdAsync(id, ct)

@@ -4,8 +4,10 @@
 @using Workbench.Domain.Changes
 @using Workbench.Domain.Detections
 @using Workbench.Domain.Enums
+@using Workbench.Domain.Issues
 @inject ChangeService ChangeService
 @inject VersionService VersionService
+@inject IssueService IssueService
 @inject PocUserContext UserContext
 @inject NavigationManager Nav
 
@@ -23,6 +25,48 @@
 }
 
 <MudGrid Spacing="3">
+    @* ── Open issues ── *@
+    <MudItem xs="12">
+        <MudPaper Class="pa-5" Elevation="1">
+            <span class="eyebrow">Open issues</span>
+            @if (_openIssues.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mt-3" Style="color: var(--color-text-secondary);">
+                    No open issues. Create one from the Work page to start tracking detection needs.
+                </MudText>
+            }
+            else
+            {
+                <MudList T="Issue" Dense="true" Class="mt-2">
+                    @foreach (var issue in _openIssues.Take(5))
+                    {
+                        <MudListItem T="Issue" OnClick="@(() => Nav.NavigateTo($"/issues/{issue.Id}"))">
+                            <div class="d-flex align-center gap-2 flex-wrap">
+                                <code style="font-size: 0.85em;">@issue.Key</code>
+                                <MudText Typo="Typo.body2">@issue.Title</MudText>
+                                <StatusChip IssueStatus="issue.Status" />
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@issue.Type</MudChip>
+                                @if (issue.ExternalCase is not null)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">
+                                        @issue.ExternalCase.System
+                                    </MudChip>
+                                }
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+                @if (_openIssues.Count > 5)
+                {
+                    <MudButton Href="/work" Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                               Class="mt-2 px-0" Style="font-weight: 600; text-transform: none;">
+                        View all @_openIssues.Count issues
+                    </MudButton>
+                }
+            }
+        </MudPaper>
+    </MudItem>
+
     @* ── Needs my action ── *@
     <MudItem xs="12" md="6">
         <MudPaper Class="pa-5" Elevation="1" Style="height: 100%;">
@@ -157,6 +201,7 @@
 </MudGrid>
 
 @code {
+    private IReadOnlyList<Issue> _openIssues = [];
     private IReadOnlyList<ChangeRequest> _myChanges = [];
     private IReadOnlyList<ChangeRequest> _awaitingReview = [];
     private IReadOnlyList<ChangeRequest> _failedChecks = [];
@@ -168,13 +213,15 @@
         _loading = true;
         var userId = UserContext.CurrentUser.Id;
 
+        var openIssuesTask = IssueService.ListOpenAsync();
         var myChangesTask = ChangeService.ListMyActiveChangesAsync(userId);
         var awaitingReviewTask = ChangeService.ListAwaitingMyReviewAsync(userId);
         var failedChecksTask = ChangeService.ListWithFailedChecksAsync();
         var recentVersionsTask = VersionService.ListRecentAsync(5);
 
-        await Task.WhenAll(myChangesTask, awaitingReviewTask, failedChecksTask, recentVersionsTask);
+        await Task.WhenAll(openIssuesTask, myChangesTask, awaitingReviewTask, failedChecksTask, recentVersionsTask);
 
+        _openIssues = openIssuesTask.Result;
         _myChanges = myChangesTask.Result;
         _awaitingReview = awaitingReviewTask.Result;
         _failedChecks = failedChecksTask.Result;

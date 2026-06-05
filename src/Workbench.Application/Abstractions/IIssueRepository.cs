@@ -9,6 +9,8 @@ public interface IIssueRepository
 
     Task<IReadOnlyList<Issue>> ListAsync(CancellationToken ct = default);
 
+    Task<IReadOnlyList<Issue>> ListOpenAsync(CancellationToken ct = default);
+
     void Add(Issue issue);
 
     void Save(Issue issue);

@@ -25,6 +25,14 @@ internal sealed class IssueRepository(DapperSession session) : IIssueRepository
         return rows.Select(r => r.ToDomain()).ToList();
     }
 
+    public async Task<IReadOnlyList<Issue>> ListOpenAsync(CancellationToken ct = default)
+    {
+        var rows = await session.Connection.QueryAsync<IssueRow>(
+            "SELECT * FROM issues WHERE status NOT IN ('Closed') ORDER BY updated_at DESC",
+            transaction: session.Transaction);
+        return rows.Select(r => r.ToDomain()).ToList();
+    }
+
     public void Add(Issue issue)
     {
         session.Connection.Execute("""

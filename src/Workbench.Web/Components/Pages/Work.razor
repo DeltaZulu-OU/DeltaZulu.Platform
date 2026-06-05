@@ -43,7 +43,9 @@
             }
             else
             {
-                <MudTable Items="_issues" Dense="true" Hover="true" T="Issue">
+                <MudTable Items="_issues" Dense="true" Hover="true" T="Issue"
+                          OnRowClick="@(args => Nav.NavigateTo($"/issues/{args.Item.Id}"))"
+                          RowClass="cursor-pointer">
                     <HeaderContent>
                         <MudTh>Key</MudTh>
                         <MudTh>Title</MudTh>

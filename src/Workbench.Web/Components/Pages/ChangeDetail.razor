@@ -37,7 +37,8 @@
         <div class="d-flex gap-2 mt-2 align-center flex-wrap">
             <StatusChip ChangeStatus="_change.Status" />
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                     Style="color: var(--brand-slate); border-color: rgba(39,86,104,0.25);">
+                     Style="color: var(--brand-slate); border-color: rgba(39,86,104,0.25);"
+                     Title="@ProfileDescription(_change.WorkflowProfileId)">
                 @_change.WorkflowProfileId
             </MudChip>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">
@@ -54,9 +55,11 @@
         {
             <div class="d-flex align-center gap-2 mt-2">
                 <MudIcon Icon="@Icons.Material.Outlined.Link" Size="Size.Small" Style="color: var(--color-text-secondary);" />
-                <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);">
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                           OnClick="@(() => Nav.NavigateTo($"/issues/{_linkedIssue.Id}"))"
+                           Class="px-0" Style="font-weight: 600; text-transform: none;">
                     Issue: <code>@_linkedIssue.Key</code> @_linkedIssue.Title
-                </MudText>
+                </MudButton>
             </div>
         }
         @if (!IsTerminal && _readiness is not null)
@@ -83,6 +86,10 @@
             <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="RunChecks"
                        Disabled="_running" StartIcon="@Icons.Material.Outlined.PlaylistAddCheck">
                 Run checks
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => _showCloseConfirm = true)"
+                       Disabled="_running" StartIcon="@Icons.Material.Outlined.Close">
+                Close
             </MudButton>
         }
     </MudItem>
@@ -122,7 +129,7 @@
                 <MudPaper Class="pa-3 mb-3" Elevation="0" Outlined="true">
                     <MudGrid Spacing="2">
                         <MudItem xs="12" md="4">
-                            <MudTextField @bind-Value="_newPath" Label="Logical path" HelperText="e.g. detection.yaml, notes/investigation.md" />
+                            <MudTextField Value="_newPath" ValueChanged="OnNewPathChanged" Label="Logical path" HelperText="e.g. detection.yaml, notes/investigation.md" T="string" />
                         </MudItem>
                         <MudItem xs="12" md="3">
                             <MudSelect @bind-Value="_newContentType" Label="Content type" T="DraftContentType">
@@ -176,6 +183,21 @@
                                     else
                                     {
                                         <pre style="white-space: pre-wrap; font-size: 0.85rem; max-height: 400px; overflow-y: auto;">@file.Content</pre>
+                                    }
+                                    @if (!IsTerminal)
+                                    {
+                                        <div class="d-flex gap-2 mt-3">
+                                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary"
+                                                       StartIcon="@Icons.Material.Outlined.Edit"
+                                                       OnClick="@(() => BeginEditFile(file))">
+                                                Edit
+                                            </MudButton>
+                                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error"
+                                                       StartIcon="@Icons.Material.Outlined.Delete"
+                                                       OnClick="@(() => RequestDeleteFile(file.Path.Value))">
+                                                Delete
+                                            </MudButton>
+                                        </div>
                                     }
                                 </ChildContent>
                             </MudExpansionPanel>
@@ -346,6 +368,39 @@
     </MudTabPanel>
 </MudTabs>
 
+@* ── Close confirmation ── *@
+@if (_showCloseConfirm)
+{
+    <MudOverlay Visible="true" DarkBackground="true" ZIndex="1300" OnClick="@(() => _showCloseConfirm = false)" />
+    <MudPaper Class="pa-5" Elevation="8" Style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1400; min-width: 400px; max-width: 500px;">
+        <MudText Typo="Typo.h6" Class="mb-3">Close change?</MudText>
+        <MudText Typo="Typo.body2" Class="mb-3">This will close the change without accepting. Please provide a reason.</MudText>
+        <MudTextField @bind-Value="_closeReason" Label="Reason" Lines="3" Class="mb-3" />
+        <div class="d-flex justify-end gap-2">
+            <MudButton OnClick="@(() => _showCloseConfirm = false)">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="CloseChange" Disabled="_running">
+                Confirm close
+            </MudButton>
+        </div>
+    </MudPaper>
+}
+
+@* ── Delete file confirmation ── *@
+@if (_showDeleteConfirm)
+{
+    <MudOverlay Visible="true" DarkBackground="true" ZIndex="1300" OnClick="@(() => _showDeleteConfirm = false)" />
+    <MudPaper Class="pa-5" Elevation="8" Style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1400; min-width: 400px;">
+        <MudText Typo="Typo.h6" Class="mb-3">Delete file?</MudText>
+        <MudText Typo="Typo.body2" Class="mb-3">Are you sure you want to delete <code>@_deletingFilePath</code>?</MudText>
+        <div class="d-flex justify-end gap-2">
+            <MudButton OnClick="@(() => _showDeleteConfirm = false)">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="ConfirmDeleteFile" Disabled="_running">
+                Delete
+            </MudButton>
+        </div>
+    </MudPaper>
+}
+
 @code {
     [Parameter] public string Id { get; set; } = null!;
 
@@ -362,6 +417,17 @@
     private string _newPath = "";
     private DraftContentType _newContentType = DraftContentType.DetectionMetadata;
     private string _newContent = "";
+
+    // Edit file
+    private string? _editingFile;
+
+    // Delete file
+    private bool _showDeleteConfirm;
+    private string _deletingFilePath = "";
+
+    // Close change
+    private bool _showCloseConfirm;
+    private string _closeReason = "";
 
     // Review
     private ReviewDecision _reviewDecision = ReviewDecision.Approved;
@@ -404,6 +470,7 @@
             await ChangeService.UpsertDraftFileAsync(
                 _change.Id, _newPath.Trim(), _newContentType, _newContent, UserContext.CurrentUser.Id);
             _showAddFile = false;
+            _editingFile = null;
             _newPath = "";
             _newContent = "";
             Snackbar.Add("Draft file saved.", Severity.Success);
@@ -469,5 +536,97 @@
         }
         catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
         finally { _running = false; }
+    }
+
+    // ── Inline file editing ──
+
+    private void BeginEditFile(ChangeDraftFile file)
+    {
+        _editingFile = file.Path.Value;
+        _newPath = file.Path.Value;
+        _newContentType = file.ContentType;
+        _newContent = file.Content;
+        _showAddFile = true;
+    }
+
+    // ── Delete file ──
+
+    private void RequestDeleteFile(string path)
+    {
+        _deletingFilePath = path;
+        _showDeleteConfirm = true;
+    }
+
+    private async Task ConfirmDeleteFile()
+    {
+        if (_change is null || string.IsNullOrWhiteSpace(_deletingFilePath)) return;
+        _running = true;
+        _showDeleteConfirm = false;
+        try
+        {
+            await ChangeService.RemoveDraftFileAsync(_change.Id, _deletingFilePath);
+            Snackbar.Add("File deleted.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        finally { _running = false; }
+    }
+
+    // ── Close change ──
+
+    private async Task CloseChange()
+    {
+        if (_change is null) return;
+        _running = true;
+        _showCloseConfirm = false;
+        try
+        {
+            await ChangeService.CloseAsync(_change.Id, _closeReason);
+            _closeReason = "";
+            Snackbar.Add("Change closed.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        finally { _running = false; }
+    }
+
+    // ── Content type auto-inference ──
+
+    private void OnNewPathChanged(string path)
+    {
+        _newPath = path;
+        _newContentType = InferContentType(path);
+    }
+
+    private static string ProfileDescription(WorkflowProfileId id) => id switch
+    {
+        WorkflowProfileId.QuickLab => "No approval required. Checks are optional.",
+        WorkflowProfileId.ControlledReview => "Requires passing checks and non-author approval.",
+        _ => "",
+    };
+
+    private static DraftContentType InferContentType(string path)
+    {
+        var lower = path.Trim().ToLowerInvariant().Replace('\\', '/');
+
+        if (lower.Contains("detection.yaml") || lower.Contains("detection.yml"))
+            return DraftContentType.DetectionMetadata;
+
+        if (lower.EndsWith(".kql") || lower.EndsWith(".kusto"))
+            return DraftContentType.HuntingQuery;
+
+        if (lower.StartsWith("tests/") && (lower.EndsWith(".yaml") || lower.EndsWith(".yml")))
+            return DraftContentType.TestDefinition;
+
+        if (lower.EndsWith(".json") || lower.EndsWith(".ndjson"))
+            return DraftContentType.Fixture;
+
+        if (lower.StartsWith("notes/") && lower.EndsWith(".md"))
+            return DraftContentType.InvestigationNote;
+
+        if (lower.StartsWith("notes/") && !lower.EndsWith(".md"))
+            return DraftContentType.StaticAsset;
+
+        return DraftContentType.DetectionMetadata;
     }
 }
