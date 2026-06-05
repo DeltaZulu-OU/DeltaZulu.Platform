@@ -1,0 +1,316 @@
+@page "/library"
+@namespace Hunting.Web.Pages
+@using Hunting.Web.Services
+@inject LibraryService Library
+@inject EditorBus EditorBus
+@inject NavigationManager Navigation
+
+<div class="dashboard-list-page">
+    <header class="dashboard-page-header dashboard-list-header">
+        <div>
+            <p class="dashboard-eyebrow">Library</p>
+            <h1>Library</h1>
+            <p class="dashboard-page-subtitle">Manage saved searches, reusable visualizations, and dashboards from one place.</p>
+        </div>
+        <div class="dashboard-list-toolbar">
+            <label class="dashboard-search" aria-label="Search library">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" />
+                <input placeholder="Search library"
+                       value="@_searchText"
+                       @oninput="OnSearchChanged" />
+            </label>
+
+            <div class="dashboard-list-actions-primary">
+                <button class="hunt-btn dashboard-primary-action" @onclick="CreateSavedSearch">New saved search</button>
+                <button class="hunt-btn" @onclick="CreateVisualization">New visualization</button>
+                <button class="hunt-btn" @onclick="CreateDashboard">New dashboard</button>
+            </div>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="dashboard-error">@_error</div>
+    }
+
+    <section class="dashboard-list-panel" aria-label="Library panel">
+        <div class="dashboard-list-panel-header">
+            <div>
+                <h2>@FilterTitle</h2>
+                <p>@RangeText</p>
+            </div>
+
+            <div class="dashboard-list-actions-primary">
+                <button class="@FilterButtonClass(null)" @onclick="() => SetFilter(null)">All</button>
+                <button class="@FilterButtonClass(LibraryItemKind.SavedSearch)" @onclick="() => SetFilter(LibraryItemKind.SavedSearch)">Saved searches</button>
+                <button class="@FilterButtonClass(LibraryItemKind.Visualization)" @onclick="() => SetFilter(LibraryItemKind.Visualization)">Visualizations</button>
+                <button class="@FilterButtonClass(LibraryItemKind.Dashboard)" @onclick="() => SetFilter(LibraryItemKind.Dashboard)">Dashboards</button>
+            </div>
+        </div>
+
+        @if (_loading)
+        {
+            <section class="dashboard-empty-state">
+                <h2>Loading library…</h2>
+                <p>Reading saved searches, visualizations, and dashboards from local application persistence.</p>
+            </section>
+        }
+        else if (FilteredItems.Count == 0)
+        {
+            <section class="dashboard-empty-state dashboard-list-empty">
+                <h2>No matching library items</h2>
+                <p>Create a new item or adjust the search/filter.</p>
+                <div class="dashboard-empty-actions">
+                    <button class="hunt-btn" @onclick="ClearSearch">Clear search</button>
+                    <button class="hunt-btn dashboard-primary-action" @onclick="CreateSavedSearch">Create saved search</button>
+                </div>
+            </section>
+        }
+        else
+        {
+            <div class="dashboard-list" aria-label="Library items">
+                @foreach (var item in FilteredItems)
+                {
+                    <article class="dashboard-list-card">
+                        <div class="dashboard-card-main">
+                            <div class="dashboard-card-title-row">
+                                <h2>@item.Name</h2>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(item.Description))
+                            {
+                                <p>@item.Description</p>
+                            }
+                            else
+                            {
+                                <p class="dashboard-muted">No description.</p>
+                            }
+                        </div>
+
+                        <dl class="dashboard-list-meta">
+                            <div>
+                                <dt>Type</dt>
+                                <dd>@KindLabel(item.Kind)</dd>
+                            </div>
+                            <div>
+                                <dt>Source</dt>
+                                <dd>@item.DependencyLabel</dd>
+                            </div>
+                            <div>
+                                <dt>Status</dt>
+                                <dd>@StatusLabel(item.Status)</dd>
+                            </div>
+                            <div>
+                                <dt>Updated</dt>
+                                <dd>@item.UpdatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</dd>
+                            </div>
+                        </dl>
+
+                        <div class="dashboard-card-actions">
+                            <button class="hunt-btn dashboard-primary-action" @onclick="() => OpenItemAsync(item)">Open</button>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </section>
+</div>
+
+@code {
+    private readonly List<LibraryItem> _items = [];
+    private string _searchText = string.Empty;
+    private string? _error;
+    private bool _loading = true;
+    private LibraryItemKind? _kindFilter;
+
+    private IReadOnlyList<LibraryItem> FilteredItems
+    {
+        get
+        {
+            IEnumerable<LibraryItem> query = _items;
+
+            if (_kindFilter is not null)
+            {
+                query = query.Where(item => item.Kind == _kindFilter);
+            }
+
+            if (!string.IsNullOrWhiteSpace(_searchText))
+            {
+                query = query.Where(item =>
+                    ContainsSearchText(item.Name)
+                    || ContainsSearchText(item.Description)
+                    || ContainsSearchText(item.DependencyLabel)
+                    || ContainsSearchText(KindLabel(item.Kind)));
+            }
+
+            return query.ToArray();
+        }
+    }
+
+    private string FilterTitle
+        => _kindFilter switch
+        {
+            LibraryItemKind.SavedSearch => "Saved searches",
+            LibraryItemKind.Visualization => "Visualizations",
+            LibraryItemKind.Dashboard => "Dashboards",
+            _ => "All library items"
+        };
+
+    private string RangeText
+    {
+        get
+        {
+            if (_loading)
+            {
+                return "Loading library items.";
+            }
+
+            var filteredCount = FilteredItems.Count;
+            if (filteredCount == _items.Count)
+            {
+                return $"{filteredCount} item(s).";
+            }
+
+            return $"{filteredCount} of {_items.Count} item(s).";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            var items = await Library.ListAsync();
+            _items.Clear();
+            _items.AddRange(items);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not load library. {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenItemAsync(LibraryItem item)
+    {
+        switch (item.Kind)
+        {
+            case LibraryItemKind.Dashboard:
+                Navigation.NavigateTo($"/dashboards/{item.Id}");
+                return;
+
+            case LibraryItemKind.SavedSearch:
+                await OpenSavedSearchAsync(item.Id);
+                return;
+
+            case LibraryItemKind.Visualization:
+                await OpenVisualizationAsync(item.Id);
+                return;
+        }
+    }
+
+    private async Task OpenSavedSearchAsync(string id)
+    {
+        var queryText = await Library.LoadSavedSearchTextAsync(id);
+        if (string.IsNullOrWhiteSpace(queryText))
+        {
+            _error = "Saved search could not be opened because its query text was not found.";
+            return;
+        }
+
+        EditorBus.RequestInsert(queryText);
+        Navigation.NavigateTo("/threat-hunting");
+    }
+
+    private async Task OpenVisualizationAsync(string id)
+    {
+        var queryText = await Library.LoadVisualizationTextAsync(id);
+        if (string.IsNullOrWhiteSpace(queryText))
+        {
+            _error = "Visualization could not be opened because its saved query or visualization definition was not found.";
+            return;
+        }
+
+        EditorBus.RequestInsert(queryText);
+        Navigation.NavigateTo("/threat-hunting");
+    }
+
+    private void CreateSavedSearch()
+    {
+        EditorBus.RequestInsert(
+            """
+            ProcessEvent
+            | where FileName has "powershell"
+            | project Timestamp, DeviceName, AccountName, ProcessCommandLine
+            | take 50
+            """);
+        Navigation.NavigateTo("/threat-hunting");
+    }
+
+    private void CreateVisualization()
+    {
+        EditorBus.RequestInsert(
+            """
+            ProcessEvent
+            | summarize Count = count() by AccountName
+            | render barchart xcolumn=AccountName ycolumns=Count title='Events by account'
+            """);
+        Navigation.NavigateTo("/threat-hunting");
+    }
+
+    private void CreateDashboard()
+    {
+        Navigation.NavigateTo("/dashboards");
+    }
+
+    private void SetFilter(LibraryItemKind? kind)
+    {
+        _kindFilter = kind;
+    }
+
+    private string FilterButtonClass(LibraryItemKind? kind)
+        => _kindFilter == kind
+            ? "hunt-btn dashboard-primary-action"
+            : "hunt-btn";
+
+    private void OnSearchChanged(ChangeEventArgs args)
+    {
+        _searchText = args.Value?.ToString() ?? string.Empty;
+    }
+
+    private void ClearSearch()
+    {
+        _searchText = string.Empty;
+        _kindFilter = null;
+    }
+
+    private bool ContainsSearchText(string? value)
+        => !string.IsNullOrWhiteSpace(value)
+            && value.Contains(_searchText, StringComparison.OrdinalIgnoreCase);
+
+    private static string KindLabel(LibraryItemKind kind)
+        => kind switch
+        {
+            LibraryItemKind.SavedSearch => "Saved search",
+            LibraryItemKind.Visualization => "Visualization",
+            LibraryItemKind.Dashboard => "Dashboard",
+            _ => kind.ToString()
+        };
+
+    private static string StatusLabel(LibraryItemStatus status)
+        => status switch
+        {
+            LibraryItemStatus.Ok => "OK",
+            LibraryItemStatus.MissingDependency => "Missing dependency",
+            _ => status.ToString()
+        };
+}

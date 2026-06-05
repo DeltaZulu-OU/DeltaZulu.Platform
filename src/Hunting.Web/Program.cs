@@ -57,6 +57,7 @@ builder.Services.AddHuntingRenderWeb();
 builder.Services.AddScoped<UserSettingsState>();
 builder.Services.AddScoped<QueryLibraryService>();
 builder.Services.AddScoped<VisualizationLibraryService>();
+builder.Services.AddScoped<LibraryService>();
 
 var app = builder.Build();
 
