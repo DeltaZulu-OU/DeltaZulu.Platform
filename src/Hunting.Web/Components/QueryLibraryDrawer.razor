@@ -97,6 +97,40 @@
             </section>
 
             <section class="hunt-query-library-section">
+                <div class="hunt-query-library-section-title">Saved visualizations</div>
+                @if (_savedVisualizations.Count == 0)
+                {
+                    <div class="hunt-query-library-empty">No saved visualizations yet.</div>
+                }
+                else
+                {
+                    <div class="hunt-query-library-list">
+                        @foreach (var visualization in _savedVisualizations)
+                        {
+                            <div class="hunt-query-library-item">
+                                <div class="hunt-query-library-item-main">
+                                    <div class="hunt-query-library-link">
+                                        @visualization.Name
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(visualization.Description))
+                                    {
+                                        <div class="hunt-query-library-description">@visualization.Description</div>
+                                    }
+                                    <div class="hunt-query-library-meta">
+                                        @visualization.Kind · Query @ShortId(visualization.QueryId) · Updated @FormatTimestamp(visualization.UpdatedAt)
+                                    </div>
+                                </div>
+                                <button class="hunt-btn hunt-btn-clear"
+                                        @onclick="() => DeleteVisualizationAsync(visualization.Id)">
+                                    Delete
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+
+            <section class="hunt-query-library-section">
                 <div class="hunt-query-library-section-title">Recent history</div>
                 @if (_recentHistory.Count == 0)
                 {
@@ -151,6 +185,7 @@
     private string? _saveDescription;
     private string? _message;
     private IReadOnlyList<Hunting.Application.SavedQueries.SavedQueryRecord> _savedQueries = [];
+    private IReadOnlyList<Hunting.Application.Visualizations.VisualizationRecord> _savedVisualizations = [];
     private IReadOnlyList<Hunting.Application.QueryHistory.QueryHistoryRecord> _recentHistory = [];
 
     [Parameter]
@@ -194,6 +229,7 @@
         try
         {
             _savedQueries = await QueryLibrary.ListSavedQueriesAsync();
+            _savedVisualizations = await VisualizationLibrary.ListVisualizationsAsync();
             _recentHistory = await QueryLibrary.ListRecentHistoryAsync(RecentHistoryLimit);
         }
         finally
@@ -299,6 +335,13 @@
         await RefreshAsync();
     }
 
+    private async Task DeleteVisualizationAsync(string id)
+    {
+        await VisualizationLibrary.DeleteVisualizationAsync(id);
+        _message = "Saved visualization deleted.";
+        await RefreshAsync();
+    }
+
     private static string FormatTimestamp(DateTime value)
     {
         return value.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
@@ -313,5 +356,15 @@
                 StringSplitOptions.RemoveEmptyEntries));
 
         return compact.Length <= 120 ? compact : $"{compact[..120]}…";
+    }
+
+    private static string ShortId(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return "(none)";
+        }
+
+        return id.Length <= 8 ? id : id[..8];
     }
 }
