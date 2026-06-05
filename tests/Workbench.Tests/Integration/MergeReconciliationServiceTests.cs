@@ -172,6 +172,51 @@ public sealed class MergeReconciliationServiceTests : IDisposable
         }
     }
 
+    [TestMethod]
+    public void BuildRecoveryGuidance_CommittedIntentWithSnapshot_AllowsProjectionRepair()
+    {
+        var changeId = ChangeRequestId.New();
+        var intent = NewMergeIntent(changeId, MergeIntentState.Committed, commitSha: "abc123");
+
+        var guidance = MergeReconciliationService.BuildRecoveryGuidance(intent);
+
+        Assert.AreEqual(changeId, guidance.ChangeId);
+        Assert.AreEqual(MergeRecoveryActionKind.RepairProjection, guidance.ActionKind);
+        Assert.IsTrue(guidance.CanRepair);
+        Assert.AreEqual("Repair projection", guidance.RecommendedAction);
+        StringAssert.Contains(guidance.Message, "version projection");
+    }
+
+    [TestMethod]
+    public void BuildRecoveryGuidance_PendingIntent_DisablesProjectionRepair()
+    {
+        var changeId = ChangeRequestId.New();
+        var intent = NewMergeIntent(changeId, MergeIntentState.Pending);
+
+        var guidance = MergeReconciliationService.BuildRecoveryGuidance(intent);
+
+        Assert.AreEqual(changeId, guidance.ChangeId);
+        Assert.AreEqual(MergeRecoveryActionKind.WaitingForAcceptedWrite, guidance.ActionKind);
+        Assert.IsFalse(guidance.CanRepair);
+        Assert.AreEqual("Wait or retry merge", guidance.RecommendedAction);
+        StringAssert.Contains(guidance.Message, "accepted-content write has not completed");
+    }
+
+    [TestMethod]
+    public void BuildRecoveryGuidance_CommittedIntentWithoutSnapshot_RequiresInvestigation()
+    {
+        var changeId = ChangeRequestId.New();
+        var intent = NewMergeIntent(changeId, MergeIntentState.Committed);
+
+        var guidance = MergeReconciliationService.BuildRecoveryGuidance(intent);
+
+        Assert.AreEqual(changeId, guidance.ChangeId);
+        Assert.AreEqual(MergeRecoveryActionKind.NeedsInvestigation, guidance.ActionKind);
+        Assert.IsFalse(guidance.CanRepair);
+        Assert.AreEqual("Verify accepted snapshot", guidance.RecommendedAction);
+        StringAssert.Contains(guidance.Message, "no accepted snapshot is recorded");
+    }
+
     private async Task<DetectionId> ConceiveDetectionAsync(string slug)
     {
         using var scope = _host.CreateScope();
@@ -201,6 +246,22 @@ public sealed class MergeReconciliationServiceTests : IDisposable
 
         return change.Id;
     }
+
+    private static MergeIntent NewMergeIntent(
+        ChangeRequestId changeId,
+        MergeIntentState state,
+        string? commitSha = null)
+        => new(
+            changeId,
+            DetectionId.New(),
+            "guidance-detection",
+            new DateTimeOffset(2026, 2, 1, 10, 0, 0, TimeSpan.Zero),
+            "Merge Tester",
+            "merge@example.test",
+            "[CHG-MI-G] Guidance test",
+            state,
+            commitSha,
+            commitSha is null ? null : new DateTimeOffset(2026, 2, 1, 10, 0, 5, TimeSpan.Zero));
 
     public void Dispose()
     {

@@ -3,6 +3,7 @@
 @using Microsoft.Extensions.Configuration
 @using Workbench.Application.Abstractions
 @using Workbench.Application.Services
+@using Workbench.Domain.Common
 @using Workbench.Domain.Identifiers
 @inject IConfiguration Configuration
 @inject PocUserContext UserContext
@@ -76,6 +77,10 @@
             }
             else
             {
+                @if (!string.IsNullOrWhiteSpace(_lastRepairMessage))
+                {
+                    <MudAlert Severity="@_lastRepairSeverity" Dense="true" Class="mb-3">@_lastRepairMessage</MudAlert>
+                }
                 <MudTable Items="_mergeIntents" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="MergeIntent">
                     <HeaderContent>
                         <MudTh>Change</MudTh>
@@ -83,9 +88,11 @@
                         <MudTh>Recovery state</MudTh>
                         <MudTh>Requested</MudTh>
                         <MudTh>Accepted snapshot</MudTh>
+                        <MudTh>Operator guidance</MudTh>
                         <MudTh>Action</MudTh>
                     </HeaderContent>
                     <RowTemplate>
+                        @{ var guidance = GuidanceFor(context); }
                         <MudTd DataLabel="Change"><code>@context.ChangeId.Value</code></MudTd>
                         <MudTd DataLabel="Detection">
                             <MudText Typo="Typo.body2">@context.DetectionSlug</MudText>
@@ -108,9 +115,13 @@
                                 <MudText Typo="Typo.caption" Class="mud-text-secondary">@(context.CommittedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Accepted time unavailable")</MudText>
                             }
                         </MudTd>
+                        <MudTd DataLabel="Operator guidance">
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@guidance.Message</MudText>
+                            <MudText Typo="Typo.caption"><strong>Recommended:</strong> @guidance.RecommendedAction</MudText>
+                        </MudTd>
                         <MudTd DataLabel="Action">
                             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                                       Disabled="@(!CanRepair(context) || _repairingChangeId == context.ChangeId)"
+                                       Disabled="@(!guidance.CanRepair || _repairingChangeId == context.ChangeId)"
                                        OnClick="@(() => RepairIntentAsync(context.ChangeId))"
                                        StartIcon="@Icons.Material.Outlined.Healing">
                                 Repair projection
@@ -134,6 +145,8 @@
     private readonly List<MergeIntent> _mergeIntents = [];
     private bool _loadingIntents = true;
     private ChangeRequestId? _repairingChangeId;
+    private string? _lastRepairMessage;
+    private Severity _lastRepairSeverity = Severity.Info;
 
     private void SwitchUser(PocUserPersona persona)
     {
@@ -154,6 +167,10 @@
         {
             _mergeIntents.Clear();
             _mergeIntents.AddRange(await MergeReconciliation.ListUnresolvedAsync());
+            if (_mergeIntents.Count == 0)
+            {
+                _lastRepairMessage = null;
+            }
         }
         finally
         {
@@ -167,11 +184,15 @@
         try
         {
             var result = await MergeReconciliation.RepairCommittedAsync(changeId);
-            Snackbar.Add(result.Message, result.IsSuccess ? Severity.Success : Severity.Warning);
+            _lastRepairSeverity = result.IsSuccess ? Severity.Success : Severity.Warning;
+            _lastRepairMessage = result.Message;
+            Snackbar.Add(result.Message, _lastRepairSeverity);
             await LoadMergeIntentsAsync();
         }
-        catch (Domain.Common.DomainException ex)
+        catch (DomainException ex)
         {
+            _lastRepairSeverity = Severity.Error;
+            _lastRepairMessage = ex.Message;
             Snackbar.Add(ex.Message, Severity.Error);
         }
         finally
@@ -180,8 +201,8 @@
         }
     }
 
-    private static bool CanRepair(MergeIntent intent)
-        => intent.State == MergeIntentState.Committed && !string.IsNullOrWhiteSpace(intent.CommitSha);
+    private static MergeIntentRecoveryGuidance GuidanceFor(MergeIntent intent)
+        => MergeReconciliationService.BuildRecoveryGuidance(intent);
 
     private static string ShortSha(string commitSha)
         => commitSha.Length <= 12 ? commitSha : commitSha[..12];

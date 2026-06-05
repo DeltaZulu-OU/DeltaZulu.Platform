@@ -27,6 +27,46 @@ public sealed class MergeReconciliationService(
         => intents.ListUnresolvedAsync(ct);
 
     /// <summary>
+    /// Produces domain-language operator guidance for an unresolved merge intent without
+    /// exposing low-level accepted-content storage commands in the UI.
+    /// </summary>
+    public async Task<MergeIntentRecoveryGuidance> GetRecoveryGuidanceAsync(
+        ChangeRequestId changeId,
+        CancellationToken ct = default)
+    {
+        var unresolved = await intents.ListUnresolvedAsync(ct);
+        var intent = unresolved.FirstOrDefault(i => i.ChangeId.Equals(changeId));
+
+        return intent is null
+            ? MergeIntentRecoveryGuidance.NotFound(changeId)
+            : BuildRecoveryGuidance(intent);
+    }
+
+    public static MergeIntentRecoveryGuidance BuildRecoveryGuidance(MergeIntent intent)
+    {
+        if (intent.State == MergeIntentState.Committed && !string.IsNullOrWhiteSpace(intent.CommitSha))
+        {
+            return MergeIntentRecoveryGuidance.Repairable(
+                intent.ChangeId,
+                "Accepted content was written, but the user-facing version projection did not finish. Use Repair projection to create the missing version and mark sibling changes stale.",
+                "Repair projection");
+        }
+
+        if (intent.State == MergeIntentState.Committed)
+        {
+            return MergeIntentRecoveryGuidance.NeedsInvestigation(
+                intent.ChangeId,
+                "The recovery marker says accepted content was written, but no accepted snapshot is recorded. Verify the accepted-content store before retrying the merge or closing the marker.",
+                "Verify accepted snapshot");
+        }
+
+        return MergeIntentRecoveryGuidance.WaitingForAcceptedWrite(
+            intent.ChangeId,
+            "The accepted-content write has not completed. If this remains after the merge attempt stops running, retry the merge from the change page or investigate the accepted-content store health.",
+            "Wait or retry merge");
+    }
+
+    /// <summary>
     /// Repairs one committed-but-unprojected merge intent by creating the missing domain
     /// version projection and moving the associated change/detection to their accepted state.
     /// Pending intents are reported but not modified because no accepted-content commit is
@@ -119,6 +159,42 @@ public sealed class MergeReconciliationService(
         var approved = effective.Count(r => r.Decision == Domain.Enums.ReviewDecision.Approved);
         return $"{approved} approved (of {effective.Count} effective reviews).";
     }
+}
+
+public enum MergeRecoveryActionKind
+{
+    WaitingForAcceptedWrite,
+    RepairProjection,
+    NeedsInvestigation,
+    NotFound,
+}
+
+public sealed record MergeIntentRecoveryGuidance(
+    ChangeRequestId ChangeId,
+    MergeRecoveryActionKind ActionKind,
+    string Message,
+    string RecommendedAction)
+{
+    public bool CanRepair => ActionKind == MergeRecoveryActionKind.RepairProjection;
+
+    public static MergeIntentRecoveryGuidance Repairable(
+        ChangeRequestId changeId, string message, string recommendedAction)
+        => new(changeId, MergeRecoveryActionKind.RepairProjection, message, recommendedAction);
+
+    public static MergeIntentRecoveryGuidance WaitingForAcceptedWrite(
+        ChangeRequestId changeId, string message, string recommendedAction)
+        => new(changeId, MergeRecoveryActionKind.WaitingForAcceptedWrite, message, recommendedAction);
+
+    public static MergeIntentRecoveryGuidance NeedsInvestigation(
+        ChangeRequestId changeId, string message, string recommendedAction)
+        => new(changeId, MergeRecoveryActionKind.NeedsInvestigation, message, recommendedAction);
+
+    public static MergeIntentRecoveryGuidance NotFound(ChangeRequestId changeId)
+        => new(
+            changeId,
+            MergeRecoveryActionKind.NotFound,
+            "No unresolved merge intent was found for this change. Refresh the recovery list before taking further action.",
+            "Refresh recovery list");
 }
 
 public enum MergeRepairStatus
