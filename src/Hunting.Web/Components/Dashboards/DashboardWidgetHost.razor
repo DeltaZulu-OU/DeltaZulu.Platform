@@ -126,10 +126,31 @@
         => Widget.Kind switch
         {
             DashboardWidgetKind.Markdown => "Markdown",
-            DashboardWidgetKind.Query when UsesSavedVisualization => $"Saved visualization · {ShortId(Widget.VisualizationId)}",
+            DashboardWidgetKind.Query when UsesSavedVisualization => SavedVisualizationLabel,
             DashboardWidgetKind.Query => "Query text",
             _ => Widget.Kind.ToString()
         };
+
+    private string SavedVisualizationLabel
+    {
+        get
+        {
+            var visualizationName = NormalizeOptionalText(Result?.VisualizationName);
+            var queryName = NormalizeOptionalText(Result?.SavedQueryName);
+
+            if (visualizationName is not null && queryName is not null)
+            {
+                return $"Saved visualization · {visualizationName} · Query: {queryName}";
+            }
+
+            if (visualizationName is not null)
+            {
+                return $"Saved visualization · {visualizationName}";
+            }
+
+            return $"Saved visualization · {ShortId(Widget.VisualizationId)}";
+        }
+    }
 
     private string RefreshTitle
         => CanRunWidget
@@ -171,6 +192,9 @@
         => DeleteWidget.HasDelegate
             ? DeleteWidget.InvokeAsync(Widget)
             : Task.CompletedTask;
+
+    private static string? NormalizeOptionalText(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string ShortId(string? id)
     {

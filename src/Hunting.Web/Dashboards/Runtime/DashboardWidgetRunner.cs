@@ -67,12 +67,14 @@ public sealed class DashboardWidgetRunner
 
         try
         {
-            var rendered = string.IsNullOrWhiteSpace(widget.VisualizationId)
-                ? await _renderedQueryRunner.RunAsync(widget.QueryText, cancellationToken)
+            var execution = string.IsNullOrWhiteSpace(widget.VisualizationId)
+                ? new DashboardWidgetExecution(
+                    await _renderedQueryRunner.RunAsync(widget.QueryText, cancellationToken))
                 : await RunVisualizationWidgetAsync(widget.VisualizationId, cancellationToken);
 
             stopwatch.Stop();
 
+            var rendered = execution.Result;
             var diagnostics = rendered.QueryResult.Diagnostics.All;
             var chartOptions = rendered.Chart.CanRender
                 ? _chartOptionsBuilder.Build(rendered.Chart)
@@ -90,7 +92,11 @@ public sealed class DashboardWidgetRunner
                 ChartOptions = chartOptions,
                 Diagnostics = diagnostics,
                 StartedAtUtc = startedAtUtc,
-                Duration = stopwatch.Elapsed
+                Duration = stopwatch.Elapsed,
+                VisualizationId = execution.VisualizationId,
+                VisualizationName = execution.VisualizationName,
+                SavedQueryId = execution.SavedQueryId,
+                SavedQueryName = execution.SavedQueryName
             };
         }
         catch (DashboardWidgetRunException ex)
@@ -125,7 +131,7 @@ public sealed class DashboardWidgetRunner
         }
     }
 
-    private async Task<RenderedQueryResult> RunVisualizationWidgetAsync(
+    private async Task<DashboardWidgetExecution> RunVisualizationWidgetAsync(
         string visualizationId,
         CancellationToken cancellationToken)
     {
@@ -148,10 +154,17 @@ public sealed class DashboardWidgetRunner
             throw new DashboardWidgetRunException(error);
         }
 
-        return await _renderedQueryRunner.RunAsync(
+        var result = await _renderedQueryRunner.RunAsync(
             query.QueryText,
             directive,
             cancellationToken);
+
+        return new DashboardWidgetExecution(
+            result,
+            visualization.Id,
+            visualization.Name,
+            query.Id,
+            query.Name);
     }
 
     private static DashboardWidgetRunResult Failed(
@@ -174,6 +187,13 @@ public sealed class DashboardWidgetRunner
             QueryDiagnosticCodes.Unspecified,
             message,
             detail);
+
+    private sealed record DashboardWidgetExecution(
+        RenderedQueryResult Result,
+        string? VisualizationId = null,
+        string? VisualizationName = null,
+        string? SavedQueryId = null,
+        string? SavedQueryName = null);
 
     private sealed class DashboardWidgetRunException : Exception
     {

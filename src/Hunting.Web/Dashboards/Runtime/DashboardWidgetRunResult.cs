@@ -16,6 +16,10 @@ public sealed record DashboardWidgetRunResult
     public IReadOnlyList<QueryDiagnostic> Diagnostics { get; init; } = [];
     public DateTime StartedAtUtc { get; init; }
     public TimeSpan Duration { get; init; }
+    public string? VisualizationId { get; init; }
+    public string? VisualizationName { get; init; }
+    public string? SavedQueryId { get; init; }
+    public string? SavedQueryName { get; init; }
 
     public bool HasRenderableChart => Chart?.CanRender == true && ChartOptions is not null;
 }
