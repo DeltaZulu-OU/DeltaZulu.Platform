@@ -250,7 +250,11 @@
                 <div class="hunt-drawer-title">@_drawerTitle</div>
                 <div class="hunt-drawer-subtitle">@_drawerTypeLabel</div>
             </div>
-            <MudIconButton Icon="@Icons.Material.Filled.Close" Color="MudBlazor.Color.Default" Size="Size.Small" OnClick="CloseDrawer" />
+            <button class="hunt-drawer-close"
+                    @onclick="CloseDrawer"
+                    aria-label="Close details drawer">
+                ×
+            </button>
         </div>
         <div class="hunt-drawer-body">
             @if (_drawerMode == DrawerMode.Sql || _drawerMode == DrawerMode.Json)

@@ -16,6 +16,7 @@ Analysts write KQL against logical security tables (for example, `ProcessEvent`)
 - Render implementation is decoupled from `Hunting.Core` and `Hunting.Data`. `Hunting.Render` owns dependency-light render contracts, terminal directive parsing, binding resolution, tabular render abstraction, and chart-model construction. `Hunting.Web` owns query/render orchestration, `QueryResult` adaptation, and Vizor.ECharts option construction.
 - Runtime execution is data-only. The Web layer parses terminal `| render ...` directives, passes the stripped data query through `QueryService.ExecuteDataOnlyAsync(...)`, adapts the returned `QueryResult`, and builds render output separately.
 - Dashboard foundation is implemented on `dashboard-rewrite`: persisted dashboards, query widgets, chart/table widgets, dashboard settings, JSON export, dashboard-level refresh, coordinate-grid edit mode, collision-safe move/resize, model-level layout validation, and a scoped dashboard page controller/state model.
+- Right-side workbench drawers now share the standard `hunt-drawer` base shell; individual drawer bodies remain free to provide use-case-specific forms, lists, and code snippets.
 - End-to-end pipeline coverage currently includes 17 hunting scenarios in `EndToEndPipelineTests`.
 
 | Feature parity status (in scope only) | Count | Percent of in-scope total |

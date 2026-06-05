@@ -191,6 +191,7 @@ Implemented:
 - model-level 12-column grid and overlap validation
 - scoped `DashboardPageController` and explicit `DashboardPageState`
 - JS lifecycle hardening and debug-level logging
+- standard right-side drawer base shell shared by generated-SQL/cell-detail drawers and the query library drawer
 
 Architecture note: `MudDropZone` is retained only as a passive dashboard surface. It does not own widget ordering or placement. Persisted `X/Y/Width/Height` layout remains authoritative.
 

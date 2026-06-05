@@ -2,54 +2,7 @@
     white-space: nowrap;
 }
 
-.hunt-query-drawer-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 1200;
-    border: 0;
-    padding: 0;
-    background: rgba(15, 23, 42, 0.18);
-}
-
-.hunt-query-drawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    z-index: 1201;
-    width: min(520px, 96vw);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    background: #ffffff;
-    color: #0f172a;
-    border-left: 1px solid #d8e0e6;
-    box-shadow: -18px 0 48px rgba(15, 23, 42, 0.22);
-}
-
-.hunt-query-drawer-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.hunt-query-drawer-title {
-    font-weight: 700;
-    letter-spacing: 0.01em;
-}
-
-.hunt-query-drawer-subtitle {
-    margin-top: 0.15rem;
-    font-size: 0.82rem;
-    color: #64748b;
-}
-
-.hunt-query-drawer-body {
-    flex: 1;
-    overflow: auto;
-    padding: 1rem;
+.hunt-query-library-body {
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -64,25 +17,26 @@
 .hunt-query-library-input {
     min-width: 0;
     width: 100%;
-    border: 1px solid #d8e0e6;
-    border-radius: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     padding: 0.5rem 0.65rem;
-    background: #ffffff;
-    color: #0f172a;
+    background: var(--bg-input);
+    color: var(--text-main);
+    font: inherit;
 }
 
 .hunt-query-library-input:focus {
     outline: 2px solid rgba(221, 100, 45, 0.22);
-    border-color: #dd642d;
+    border-color: var(--accent);
 }
 
 .hunt-query-library-message {
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     padding: 0.55rem 0.65rem;
     font-size: 0.84rem;
-    background: #f8fafc;
-    color: #334155;
+    background: color-mix(in srgb, var(--info) 8%, var(--bg-panel));
+    color: var(--text-main);
 }
 
 .hunt-query-library-section {
@@ -96,12 +50,12 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #0f4960;
+    color: var(--accent);
 }
 
 .hunt-query-library-empty {
     font-size: 0.86rem;
-    color: #64748b;
+    color: var(--text-dim);
 }
 
 .hunt-query-library-list {
@@ -116,7 +70,7 @@
     justify-content: space-between;
     gap: 0.75rem;
     padding: 0.7rem 0;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--border);
 }
 
 .hunt-query-library-item-main {
@@ -130,7 +84,7 @@
     border: 0;
     padding: 0;
     background: transparent;
-    color: #0f172a;
+    color: var(--text-head);
     text-align: left;
     font: inherit;
     font-weight: 700;
@@ -148,10 +102,10 @@
 }
 
 .hunt-query-library-description {
-    color: #475569;
+    color: var(--text-main);
     overflow-wrap: anywhere;
 }
 
 .hunt-query-library-meta {
-    color: #64748b;
+    color: var(--text-dim);
 }

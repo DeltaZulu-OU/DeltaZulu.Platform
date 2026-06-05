@@ -9,27 +9,27 @@
 
 @if (_open)
 {
-    <button class="hunt-query-drawer-backdrop"
+    <button class="hunt-drawer-backdrop"
             @onclick="Close"
             aria-label="Close query history drawer"></button>
 
-    <aside class="hunt-query-drawer"
+    <aside class="hunt-drawer"
            role="dialog"
            aria-modal="true"
            aria-label="Query history and saved queries">
-        <div class="hunt-query-drawer-header">
+        <div class="hunt-drawer-header">
             <div>
-                <div class="hunt-query-drawer-title">Query Library</div>
-                <div class="hunt-query-drawer-subtitle">Saved queries and recent executions</div>
+                <div class="hunt-drawer-title">Query Library</div>
+                <div class="hunt-drawer-subtitle">Saved queries and recent executions</div>
             </div>
-            <button class="hunt-btn hunt-btn-clear"
+            <button class="hunt-drawer-close"
                     @onclick="Close"
                     aria-label="Close query history drawer">
-                Close
+                ×
             </button>
         </div>
 
-        <div class="hunt-query-drawer-body">
+        <div class="hunt-drawer-body hunt-drawer-body-padded hunt-query-library-body">
             <div class="hunt-query-library-save">
                 <input class="hunt-query-library-input"
                        placeholder="Saved query name"

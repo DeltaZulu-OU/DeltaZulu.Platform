@@ -389,10 +389,38 @@ body.hunt-splitter-active {
 .hunt-drawer-header {
     display: flex;
     justify-content: space-between;
-    align-items: start;
+    align-items: center;
     gap: 16px;
     padding: 12px 16px;
     border-bottom: 1px solid var(--border);
+}
+
+.hunt-drawer-close {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-input);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.hunt-drawer-close:hover,
+.hunt-drawer-close:focus-visible {
+    border-color: var(--accent);
+    color: var(--text-head);
+}
+
+.hunt-drawer-close:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    outline-offset: 2px;
 }
 
 .hunt-drawer-backdrop {
@@ -431,6 +459,10 @@ body.hunt-splitter-active {
 .hunt-drawer-body {
     flex: 1;
     overflow: auto;
+}
+
+.hunt-drawer-body-padded {
+    padding: 1rem;
 }
 
 .hunt-drawer-content,
