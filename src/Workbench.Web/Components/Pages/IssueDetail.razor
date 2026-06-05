@@ -33,7 +33,7 @@
         <div class="d-flex gap-2 mt-2 align-center flex-wrap">
             <StatusChip IssueStatus="_issue.Status" />
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_issue.Type</MudChip>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_issue.Priority</MudChip>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@PriorityColor(_issue.Priority)">@_issue.Priority</MudChip>
         </div>
         @if (_issue.ExternalCase is not null)
         {
@@ -299,4 +299,13 @@
         }
         catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
     }
+
+    private static Color PriorityColor(Priority priority) => priority switch
+    {
+        Priority.Critical => Color.Error,
+        Priority.High => Color.Warning,
+        Priority.Normal => Color.Info,
+        Priority.Low => Color.Default,
+        _ => Color.Default,
+    };
 }

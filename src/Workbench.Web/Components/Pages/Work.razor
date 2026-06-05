@@ -69,7 +69,11 @@
                         <MudTd DataLabel="Title">@context.Title</MudTd>
                         <MudTd DataLabel="Type"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.Type</MudChip></MudTd>
                         <MudTd DataLabel="Status"><StatusChip IssueStatus="context.Status" /></MudTd>
-                        <MudTd DataLabel="Priority">@context.Priority</MudTd>
+                        <MudTd DataLabel="Priority">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@PriorityColor(context.Priority)">
+                                @context.Priority
+                            </MudChip>
+                        </MudTd>
                         <MudTd DataLabel="External Case">
                             @if (context.ExternalCase is not null)
                             {
@@ -216,4 +220,13 @@
         var result = await dialog.Result;
         if (result is not null && !result.Canceled) await LoadAsync();
     }
+
+    private static Color PriorityColor(Priority priority) => priority switch
+    {
+        Priority.Critical => Color.Error,
+        Priority.High => Color.Warning,
+        Priority.Normal => Color.Info,
+        Priority.Low => Color.Default,
+        _ => Color.Default,
+    };
 }

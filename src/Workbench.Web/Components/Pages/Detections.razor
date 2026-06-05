@@ -3,9 +3,11 @@
 @using Workbench.Application.Services
 @using Workbench.Domain.Detections
 @using Workbench.Domain.Enums
+@using Workbench.Domain.Identifiers
 @inject DetectionContentService DetectionService
 @inject IDialogService DialogService
 @inject NavigationManager Nav
+@inject PocUserContext UserContext
 
 <PageTitle>Detections</PageTitle>
 
@@ -30,10 +32,10 @@
                   T="string" />
     <MudChipSet T="string" SelectionMode="SelectionMode.SingleSelection" SelectedValue="_lifecycleFilter"
                 SelectedValueChanged="OnLifecycleFilterChanged">
-        <MudChip T="string" Value="@("all")" Variant="Variant.Outlined" SelectedColor="Color.Primary">All</MudChip>
-        <MudChip T="string" Value="@("Conceived")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Conceived</MudChip>
-        <MudChip T="string" Value="@("Accepted")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Accepted</MudChip>
-        <MudChip T="string" Value="@("Deprecated")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Deprecated</MudChip>
+        <MudChip T="string" Value="@("all")" Variant="Variant.Outlined" SelectedColor="Color.Primary">All (@_detections.Count)</MudChip>
+        <MudChip T="string" Value="@("Conceived")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Conceived (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Conceived))</MudChip>
+        <MudChip T="string" Value="@("Accepted")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Accepted (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Accepted))</MudChip>
+        <MudChip T="string" Value="@("Deprecated")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Deprecated (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Deprecated))</MudChip>
     </MudChipSet>
 </div>
 
@@ -60,6 +62,7 @@ else
             <MudTh>Title</MudTh>
             <MudTh>Lifecycle</MudTh>
             <MudTh>Updated</MudTh>
+            <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Slug"><code>@context.Slug</code></MudTd>
@@ -67,6 +70,13 @@ else
             <MudTd DataLabel="Lifecycle"><StatusChip Lifecycle="context.Lifecycle" /></MudTd>
             <MudTd DataLabel="Updated">
                 <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+            </MudTd>
+            <MudTd DataLabel="Actions" @onclick:stopPropagation="true">
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Outlined.Add"
+                           OnClick="@(() => OpenChangeForDetection(context.Id))">
+                    Open change
+                </MudButton>
             </MudTd>
         </RowTemplate>
     </MudTable>
@@ -118,5 +128,21 @@ else
         var dialog = await DialogService.ShowAsync<ConceiveDetectionDialog>("Conceive detection", options);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled) await LoadAsync();
+    }
+
+    private async Task OpenChangeForDetection(DetectionId detectionId)
+    {
+        var parameters = new DialogParameters<OpenChangeDialog>
+        {
+            { x => x.DetectionId, detectionId },
+            { x => x.AuthorId, UserContext.CurrentUser.Id },
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<OpenChangeDialog>("Open Change", parameters, options);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled && result.Data is ChangeRequestId changeId)
+        {
+            Nav.NavigateTo($"/changes/{changeId}");
+        }
     }
 }
