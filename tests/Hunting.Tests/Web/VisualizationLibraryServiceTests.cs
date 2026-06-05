@@ -106,6 +106,67 @@ public sealed class VisualizationLibraryServiceTests
     }
 
     [TestMethod]
+    public async Task LoadVisualizationQueryTextAsync_ReconstructsSavedQueryWithRenderClause()
+    {
+        var savedQueries = new InMemorySavedQueryRepository();
+        var visualizations = new InMemoryVisualizationRepository();
+        var service = CreateService(savedQueries, visualizations);
+        var now = new DateTime(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
+
+        await savedQueries.SaveAsync(new SavedQueryRecord(
+            "query-1",
+            "Events by account",
+            null,
+            """
+            ProcessEvent
+            | summarize Count = count() by AccountName
+            """,
+            now,
+            now,
+            null), TestContext.CancellationToken);
+
+        await visualizations.SaveAsync(new VisualizationRecord(
+            "viz-1",
+            "query-1",
+            "Events by account",
+            null,
+            nameof(RenderKind.Barchart),
+            JsonSerializer.Serialize(
+                new VisualizationSpec
+                {
+                    Title = "Events by account",
+                    XColumn = "AccountName",
+                    YColumns = ["Count"],
+                    IsStacked = true
+                },
+                new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+            now,
+            now), TestContext.CancellationToken);
+
+        var queryText = await service.LoadVisualizationQueryTextAsync("viz-1", TestContext.CancellationToken);
+
+        Assert.IsNotNull(queryText);
+        Assert.Contains("ProcessEvent", queryText);
+        Assert.Contains("| render barchart", queryText);
+        Assert.Contains("title='Events by account'", queryText);
+        Assert.Contains("xcolumn='AccountName'", queryText);
+        Assert.Contains("ycolumns='Count'", queryText);
+        Assert.Contains("kind='stacked'", queryText);
+    }
+
+    [TestMethod]
+    public async Task LoadVisualizationQueryTextAsync_MissingVisualization_ReturnsNull()
+    {
+        var service = CreateService(
+            new InMemorySavedQueryRepository(),
+            new InMemoryVisualizationRepository());
+
+        var queryText = await service.LoadVisualizationQueryTextAsync("missing", TestContext.CancellationToken);
+
+        Assert.IsNull(queryText);
+    }
+
+    [TestMethod]
     public async Task SaveVisualizationFromRenderedQueryAsync_QueryWithoutRender_Throws()
     {
         var service = CreateService(

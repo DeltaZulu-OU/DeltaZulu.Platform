@@ -55,6 +55,35 @@ public sealed class VisualizationLibraryService
         return _visualizations.GetAsync(id, cancellationToken);
     }
 
+    public async Task<string?> LoadVisualizationQueryTextAsync(
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        var visualization = await _visualizations.GetAsync(id, cancellationToken);
+        if (visualization is null)
+        {
+            return null;
+        }
+
+        var query = await _savedQueries.GetAsync(visualization.QueryId, cancellationToken);
+        if (query is null)
+        {
+            return null;
+        }
+
+        if (!Enum.TryParse<RenderKind>(visualization.Kind, ignoreCase: true, out var kind))
+        {
+            throw new InvalidOperationException(
+                $"Visualization '{visualization.Id}' has unsupported kind '{visualization.Kind}'.");
+        }
+
+        var spec = DeserializeVisualizationSpec(visualization);
+        var renderClause = BuildRenderClause(kind, spec);
+        return $"{query.QueryText.TrimEnd()}{Environment.NewLine}{renderClause}";
+    }
+
     public async Task<SavedVisualizationResult> SaveVisualizationFromRenderedQueryAsync(
         string? queryId,
         string? visualizationId,
@@ -234,6 +263,58 @@ public sealed class VisualizationLibraryService
             Legend = NormalizeOptionalText(spec.Legend),
             IsStacked = spec.IsStacked
         };
+
+    private static VisualizationSpec DeserializeVisualizationSpec(VisualizationRecord visualization)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<VisualizationSpec>(
+                    visualization.SpecJson,
+                    JsonOptions)
+                ?? new VisualizationSpec();
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException(
+                $"Visualization '{visualization.Id}' contains malformed visualization spec JSON.",
+                ex);
+        }
+    }
+
+    private static string BuildRenderClause(RenderKind kind, VisualizationSpec spec)
+    {
+        var properties = new List<string>();
+
+        AddRenderProperty(properties, "title", spec.Title);
+        AddRenderProperty(properties, "xcolumn", spec.XColumn);
+        AddRenderProperty(properties, "ycolumns", spec.YColumns.Count == 0 ? null : string.Join(",", spec.YColumns));
+        AddRenderProperty(properties, "series", spec.SeriesColumn);
+        AddRenderProperty(properties, "legend", spec.Legend);
+
+        if (spec.IsStacked)
+        {
+            AddRenderProperty(properties, "kind", "stacked");
+        }
+
+        var kindText = kind.ToString().ToLowerInvariant();
+        return properties.Count == 0
+            ? $"| render {kindText}"
+            : $"| render {kindText} with ({string.Join(", ", properties)})";
+    }
+
+    private static void AddRenderProperty(List<string> properties, string name, string? value)
+    {
+        var normalized = NormalizeOptionalText(value);
+        if (normalized is null)
+        {
+            return;
+        }
+
+        properties.Add($"{name}={QuoteRenderValue(normalized)}");
+    }
+
+    private static string QuoteRenderValue(string value)
+        => $"'{value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("'", "\\'", StringComparison.Ordinal)}'";
 
     private static string SerializeSpec(VisualizationSpec spec)
         => JsonSerializer.Serialize(spec, JsonOptions);

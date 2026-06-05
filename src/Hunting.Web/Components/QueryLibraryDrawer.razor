@@ -109,9 +109,10 @@
                         {
                             <div class="hunt-query-library-item">
                                 <div class="hunt-query-library-item-main">
-                                    <div class="hunt-query-library-link">
+                                    <button class="hunt-query-library-link"
+                                            @onclick="() => SelectVisualizationAsync(visualization.Id)">
                                         @visualization.Name
-                                    </div>
+                                    </button>
                                     @if (!string.IsNullOrWhiteSpace(visualization.Description))
                                     {
                                         <div class="hunt-query-library-description">@visualization.Description</div>
@@ -120,6 +121,10 @@
                                         @visualization.Kind · Query @ShortId(visualization.QueryId) · Updated @FormatTimestamp(visualization.UpdatedAt)
                                     </div>
                                 </div>
+                                <button class="hunt-btn"
+                                        @onclick="() => SelectVisualizationAsync(visualization.Id)">
+                                    Open
+                                </button>
                                 <button class="hunt-btn hunt-btn-clear"
                                         @onclick="() => DeleteVisualizationAsync(visualization.Id)">
                                     Delete
@@ -305,6 +310,19 @@
     {
         var queryText = await QueryLibrary.LoadSavedQueryTextAsync(id);
         await SelectQueryTextAsync(queryText);
+    }
+
+    private async Task SelectVisualizationAsync(string id)
+    {
+        try
+        {
+            var queryText = await VisualizationLibrary.LoadVisualizationQueryTextAsync(id);
+            await SelectQueryTextAsync(queryText);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _message = ex.Message;
+        }
     }
 
     private async Task SelectHistoryQueryAsync(string id)
