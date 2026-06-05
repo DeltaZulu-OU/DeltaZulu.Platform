@@ -56,6 +56,7 @@ builder.Services.AddHuntingRenderWeb();
 
 builder.Services.AddScoped<UserSettingsState>();
 builder.Services.AddScoped<QueryLibraryService>();
+builder.Services.AddScoped<VisualizationLibraryService>();
 
 var app = builder.Build();
 
@@ -128,7 +129,7 @@ static void SeedMedallionSources(SchemaApplier applier, ILogger logger)
 
         applier.ExecuteRaw(seedSql);
         var insertedRows = applier.QueryScalar($"SELECT count(*) FROM {tableName}");
-        logger.LogInformation("Seeded {RowCount} rows into {TableName}", insertedRows, tableName);
+        logger.LogInformation("Seeded {RowCount} rows into {TableName}", insertedRows);
     }
 }
 
