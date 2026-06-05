@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @using Workbench.Application.Services
 @using Workbench.Domain.Common
+@using Workbench.Domain.Detections
 @using Workbench.Domain.Enums
 @using Workbench.Domain.Identifiers
 @inject VersionService VersionService
@@ -48,16 +49,25 @@ else
             <MudPaper Class="pa-4" Elevation="1">
                 <span class="eyebrow" style="font-size: 0.625rem;">Comparison</span>
                 <div class="mt-3">
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Before</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Compare from</MudText>
                     <MudText Typo="Typo.body2" Class="mt-1">
                         @(_comparison.BeforeVersion?.DisplayVersion ?? "No earlier version")
                     </MudText>
                 </div>
                 <MudDivider Class="my-3" />
                 <div>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">After</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Compare to</MudText>
                     <MudText Typo="Typo.body2" Class="mt-1">@_comparison.AfterVersion.DisplayVersion</MudText>
                 </div>
+                <MudDivider Class="my-3" />
+                <MudSelect Value="_selectedBeforeVersionValue" ValueChanged="OnBeforeVersionChanged"
+                           Label="Choose comparison baseline" T="string" Dense="true" Class="mt-2">
+                    <MudSelectItem Value="@PreviousVersionValue">Previous accepted version</MudSelectItem>
+                    @foreach (var version in _availableBeforeVersions)
+                    {
+                        <MudSelectItem Value="@version.Id.ToString()">@version.DisplayVersion — @version.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudSelectItem>
+                    }
+                </MudSelect>
                 <MudDivider Class="my-3" />
                 <div>
                     <MudText Typo="Typo.caption" Class="mud-text-secondary">Changed files</MudText>
@@ -149,8 +159,12 @@ else
 @code {
     [Parameter] public string Id { get; set; } = null!;
 
+    private const string PreviousVersionValue = "__previous__";
+
     private VersionComparison? _comparison;
+    private List<DetectionVersion> _availableBeforeVersions = [];
     private List<BreadcrumbItem> _breadcrumbs = [];
+    private string _selectedBeforeVersionValue = PreviousVersionValue;
     private bool _loading = true;
     private bool _restoring;
 
@@ -158,18 +172,17 @@ else
     {
         _loading = true;
         _comparison = null;
+        _availableBeforeVersions = [];
+        _selectedBeforeVersionValue = PreviousVersionValue;
 
         if (Guid.TryParse(Id, out var guid))
         {
             try
             {
-                _comparison = await VersionService.CompareWithPreviousAsync(new VersionId(guid));
-                _breadcrumbs =
-                [
-                    new("Versions", "/versions"),
-                    new(_comparison.Detection.Slug, $"/detections/{_comparison.Detection.Id}"),
-                    new(_comparison.AfterVersion.DisplayVersion, null, disabled: true),
-                ];
+                var versionId = new VersionId(guid);
+                _comparison = await VersionService.CompareWithPreviousAsync(versionId);
+                await LoadAvailableBeforeVersionsAsync();
+                SetBreadcrumbs();
             }
             catch (DomainException ex)
             {
@@ -178,6 +191,53 @@ else
         }
 
         _loading = false;
+    }
+
+    private async Task LoadAvailableBeforeVersionsAsync()
+    {
+        if (_comparison is null) return;
+
+        var versions = await VersionService.ListByDetectionAsync(_comparison.AfterVersion.DetectionId);
+        _availableBeforeVersions = versions
+            .Where(version => version.Id != _comparison.AfterVersion.Id)
+            .OrderByDescending(version => version.AcceptedAt)
+            .ThenByDescending(version => version.DisplayVersion, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private void SetBreadcrumbs()
+    {
+        if (_comparison is null) return;
+
+        _breadcrumbs =
+        [
+            new("Versions", "/versions"),
+            new(_comparison.Detection.Slug, $"/detections/{_comparison.Detection.Id}"),
+            new(_comparison.AfterVersion.DisplayVersion, null, disabled: true),
+        ];
+    }
+
+    private async Task OnBeforeVersionChanged(string value)
+    {
+        if (_comparison is null) return;
+
+        _selectedBeforeVersionValue = value;
+        try
+        {
+            _comparison = value == PreviousVersionValue
+                ? await VersionService.CompareWithPreviousAsync(_comparison.AfterVersion.Id)
+                : await VersionService.CompareAsync(new VersionId(Guid.Parse(value)), _comparison.AfterVersion.Id);
+            await LoadAvailableBeforeVersionsAsync();
+            SetBreadcrumbs();
+        }
+        catch (DomainException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        catch (FormatException)
+        {
+            Snackbar.Add("The selected comparison baseline is invalid.", Severity.Error);
+        }
     }
 
     private async Task RestoreVersion()

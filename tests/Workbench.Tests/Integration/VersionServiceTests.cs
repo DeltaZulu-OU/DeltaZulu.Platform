@@ -78,6 +78,46 @@ public sealed class VersionServiceTests : IDisposable
     }
 
     [TestMethod]
+    public async Task CompareAsync_ExplicitAcceptedVersions_UsesSelectedBaseline()
+    {
+        var detectionId = await ConceiveDetectionAsync("compare-explicit");
+        var version1 = await MergeQuickLabAsync(
+            detectionId,
+            "CHG-E1",
+            "Initial accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, "SigninLogs | take 1"),
+            });
+        await MergeQuickLabAsync(
+            detectionId,
+            "CHG-E2",
+            "Intermediate accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, "SigninLogs | take 1"),
+                ("tests/intermediate.yaml", DraftContentType.TestDefinition, "expectedRows: 1"),
+            });
+        var version3 = await MergeQuickLabAsync(
+            detectionId,
+            "CHG-E3",
+            "Latest accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, "SigninLogs | where ResultType == 0"),
+            });
+
+        using var scope = _host.CreateScope();
+        var versionSvc = _host.Resolve<VersionService>(scope);
+        var comparison = await versionSvc.CompareAsync(version1.Id, version3.Id, TestContext.CancellationToken);
+
+        Assert.AreEqual(version1.Id, comparison.BeforeVersion?.Id);
+        Assert.AreEqual(version3.Id, comparison.AfterVersion.Id);
+        AssertStatus(comparison, "rule.kql", VersionFileDiffStatus.Modified);
+        AssertStatus(comparison, "tests/intermediate.yaml", VersionFileDiffStatus.Added);
+    }
+
+    [TestMethod]
     public async Task CompareWithPrevious_ModifiedTextFile_IncludesInlineDiffHunk()
     {
         var detectionId = await ConceiveDetectionAsync("compare-inline");
