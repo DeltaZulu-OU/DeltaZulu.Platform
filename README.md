@@ -10,7 +10,7 @@ Analysts write KQL against logical security tables (for example, `ProcessEvent`)
 
 - Phases 0–3 (schema + translation + runtime + Blazor UI vertical slice) are complete.
 - Phase 4 (hardening) is complete: schema validation automation, generated SQL preview, second table family, and Monaco KQL editor language-service integration are complete.
-- Phase 5 (Planner v1 + emitter SQL-shape simplification) is complete.
+- Phase 5 (Planner v1 + emitter SQL-shape simplification) is complete; the emitter now also collapses single computed-column scopes (`where | extend | project[/take]`) into derived SELECT blocks and emits `sample-distinct` as compact `SELECT DISTINCT ... LIMIT` SQL so transient `__kql_stage_N` names do not leak into optimized preview SQL for those shapes.
 - Phase 1A medallion checkpoint is complete: active Bronze/Silver/Golden contracts are documented, legacy vertical-slice names are removed from the active branch, and sample queries use the active Golden surface.
 - Phase 1E semantic-hardening baseline is in progress: Silver parsers now extract source-specific event timestamps with explicit `ingest_time` fallback and use tolerant DuckDB conversions for optional numeric telemetry; Golden contract documentation records the current normalization boundary.
 - Render implementation is decoupled from `Hunting.Core` and `Hunting.Data`. `Hunting.Render` owns dependency-light render contracts, terminal directive parsing, binding resolution, tabular render abstraction, and chart-model construction. `Hunting.Web` owns query/render orchestration, `QueryResult` adaptation, and Vizor.ECharts option construction.

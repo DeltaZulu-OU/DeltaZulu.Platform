@@ -382,7 +382,7 @@ public sealed partial class DuckDbQueryEmitterTests
     }
 
     [TestMethod]
-    [Description("sample-distinct emits DISTINCT stage then sample stage")]
+    [Description("sample-distinct emits a compact SELECT DISTINCT ... LIMIT shape without transient stages")]
     public void Emit_SampleDistinct()
     {
         var node = new SampleNode(
@@ -390,9 +390,86 @@ public sealed partial class DuckDbQueryEmitterTests
                 new ScanNode("ProcessEvent"),
                 [new ProjectionExpr("sample_distinct_value", new ColumnRef("FileName"))]),
             7);
+
         var sql = _emitter.Emit(node);
-        AssertSqlContains(sql, "SELECT DISTINCT FileName AS sample_distinct_value FROM golden.ProcessEvent");
+        var norm = NormSql(sql);
+
+        AssertSqlContains(sql, "SELECT DISTINCT FileName FROM golden.ProcessEvent LIMIT 7");
+        Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
+        Assert.DoesNotContain("USING SAMPLE", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sample_distinct_value", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.AreEqual(0, _emitter.LastRunStats?.FinalCteCount);
+    }
+
+    [TestMethod]
+    [Description("sample-distinct KQL pipeline emits compact DISTINCT/LIMIT SQL without transient stages")]
+    public void Emit_SampleDistinct_KqlPipeline_CollapsesToDistinctLimit()
+    {
+        var catalog = new ApprovedViewCatalog();
+        SchemaConventions.RegisterCanonicalViews(catalog);
+        var diagnostics = new DiagnosticBag();
+        var translator = new KustoToRelational(catalog, diagnostics);
+
+        var plan = translator.Translate("ProcessEvent | sample-distinct 10 of FileName");
+
+        Assert.IsFalse(diagnostics.HasErrors, string.Join(Environment.NewLine, diagnostics.All));
+        Assert.IsNotNull(plan);
+
+        var sql = _emitter.Emit(plan);
+        var norm = NormSql(sql);
+
+        AssertSqlContains(sql, "SELECT DISTINCT FileName FROM golden.ProcessEvent LIMIT 10");
+        Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
+        Assert.DoesNotContain("USING SAMPLE", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sample_distinct_value", norm, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [TestMethod]
+    [Description("sample-distinct after a simple where folds the filter into the compact DISTINCT/LIMIT shape")]
+    public void Emit_SampleDistinct_FilteredScan()
+    {
+        var node = new SampleNode(
+            new DistinctNode(
+                new FilterNode(
+                    new ScanNode("ProcessEvent"),
+                    new BinaryScalar(
+                        new ColumnRef("FileName"),
+                        ScalarBinaryOp.Has,
+                        new LiteralScalar("powershell", LiteralKind.String))),
+                [new ProjectionExpr("sample_distinct_value", new ColumnRef("FileName"))]),
+            10);
+
+        var sql = _emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        AssertSqlContains(sql, "SELECT DISTINCT FileName FROM golden.ProcessEvent WHERE");
+        Assert.Contains("regexp_matches(lower(FileName)", norm, StringComparison.Ordinal);
+        Assert.MatchesRegex(@"\bLIMIT\s+10\s*;?\s*$", norm);
+        Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
+        Assert.DoesNotContain("sample_distinct_value", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.AreEqual(0, _emitter.LastRunStats?.FinalCteCount);
+    }
+
+    [TestMethod]
+    [Description("generic distinct|sample is not rewritten as sample-distinct without the translator marker alias")]
+    public void Emit_DistinctThenSample_NonSampleDistinctAlias_RemainsReservoirSample()
+    {
+        var node = new SampleNode(
+            new DistinctNode(
+                new ScanNode("ProcessEvent"),
+                [new ProjectionExpr("FileName", new ColumnRef("FileName"))]),
+            7);
+
+        var sql = _emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        AssertSqlContains(sql, "SELECT DISTINCT FileName FROM golden.ProcessEvent");
         AssertSqlContains(sql, "USING SAMPLE reservoir(7 ROWS)");
+        Assert.Contains("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.MatchesRegex(@"__kql_stage_\d+", norm);
     }
 
     [TestMethod]
@@ -1207,10 +1284,112 @@ public sealed partial class DuckDbQueryEmitterTests
         var sql = emitter.Emit(node);
         var norm = NormSql(sql);
 
-        Assert.DoesNotContain("__kql_stage_1", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
+        Assert.Contains("FROM (SELECT *,", norm, StringComparison.Ordinal);
         Assert.Contains("FROM golden.ProcessEvent WHERE (lower(FileName) = lower('powershell.exe'))", norm, StringComparison.Ordinal);
         Assert.Contains("regexp_extract(ProcessCommandLine, '-enc\\s+([^\\s]+)', CAST(1 AS INTEGER))", norm, StringComparison.Ordinal);
         Assert.Contains("AS EncodedPayload", norm, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    [Description("where|extend optimized single computed scope still preserves the default safety limit")]
+    public void WhereExtend_OptimizedMode_PreservesDefaultLimitAndTelemetry()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: true);
+        var node = new ExtendNode(
+            new FilterNode(
+                new ScanNode("ProcessEvent"),
+                new BinaryScalar(
+                    new FunctionCall("tolower", [new ColumnRef("FileName")]),
+                    ScalarBinaryOp.Eq,
+                    new FunctionCall("tolower", [new LiteralScalar("powershell.exe", LiteralKind.String)]))),
+            [new ProjectionExpr("LowerCommandLine", new FunctionCall("tolower", [new ColumnRef("ProcessCommandLine")]))]);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
+        Assert.Contains("FROM (SELECT *,", norm, StringComparison.Ordinal);
+        Assert.MatchesRegex(@"\bLIMIT\s+10000\s*;?\s*$", norm);
+        Assert.AreEqual(0, emitter.LastRunStats?.FinalCteCount);
+    }
+
+    [TestMethod]
+    [Description("where|extend|project without take collapses the single computed scope without CTE names")]
+    public void WhereExtendProject_OptimizedMode_RemovesSingleComputedScopeStage()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: false);
+        var node = new ProjectNode(
+            new ExtendNode(
+                new FilterNode(
+                    new ScanNode("ProcessEvent"),
+                    new BinaryScalar(
+                        new FunctionCall("tolower", [new ColumnRef("FileName")]),
+                        ScalarBinaryOp.Eq,
+                        new FunctionCall("tolower", [new LiteralScalar("powershell.exe", LiteralKind.String)]))),
+                [
+                    new ProjectionExpr(
+                        "EncodedPayload",
+                        new FunctionCall(
+                            "extract",
+                            [
+                                new LiteralScalar(@"-enc\s+([^\s]+)", LiteralKind.String),
+                                new LiteralScalar(1, LiteralKind.Int),
+                                new ColumnRef("ProcessCommandLine")
+                            ]))
+                ]),
+            [
+                new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
+                new ProjectionExpr("EncodedPayload", new ColumnRef("EncodedPayload"))
+            ]);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
+        Assert.Contains("SELECT Timestamp, EncodedPayload FROM (SELECT *,", norm, StringComparison.Ordinal);
+        Assert.Contains("FROM golden.ProcessEvent WHERE (lower(FileName) = lower('powershell.exe'))", norm, StringComparison.Ordinal);
+        Assert.Contains("COALESCE(regexp_extract(ProcessCommandLine, '-enc\\s+([^\\s]+)', CAST(1 AS INTEGER)), '') AS EncodedPayload", norm, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    [Description("where|extend with multiple same-scope computed columns still collapses safely")]
+    public void WhereExtendProjectTake_OptimizedMode_CollapsesMultipleSameScopeComputedColumns()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: false);
+        var node = new LimitNode(
+            new ProjectNode(
+                new ExtendNode(
+                    new FilterNode(
+                        new ScanNode("ProcessEvent"),
+                        new BinaryScalar(
+                            new ColumnRef("FileName"),
+                            ScalarBinaryOp.Eq,
+                            new LiteralScalar("powershell.exe", LiteralKind.String))),
+                    [
+                        new ProjectionExpr("LowerName", new FunctionCall("tolower", [new ColumnRef("FileName")])),
+                        new ProjectionExpr("CommandLength", new FunctionCall("strlen", [new ColumnRef("ProcessCommandLine")]))
+                    ]),
+                [
+                    new ProjectionExpr("Timestamp", new ColumnRef("Timestamp")),
+                    new ProjectionExpr("LowerName", new ColumnRef("LowerName")),
+                    new ProjectionExpr("CommandLength", new ColumnRef("CommandLength"))
+                ]),
+            10);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
+        Assert.Contains("SELECT Timestamp, LowerName, CommandLength FROM (SELECT *,", norm, StringComparison.Ordinal);
+        Assert.Contains("lower(FileName) AS LowerName", norm, StringComparison.Ordinal);
+        Assert.Contains("length(ProcessCommandLine) AS CommandLength", norm, StringComparison.Ordinal);
+        Assert.MatchesRegex(@"\bLIMIT\s+10\s*;?\s*$", norm);
+        Assert.AreEqual(0, emitter.LastRunStats?.FinalCteCount);
     }
 
     [TestMethod]
@@ -1249,8 +1428,62 @@ public sealed partial class DuckDbQueryEmitterTests
 
         Assert.Contains("SELECT Timestamp, EncodedPayload FROM", norm, StringComparison.Ordinal);
         Assert.Contains("AS EncodedPayload", norm, StringComparison.Ordinal);
-        Assert.DoesNotContain("__kql_stage_1", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
         Assert.MatchesRegex(@"\bLIMIT\s+25\s*;?\s*$", norm);
+        Assert.AreEqual(0, emitter.LastRunStats?.FinalCteCount);
+    }
+
+    [TestMethod]
+    [Description("sort over where|extend does not inline the computed scope ahead of terminal ordering")]
+    public void SortOverWhereExtend_OptimizedMode_DoesNotInlineComputedScopeBeforeOrder()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: true);
+        var node = new SortNode(
+            new ExtendNode(
+                new FilterNode(
+                    new ScanNode("ProcessEvent"),
+                    new BinaryScalar(
+                        new ColumnRef("FileName"),
+                        ScalarBinaryOp.Eq,
+                        new LiteralScalar("powershell.exe", LiteralKind.String))),
+                [new ProjectionExpr("LowerCommandLine", new FunctionCall("tolower", [new ColumnRef("ProcessCommandLine")]))]),
+            [new SortExpr(new ColumnRef("LowerCommandLine"), SortDirection.Asc)]);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.Contains("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.MatchesRegex(@"__kql_stage_\d+", norm);
+        Assert.Contains("lower(ProcessCommandLine) AS LowerCommandLine", norm, StringComparison.Ordinal);
+        Assert.Contains("ORDER BY LowerCommandLine ASC NULLS FIRST", norm, StringComparison.Ordinal);
+        Assert.MatchesRegex(@"\bLIMIT\s+10000\s*;?\s*$", norm);
+        Assert.AreEqual(1, emitter.LastRunStats?.FinalCteCount);
+    }
+
+    [TestMethod]
+    [Description("chained extend remains staged because the computed scope source is another stage")]
+    public void ChainedExtend_OptimizedMode_DoesNotInlineThroughStageSource()
+    {
+        var emitter = new DuckDbQueryEmitter(defaultLimit: 10_000, applyDefaultLimit: false);
+        var node = new ProjectNode(
+            new ExtendNode(
+                new ExtendNode(
+                    new ScanNode("ProcessEvent"),
+                    [new ProjectionExpr("LowerName", new FunctionCall("tolower", [new ColumnRef("FileName")]))]),
+                [new ProjectionExpr("NameLength", new FunctionCall("strlen", [new ColumnRef("LowerName")]))]),
+            [new ProjectionExpr("NameLength", new ColumnRef("NameLength"))]);
+
+        var sql = emitter.Emit(node);
+        var norm = NormSql(sql);
+
+        Assert.Contains("WITH", norm, StringComparison.OrdinalIgnoreCase);
+        Assert.MatchesRegex(@"__kql_stage_\d+", norm);
+        Assert.Contains("lower(FileName) AS LowerName", norm, StringComparison.Ordinal);
+        Assert.Contains("length(LowerName) AS NameLength", norm, StringComparison.Ordinal);
+        Assert.Contains("SELECT NameLength FROM", norm, StringComparison.Ordinal);
+        Assert.IsNotNull(emitter.LastRunStats);
+        Assert.IsGreaterThan(0, emitter.LastRunStats!.FinalCteCount);
     }
 
     [TestMethod]

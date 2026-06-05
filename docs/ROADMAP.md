@@ -238,7 +238,7 @@ Candidate scope:
 | Phase 2 | Complete | Translation pipeline |
 | Phase 3 | Complete | Blazor UI |
 | Phase 4 | Complete for pre-medallion MVP | New medallion hardening is tracked under 1B–1E |
-| Phase 5 | Complete | Planner v1 |
+| Phase 5 | Complete | Planner v1; latest maintenance keeps single computed-column `where | extend | project[/take]` and `sample-distinct` shapes CTE-free in optimized emitter output |
 
 ---
 

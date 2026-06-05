@@ -19,6 +19,8 @@ Items that have no meaning in a read-only DuckDB hunting workbench, such as mana
 
 For the POC, canonical SQL emission uses CTE staging (`__kql_stage_N`) to preserve KQL pipe semantics clearly. A post-translation planner can collapse, inline, retain, or reshape these stages when enabled. Planner rewrites are implemented as an optimization layer and must preserve semantics. Safety rule: when KQL and DuckDB differ, the converter must preserve KQL semantics, use a documented helper, emit a visible approximation diagnostic, or reject.
 
+Emitter optimization maintenance: single computed-column scopes produced by `where | extend | project` and `where | extend | project | take` now render as derived SELECT blocks, and `sample-distinct` now emits compact `SELECT DISTINCT ... LIMIT` SQL instead of distinct/sample CTE staging. This tightens SQL-shape simplification only and does not change construct coverage or KQL semantics.
+
 Emitter decomposition is structural only and is now complete: `DuckDbQueryEmitter` remains the public compatibility façade, retaining immutable options and mutable `LastRunStats` publication only. Each `Emit(RelNode)` call constructs a fresh `DuckDbEmitterContext` plus run-scoped `DuckDbFunctionEmitter`, `DuckDbScalarEmitter`, `DuckDbJoinEmitter`, and `DuckDbRelNodeEmitter` collaborators. `DuckDbStageRegistry` owns stage state, caches, mutation operations, reference counting, and registry statistics; `DuckDbSqlShapeRewriter` owns SQL-shape simplifications; and the internal stateless `DuckDbSqlText` helper owns identifier escaping, qualified-identifier escaping, string escaping, and SQL indentation. `StageFrom` lives with relational orchestration. Statistics assembly remains a trivial context adapter, so no separate stats builder was added. Removing façade context storage does not claim shared-emitter thread safety because `LastRunStats` remains mutable publication state. This does not change construct coverage or emitted SQL semantics.
 
 Translator decomposition is also structural only: public `KustoToRelational` remains the compatibility adapter over internal `KustoQueryTranslator`. Document analysis, management-command guarding, approved-table policy, Kusto SDK syntax adaptation, projection naming, function validation, and integer-literal reading are isolated internal services. This refactor does not change construct coverage or translation semantics.
@@ -50,7 +52,7 @@ Editor metadata projection is structural only: the same Golden C# contracts used
 - [ ] `top-nested` — hierarchical top-N — *complexity: recursive aggregation*
 - [ ] `top-hitters` — approximate top-N by frequency — *frequency*
 - [x] `sample` — random row sampling — staged `USING SAMPLE reservoir(n ROWS)`
-- [x] `sample-distinct` — random distinct values — caveated `SELECT DISTINCT expr ... LIMIT n`
+- [x] `sample-distinct` — up to N distinct values — caveated compact `SELECT DISTINCT expr ... LIMIT n`
 
 ### 1.2 Join Operators
 

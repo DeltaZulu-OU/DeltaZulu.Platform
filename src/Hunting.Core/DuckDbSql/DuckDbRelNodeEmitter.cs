@@ -7,6 +7,11 @@ internal sealed partial class DuckDbRelNodeEmitter
 {
     internal string Emit(RelNode node)
     {
+        if (TryRenderSampleDistinct(node, out var sampleDistinctSql))
+        {
+            return sampleDistinctSql;
+        }
+
         if (_joinEmitter.TryRenderProjectedLookupSortTake(node, out var projectedLookupSql))
         {
             return projectedLookupSql;
@@ -68,6 +73,11 @@ internal sealed partial class DuckDbRelNodeEmitter
             terminalLimit = terminalLimit with { Source = finalSource };
         }
         _joinEmitter.TryCollapseProjectedLookupJoin(ref finalSource, ref columns, ref terminalTopK, ref terminalOrder, ref terminalLimit);
+        if (terminalTopK is null && terminalOrder is null)
+        {
+            shapeRewriter.TryInlineSingleComputedScope(ref finalSource, ref terminalLimit);
+        }
+
         if (shapeRewriter.TryRenderDerivedComputedScope(columns, terminalTopK, terminalOrder, terminalLimit, out var derivedSql))
         {
             return derivedSql;

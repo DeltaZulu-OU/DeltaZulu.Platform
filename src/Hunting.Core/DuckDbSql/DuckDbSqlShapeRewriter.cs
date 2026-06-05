@@ -60,6 +60,48 @@ internal sealed partial class DuckDbSqlShapeRewriter
     [GeneratedRegex(@"^(?<expr>.+)\s+AS\s+(?<alias>[A-Za-z_][A-Za-z0-9_]*)$", RegexOptions.IgnoreCase, "en-150")]
     private static partial Regex DecodedPattern();
 
+    internal void TryInlineSingleComputedScope(
+        ref string finalSource,
+        ref TerminalLimit? terminalLimit)
+    {
+        var sourceToken = terminalLimit?.Source ?? finalSource;
+        var stageIdx = _stages.GetStageIndex(sourceToken);
+        if (stageIdx < 0)
+        {
+            return;
+        }
+
+        var stage = _stages.Ctes[stageIdx];
+        var match = ExtendWithFilterStageRegex().Match(stage.Sql);
+        if (!match.Success)
+        {
+            return;
+        }
+
+        if (_stages.CountStageReferences(stage.Name) != 0)
+        {
+            return;
+        }
+
+        var source = match.Groups["source"].Value;
+        if (_stages.IsStageReference(source))
+        {
+            return;
+        }
+
+        var derivedSource = $"(SELECT *, {match.Groups["extensions"].Value} FROM {source} WHERE {match.Groups["pred"].Value}) AS s";
+        _stages.RemoveStageAt(stageIdx);
+
+        if (terminalLimit is null)
+        {
+            finalSource = derivedSource;
+            return;
+        }
+
+        terminalLimit = terminalLimit with { Source = derivedSource };
+        finalSource = derivedSource;
+    }
+
     internal bool TryRenderDerivedComputedScope(
         string? columns,
         TerminalTopK? terminalTopK,

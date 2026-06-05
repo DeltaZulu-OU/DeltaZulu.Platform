@@ -179,6 +179,44 @@ internal sealed partial class DuckDbRelNodeEmitter
         return (stage, null);
     }
 
+    private bool TryRenderSampleDistinct(RelNode node, out string sql)
+    {
+        sql = string.Empty;
+        if (node is not SampleNode { Input: DistinctNode distinct } sample
+            || distinct.Projections.Count != 1
+            || !string.Equals(distinct.Projections[0].Alias, "sample_distinct_value", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (!TryRenderSampleDistinctSource(distinct.Input, out var source))
+        {
+            return false;
+        }
+
+        var projection = _scalarEmitter.EmitScalar(distinct.Projections[0].Expression);
+        sql = $"SELECT DISTINCT {projection} FROM {source} LIMIT {sample.Count}";
+        return true;
+    }
+
+    private bool TryRenderSampleDistinctSource(RelNode node, out string source)
+    {
+        switch (node)
+        {
+            case ScanNode scan:
+                source = $"golden.{DuckDbSqlText.EscapeIdent(scan.ViewName)}";
+                return true;
+
+            case FilterNode { Input: ScanNode scan } filter:
+                source = $"golden.{DuckDbSqlText.EscapeIdent(scan.ViewName)} WHERE {_scalarEmitter.EmitScalar(filter.Predicate)}";
+                return true;
+
+            default:
+                source = string.Empty;
+                return false;
+        }
+    }
+
     #endregion Limit
 
     private (string Source, string? Columns) EmitSingleton(SingletonRowNode _)
