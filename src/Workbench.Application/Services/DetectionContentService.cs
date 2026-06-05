@@ -34,4 +34,13 @@ public sealed class DetectionContentService(
 
     public Task<IReadOnlyList<Detection>> ListAsync(CancellationToken ct = default)
         => detections.ListAsync(ct);
+
+    public async Task<Detection> DeprecateAsync(DetectionId id, CancellationToken ct = default)
+    {
+        var detection = await detections.GetByIdAsync(id, ct)
+            ?? throw new DomainException("detection.not_found", $"Detection '{id}' not found.");
+        detection.Deprecate(time.GetUtcNow());
+        detections.Save(detection);
+        return detection;
+    }
 }

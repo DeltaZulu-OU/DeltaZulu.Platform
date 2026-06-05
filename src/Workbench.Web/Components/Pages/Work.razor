@@ -28,22 +28,31 @@
 <MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true">
 
     @* ── Issues tab ── *@
-    <MudTabPanel Text="Issues" BadgeData="@_issues.Count" BadgeColor="Color.Primary">
+    <MudTabPanel Text="Issues" BadgeData="@_filteredIssues.Count" BadgeColor="Color.Primary">
         <div class="ma-3">
-            <MudButtonGroup Variant="Variant.Filled" Class="mb-4">
+            <MudButtonGroup Variant="Variant.Filled" Class="mb-3">
                 <MudButton Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
                            OnClick="@(() => OpenCreateIssueDialog(false))">New issue</MudButton>
                 <MudButton Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Cases"
                            OnClick="@(() => OpenCreateIssueDialog(true))">From external case</MudButton>
             </MudButtonGroup>
 
-            @if (_issues.Count == 0)
+            <MudChipSet T="string" SelectionMode="SelectionMode.SingleSelection" SelectedValue="_issueFilter"
+                        SelectedValueChanged="OnIssueFilterChanged" Class="mb-3">
+                <MudChip T="string" Value="@("all")" Variant="Variant.Outlined" SelectedColor="Color.Primary">All</MudChip>
+                <MudChip T="string" Value="@("open")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Open</MudChip>
+                <MudChip T="string" Value="@("inprogress")" Variant="Variant.Outlined" SelectedColor="Color.Primary">In progress</MudChip>
+                <MudChip T="string" Value="@("blocked")" Variant="Variant.Outlined" SelectedColor="Color.Warning">Blocked</MudChip>
+                <MudChip T="string" Value="@("closed")" Variant="Variant.Outlined" SelectedColor="Color.Dark">Resolved / Closed</MudChip>
+            </MudChipSet>
+
+            @if (_filteredIssues.Count == 0)
             {
-                <MudAlert Severity="Severity.Info">No issues yet. Create one to begin tracking detection work.</MudAlert>
+                <MudAlert Severity="Severity.Info">No issues match the current filter.</MudAlert>
             }
             else
             {
-                <MudTable Items="_issues" Dense="true" Hover="true" T="Issue"
+                <MudTable Items="_filteredIssues" Dense="true" Hover="true" T="Issue"
                           OnRowClick="@(args => Nav.NavigateTo($"/issues/{args.Item.Id}"))"
                           RowClass="cursor-pointer">
                     <HeaderContent>
@@ -139,7 +148,9 @@
 </MudTabs>
 
 @code {
-    private List<Issue> _issues = [];
+    private List<Issue> _allIssues = [];
+    private List<Issue> _filteredIssues = [];
+    private string _issueFilter = "all";
     private List<ChangeRequest> _allChanges = [];
     private List<ChangeRequest> _filteredChanges = [];
     private string _changeFilter = "all";
@@ -153,10 +164,29 @@
         var issuesTask = IssueService.ListAsync();
         var changesTask = ChangeService.ListAsync();
         await Task.WhenAll(issuesTask, changesTask);
-        _issues = issuesTask.Result.ToList();
+        _allIssues = issuesTask.Result.ToList();
         _allChanges = changesTask.Result.ToList();
+        ApplyIssueFilter();
         ApplyChangeFilter();
         _loading = false;
+    }
+
+    private void OnIssueFilterChanged(string filter)
+    {
+        _issueFilter = filter ?? "all";
+        ApplyIssueFilter();
+    }
+
+    private void ApplyIssueFilter()
+    {
+        _filteredIssues = _issueFilter switch
+        {
+            "open" => _allIssues.Where(i => i.Status == IssueStatus.Open).ToList(),
+            "inprogress" => _allIssues.Where(i => i.Status == IssueStatus.InProgress).ToList(),
+            "blocked" => _allIssues.Where(i => i.Status == IssueStatus.Blocked).ToList(),
+            "closed" => _allIssues.Where(i => i.Status is IssueStatus.Resolved or IssueStatus.Closed).ToList(),
+            _ => _allIssues,
+        };
     }
 
     private void OnChangeFilterChanged(string filter)

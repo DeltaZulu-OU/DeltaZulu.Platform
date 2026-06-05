@@ -6,6 +6,7 @@
 @using Workbench.Domain.Changes
 @using Workbench.Domain.Identifiers
 @using Workbench.Domain.Issues
+@using Workbench.Domain.Common
 @using Workbench.Domain.Enums
 @inject DetectionContentService DetectionService
 @inject IssueService IssueService
@@ -13,6 +14,7 @@
 @inject VersionService VersionService
 @inject IAcceptedContentStore ContentStore
 @inject IDialogService DialogService
+@inject ISnackbar Snackbar
 @inject NavigationManager Nav
 @inject PocUserContext UserContext
 
@@ -34,10 +36,19 @@ else
                 <code>@_detection.Slug</code>
             </MudText>
             <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);" Class="mb-4">@_detection.Summary</MudText>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                       StartIcon="@Icons.Material.Outlined.Add" OnClick="OpenChangeDialog">
-                Open change
-            </MudButton>
+            <div class="d-flex gap-2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                           StartIcon="@Icons.Material.Outlined.Add" OnClick="OpenChangeDialog">
+                    Open change
+                </MudButton>
+                @if (_detection.Lifecycle == DetectionLifecycle.Accepted)
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                               StartIcon="@Icons.Material.Outlined.Archive" OnClick="DeprecateDetection">
+                        Deprecate
+                    </MudButton>
+                }
+            </div>
         </MudItem>
         <MudItem xs="12" md="4">
             <MudPaper Class="pa-4" Elevation="1">
@@ -223,6 +234,18 @@ else
 
         var allIssues = await IssueService.ListAsync();
         _relatedIssues = allIssues.Where(i => i.LinkedDetectionId == detId).ToList();
+    }
+
+    private async Task DeprecateDetection()
+    {
+        if (_detection is null) return;
+        try
+        {
+            await DetectionService.DeprecateAsync(_detection.Id);
+            Snackbar.Add("Detection deprecated.", Severity.Success);
+            _detection = await DetectionService.GetByIdAsync(_detection.Id);
+        }
+        catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
     }
 
     private async Task OpenChangeDialog()
