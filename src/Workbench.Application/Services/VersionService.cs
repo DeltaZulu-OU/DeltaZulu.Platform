@@ -22,6 +22,25 @@ public sealed class VersionService(
         => versions.ListByDetectionAsync(detectionId, ct);
 
     /// <summary>
+    /// Lists accepted versions that can be used as historical comparison baselines for the supplied version.
+    /// </summary>
+    public async Task<IReadOnlyList<DetectionVersion>> ListComparisonBaselinesAsync(
+        VersionId afterVersionId,
+        CancellationToken ct = default)
+    {
+        var afterVersion = await versions.GetByIdAsync(afterVersionId, ct)
+            ?? throw new DomainException("version.not_found", $"Version '{afterVersionId}' not found.");
+
+        var detectionVersions = await versions.ListByDetectionAsync(afterVersion.DetectionId, ct);
+        return detectionVersions
+            .Where(version => IsBefore(version, afterVersion))
+            .OrderByDescending(version => version.AcceptedAt)
+            .ThenByDescending(version => version.SequenceNumber)
+            .ThenByDescending(version => version.DisplayVersion, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    /// <summary>
     /// Compares an accepted version with the version immediately before it for the same detection.
     /// If the supplied version is the first accepted version, every file is reported as added.
     /// </summary>
@@ -60,6 +79,11 @@ public sealed class VersionService(
         if (beforeVersion.DetectionId != afterVersion.DetectionId)
         {
             throw new DomainException("version.detection_mismatch", "Accepted versions must belong to the same detection to be compared.");
+        }
+
+        if (!IsBefore(beforeVersion, afterVersion))
+        {
+            throw new DomainException("version.baseline_not_before", "Comparison baseline must be an earlier accepted version for the same detection.");
         }
 
         var detection = await detections.GetByIdAsync(afterVersion.DetectionId, ct)
@@ -117,6 +141,17 @@ public sealed class VersionService(
     {
         var prefix = detectionPrefix.TrimEnd('/') + "/";
         return files.ToDictionary(file => ToLogicalPath(prefix, file.RepositoryPath), StringComparer.Ordinal);
+    }
+
+    private static bool IsBefore(DetectionVersion candidate, DetectionVersion afterVersion)
+    {
+        if (candidate.Id == afterVersion.Id)
+        {
+            return false;
+        }
+
+        return candidate.AcceptedAt < afterVersion.AcceptedAt
+            || (candidate.AcceptedAt == afterVersion.AcceptedAt && candidate.SequenceNumber < afterVersion.SequenceNumber);
     }
 
     private static string ToLogicalPath(string prefix, string repositoryPath)

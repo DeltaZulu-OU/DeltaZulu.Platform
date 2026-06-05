@@ -197,12 +197,8 @@ else
     {
         if (_comparison is null) return;
 
-        var versions = await VersionService.ListByDetectionAsync(_comparison.AfterVersion.DetectionId);
-        _availableBeforeVersions = versions
-            .Where(version => version.Id != _comparison.AfterVersion.Id)
-            .OrderByDescending(version => version.AcceptedAt)
-            .ThenByDescending(version => version.DisplayVersion, StringComparer.Ordinal)
-            .ToList();
+        var versions = await VersionService.ListComparisonBaselinesAsync(_comparison.AfterVersion.Id);
+        _availableBeforeVersions = versions.ToList();
     }
 
     private void SetBreadcrumbs()

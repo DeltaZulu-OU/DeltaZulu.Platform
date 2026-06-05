@@ -118,6 +118,73 @@ public sealed class VersionServiceTests : IDisposable
     }
 
     [TestMethod]
+    public async Task ListComparisonBaselines_OnlyReturnsEarlierAcceptedVersions()
+    {
+        var detectionId = await ConceiveDetectionAsync("compare-baselines");
+        var version1 = await MergeQuickLabAsync(
+            detectionId,
+            "CHG-B1",
+            "Initial accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, "SigninLogs | take 1"),
+            });
+        var version2 = await MergeQuickLabAsync(
+            detectionId,
+            "CHG-B2",
+            "Second accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, "SigninLogs | where ResultType == 0"),
+            });
+        var version3 = await MergeQuickLabAsync(
+            detectionId,
+            "CHG-B3",
+            "Third accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, "SigninLogs | summarize count()"),
+            });
+
+        using var scope = _host.CreateScope();
+        var versionSvc = _host.Resolve<VersionService>(scope);
+        var baselines = await versionSvc.ListComparisonBaselinesAsync(version2.Id, TestContext.CancellationToken);
+
+        CollectionAssert.AreEqual(new[] { version1.Id }, baselines.Select(version => version.Id).ToArray());
+        Assert.IsFalse(baselines.Any(version => version.Id == version2.Id));
+        Assert.IsFalse(baselines.Any(version => version.Id == version3.Id));
+    }
+
+    [TestMethod]
+    public async Task CompareAsync_LaterBaseline_IsRejected()
+    {
+        var detectionId = await ConceiveDetectionAsync("compare-later-baseline");
+        var version1 = await MergeQuickLabAsync(
+            detectionId,
+            "CHG-L1",
+            "Initial accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, "SigninLogs | take 1"),
+            });
+        var version2 = await MergeQuickLabAsync(
+            detectionId,
+            "CHG-L2",
+            "Second accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, "SigninLogs | where ResultType == 0"),
+            });
+
+        using var scope = _host.CreateScope();
+        var versionSvc = _host.Resolve<VersionService>(scope);
+        var ex = await Assert.ThrowsExactlyAsync<DomainException>(() =>
+            versionSvc.CompareAsync(version2.Id, version1.Id, TestContext.CancellationToken));
+
+        Assert.AreEqual("version.baseline_not_before", ex.Code);
+    }
+
+    [TestMethod]
     public async Task CompareWithPrevious_ModifiedTextFile_IncludesInlineDiffHunk()
     {
         var detectionId = await ConceiveDetectionAsync("compare-inline");
