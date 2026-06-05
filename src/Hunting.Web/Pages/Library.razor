@@ -112,10 +112,11 @@
 
                         <div class="dashboard-card-actions">
                             <button class="hunt-btn dashboard-primary-action" @onclick="() => OpenItemAsync(item)">Open</button>
-                            <button class="hunt-btn hunt-btn-clear"
+                            <button class="@DeleteButtonClass(item)"
                                     disabled="@_deleting"
+                                    title="@DeleteButtonTitle(item)"
                                     @onclick="() => DeleteItemAsync(item)">
-                                Delete
+                                @DeleteButtonText(item)
                             </button>
                         </div>
                     </article>
@@ -130,6 +131,8 @@
     private string _searchText = string.Empty;
     private string? _error;
     private string? _message;
+    private string? _pendingDeleteId;
+    private LibraryItemKind? _pendingDeleteKind;
     private bool _loading = true;
     private bool _deleting;
     private LibraryItemKind? _kindFilter;
@@ -214,6 +217,8 @@
 
     private async Task OpenItemAsync(LibraryItem item)
     {
+        ResetPendingDelete();
+
         switch (item.Kind)
         {
             case LibraryItemKind.Dashboard:
@@ -232,6 +237,15 @@
 
     private async Task DeleteItemAsync(LibraryItem item)
     {
+        if (!IsDeletePendingFor(item))
+        {
+            _error = null;
+            _pendingDeleteId = item.Id;
+            _pendingDeleteKind = item.Kind;
+            _message = $"Click Confirm delete to delete {KindLabel(item.Kind).ToLowerInvariant()} '{item.Name}'.";
+            return;
+        }
+
         _deleting = true;
         _error = null;
         _message = null;
@@ -240,15 +254,18 @@
         {
             await LibraryItems.DeleteAsync(item);
             _message = $"{KindLabel(item.Kind)} '{item.Name}' deleted.";
+            ResetPendingDelete();
             await LoadAsync();
         }
         catch (InvalidOperationException ex)
         {
             _message = ex.Message;
+            ResetPendingDelete();
         }
         catch (Exception ex)
         {
             _error = $"Could not delete {KindLabel(item.Kind).ToLowerInvariant()} '{item.Name}'. {ex.Message}";
+            ResetPendingDelete();
         }
         finally
         {
@@ -284,6 +301,7 @@
 
     private void CreateSavedSearch()
     {
+        ResetPendingDelete();
         EditorBus.RequestInsert(
             """
             ProcessEvent
@@ -296,6 +314,7 @@
 
     private void CreateVisualization()
     {
+        ResetPendingDelete();
         EditorBus.RequestInsert(
             """
             ProcessEvent
@@ -307,12 +326,14 @@
 
     private void CreateDashboard()
     {
+        ResetPendingDelete();
         Navigation.NavigateTo("/dashboards");
     }
 
     private void SetFilter(LibraryItemKind? kind)
     {
         _kindFilter = kind;
+        ResetPendingDelete();
     }
 
     private string FilterButtonClass(LibraryItemKind? kind)
@@ -323,12 +344,37 @@
     private void OnSearchChanged(ChangeEventArgs args)
     {
         _searchText = args.Value?.ToString() ?? string.Empty;
+        ResetPendingDelete();
     }
 
     private void ClearSearch()
     {
         _searchText = string.Empty;
         _kindFilter = null;
+        ResetPendingDelete();
+    }
+
+    private bool IsDeletePendingFor(LibraryItem item)
+        => string.Equals(_pendingDeleteId, item.Id, StringComparison.OrdinalIgnoreCase)
+            && _pendingDeleteKind == item.Kind;
+
+    private string DeleteButtonText(LibraryItem item)
+        => IsDeletePendingFor(item) ? "Confirm delete" : "Delete";
+
+    private string DeleteButtonTitle(LibraryItem item)
+        => IsDeletePendingFor(item)
+            ? $"Confirm deleting {KindLabel(item.Kind).ToLowerInvariant()} '{item.Name}'"
+            : $"Delete {KindLabel(item.Kind).ToLowerInvariant()} '{item.Name}'";
+
+    private string DeleteButtonClass(LibraryItem item)
+        => IsDeletePendingFor(item)
+            ? "hunt-btn dashboard-primary-action"
+            : "hunt-btn hunt-btn-clear";
+
+    private void ResetPendingDelete()
+    {
+        _pendingDeleteId = null;
+        _pendingDeleteKind = null;
     }
 
     private bool ContainsSearchText(string? value)
