@@ -119,7 +119,7 @@
                             @(_savingQuery ? "Saving…" : "Save query")
                         </button>
 
-                        @if (_result?.GeneratedSql is string)
+                        @if (IsDebugBuild && _result?.GeneratedSql is string)
                         {
                             <button class="hunt-btn hunt-btn-sql"
                                     @onclick="OpenSqlDrawer">
@@ -128,7 +128,7 @@
                         }
                     </div>
 
-                    @if (_showSql && _result?.GeneratedSql is string sql)
+                    @if (IsDebugBuild && _showSql && _result?.GeneratedSql is string sql)
                     {
                         <pre class="hunt-sql-preview">@sql</pre>
                     }
@@ -288,7 +288,7 @@
             @if (_drawerMode == DrawerMode.Sql || _drawerMode == DrawerMode.Json)
             {
                 <div class="hunt-sql-snippet">
-                    <button class="hunt-btn hunt-btn-copy" @onclick="CopySqlToClipboard">Copy</button>
+                    <button class="hunt-btn hunt-btn-copy" @onclick="CopyDrawerContentToClipboard">Copy</button>
                     <pre class="hunt-sql-highlight">@((MarkupString)_drawerSqlHtml)</pre>
                 </div>
             }
@@ -303,6 +303,12 @@
 @code {
     private string _kql = string.Empty;
     private readonly Hunting.Web.Services.QueryToolbarState _toolbar = new();
+
+#if DEBUG
+    private const bool IsDebugBuild = true;
+#else
+    private const bool IsDebugBuild = false;
+#endif
 
     private bool _running;
     private bool _savingQuery;
@@ -542,6 +548,7 @@
             ? _renderDirective.Title.Trim()
             : BuildArtifactName(queryText, "Visualization");
 
+#if DEBUG
     private void OpenSqlDrawer()
     {
         if (_result?.GeneratedSql is not string sql) return;
@@ -550,12 +557,15 @@
         _drawerSqlHtml = HighlightSql(BeautifySql(sql));
         _showDrawer = true;
     }
+#endif
 
-    private async Task CopySqlToClipboard()
+    private async Task CopyDrawerContentToClipboard()
     {
         string? text = _drawerMode switch
         {
+#if DEBUG
             DrawerMode.Sql => _result?.GeneratedSql,
+#endif
             DrawerMode.Json => _drawerContent,
             _ => null
         };
@@ -720,6 +730,7 @@
             : firstLine.Length <= 60 ? firstLine : firstLine[..60];
     }
 
+#if DEBUG
     private static string BeautifySql(string sql)
     {
         string[] keywords = ["select", "from", "where", "group by", "order by", "having", "limit", "join", "left join", "right join", "inner join", "outer join", "on", "and", "or", "union", "with", "as"];
@@ -776,6 +787,7 @@
 
         return encoded;
     }
+#endif
 
     private static bool TryBeautifyJson(string text, out string beautified)
     {
