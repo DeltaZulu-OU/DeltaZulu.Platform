@@ -1,7 +1,7 @@
 @page "/library"
 @namespace Hunting.Web.Pages
 @using Hunting.Web.Services
-@inject LibraryService Library
+@inject LibraryService LibraryItems
 @inject EditorBus EditorBus
 @inject NavigationManager Navigation
 
@@ -31,6 +31,11 @@
     @if (!string.IsNullOrWhiteSpace(_error))
     {
         <div class="dashboard-error">@_error</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <div class="hunt-query-library-message">@_message</div>
     }
 
     <section class="dashboard-list-panel" aria-label="Library panel">
@@ -107,6 +112,11 @@
 
                         <div class="dashboard-card-actions">
                             <button class="hunt-btn dashboard-primary-action" @onclick="() => OpenItemAsync(item)">Open</button>
+                            <button class="hunt-btn hunt-btn-clear"
+                                    disabled="@_deleting"
+                                    @onclick="() => DeleteItemAsync(item)">
+                                Delete
+                            </button>
                         </div>
                     </article>
                 }
@@ -119,7 +129,9 @@
     private readonly List<LibraryItem> _items = [];
     private string _searchText = string.Empty;
     private string? _error;
+    private string? _message;
     private bool _loading = true;
+    private bool _deleting;
     private LibraryItemKind? _kindFilter;
 
     private IReadOnlyList<LibraryItem> FilteredItems
@@ -186,7 +198,7 @@
 
         try
         {
-            var items = await Library.ListAsync();
+            var items = await LibraryItems.ListAsync();
             _items.Clear();
             _items.AddRange(items);
         }
@@ -218,9 +230,35 @@
         }
     }
 
+    private async Task DeleteItemAsync(LibraryItem item)
+    {
+        _deleting = true;
+        _error = null;
+        _message = null;
+
+        try
+        {
+            await LibraryItems.DeleteAsync(item);
+            _message = $"{KindLabel(item.Kind)} '{item.Name}' deleted.";
+            await LoadAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _message = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not delete {KindLabel(item.Kind).ToLowerInvariant()} '{item.Name}'. {ex.Message}";
+        }
+        finally
+        {
+            _deleting = false;
+        }
+    }
+
     private async Task OpenSavedSearchAsync(string id)
     {
-        var queryText = await Library.LoadSavedSearchTextAsync(id);
+        var queryText = await LibraryItems.LoadSavedSearchTextAsync(id);
         if (string.IsNullOrWhiteSpace(queryText))
         {
             _error = "Saved search could not be opened because its query text was not found.";
@@ -233,7 +271,7 @@
 
     private async Task OpenVisualizationAsync(string id)
     {
-        var queryText = await Library.LoadVisualizationTextAsync(id);
+        var queryText = await LibraryItems.LoadVisualizationTextAsync(id);
         if (string.IsNullOrWhiteSpace(queryText))
         {
             _error = "Visualization could not be opened because its saved query or visualization definition was not found.";

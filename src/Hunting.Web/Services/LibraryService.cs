@@ -112,6 +112,30 @@ public sealed class LibraryService
         return _visualizations.LoadVisualizationQueryTextAsync(id, cancellationToken);
     }
 
+    public Task DeleteAsync(
+        LibraryItem item,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        return DeleteAsync(item.Id, item.Kind, cancellationToken);
+    }
+
+    public Task DeleteAsync(
+        string id,
+        LibraryItemKind kind,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        return kind switch
+        {
+            LibraryItemKind.SavedSearch => _queries.DeleteSavedQueryAsync(id, cancellationToken),
+            LibraryItemKind.Visualization => _visualizations.DeleteVisualizationAsync(id, cancellationToken),
+            LibraryItemKind.Dashboard => _dashboards.DeleteAsync(id, cancellationToken),
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported library item kind.")
+        };
+    }
+
     private static string ShortId(string id)
     {
         if (string.IsNullOrWhiteSpace(id))
