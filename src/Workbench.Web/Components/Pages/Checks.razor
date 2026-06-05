@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @using Workbench.Application.Services
 @using Workbench.Domain.Changes
+@using Workbench.Domain.Enums
 @inject ChangeService ChangeService
 @inject NavigationManager Nav
 
@@ -22,6 +23,37 @@ else if (_rows.Count == 0)
 }
 else
 {
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+                <span class="eyebrow">Total checks</span>
+                <MudText Typo="Typo.h4" Class="mt-1">@_rows.Count</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Across @_changeCount change(s)</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+                <span class="eyebrow">Blocking attention</span>
+                <MudText Typo="Typo.h4" Class="mt-1">@BlockingAttentionCount</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Blocking checks not currently passed</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+                <span class="eyebrow">Failed checks</span>
+                <MudText Typo="Typo.h4" Class="mt-1">@FailedCount</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Latest failures stay linked to changes</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+                <span class="eyebrow">Waiting/running</span>
+                <MudText Typo="Typo.h4" Class="mt-1">@InFlightCount</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Queued or running validations</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
     <MudTable Items="_rows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="CheckRow">
         <HeaderContent>
             <MudTh>Change</MudTh>
@@ -64,11 +96,19 @@ else
 @code {
     private readonly List<CheckRow> _rows = [];
     private bool _loading = true;
+    private int _changeCount;
+
+    private int BlockingAttentionCount => _rows.Count(row => row.Check.IsBlocking && row.Check.Status is not CheckStatus.Passed);
+
+    private int FailedCount => _rows.Count(row => row.Check.Status is CheckStatus.Failed);
+
+    private int InFlightCount => _rows.Count(row => row.Check.Status is CheckStatus.Queued or CheckStatus.Running);
 
     protected override async Task OnInitializedAsync()
     {
         _loading = true;
         var changes = await ChangeService.ListAsync();
+        _changeCount = changes.Count;
         _rows.AddRange(changes.SelectMany(change => change.Checks.Select(check => new CheckRow(change, check))));
         _rows.Sort((left, right) => Nullable.Compare(right.Check.CompletedAt, left.Check.CompletedAt));
         _loading = false;

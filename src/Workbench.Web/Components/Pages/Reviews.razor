@@ -24,6 +24,37 @@ else if (_rows.Count == 0)
 }
 else
 {
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+                <span class="eyebrow">Total reviews</span>
+                <MudText Typo="Typo.h4" Class="mt-1">@_rows.Count</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Across @_changeCount change(s)</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+                <span class="eyebrow">Effective approvals</span>
+                <MudText Typo="Typo.h4" Class="mt-1">@EffectiveApprovalCount</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Current approvals that still count</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+                <span class="eyebrow">Changes requested</span>
+                <MudText Typo="Typo.h4" Class="mt-1">@EffectiveChangesRequestedCount</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Effective requests for more work</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+                <span class="eyebrow">Superseded</span>
+                <MudText Typo="Typo.h4" Class="mt-1">@SupersededCount</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Invalidated after draft edits</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
     <MudTable Items="_rows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="ReviewRow">
         <HeaderContent>
             <MudTh>Change</MudTh>
@@ -76,11 +107,19 @@ else
 @code {
     private readonly List<ReviewRow> _rows = [];
     private bool _loading = true;
+    private int _changeCount;
+
+    private int EffectiveApprovalCount => _rows.Count(row => !row.Review.IsSuperseded && row.Review.Decision is ReviewDecision.Approved);
+
+    private int EffectiveChangesRequestedCount => _rows.Count(row => !row.Review.IsSuperseded && row.Review.Decision is ReviewDecision.ChangesRequested);
+
+    private int SupersededCount => _rows.Count(row => row.Review.IsSuperseded);
 
     protected override async Task OnInitializedAsync()
     {
         _loading = true;
         var changes = await ChangeService.ListAsync();
+        _changeCount = changes.Count;
         _rows.AddRange(changes.SelectMany(change => change.Reviews.Select(review => new ReviewRow(change, review))));
         _rows.Sort((left, right) => right.Review.CreatedAt.CompareTo(left.Review.CreatedAt));
         _loading = false;
