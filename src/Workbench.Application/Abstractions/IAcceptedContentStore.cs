@@ -34,10 +34,16 @@ public interface IAcceptedContentStore
 
     /// <summary>
     /// Lists all files under the given repository-relative directory prefix at a specific commit.
-    /// Returns an empty list if the commit or directory does not exist.
+    /// Returns an empty list if the directory does not exist. Call <see cref="CommitExistsAsync" />
+    /// first when callers must distinguish a missing commit from an empty directory.
     /// </summary>
     Task<IReadOnlyList<ContentFile>> ListFilesAtCommitAsync(
         string directoryPrefix, string commitSha, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns true if the accepted-content commit exists in the backing store.
+    /// </summary>
+    Task<bool> CommitExistsAsync(string commitSha, CancellationToken ct = default);
 
     /// <summary>
     /// Returns true if the given path exists at HEAD.

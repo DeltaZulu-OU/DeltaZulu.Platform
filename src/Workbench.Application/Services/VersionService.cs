@@ -75,6 +75,13 @@ public sealed class VersionService(
         CancellationToken ct)
     {
         var prefix = CanonicalPathResolver.DetectionPrefix(detection.Slug);
+        if (beforeVersion is not null)
+        {
+            await EnsureVersionCommitExistsAsync(beforeVersion, ct);
+        }
+
+        await EnsureVersionCommitExistsAsync(afterVersion, ct);
+
         var beforeFiles = beforeVersion is null
             ? []
             : await contentStore.ListFilesAtCommitAsync(prefix, beforeVersion.GitCommitSha, ct);
@@ -92,6 +99,18 @@ public sealed class VersionService(
             .ToArray();
 
         return new VersionComparison(detection, beforeVersion, afterVersion, diffs);
+    }
+
+    private async Task EnsureVersionCommitExistsAsync(DetectionVersion version, CancellationToken ct)
+    {
+        if (await contentStore.CommitExistsAsync(version.GitCommitSha, ct))
+        {
+            return;
+        }
+
+        throw new DomainException(
+            "accepted_content.commit_missing",
+            $"Accepted content for version {version.DisplayVersion} is unavailable. Run accepted-content reconciliation before comparing or restoring this version.");
     }
 
     private static Dictionary<string, ContentFile> ToLogicalPathMap(string detectionPrefix, IReadOnlyList<ContentFile> files)

@@ -211,6 +211,28 @@ public sealed class VersionServiceTests : IDisposable
         Assert.IsFalse(secondHunk.Lines.Any(line => line.Text == "row06"));
     }
 
+    [TestMethod]
+    public async Task CompareWithPrevious_MissingAcceptedCommit_ReportsReconciliationNeeded()
+    {
+        var detectionId = await ConceiveDetectionAsync("compare-missing-commit");
+        var version = await MergeQuickLabAsync(
+            detectionId,
+            "CHG-C6",
+            "Accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, "SigninLogs | take 1"),
+            });
+        _host.ContentStore.ForgetCommit(version.GitCommitSha);
+
+        using var scope = _host.CreateScope();
+        var versionSvc = _host.Resolve<VersionService>(scope);
+        var ex = await Assert.ThrowsExactlyAsync<DomainException>(() =>
+            versionSvc.CompareWithPreviousAsync(version.Id, TestContext.CancellationToken));
+
+        Assert.AreEqual("accepted_content.commit_missing", ex.Code);
+    }
+
     private async Task<DetectionId> ConceiveDetectionAsync(string slug)
     {
         using var scope = _host.CreateScope();

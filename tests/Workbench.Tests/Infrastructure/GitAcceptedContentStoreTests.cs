@@ -158,6 +158,23 @@ public sealed class GitAcceptedContentStoreTests
         Assert.AreEqual("version-1", files.Single(file => file.RepositoryPath.EndsWith("rule.kql", StringComparison.Ordinal)).Content);
     }
 
+
+    [TestMethod]
+    public async Task CommitExistsAsync_ReportsKnownAndUnknownCommits()
+    {
+        using var temp = new TemporaryDirectory();
+        var store = CreateStore(temp.Path);
+
+        var result = await store.CommitAsync(new CommitRequest(
+            "create file",
+            "Test User",
+            "test@example.com",
+            [new ContentFile("detections/test/rule.kql", "query")]), TestContext.CancellationToken);
+
+        Assert.IsTrue(await store.CommitExistsAsync(result.CommitSha, TestContext.CancellationToken));
+        Assert.IsFalse(await store.CommitExistsAsync("0000000000000000000000000000000000000000", TestContext.CancellationToken));
+    }
+
     [TestMethod]
     public async Task CommitAsync_RejectsPathTraversal()
     {

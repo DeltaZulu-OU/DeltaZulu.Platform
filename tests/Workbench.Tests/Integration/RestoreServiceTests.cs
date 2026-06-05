@@ -103,6 +103,33 @@ public sealed class RestoreServiceTests : IDisposable
         Assert.AreEqual(pngB64, asset.Content);
     }
 
+    [TestMethod]
+    public async Task RestoreVersionAsChange_MissingAcceptedCommit_ReportsReconciliationNeeded()
+    {
+        var detectionId = await ConceiveDetectionAsync("restore-missing-commit");
+        var version = await MergeQuickLabAsync(
+            detectionId,
+            "CHG-M1",
+            "Accepted content",
+            new[]
+            {
+                ("detection.yaml", DraftContentType.DetectionMetadata, "id: restore-missing-commit"),
+            });
+        _host.ContentStore.ForgetCommit(version.GitCommitSha);
+
+        using var scope = _host.CreateScope();
+        var restoreSvc = _host.Resolve<RestoreService>(scope);
+        var ex = await Assert.ThrowsExactlyAsync<DomainException>(() =>
+            restoreSvc.RestoreVersionAsChangeAsync(
+                version.Id,
+                Author,
+                WorkflowProfileId.QuickLab,
+                key: "RST-M1",
+                ct: TestContext.CancellationToken));
+
+        Assert.AreEqual("accepted_content.commit_missing", ex.Code);
+    }
+
     private async Task<DetectionId> ConceiveDetectionAsync(string slug)
     {
         using var scope = _host.CreateScope();

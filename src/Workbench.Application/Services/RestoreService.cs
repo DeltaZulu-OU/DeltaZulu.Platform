@@ -49,6 +49,13 @@ public sealed class RestoreService(
             workflowProfileId, detection.CurrentVersionId, time.GetUtcNow(), linkedIssueId ?? version.LinkedIssueId);
 
         var prefix = CanonicalPathResolver.DetectionPrefix(detection.Slug);
+        if (!await contentStore.CommitExistsAsync(version.GitCommitSha, ct))
+        {
+            throw new DomainException(
+                "accepted_content.commit_missing",
+                $"Accepted content for version {version.DisplayVersion} is unavailable. Run accepted-content reconciliation before comparing or restoring this version.");
+        }
+
         var files = await contentStore.ListFilesAtCommitAsync(prefix, version.GitCommitSha, ct);
         if (files.Count == 0)
         {

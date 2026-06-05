@@ -98,6 +98,19 @@ public sealed class GitAcceptedContentStore : IAcceptedContentStore
     }
 
     /// <inheritdoc />
+    public Task<bool> CommitExistsAsync(string commitSha, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(commitSha);
+        ct.ThrowIfCancellationRequested();
+
+        lock (_lock)
+        {
+            using var repository = OpenOrCreateRepository();
+            return Task.FromResult(repository.Lookup<Commit>(commitSha) is not null);
+        }
+    }
+
+    /// <inheritdoc />
     public Task<bool> ExistsAsync(string repositoryPath, CancellationToken ct = default)
     {
         var normalizedPath = NormalizeRepositoryPath(repositoryPath);

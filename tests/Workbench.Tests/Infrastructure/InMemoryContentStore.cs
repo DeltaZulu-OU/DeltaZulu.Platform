@@ -88,6 +88,26 @@ internal sealed class InMemoryContentStore : IAcceptedContentStore
         }
     }
 
+    public Task<bool> CommitExistsAsync(string commitSha, CancellationToken ct = default)
+    {
+        lock (_lock)
+        {
+            return Task.FromResult(_commits.ContainsKey(commitSha));
+        }
+    }
+
+    public void ForgetCommit(string commitSha)
+    {
+        lock (_lock)
+        {
+            _commits.Remove(commitSha);
+            if (_headSha == commitSha)
+            {
+                _headSha = _commits.Keys.LastOrDefault();
+            }
+        }
+    }
+
     public Task<bool> ExistsAsync(string repositoryPath, CancellationToken ct = default)
     {
         lock (_lock)
