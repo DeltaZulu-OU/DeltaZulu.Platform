@@ -8,10 +8,10 @@
 @inject IJSRuntime JS
 @inject Hunting.Web.Services.UserSettingsState UserSettings
 @inject Hunting.Web.Services.QueryLibraryService QueryLibrary
+@inject Hunting.Web.Services.VisualizationLibraryService VisualizationLibrary
 @inject Hunting.Web.Rendering.EChartsRenderOptionsBuilder EChartsOptionsBuilder
 @inject ISnackbar Snackbar
 @implements IAsyncDisposable
-
 
 <div class="threat-hunting-page">
     <aside class="threat-hunting-secondary-nav" aria-label="Threat hunting navigation">
@@ -32,7 +32,6 @@
     <main class="threat-hunting-workbench">
         <div class="hunt-page">
             <div class="hunt-page-content" id="hunt-page-content">
-                <!-- ─── Editor panel ──────────────────────────────────────────────────────── -->
                 <section class="hunt-editor-panel" id="hunt-editor-panel">
                     <div class="hunt-editor-toolbar">
                         <span class="hunt-editor-label">KQL Query</span>
@@ -50,7 +49,6 @@
                         </div>
                     </div>
 
-        
                     <div class="hunt-timefilter-toolbar">
                         <label class="hunt-timefilter-label" for="time-range">Time filter</label>
                         <select id="time-range" class="hunt-timefilter-select" @bind="_toolbar.SelectedTimeFilter">
@@ -78,8 +76,6 @@
                         </select>
                     </div>
 
-
-                    <!-- Monaco editor placeholder — wired via JS interop -->
                     <div class="hunt-editor-container">
                         <div id="kql-editor" class="hunt-editor-textarea"></div>
                     </div>
@@ -98,7 +94,6 @@
                     }
                 </section>
 
-                <!-- ─── Results panel ───────────────────────────────────────── -->
                 <div class="hunt-panel-splitter" id="hunt-panel-splitter" role="separator" aria-orientation="horizontal" aria-label="Resize editor and results panels"></div>
 
                 <section class="hunt-results-panel" id="hunt-results-panel">
@@ -143,6 +138,14 @@
                         <div class="hunt-results-tabs" role="tablist" aria-label="Result views">
                             <button class="hunt-btn hunt-tab-button @GetTabButtonClass(ResultTab.Table)" role="tab" aria-selected="@(_activeTab == ResultTab.Table)" aria-controls="results-table-panel" id="results-table-tab" @onclick="() => SelectTab(ResultTab.Table)">Table</button>
                             <button class="hunt-btn hunt-tab-button @GetTabButtonClass(ResultTab.Render)" role="tab" aria-selected="@(_activeTab == ResultTab.Render)" aria-controls="results-render-panel" id="results-render-tab" disabled="@(!HasRenderOutput)" @onclick="() => SelectTab(ResultTab.Render)">Render</button>
+                            @if (HasRenderOutput)
+                            {
+                                <button class="hunt-btn hunt-tab-button"
+                                        disabled="@_savingVisualization"
+                                        @onclick="SaveCurrentVisualizationAsync">
+                                    @(_savingVisualization ? "Saving…" : "Save visualization")
+                                </button>
+                            }
                         </div>
 
                         <div class="hunt-results-content">
@@ -296,12 +299,14 @@
         </div>
     </aside>
 }
+
 @code {
     private string _kql = string.Empty;
     private readonly Hunting.Web.Services.QueryToolbarState _toolbar = new();
 
     private bool _running;
     private bool _savingQuery;
+    private bool _savingVisualization;
     private Hunting.Data.QueryResult? _result;
     private Hunting.Web.Rendering.RenderedQueryResult? _renderedResult;
     private Hunting.Render.Model.RenderChartModel? _chart;
@@ -332,7 +337,6 @@
     private int _lastMeasuredChartHeightPx;
     private bool _editorInitialized;
     private string _cachedEditorText = string.Empty;
-
 
     private string SelectedResultLimitValue
     {
@@ -468,6 +472,56 @@
         }
     }
 
+    private async Task SaveCurrentVisualizationAsync()
+    {
+        if (_savingVisualization)
+        {
+            return;
+        }
+
+        if (!HasRenderOutput)
+        {
+            Snackbar.Add("There is no render output to save as a visualization.", Severity.Warning);
+            return;
+        }
+
+        _savingVisualization = true;
+
+        try
+        {
+            var queryText = await GetCurrentEditorTextAsync();
+            if (string.IsNullOrWhiteSpace(queryText))
+            {
+                Snackbar.Add("Cannot save a visualization from an empty query.", Severity.Warning);
+                return;
+            }
+
+            var visualization = await VisualizationLibrary.SaveVisualizationFromRenderedQueryAsync(
+                queryId: null,
+                visualizationId: null,
+                name: BuildVisualizationName(queryText),
+                description: null,
+                queryText: queryText);
+
+            _kql = queryText;
+            _cachedEditorText = queryText;
+
+            Snackbar.Add($"Saved visualization '{visualization.Name}'.", Severity.Success);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Warning);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Could not save visualization. {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _savingVisualization = false;
+        }
+    }
+
     private async Task<string> GetCurrentEditorTextAsync()
     {
         try
@@ -481,16 +535,12 @@
     }
 
     private static string BuildSavedQueryName(string queryText)
-    {
-        var firstLine = queryText
-            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Trim())
-            .FirstOrDefault(line => !string.IsNullOrWhiteSpace(line));
+        => BuildArtifactName(queryText, "Saved query");
 
-        return string.IsNullOrWhiteSpace(firstLine)
-            ? $"Saved query {DateTime.Now:yyyy-MM-dd HH:mm}"
-            : firstLine.Length <= 60 ? firstLine : firstLine[..60];
-    }
+    private string BuildVisualizationName(string queryText)
+        => !string.IsNullOrWhiteSpace(_renderDirective.Title)
+            ? _renderDirective.Title.Trim()
+            : BuildArtifactName(queryText, "Visualization");
 
     private void OpenSqlDrawer()
     {
@@ -609,6 +659,7 @@
 
         _activeTab = tab;
     }
+
     private string GetTabButtonClass(ResultTab tab) => _activeTab == tab ? "hunt-tab-active" : string.Empty;
     private string GetTabVisibilityClass(ResultTab tab) => _activeTab == tab ? "hunt-tab-active-content" : "hunt-tab-hidden";
 
@@ -655,6 +706,18 @@
         _showDrawer = false;
         _chartRenderKey++;
         await LanguageService.SetEditorValueAsync(_kql);
+    }
+
+    private static string BuildArtifactName(string queryText, string fallbackPrefix)
+    {
+        var firstLine = queryText
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .FirstOrDefault(line => !string.IsNullOrWhiteSpace(line));
+
+        return string.IsNullOrWhiteSpace(firstLine)
+            ? $"{fallbackPrefix} {DateTime.Now:yyyy-MM-dd HH:mm}"
+            : firstLine.Length <= 60 ? firstLine : firstLine[..60];
     }
 
     private static string BeautifySql(string sql)
