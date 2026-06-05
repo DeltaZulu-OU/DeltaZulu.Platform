@@ -1,0 +1,187 @@
+@page "/work"
+@page "/issues"
+@page "/changes"
+@rendermode InteractiveServer
+@using Workbench.Application.Services
+@using Workbench.Domain.Changes
+@using Workbench.Domain.Issues
+@using Workbench.Domain.Enums
+@inject ChangeService ChangeService
+@inject IssueService IssueService
+@inject IDialogService DialogService
+@inject NavigationManager Nav
+@inject PocUserContext UserContext
+
+<PageTitle>Work</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-1">Work</MudText>
+<MudText Typo="Typo.body2" Class="mb-4" Style="color: var(--color-text-secondary); max-width: 720px;">
+    Issues capture why work is needed. Changes track proposed detection content edits.
+</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+    return;
+}
+
+<MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true">
+
+    @* ── Issues tab ── *@
+    <MudTabPanel Text="Issues" BadgeData="@_issues.Count" BadgeColor="Color.Primary">
+        <div class="ma-3">
+            <MudButtonGroup Variant="Variant.Filled" Class="mb-4">
+                <MudButton Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@(() => OpenCreateIssueDialog(false))">New issue</MudButton>
+                <MudButton Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Cases"
+                           OnClick="@(() => OpenCreateIssueDialog(true))">From external case</MudButton>
+            </MudButtonGroup>
+
+            @if (_issues.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">No issues yet. Create one to begin tracking detection work.</MudAlert>
+            }
+            else
+            {
+                <MudTable Items="_issues" Dense="true" Hover="true" T="Issue">
+                    <HeaderContent>
+                        <MudTh>Key</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Type</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Priority</MudTh>
+                        <MudTh>External Case</MudTh>
+                        <MudTh>Updated</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
+                        <MudTd DataLabel="Title">@context.Title</MudTd>
+                        <MudTd DataLabel="Type"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.Type</MudChip></MudTd>
+                        <MudTd DataLabel="Status"><StatusChip IssueStatus="context.Status" /></MudTd>
+                        <MudTd DataLabel="Priority">@context.Priority</MudTd>
+                        <MudTd DataLabel="External Case">
+                            @if (context.ExternalCase is not null)
+                            {
+                                @if (context.ExternalCase.Url is not null)
+                                {
+                                    <MudLink Href="@context.ExternalCase.Url" Target="_blank">
+                                        @context.ExternalCase.System: @context.ExternalCase.ExternalId
+                                    </MudLink>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2">@context.ExternalCase.System: @context.ExternalCase.ExternalId</MudText>
+                                }
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </div>
+    </MudTabPanel>
+
+    @* ── Changes tab ── *@
+    <MudTabPanel Text="Changes" BadgeData="@_filteredChanges.Count" BadgeColor="Color.Secondary">
+        <div class="ma-3">
+            <MudChipSet T="string" SelectionMode="SelectionMode.SingleSelection" SelectedValue="_changeFilter"
+                        SelectedValueChanged="OnChangeFilterChanged" Class="mb-3">
+                <MudChip T="string" Value="@("all")" Variant="Variant.Outlined" SelectedColor="Color.Primary">All</MudChip>
+                <MudChip T="string" Value="@("mine")" Variant="Variant.Outlined" SelectedColor="Color.Primary">My changes</MudChip>
+                <MudChip T="string" Value="@("review")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Awaiting review</MudChip>
+                <MudChip T="string" Value="@("stale")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Stale</MudChip>
+            </MudChipSet>
+
+            @if (_filteredChanges.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">No changes match the current filter. Open one from a detection detail page.</MudAlert>
+            }
+            else
+            {
+                <MudTable Items="_filteredChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
+                          OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
+                          T="ChangeRequest" RowClass="cursor-pointer">
+                    <HeaderContent>
+                        <MudTh>Key</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Profile</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Files</MudTh>
+                        <MudTh>Checks</MudTh>
+                        <MudTh>Stale</MudTh>
+                        <MudTh>Updated</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
+                        <MudTd DataLabel="Title">@context.Title</MudTd>
+                        <MudTd DataLabel="Profile"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.WorkflowProfileId</MudChip></MudTd>
+                        <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
+                        <MudTd DataLabel="Files">@context.DraftFiles.Count</MudTd>
+                        <MudTd DataLabel="Checks">@context.Checks.Count</MudTd>
+                        <MudTd DataLabel="Stale">
+                            @if (context.IsStale)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </div>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private List<Issue> _issues = [];
+    private List<ChangeRequest> _allChanges = [];
+    private List<ChangeRequest> _filteredChanges = [];
+    private string _changeFilter = "all";
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var issuesTask = IssueService.ListAsync();
+        var changesTask = ChangeService.ListAsync();
+        await Task.WhenAll(issuesTask, changesTask);
+        _issues = issuesTask.Result.ToList();
+        _allChanges = changesTask.Result.ToList();
+        ApplyChangeFilter();
+        _loading = false;
+    }
+
+    private void OnChangeFilterChanged(string filter)
+    {
+        _changeFilter = filter ?? "all";
+        ApplyChangeFilter();
+    }
+
+    private void ApplyChangeFilter()
+    {
+        var userId = UserContext.CurrentUser.Id;
+        _filteredChanges = _changeFilter switch
+        {
+            "mine" => _allChanges.Where(c => c.AuthorId == userId && c.Status is not ChangeStatus.Merged and not ChangeStatus.Closed).ToList(),
+            "review" => _allChanges.Where(c => c.Status == ChangeStatus.ReviewRequired && c.AuthorId != userId).ToList(),
+            "stale" => _allChanges.Where(c => c.IsStale && c.Status is not ChangeStatus.Merged and not ChangeStatus.Closed).ToList(),
+            _ => _allChanges,
+        };
+    }
+
+    private async Task OpenCreateIssueDialog(bool withExternalCase)
+    {
+        var parameters = new DialogParameters<CreateIssueDialog> { { x => x.WithExternalCase, withExternalCase } };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CreateIssueDialog>(
+            withExternalCase ? "From external case" : "New issue", parameters, options);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled) await LoadAsync();
+    }
+}

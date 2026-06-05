@@ -10,7 +10,7 @@
 
 <MudText Typo="Typo.h5" Class="mb-1">Versions</MudText>
 <MudText Typo="Typo.body2" Class="mb-4" Style="color: var(--color-text-secondary); max-width: 720px;">
-    Accepted detection content history shown as user-friendly versions, not repository commits.
+    Accepted detection content versions. Compare changes and restore previous content safely.
 </MudText>
 
 @if (_loading)
@@ -20,7 +20,7 @@
 else if (_rows.Count == 0)
 {
     <MudAlert Severity="Severity.Info">
-        No accepted versions yet. Merge an approved change to create the first version projection.
+        No accepted versions yet. Accept an approved change to create the first version.
     </MudAlert>
 }
 else

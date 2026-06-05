@@ -1,0 +1,72 @@
+@using Workbench.Domain.Changes
+@using Workbench.Domain.Workflow
+
+@if (Readiness is null)
+{
+    return;
+}
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <span class="eyebrow">Acceptance readiness</span>
+    @if (Readiness.IsReady)
+    {
+        <MudAlert Severity="Severity.Success" Dense="true" Class="mt-3 mb-3">All gates satisfied. Ready to accept.</MudAlert>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnAccept"
+                   Disabled="IsRunning" StartIcon="@Icons.Material.Outlined.CheckCircle">
+            Accept
+        </MudButton>
+    }
+    else
+    {
+        <div class="mt-3">
+            @foreach (var gate in Readiness.UnmetGates)
+            {
+                <div class="d-flex align-center gap-3 mb-2 pa-2" style="border-radius: var(--radius-sm); background: rgba(138,90,18,0.04);">
+                    <MudIcon Icon="@Icons.Material.Outlined.Cancel" Size="Size.Small"
+                             Style="color: var(--color-error);" />
+                    <MudText Typo="Typo.body2" Style="flex: 1;">@GateDisplayText(gate.Code, gate.Message)</MudText>
+                    @{ var action = GateAction(gate.Code); }
+                    @if (action is not null)
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                   OnClick="action.Value.Callback" Disabled="IsRunning"
+                                   Style="font-weight: 600; text-transform: none;">
+                            @action.Value.Label
+                        </MudButton>
+                    }
+                </div>
+            }
+        </div>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public MergeReadiness? Readiness { get; set; }
+    [Parameter] public ChangeRequest? Change { get; set; }
+    [Parameter] public EventCallback OnRunChecks { get; set; }
+    [Parameter] public EventCallback OnRequestReview { get; set; }
+    [Parameter] public EventCallback OnAccept { get; set; }
+    [Parameter] public bool IsRunning { get; set; }
+
+    private static string GateDisplayText(string code, string fallback) => code switch
+    {
+        "gate.no_checks" => "Run required checks before accepting.",
+        "gate.checks_missing" => "Required checks have not run yet.",
+        "gate.checks_not_passed" => "Fix failed checks before accepting.",
+        "gate.approval_missing" => "An approval is required before accepting.",
+        "gate.non_author_approval_missing" => "Approval from someone other than the author is required.",
+        "gate.stale" => "A newer version was accepted since this change was opened.",
+        "gate.terminal_state" => "This change has been completed.",
+        _ => fallback,
+    };
+
+    private (string Label, EventCallback Callback)? GateAction(string code) => code switch
+    {
+        "gate.no_checks" => ("Run checks", OnRunChecks),
+        "gate.checks_missing" => ("Run checks", OnRunChecks),
+        "gate.checks_not_passed" => ("Run checks", OnRunChecks),
+        "gate.approval_missing" => ("Request review", OnRequestReview),
+        "gate.non_author_approval_missing" => ("Request review", OnRequestReview),
+        _ => null,
+    };
+}

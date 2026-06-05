@@ -21,6 +21,9 @@ public sealed class VersionService(
         DetectionId detectionId, CancellationToken ct = default)
         => versions.ListByDetectionAsync(detectionId, ct);
 
+    public Task<IReadOnlyList<DetectionVersion>> ListRecentAsync(int count, CancellationToken ct = default)
+        => versions.ListRecentAsync(count, ct);
+
     /// <summary>
     /// Lists accepted versions that can be used as historical comparison baselines for the supplied version.
     /// </summary>

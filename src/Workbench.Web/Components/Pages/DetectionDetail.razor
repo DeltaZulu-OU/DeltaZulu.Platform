@@ -45,8 +45,27 @@ else
                 </div>
                 <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
                 <div>
-                    <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Current version</MudText>
-                    <MudText Typo="Typo.body2" Class="mt-1">@(_detection.CurrentVersionId?.ToString() ?? "None")</MudText>
+                    <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Latest version</MudText>
+                    @if (_latestVersion is not null)
+                    {
+                        <div class="d-flex align-center gap-2 mt-1">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success">@_latestVersion.DisplayVersion</MudChip>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                       OnClick="@(() => Nav.NavigateTo($"/versions/{_latestVersion.Id}"))"
+                                       Class="px-0" Style="font-weight: 600; text-transform: none;">
+                                Compare
+                            </MudButton>
+                        </div>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Class="mt-1" Style="color: var(--color-text-secondary);">None</MudText>
+                    }
+                </div>
+                <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
+                <div>
+                    <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Active changes</MudText>
+                    <MudText Typo="Typo.body2" Class="mt-1">@_activeChangeCount</MudText>
                 </div>
                 <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
                 <div>
@@ -63,7 +82,7 @@ else
         <MudTabPanel Text="Versions" BadgeData="@_versions.Count" BadgeColor="Color.Secondary">
             @if (_versions.Count == 0)
             {
-                <MudAlert Severity="Severity.Info" Dense="true" Class="ma-4">No accepted versions yet. Merge a change to create the first.</MudAlert>
+                <MudAlert Severity="Severity.Info" Dense="true" Class="ma-4">No accepted versions yet. Accept a change to create the first.</MudAlert>
             }
             else
             {
@@ -91,7 +110,7 @@ else
             }
         </MudTabPanel>
 
-        <MudTabPanel Text="Changes" BadgeData="@_changes.Count" BadgeColor="Color.Secondary">
+        <MudTabPanel Text="Work history" BadgeData="@_changes.Count" BadgeColor="Color.Secondary">
             @if (_changes.Count == 0)
             {
                 <MudAlert Severity="Severity.Info" Class="ma-3">No changes linked to this detection.</MudAlert>
@@ -141,6 +160,8 @@ else
     [Parameter] public string Id { get; set; } = null!;
 
     private Detection? _detection;
+    private DetectionVersion? _latestVersion;
+    private int _activeChangeCount;
     private List<DetectionVersion> _versions = [];
     private List<ChangeRequest> _changes = [];
     private List<ContentFile> _acceptedFiles = [];
@@ -161,7 +182,9 @@ else
         ];
 
         _versions = (await VersionService.ListByDetectionAsync(detId)).ToList();
+        _latestVersion = _versions.FirstOrDefault();
         _changes = (await ChangeService.ListByDetectionAsync(detId)).ToList();
+        _activeChangeCount = _changes.Count(c => c.Status is not Domain.Enums.ChangeStatus.Merged and not Domain.Enums.ChangeStatus.Closed);
 
         var prefix = Application.ContentPipeline.CanonicalPathResolver.DetectionPrefix(_detection.Slug);
         _acceptedFiles = (await ContentStore.ListFilesAsync(prefix)).ToList();

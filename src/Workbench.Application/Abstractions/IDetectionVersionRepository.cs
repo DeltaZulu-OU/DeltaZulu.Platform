@@ -12,5 +12,7 @@ public interface IDetectionVersionRepository
 
     Task<int> GetNextSequenceNumberAsync(DetectionId detectionId, CancellationToken ct = default);
 
+    Task<IReadOnlyList<DetectionVersion>> ListRecentAsync(int count, CancellationToken ct = default);
+
     void Add(DetectionVersion version);
 }

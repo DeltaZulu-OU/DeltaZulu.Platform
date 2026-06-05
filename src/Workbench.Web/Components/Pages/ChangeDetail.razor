@@ -4,11 +4,13 @@
 @using Workbench.Application.Abstractions
 @using Workbench.Domain.Changes
 @using Workbench.Domain.Detections
+@using Workbench.Domain.Issues
 @using Workbench.Domain.Enums
 @using Workbench.Domain.Identifiers
 @using Workbench.Domain.Workflow
 @inject ChangeService ChangeService
 @inject DetectionContentService DetectionService
+@inject IssueService IssueService
 @inject CheckPipelineRunner PipelineRunner
 @inject MergeService MergeService
 @inject ISnackbar Snackbar
@@ -48,6 +50,32 @@
                 </MudChip>
             }
         </div>
+        @if (_linkedIssue is not null)
+        {
+            <div class="d-flex align-center gap-2 mt-2">
+                <MudIcon Icon="@Icons.Material.Outlined.Link" Size="Size.Small" Style="color: var(--color-text-secondary);" />
+                <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);">
+                    Issue: <code>@_linkedIssue.Key</code> @_linkedIssue.Title
+                </MudText>
+            </div>
+        }
+        @if (!IsTerminal && _readiness is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-2" Style="color: var(--color-text-secondary);">
+                @if (_readiness.IsReady)
+                {
+                    <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small"
+                             Style="color: var(--color-success); vertical-align: middle;" />
+                    <span>Ready to accept</span>
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small"
+                             Style="color: var(--color-warning); vertical-align: middle;" />
+                    <span>@_readiness.UnmetGates.First().Message</span>
+                }
+            </MudText>
+        }
     </MudItem>
     <MudItem xs="12" md="4" Class="d-flex justify-end align-start gap-2">
         @if (!IsTerminal)
@@ -56,44 +84,30 @@
                        Disabled="_running" StartIcon="@Icons.Material.Outlined.PlaylistAddCheck">
                 Run checks
             </MudButton>
-            @if (_readiness?.IsReady == true)
-            {
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Merge"
-                           Disabled="_running" StartIcon="@Icons.Material.Outlined.MergeType">
-                    Accept and merge
-                </MudButton>
-            }
         }
     </MudItem>
 </MudGrid>
 
-@* ── Merge readiness ── *@
-@if (_readiness is not null && !IsTerminal)
+@* ── Stale base warning ── *@
+@if (_change.IsStale && !IsTerminal)
 {
-    <MudPaper Class="pa-4 mb-4" Elevation="1">
-        <span class="eyebrow">Merge readiness</span>
-        @if (_readiness.IsReady)
-        {
-            <MudAlert Severity="Severity.Success" Dense="true" Class="mt-3">All gates satisfied. Ready to merge.</MudAlert>
-        }
-        else
-        {
-            <div class="mt-3">
-            @foreach (var gate in _readiness.UnmetGates)
-            {
-                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
-                    <code style="font-size: 0.8em;">@gate.Code</code> — @gate.Message
-                </MudAlert>
-            }
-            </div>
-        }
-    </MudPaper>
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4">
+        @(_change.StaleReason ?? "A newer version was accepted since this change was opened. Review the latest accepted content before proceeding.")
+    </MudAlert>
 }
 
-<MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true">
+@* ── Gate checklist ── *@
+@if (!IsTerminal)
+{
+    <GateChecklist Readiness="_readiness" Change="_change"
+                   OnRunChecks="RunChecks" OnRequestReview="ScrollToReview"
+                   OnAccept="Accept" IsRunning="_running" />
+}
 
-    @* ── Draft Files tab ── *@
-    <MudTabPanel Text="Draft files" BadgeData="@_change.DraftFiles.Count" BadgeColor="Color.Primary">
+<MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true" @ref="_tabs">
+
+    @* ── Content tab ── *@
+    <MudTabPanel Text="Content" BadgeData="@_change.DraftFiles.Count" BadgeColor="Color.Primary">
         <div class="ma-3">
             @if (!IsTerminal)
             {
@@ -135,49 +149,85 @@
             }
             else
             {
-                @foreach (var file in _change.DraftFiles)
+                @foreach (var group in _change.DraftFiles.GroupBy(f => f.ContentType).OrderBy(g => g.Key))
                 {
-                    <MudExpansionPanels Class="mb-2">
-                        <MudExpansionPanel>
-                            <TitleContent>
-                                <div class="d-flex align-center gap-2">
-                                    <MudIcon Icon="@Icons.Material.Outlined.InsertDriveFile" Size="Size.Small" />
-                                    <code>@file.Path.Value</code>
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@file.ContentType</MudChip>
-                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@file.SizeChars chars</MudText>
-                                </div>
-                            </TitleContent>
-                            <ChildContent>
-                                @if (file.ContentType == DraftContentType.InvestigationNote)
-                                {
-                                    <MarkdownViewer Content="@file.Content" CurrentFilePath="@($"detections/{_detection?.Slug}/{file.Path.Value}")" />
-                                }
-                                else if (file.ContentType == DraftContentType.StaticAsset)
-                                {
-                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Binary asset — @file.SizeChars chars (base64)</MudText>
-                                }
-                                else
-                                {
-                                    <pre style="white-space: pre-wrap; font-size: 0.85rem; max-height: 400px; overflow-y: auto;">@file.Content</pre>
-                                }
-                            </ChildContent>
-                        </MudExpansionPanel>
-                    </MudExpansionPanels>
+                    <MudText Typo="Typo.subtitle2" Class="mt-3 mb-1" Style="color: var(--color-text-secondary);">@group.Key</MudText>
+                    @foreach (var file in group)
+                    {
+                        <MudExpansionPanels Class="mb-2">
+                            <MudExpansionPanel>
+                                <TitleContent>
+                                    <div class="d-flex align-center gap-2">
+                                        <MudIcon Icon="@Icons.Material.Outlined.InsertDriveFile" Size="Size.Small" />
+                                        <code>@file.Path.Value</code>
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@file.ContentType</MudChip>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@file.SizeChars chars</MudText>
+                                    </div>
+                                </TitleContent>
+                                <ChildContent>
+                                    @if (file.ContentType == DraftContentType.InvestigationNote)
+                                    {
+                                        <MarkdownViewer Content="@file.Content" CurrentFilePath="@($"detections/{_detection?.Slug}/{file.Path.Value}")" />
+                                    }
+                                    else if (file.ContentType == DraftContentType.StaticAsset)
+                                    {
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Binary asset — @file.SizeChars chars (base64)</MudText>
+                                    }
+                                    else
+                                    {
+                                        <pre style="white-space: pre-wrap; font-size: 0.85rem; max-height: 400px; overflow-y: auto;">@file.Content</pre>
+                                    }
+                                </ChildContent>
+                            </MudExpansionPanel>
+                        </MudExpansionPanels>
+                    }
                 }
             }
         </div>
     </MudTabPanel>
 
-    @* ── Checks tab ── *@
-    <MudTabPanel Text="Checks" BadgeData="@_change.Checks.Count" BadgeColor="Color.Info">
+    @* ── Validation tab ── *@
+    <MudTabPanel Text="Validation" BadgeData="@_change.Checks.Count" BadgeColor="Color.Info">
         <div class="ma-3">
+            @if (_change.Checks.Count > 0)
+            {
+                var passed = _change.Checks.Count(c => c.Status == CheckStatus.Passed);
+                var total = _change.Checks.Count;
+                var failed = _change.Checks.Count(c => c.Status == CheckStatus.Failed);
+                <div class="d-flex align-center gap-3 mb-3">
+                    <MudText Typo="Typo.body2">
+                        @passed of @total check(s) passed
+                        @if (failed > 0)
+                        {
+                            <span style="color: var(--color-error);"> — @failed failure(s)</span>
+                        }
+                    </MudText>
+                    @if (!IsTerminal)
+                    {
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Secondary"
+                                   OnClick="RunChecks" Disabled="_running"
+                                   StartIcon="@Icons.Material.Outlined.Refresh">
+                            Re-run checks
+                        </MudButton>
+                    }
+                </div>
+            }
+
             @if (_change.Checks.Count == 0)
             {
-                <MudAlert Severity="Severity.Info">No checks have been run yet. Run the pipeline to validate.</MudAlert>
+                <MudAlert Severity="Severity.Info">No checks have been run yet.</MudAlert>
+                @if (!IsTerminal)
+                {
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary"
+                               OnClick="RunChecks" Disabled="_running" Class="mt-2"
+                               StartIcon="@Icons.Material.Outlined.PlaylistAddCheck">
+                        Run checks
+                    </MudButton>
+                }
             }
             else
             {
-                <MudTable Items="_change.Checks" Dense="true" T="CheckRun">
+                <MudTable Items="_change.Checks.OrderByDescending(c => c.IsBlocking).ThenBy(c => c.Status)" Dense="true" T="CheckRun">
                     <HeaderContent>
                         <MudTh>Check</MudTh>
                         <MudTh>Blocking</MudTh>
@@ -193,7 +243,7 @@
                             @if (!string.IsNullOrWhiteSpace(context.LogsExcerpt))
                             {
                                 <MudExpansionPanels Class="mt-1">
-                                    <MudExpansionPanel Text="Logs" Dense="true" IsInitiallyExpanded="false">
+                                    <MudExpansionPanel Text="Technical details" Dense="true" IsInitiallyExpanded="false">
                                         <pre style="white-space: pre-wrap; font-size: 0.8rem;">@context.LogsExcerpt</pre>
                                     </MudExpansionPanel>
                                 </MudExpansionPanels>
@@ -205,22 +255,41 @@
         </div>
     </MudTabPanel>
 
-    @* ── Reviews tab ── *@
-    <MudTabPanel Text="Reviews" BadgeData="@_change.Reviews.Count" BadgeColor="Color.Secondary">
+    @* ── Review tab ── *@
+    <MudTabPanel Text="Review" BadgeData="@_change.Reviews.Count" BadgeColor="Color.Secondary">
         <div class="ma-3">
             @if (!IsTerminal)
             {
+                var profile = WorkflowProfile.For(_change.WorkflowProfileId);
+                @if (profile.RequiresApproval)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+                        @if (profile.RequiresNonAuthorApprover)
+                        {
+                            <span>This workflow requires approval from someone other than the author.</span>
+                        }
+                        else
+                        {
+                            <span>This workflow requires at least one approval.</span>
+                        }
+                    </MudAlert>
+                }
+
                 <MudPaper Class="pa-3 mb-3" Elevation="0" Outlined="true">
                     <MudText Typo="Typo.subtitle2" Class="mb-2">Record review</MudText>
-                    <MudAlert Severity="@(IsCurrentUserAuthor ? Severity.Warning : Severity.Info)" Dense="true" Class="mb-3">
-                        Acting as @UserContext.CurrentUser.DisplayName. Controlled review blocks approval by the change author; switch users here to demonstrate both paths.
-                    </MudAlert>
-                    <MudSelect Value="UserContext.CurrentPersona" ValueChanged="SwitchUser" Label="POC user" T="PocUserPersona" Class="mb-3">
-                        @foreach (var user in UserContext.AvailableUsers)
-                        {
-                            <MudSelectItem Value="user.Persona">@user.DisplayName</MudSelectItem>
-                        }
-                    </MudSelect>
+                    <MudExpansionPanels Class="mb-3">
+                        <MudExpansionPanel Text="Switch user for testing" Dense="true" IsInitiallyExpanded="false">
+                            <MudAlert Severity="@(IsCurrentUserAuthor ? Severity.Warning : Severity.Info)" Dense="true" Class="mb-2">
+                                Acting as @UserContext.CurrentUser.DisplayName. Controlled review blocks approval by the change author.
+                            </MudAlert>
+                            <MudSelect Value="UserContext.CurrentPersona" ValueChanged="SwitchUser" Label="POC user" T="PocUserPersona">
+                                @foreach (var user in UserContext.AvailableUsers)
+                                {
+                                    <MudSelectItem Value="user.Persona">@user.DisplayName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
                     <MudGrid Spacing="2">
                         <MudItem xs="12" md="4">
                             <MudSelect @bind-Value="_reviewDecision" Label="Decision" T="ReviewDecision">
@@ -282,9 +351,11 @@
 
     private ChangeRequest? _change;
     private Detection? _detection;
+    private Issue? _linkedIssue;
     private MergeReadiness? _readiness;
     private bool _running;
     private List<BreadcrumbItem> _breadcrumbs = [];
+    private MudTabs? _tabs;
 
     // Add file
     private bool _showAddFile;
@@ -312,9 +383,14 @@
         _detection = await DetectionService.GetByIdAsync(_change.DetectionId);
         _readiness = _change.EvaluateMergeReadiness();
 
+        if (_change.LinkedIssueId is not null)
+        {
+            _linkedIssue = await IssueService.GetByIdAsync(_change.LinkedIssueId.Value);
+        }
+
         _breadcrumbs =
         [
-            new("Changes", "/changes"),
+            new("Work", "/work"),
             new(_change.Key, null, disabled: true),
         ];
     }
@@ -353,6 +429,14 @@
         finally { _running = false; }
     }
 
+    private void ScrollToReview()
+    {
+        if (_tabs is not null)
+        {
+            _tabs.ActivatePanelAsync(2);
+        }
+    }
+
     private void SwitchUser(PocUserPersona persona)
     {
         UserContext.SwitchTo(persona);
@@ -373,14 +457,14 @@
         finally { _running = false; }
     }
 
-    private async Task Merge()
+    private async Task Accept()
     {
         if (_change is null) return;
         _running = true;
         try
         {
             var version = await MergeService.MergeAsync(_change.Id, UserContext.CurrentUser.DisplayName, UserContext.CurrentUser.Email);
-            Snackbar.Add($"Merged. Version {version.DisplayVersion} created.", Severity.Success);
+            Snackbar.Add($"Accepted. Version {version.DisplayVersion} created.", Severity.Success);
             await LoadAsync();
         }
         catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }

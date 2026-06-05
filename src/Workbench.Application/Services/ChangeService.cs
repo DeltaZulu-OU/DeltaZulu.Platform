@@ -94,6 +94,15 @@ public sealed class ChangeService(
     public Task<IReadOnlyList<ChangeRequest>> ListByDetectionAsync(DetectionId detectionId, CancellationToken ct = default)
         => changes.ListByDetectionAsync(detectionId, ct);
 
+    public Task<IReadOnlyList<ChangeRequest>> ListMyActiveChangesAsync(UserId userId, CancellationToken ct = default)
+        => changes.ListOpenByAuthorAsync(userId, ct);
+
+    public Task<IReadOnlyList<ChangeRequest>> ListAwaitingMyReviewAsync(UserId userId, CancellationToken ct = default)
+        => changes.ListAwaitingReviewAsync(userId, ct);
+
+    public Task<IReadOnlyList<ChangeRequest>> ListWithFailedChecksAsync(CancellationToken ct = default)
+        => changes.ListWithFailedBlockingChecksAsync(ct);
+
     private async Task<ChangeRequest> GetOrThrowAsync(ChangeRequestId id, CancellationToken ct)
         => await changes.GetByIdAsync(id, ct)
            ?? throw new DomainException("change.not_found", $"Change '{id}' not found.");

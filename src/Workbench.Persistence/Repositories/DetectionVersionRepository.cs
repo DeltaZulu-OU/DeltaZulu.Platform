@@ -32,6 +32,14 @@ internal sealed class DetectionVersionRepository(DapperSession session) : IDetec
         return (max ?? 0) + 1;
     }
 
+    public async Task<IReadOnlyList<DetectionVersion>> ListRecentAsync(int count, CancellationToken ct = default)
+    {
+        var rows = await session.Connection.QueryAsync<VersionRow>(
+            "SELECT * FROM detection_versions ORDER BY accepted_at DESC LIMIT @Count",
+            new { Count = count }, session.Transaction);
+        return rows.Select(r => r.ToDomain()).ToList();
+    }
+
     public void Add(DetectionVersion version)
     {
         session.Connection.Execute("""

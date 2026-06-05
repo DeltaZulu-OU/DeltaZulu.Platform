@@ -39,6 +39,41 @@ internal sealed class ChangeRequestRepository(DapperSession session) : IChangeRe
         return result;
     }
 
+    public async Task<IReadOnlyList<ChangeRequest>> ListOpenByAuthorAsync(UserId authorId, CancellationToken ct = default)
+    {
+        var rows = await session.Connection.QueryAsync<ChangeRow>(
+            "SELECT * FROM change_requests WHERE author_id = @AuthorId AND status NOT IN ('Merged', 'Closed') ORDER BY updated_at DESC",
+            new { AuthorId = authorId.Value.ToString() }, session.Transaction);
+        var result = new List<ChangeRequest>();
+        foreach (var row in rows) result.Add(await HydrateAsync(row));
+        return result;
+    }
+
+    public async Task<IReadOnlyList<ChangeRequest>> ListAwaitingReviewAsync(UserId excludeAuthorId, CancellationToken ct = default)
+    {
+        var rows = await session.Connection.QueryAsync<ChangeRow>(
+            "SELECT * FROM change_requests WHERE status = 'ReviewRequired' AND author_id != @ExcludeAuthorId ORDER BY updated_at DESC",
+            new { ExcludeAuthorId = excludeAuthorId.Value.ToString() }, session.Transaction);
+        var result = new List<ChangeRequest>();
+        foreach (var row in rows) result.Add(await HydrateAsync(row));
+        return result;
+    }
+
+    public async Task<IReadOnlyList<ChangeRequest>> ListWithFailedBlockingChecksAsync(CancellationToken ct = default)
+    {
+        var rows = await session.Connection.QueryAsync<ChangeRow>("""
+            SELECT DISTINCT cr.* FROM change_requests cr
+            INNER JOIN check_runs ck ON ck.change_request_id = cr.id
+            WHERE cr.status NOT IN ('Merged', 'Closed')
+              AND ck.is_blocking = 1
+              AND ck.status = 'Failed'
+            ORDER BY cr.updated_at DESC
+            """, transaction: session.Transaction);
+        var result = new List<ChangeRequest>();
+        foreach (var row in rows) result.Add(await HydrateAsync(row));
+        return result;
+    }
+
     public void Add(ChangeRequest change)
     {
         session.Connection.Execute("""

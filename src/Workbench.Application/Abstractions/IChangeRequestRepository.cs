@@ -15,6 +15,12 @@ public interface IChangeRequestRepository
 
     Task<IReadOnlyList<ChangeRequest>> ListAsync(CancellationToken ct = default);
 
+    Task<IReadOnlyList<ChangeRequest>> ListOpenByAuthorAsync(UserId authorId, CancellationToken ct = default);
+
+    Task<IReadOnlyList<ChangeRequest>> ListAwaitingReviewAsync(UserId excludeAuthorId, CancellationToken ct = default);
+
+    Task<IReadOnlyList<ChangeRequest>> ListWithFailedBlockingChecksAsync(CancellationToken ct = default);
+
     void Add(ChangeRequest change);
 
     /// <summary>

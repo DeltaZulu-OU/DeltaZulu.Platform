@@ -6,122 +6,199 @@
 @using Workbench.Domain.Reviews
 @inject ChangeService ChangeService
 @inject NavigationManager Nav
+@inject PocUserContext UserContext
 
 <PageTitle>Reviews</PageTitle>
 
-<MudText Typo="Typo.h5" Class="mb-1">Reviews</MudText>
+<MudText Typo="Typo.h5" Class="mb-1">Your reviews</MudText>
 <MudText Typo="Typo.body2" Class="mb-4" Style="color: var(--color-text-secondary); max-width: 720px;">
-    Review decisions across changes, including superseded approvals after draft content edits.
+    Changes awaiting your review decision and your review history.
 </MudText>
 
 @if (_loading)
 {
     <MudProgressLinear Indeterminate="true" />
 }
-else if (_rows.Count == 0)
-{
-    <MudAlert Severity="Severity.Info">No reviews have been recorded yet. Open a change to record a review decision.</MudAlert>
-}
 else
 {
     <MudGrid Spacing="3" Class="mb-4">
-        <MudItem xs="12" sm="6" md="3">
+        <MudItem xs="12" sm="6" md="4">
             <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
-                <span class="eyebrow">Total reviews</span>
-                <MudText Typo="Typo.h4" Class="mt-1">@_rows.Count</MudText>
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">Across @_changeCount change(s)</MudText>
+                <span class="eyebrow">Awaiting your decision</span>
+                <MudText Typo="Typo.h4" Class="mt-1">@_awaitingCount</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Changes needing your review</MudText>
             </MudPaper>
         </MudItem>
-        <MudItem xs="12" sm="6" md="3">
+        <MudItem xs="12" sm="6" md="4">
             <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
-                <span class="eyebrow">Effective approvals</span>
-                <MudText Typo="Typo.h4" Class="mt-1">@EffectiveApprovalCount</MudText>
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">Current approvals that still count</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="12" sm="6" md="3">
-            <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
-                <span class="eyebrow">Changes requested</span>
-                <MudText Typo="Typo.h4" Class="mt-1">@EffectiveChangesRequestedCount</MudText>
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">Effective requests for more work</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="12" sm="6" md="3">
-            <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
-                <span class="eyebrow">Superseded</span>
-                <MudText Typo="Typo.h4" Class="mt-1">@SupersededCount</MudText>
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">Invalidated after draft edits</MudText>
+                <span class="eyebrow">Reviewed by you</span>
+                <MudText Typo="Typo.h4" Class="mt-1">@_reviewedByYouCount</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Changes you have reviewed</MudText>
             </MudPaper>
         </MudItem>
     </MudGrid>
 
-    <MudTable Items="_rows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="ReviewRow">
-        <HeaderContent>
-            <MudTh>Change</MudTh>
-            <MudTh>Decision</MudTh>
-            <MudTh>State</MudTh>
-            <MudTh>Comment</MudTh>
-            <MudTh>Recorded</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Change">
-                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                           OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))"
-                           Class="px-0" Style="font-weight: 600; text-transform: none;">
-                    <code>@context.Change.Key</code>
-                </MudButton>
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>
-            </MudTd>
-            <MudTd DataLabel="Decision">
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@DecisionColor(context.Review.Decision)">
-                    @context.Review.Decision
-                </MudChip>
-            </MudTd>
-            <MudTd DataLabel="State">
-                @if (context.Review.IsSuperseded)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Dark" Variant="Variant.Outlined">Superseded</MudChip>
-                }
-                else
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Effective</MudChip>
-                }
-            </MudTd>
-            <MudTd DataLabel="Comment">
-                @if (string.IsNullOrWhiteSpace(context.Review.Comment))
-                {
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
-                }
-                else
-                {
-                    <MudText Typo="Typo.body2">@context.Review.Comment</MudText>
-                }
-            </MudTd>
-            <MudTd DataLabel="Recorded">
-                <MudText Typo="Typo.caption">@context.Review.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
-            </MudTd>
-        </RowTemplate>
-    </MudTable>
+    @if (!_showAuditView)
+    {
+        @if (_awaitingChanges.Count == 0 && _reviewedByYou.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">No review activity for your account yet.</MudAlert>
+        }
+
+        @if (_awaitingChanges.Count > 0)
+        {
+            <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color: var(--color-text-secondary);">Awaiting your decision</MudText>
+            <MudTable Items="_awaitingChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
+                      OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
+                      T="ChangeRequest" RowClass="cursor-pointer" Class="mb-4">
+                <HeaderContent>
+                    <MudTh>Key</MudTh>
+                    <MudTh>Title</MudTh>
+                    <MudTh>Profile</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Updated</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
+                    <MudTd DataLabel="Title">@context.Title</MudTd>
+                    <MudTd DataLabel="Profile"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.WorkflowProfileId</MudChip></MudTd>
+                    <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
+                    <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+
+        @if (_reviewedByYou.Count > 0)
+        {
+            <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color: var(--color-text-secondary);">Your review history</MudText>
+            <MudTable Items="_reviewedByYou" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="ReviewRow">
+                <HeaderContent>
+                    <MudTh>Change</MudTh>
+                    <MudTh>Decision</MudTh>
+                    <MudTh>State</MudTh>
+                    <MudTh>Recorded</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Change">
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                   OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))"
+                                   Class="px-0" Style="font-weight: 600; text-transform: none;">
+                            <code>@context.Change.Key</code>
+                        </MudButton>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Decision">
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@DecisionColor(context.Review.Decision)">
+                            @context.Review.Decision
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="State">
+                        @if (context.Review.IsSuperseded)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Dark" Variant="Variant.Outlined">Superseded</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Effective</MudChip>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Recorded">
+                        <MudText Typo="Typo.caption">@context.Review.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    }
+    else
+    {
+        @* ── Audit view: all reviews across all changes ── *@
+        <MudTable Items="_allRows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="ReviewRow">
+            <HeaderContent>
+                <MudTh>Change</MudTh>
+                <MudTh>Decision</MudTh>
+                <MudTh>State</MudTh>
+                <MudTh>Comment</MudTh>
+                <MudTh>Recorded</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Change">
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                               OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))"
+                               Class="px-0" Style="font-weight: 600; text-transform: none;">
+                        <code>@context.Change.Key</code>
+                    </MudButton>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>
+                </MudTd>
+                <MudTd DataLabel="Decision">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@DecisionColor(context.Review.Decision)">
+                        @context.Review.Decision
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="State">
+                    @if (context.Review.IsSuperseded)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Dark" Variant="Variant.Outlined">Superseded</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Effective</MudChip>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Comment">
+                    @if (string.IsNullOrWhiteSpace(context.Review.Comment))
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">@context.Review.Comment</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Recorded">
+                    <MudText Typo="Typo.caption">@context.Review.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+
+    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+               OnClick="@(() => _showAuditView = !_showAuditView)"
+               Class="mt-3" Style="font-weight: 600; text-transform: none;">
+        @(_showAuditView ? "Show my reviews" : "Show all reviews (audit view)")
+    </MudButton>
 }
 
 @code {
-    private readonly List<ReviewRow> _rows = [];
     private bool _loading = true;
-    private int _changeCount;
-
-    private int EffectiveApprovalCount => _rows.Count(row => !row.Review.IsSuperseded && row.Review.Decision is ReviewDecision.Approved);
-
-    private int EffectiveChangesRequestedCount => _rows.Count(row => !row.Review.IsSuperseded && row.Review.Decision is ReviewDecision.ChangesRequested);
-
-    private int SupersededCount => _rows.Count(row => row.Review.IsSuperseded);
+    private bool _showAuditView;
+    private List<ChangeRequest> _awaitingChanges = [];
+    private List<ReviewRow> _reviewedByYou = [];
+    private List<ReviewRow> _allRows = [];
+    private int _awaitingCount;
+    private int _reviewedByYouCount;
 
     protected override async Task OnInitializedAsync()
     {
         _loading = true;
+        var userId = UserContext.CurrentUser.Id;
         var changes = await ChangeService.ListAsync();
-        _changeCount = changes.Count;
-        _rows.AddRange(changes.SelectMany(change => change.Reviews.Select(review => new ReviewRow(change, review))));
-        _rows.Sort((left, right) => right.Review.CreatedAt.CompareTo(left.Review.CreatedAt));
+
+        _awaitingChanges = changes
+            .Where(c => c.Status == ChangeStatus.ReviewRequired && c.AuthorId != userId)
+            .ToList();
+        _awaitingCount = _awaitingChanges.Count;
+
+        _reviewedByYou = changes
+            .SelectMany(c => c.Reviews.Where(r => r.ReviewerId == userId).Select(r => new ReviewRow(c, r)))
+            .OrderByDescending(row => row.Review.CreatedAt)
+            .ToList();
+        _reviewedByYouCount = _reviewedByYou.Select(r => r.Change.Id).Distinct().Count();
+
+        _allRows = changes
+            .SelectMany(c => c.Reviews.Select(r => new ReviewRow(c, r)))
+            .OrderByDescending(row => row.Review.CreatedAt)
+            .ToList();
+
         _loading = false;
     }
 

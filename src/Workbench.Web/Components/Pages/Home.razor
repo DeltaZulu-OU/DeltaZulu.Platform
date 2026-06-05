@@ -1,52 +1,184 @@
 @page "/"
 @rendermode InteractiveServer
+@using Workbench.Application.Services
+@using Workbench.Domain.Changes
+@using Workbench.Domain.Detections
+@using Workbench.Domain.Enums
+@inject ChangeService ChangeService
+@inject VersionService VersionService
+@inject PocUserContext UserContext
+@inject NavigationManager Nav
 
 <PageTitle>Detection Content Workbench</PageTitle>
 
 <MudText Typo="Typo.h4" Class="mb-1" Style="font-weight: 700;">Detection Content Workbench</MudText>
 <MudText Typo="Typo.body1" Style="color: var(--color-text-secondary); max-width: 640px;" Class="mb-6">
-    PR-like governance over detection content, backed by Git.
-    Conceive detections, draft changes, run checks, review, and merge.
+    Your detection content workbench. See what needs attention.
 </MudText>
 
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+    return;
+}
+
 <MudGrid Spacing="3">
-    <MudItem xs="12" md="4">
+    @* ── Needs my action ── *@
+    <MudItem xs="12" md="6">
         <MudPaper Class="pa-5" Elevation="1" Style="height: 100%;">
-            <span class="eyebrow">Content</span>
-            <MudText Typo="Typo.h6" Class="mt-3 mb-2">Detections</MudText>
-            <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);">
-                Conceive, version, and manage detection content packages.
-            </MudText>
-            <MudButton Href="/detections" Variant="Variant.Text" Color="Color.Secondary"
-                       Class="mt-4 px-0" Style="font-weight: 600;">
-                Open detections
-            </MudButton>
+            <span class="eyebrow">Needs my action</span>
+            @if (_myChanges.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mt-3" Style="color: var(--color-text-secondary);">
+                    No changes need your attention.
+                </MudText>
+            }
+            else
+            {
+                <MudList T="ChangeRequest" Dense="true" Class="mt-2">
+                    @foreach (var change in _myChanges)
+                    {
+                        <MudListItem T="ChangeRequest" OnClick="@(() => Nav.NavigateTo($"/changes/{change.Id}"))">
+                            <div class="d-flex align-center gap-2 flex-wrap">
+                                <code style="font-size: 0.85em;">@change.Key</code>
+                                <MudText Typo="Typo.body2">@change.Title</MudText>
+                                <StatusChip ChangeStatus="change.Status" />
+                                @if (change.IsStale)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Style="background: rgba(138,90,18,0.12); color: #8A5A12;">Stale</MudChip>
+                                }
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
         </MudPaper>
     </MudItem>
-    <MudItem xs="12" md="4">
+
+    @* ── Pending review ── *@
+    <MudItem xs="12" md="6">
         <MudPaper Class="pa-5" Elevation="1" Style="height: 100%;">
-            <span class="eyebrow">Work</span>
-            <MudText Typo="Typo.h6" Class="mt-3 mb-2">Issues and cases</MudText>
-            <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);">
-                Track detection work. Link to FlowIntel or TheHive cases.
-            </MudText>
-            <MudButton Href="/issues" Variant="Variant.Text" Color="Color.Secondary"
-                       Class="mt-4 px-0" Style="font-weight: 600;">
-                Open issues
-            </MudButton>
+            <span class="eyebrow">Pending review</span>
+            @if (_awaitingReview.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mt-3" Style="color: var(--color-text-secondary);">
+                    No reviews waiting for your decision.
+                </MudText>
+            }
+            else
+            {
+                <MudList T="ChangeRequest" Dense="true" Class="mt-2">
+                    @foreach (var change in _awaitingReview)
+                    {
+                        <MudListItem T="ChangeRequest" OnClick="@(() => Nav.NavigateTo($"/changes/{change.Id}"))">
+                            <div class="d-flex align-center gap-2 flex-wrap">
+                                <code style="font-size: 0.85em;">@change.Key</code>
+                                <MudText Typo="Typo.body2">@change.Title</MudText>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                         Style="color: var(--brand-slate); border-color: rgba(39,86,104,0.25);">
+                                    @change.WorkflowProfileId
+                                </MudChip>
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
         </MudPaper>
     </MudItem>
-    <MudItem xs="12" md="4">
+
+    @* ── Failed checks ── *@
+    <MudItem xs="12" md="6">
         <MudPaper Class="pa-5" Elevation="1" Style="height: 100%;">
-            <span class="eyebrow">Governance</span>
-            <MudText Typo="Typo.h6" Class="mt-3 mb-2">Changes</MudText>
-            <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);">
-                Draft content, run validation checks, collect reviews, merge.
-            </MudText>
-            <MudButton Href="/changes" Variant="Variant.Text" Color="Color.Secondary"
-                       Class="mt-4 px-0" Style="font-weight: 600;">
-                Open changes
-            </MudButton>
+            <span class="eyebrow">Failed checks</span>
+            @if (_failedChecks.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mt-3" Style="color: var(--color-text-secondary);">
+                    No check failures across open changes.
+                </MudText>
+            }
+            else
+            {
+                <MudList T="ChangeRequest" Dense="true" Class="mt-2">
+                    @foreach (var change in _failedChecks)
+                    {
+                        var failCount = change.Checks.Count(c => c.IsBlocking && c.Status == CheckStatus.Failed);
+                        <MudListItem T="ChangeRequest" OnClick="@(() => Nav.NavigateTo($"/changes/{change.Id}"))">
+                            <div class="d-flex align-center gap-2 flex-wrap">
+                                <MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small"
+                                         Style="color: var(--color-error);" />
+                                <code style="font-size: 0.85em;">@change.Key</code>
+                                <MudText Typo="Typo.body2">@change.Title</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
+                                    @failCount failure(s)
+                                </MudChip>
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+                <MudButton Href="/checks" Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                           Class="mt-2 px-0" Style="font-weight: 600; text-transform: none;">
+                    View all checks
+                </MudButton>
+            }
+        </MudPaper>
+    </MudItem>
+
+    @* ── Recently accepted ── *@
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-5" Elevation="1" Style="height: 100%;">
+            <span class="eyebrow">Recently accepted</span>
+            @if (_recentVersions.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="mt-3" Style="color: var(--color-text-secondary);">
+                    No versions accepted yet.
+                </MudText>
+            }
+            else
+            {
+                <MudList T="DetectionVersion" Dense="true" Class="mt-2">
+                    @foreach (var version in _recentVersions)
+                    {
+                        <MudListItem T="DetectionVersion" OnClick="@(() => Nav.NavigateTo($"/versions/{version.Id}"))">
+                            <div class="d-flex align-center gap-2 flex-wrap">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success">
+                                    @version.DisplayVersion
+                                </MudChip>
+                                <MudText Typo="Typo.body2">@version.Title</MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                    @version.AcceptedAt.ToString("yyyy-MM-dd HH:mm")
+                                </MudText>
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
         </MudPaper>
     </MudItem>
 </MudGrid>
+
+@code {
+    private IReadOnlyList<ChangeRequest> _myChanges = [];
+    private IReadOnlyList<ChangeRequest> _awaitingReview = [];
+    private IReadOnlyList<ChangeRequest> _failedChecks = [];
+    private IReadOnlyList<DetectionVersion> _recentVersions = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        var userId = UserContext.CurrentUser.Id;
+
+        var myChangesTask = ChangeService.ListMyActiveChangesAsync(userId);
+        var awaitingReviewTask = ChangeService.ListAwaitingMyReviewAsync(userId);
+        var failedChecksTask = ChangeService.ListWithFailedChecksAsync();
+        var recentVersionsTask = VersionService.ListRecentAsync(5);
+
+        await Task.WhenAll(myChangesTask, awaitingReviewTask, failedChecksTask, recentVersionsTask);
+
+        _myChanges = myChangesTask.Result;
+        _awaitingReview = awaitingReviewTask.Result;
+        _failedChecks = failedChecksTask.Result;
+        _recentVersions = recentVersionsTask.Result;
+        _loading = false;
+    }
+}
