@@ -3,6 +3,7 @@ namespace Hunting.Tests;
 using Hunting.Data.Persistence;
 using Hunting.Data.SavedQueries;
 using Microsoft.Data.Sqlite;
+using AppSavedQueryRecord = Hunting.Application.SavedQueries.SavedQueryRecord;
 
 [TestClass]
 public sealed class SavedQueryRepositoryTests
@@ -32,7 +33,7 @@ public sealed class SavedQueryRepositoryTests
             var createdAt = new DateTime(2026, 6, 3, 8, 0, 0, DateTimeKind.Utc);
             var updatedAt = new DateTime(2026, 6, 3, 8, 5, 0, DateTimeKind.Utc);
 
-            await repository.SaveAsync(new SavedQueryRecord(
+            await repository.SaveAsync(new AppSavedQueryRecord(
                 "query-1",
                 "Recent PowerShell",
                 "Find recent PowerShell launches.",
@@ -70,7 +71,7 @@ public sealed class SavedQueryRepositoryTests
             var firstUpdatedAt = new DateTime(2026, 6, 3, 8, 5, 0, DateTimeKind.Utc);
             var secondUpdatedAt = new DateTime(2026, 6, 3, 8, 10, 0, DateTimeKind.Utc);
 
-            await repository.SaveAsync(new SavedQueryRecord(
+            await repository.SaveAsync(new AppSavedQueryRecord(
                 "query-1",
                 "Original",
                 null,
@@ -79,7 +80,7 @@ public sealed class SavedQueryRepositoryTests
                 firstUpdatedAt,
                 null), TestContext.CancellationToken);
 
-            await repository.SaveAsync(new SavedQueryRecord(
+            await repository.SaveAsync(new AppSavedQueryRecord(
                 "query-1",
                 "Updated",
                 "Updated description",
@@ -113,7 +114,7 @@ public sealed class SavedQueryRepositoryTests
             var updatedAt = new DateTime(2026, 6, 3, 8, 5, 0, DateTimeKind.Utc);
             var runAt = new DateTime(2026, 6, 3, 9, 0, 0, DateTimeKind.Utc);
 
-            await repository.SaveAsync(new SavedQueryRecord(
+            await repository.SaveAsync(new AppSavedQueryRecord(
                 "query-1",
                 "Query",
                 null,
@@ -144,7 +145,7 @@ public sealed class SavedQueryRepositoryTests
         {
             var now = new DateTime(2026, 6, 3, 8, 0, 0, DateTimeKind.Utc);
 
-            await repository.SaveAsync(new SavedQueryRecord(
+            await repository.SaveAsync(new AppSavedQueryRecord(
                 "query-1",
                 "Query",
                 null,

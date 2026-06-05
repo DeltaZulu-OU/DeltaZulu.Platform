@@ -1,9 +1,10 @@
 namespace Hunting.Tests;
 
+using Hunting.Application.QueryHistory;
+using Hunting.Application.SavedQueries;
+using Hunting.Application.Settings;
+using Hunting.Application.Visualizations;
 using Hunting.Data.Persistence;
-using Hunting.Data.QueryHistory;
-using Hunting.Data.SavedQueries;
-using Hunting.Data.Settings;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -29,6 +30,7 @@ public sealed class ApplicationPersistenceBootstrapTests
             var settingsRepository = provider.GetRequiredService<IUserSettingsRepository>();
             var savedQueryRepository = provider.GetRequiredService<ISavedQueryRepository>();
             var queryHistoryRepository = provider.GetRequiredService<IQueryHistoryRepository>();
+            var visualizationRepository = provider.GetRequiredService<IVisualizationRepository>();
 
             var settings = await settingsRepository.LoadAsync(TestContext.CancellationToken);
             Assert.AreEqual(UserSettingsDefaults.DefaultTimeFilterKey, settings.DefaultTimeFilter);
@@ -39,6 +41,9 @@ public sealed class ApplicationPersistenceBootstrapTests
 
             var history = await queryHistoryRepository.ListRecentAsync(cancellationToken: TestContext.CancellationToken);
             Assert.IsEmpty(history);
+
+            var visualizations = await visualizationRepository.ListAsync(TestContext.CancellationToken);
+            Assert.IsEmpty(visualizations);
         }
         finally
         {
@@ -65,6 +70,7 @@ public sealed class ApplicationPersistenceBootstrapTests
             var settingsRepository = provider.GetRequiredService<IUserSettingsRepository>();
             var savedQueryRepository = provider.GetRequiredService<ISavedQueryRepository>();
             var queryHistoryRepository = provider.GetRequiredService<IQueryHistoryRepository>();
+            var visualizationRepository = provider.GetRequiredService<IVisualizationRepository>();
 
             await settingsRepository.SaveAsync(new UserSettingsRecord("last24h", 500), TestContext.CancellationToken);
 
@@ -87,6 +93,16 @@ public sealed class ApplicationPersistenceBootstrapTests
                 15,
                 null), TestContext.CancellationToken);
 
+            await visualizationRepository.SaveAsync(new VisualizationRecord(
+                "visualization-1",
+                "saved-1",
+                "Saved chart",
+                "Shared visualization persistence test.",
+                "barchart",
+                "{\"xcolumn\":\"DeviceName\",\"ycolumns\":[\"LaunchCount\"]}",
+                now,
+                now), TestContext.CancellationToken);
+
             var secondServices = new ServiceCollection();
             secondServices.AddApplicationPersistence(BuildConnectionString(dbPath));
 
@@ -97,6 +113,7 @@ public sealed class ApplicationPersistenceBootstrapTests
             var loadedSettings = await secondProvider.GetRequiredService<IUserSettingsRepository>().LoadAsync(TestContext.CancellationToken);
             var loadedSavedQueries = await secondProvider.GetRequiredService<ISavedQueryRepository>().ListAsync(TestContext.CancellationToken);
             var loadedHistory = await secondProvider.GetRequiredService<IQueryHistoryRepository>().ListRecentAsync(cancellationToken: TestContext.CancellationToken);
+            var loadedVisualizations = await secondProvider.GetRequiredService<IVisualizationRepository>().ListAsync(TestContext.CancellationToken);
 
             Assert.AreEqual("last24h", loadedSettings.DefaultTimeFilter);
             Assert.AreEqual(500, loadedSettings.DefaultResultLimit);
@@ -104,6 +121,8 @@ public sealed class ApplicationPersistenceBootstrapTests
             Assert.AreEqual("saved-1", loadedSavedQueries[0].Id);
             Assert.HasCount(1, loadedHistory);
             Assert.AreEqual("history-1", loadedHistory[0].Id);
+            Assert.HasCount(1, loadedVisualizations);
+            Assert.AreEqual("visualization-1", loadedVisualizations[0].Id);
         }
         finally
         {

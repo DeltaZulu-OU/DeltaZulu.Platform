@@ -1,4 +1,4 @@
-namespace Hunting.Data.Settings;
+namespace Hunting.Application.Settings;
 
 public static class UserSettingsDefaults
 {

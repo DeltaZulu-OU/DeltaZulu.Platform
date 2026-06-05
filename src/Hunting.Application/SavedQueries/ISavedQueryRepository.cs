@@ -1,4 +1,4 @@
-namespace Hunting.Data.SavedQueries;
+namespace Hunting.Application.SavedQueries;
 
 public interface ISavedQueryRepository
 {

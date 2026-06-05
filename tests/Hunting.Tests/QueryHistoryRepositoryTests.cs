@@ -3,6 +3,7 @@ namespace Hunting.Tests;
 using Hunting.Data.Persistence;
 using Hunting.Data.QueryHistory;
 using Microsoft.Data.Sqlite;
+using AppQueryHistoryRecord = Hunting.Application.QueryHistory.QueryHistoryRecord;
 
 [TestClass]
 public sealed class QueryHistoryRepositoryTests
@@ -31,7 +32,7 @@ public sealed class QueryHistoryRepositoryTests
         {
             var executedAt = new DateTime(2026, 6, 3, 10, 0, 0, DateTimeKind.Utc);
 
-            await repository.AddAsync(new QueryHistoryRecord(
+            await repository.AddAsync(new AppQueryHistoryRecord(
                 "history-1",
                 "ProcessEvent | take 10",
                 executedAt,
@@ -66,7 +67,7 @@ public sealed class QueryHistoryRepositoryTests
         var repository = CreateRepository(out var dbPath);
         try
         {
-            await repository.AddAsync(new QueryHistoryRecord(
+            await repository.AddAsync(new AppQueryHistoryRecord(
                 "old",
                 "ProcessEvent | take 1",
                 new DateTime(2026, 6, 3, 8, 0, 0, DateTimeKind.Utc),
@@ -75,7 +76,7 @@ public sealed class QueryHistoryRepositoryTests
                 10,
                 null), TestContext.CancellationToken);
 
-            await repository.AddAsync(new QueryHistoryRecord(
+            await repository.AddAsync(new AppQueryHistoryRecord(
                 "new",
                 "ProcessEvent | take 2",
                 new DateTime(2026, 6, 3, 9, 0, 0, DateTimeKind.Utc),
@@ -101,7 +102,7 @@ public sealed class QueryHistoryRepositoryTests
         var repository = CreateRepository(out var dbPath);
         try
         {
-            await repository.AddAsync(new QueryHistoryRecord(
+            await repository.AddAsync(new AppQueryHistoryRecord(
                 "failed",
                 "BadQuery",
                 new DateTime(2026, 6, 3, 10, 0, 0, DateTimeKind.Utc),
@@ -129,7 +130,7 @@ public sealed class QueryHistoryRepositoryTests
         var repository = CreateRepository(out var dbPath);
         try
         {
-            await repository.AddAsync(new QueryHistoryRecord(
+            await repository.AddAsync(new AppQueryHistoryRecord(
                 "history-1",
                 "ProcessEvent | take 10",
                 new DateTime(2026, 6, 3, 10, 0, 0, DateTimeKind.Utc),

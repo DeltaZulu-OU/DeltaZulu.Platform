@@ -1,9 +1,9 @@
 namespace Hunting.Tests.Web;
 
+using Hunting.Application.QueryHistory;
 using Hunting.Core.Catalog;
 using Hunting.Core.DuckDbSql;
 using Hunting.Data;
-using Hunting.Data.QueryHistory;
 using Hunting.Schema;
 using Hunting.Tests.Fixtures;
 using Hunting.Web.Services;

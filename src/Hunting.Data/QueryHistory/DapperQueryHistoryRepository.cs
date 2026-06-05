@@ -2,8 +2,10 @@ namespace Hunting.Data.QueryHistory;
 
 using Dapper;
 using Hunting.Data.Persistence;
+using AppIQueryHistoryRepository = Hunting.Application.QueryHistory.IQueryHistoryRepository;
+using AppQueryHistoryRecord = Hunting.Application.QueryHistory.QueryHistoryRecord;
 
-public sealed class DapperQueryHistoryRepository : IQueryHistoryRepository
+public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository
 {
     private const string CreateSchemaSql =
         """
@@ -98,7 +100,7 @@ public sealed class DapperQueryHistoryRepository : IQueryHistoryRepository
         }
     }
 
-    public async Task<IReadOnlyList<QueryHistoryRecord>> ListRecentAsync(
+    public async Task<IReadOnlyList<AppQueryHistoryRecord>> ListRecentAsync(
         int limit = 50,
         CancellationToken cancellationToken = default)
     {
@@ -118,7 +120,7 @@ public sealed class DapperQueryHistoryRepository : IQueryHistoryRepository
         return rows.Select(ToRecord).ToArray();
     }
 
-    public async Task AddAsync(QueryHistoryRecord record, CancellationToken cancellationToken = default)
+    public async Task AddAsync(AppQueryHistoryRecord record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentException.ThrowIfNullOrWhiteSpace(record.Id);
@@ -154,9 +156,9 @@ public sealed class DapperQueryHistoryRepository : IQueryHistoryRepository
         await connection.ExecuteAsync(new CommandDefinition(ClearSql, cancellationToken: cancellationToken));
     }
 
-    private static QueryHistoryRecord ToRecord(QueryHistoryRow row)
+    private static AppQueryHistoryRecord ToRecord(QueryHistoryRow row)
     {
-        return new QueryHistoryRecord(
+        return new AppQueryHistoryRecord(
             row.Id,
             row.QueryText,
             ParseDateTime(row.ExecutedAt),

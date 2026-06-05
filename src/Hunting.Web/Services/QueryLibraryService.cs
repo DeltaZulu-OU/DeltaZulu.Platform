@@ -1,7 +1,7 @@
 namespace Hunting.Web.Services;
 
-using Hunting.Data.QueryHistory;
-using Hunting.Data.SavedQueries;
+using Hunting.Application.QueryHistory;
+using Hunting.Application.SavedQueries;
 
 /// <summary>
 /// Application-facing service for saved queries and recent query history.

@@ -1,9 +1,14 @@
 namespace Hunting.Data.Persistence;
 
+using Hunting.Application.QueryHistory;
+using Hunting.Application.SavedQueries;
+using Hunting.Application.Visualizations;
 using Hunting.Data.QueryHistory;
 using Hunting.Data.SavedQueries;
 using Hunting.Data.Settings;
+using Hunting.Data.Visualizations;
 using Microsoft.Extensions.DependencyInjection;
+using IUserSettingsRepository = Application.Settings.IUserSettingsRepository;
 
 public static class ApplicationPersistenceServiceCollectionExtensions
 {
@@ -19,6 +24,7 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         services.AddSingleton<IUserSettingsRepository, DapperUserSettingsRepository>();
         services.AddSingleton<ISavedQueryRepository, DapperSavedQueryRepository>();
         services.AddSingleton<IQueryHistoryRepository, DapperQueryHistoryRepository>();
+        services.AddSingleton<IVisualizationRepository, DapperVisualizationRepository>();
 
         return services;
     }
@@ -37,5 +43,8 @@ public static class ApplicationPersistenceServiceCollectionExtensions
 
         var queryHistory = services.GetRequiredService<IQueryHistoryRepository>();
         await queryHistory.EnsureInitializedAsync(cancellationToken);
+
+        var visualizations = services.GetRequiredService<IVisualizationRepository>();
+        await visualizations.EnsureInitializedAsync(cancellationToken);
     }
 }

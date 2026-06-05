@@ -1,9 +1,9 @@
 namespace Hunting.Web.Services;
 
 using DuckDB.NET.Data;
+using Hunting.Application.QueryHistory;
 using Hunting.Core.Policy;
 using Hunting.Data;
-using Hunting.Data.QueryHistory;
 using Hunting.Web.Rendering;
 
 /// <summary>

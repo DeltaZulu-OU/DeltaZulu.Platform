@@ -1,5 +1,6 @@
 namespace Hunting.Tests;
 
+using Hunting.Application.Settings;
 using Hunting.Data.Persistence;
 using Hunting.Data.Settings;
 using Microsoft.Data.Sqlite;

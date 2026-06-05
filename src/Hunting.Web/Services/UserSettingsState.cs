@@ -1,6 +1,6 @@
 namespace Hunting.Web.Services;
 
-using Hunting.Data.Settings;
+using Hunting.Application.Settings;
 
 public sealed class UserSettingsState
 {

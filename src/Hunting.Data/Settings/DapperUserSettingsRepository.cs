@@ -2,8 +2,11 @@ namespace Hunting.Data.Settings;
 
 using Dapper;
 using Hunting.Data.Persistence;
+using AppIUserSettingsRepository = Hunting.Application.Settings.IUserSettingsRepository;
+using AppUserSettingsDefaults = Hunting.Application.Settings.UserSettingsDefaults;
+using AppUserSettingsRecord = Hunting.Application.Settings.UserSettingsRecord;
 
-public sealed class DapperUserSettingsRepository : IUserSettingsRepository
+public sealed class DapperUserSettingsRepository : AppIUserSettingsRepository
 {
     private const string CreateSchemaSql =
         """
@@ -70,7 +73,7 @@ public sealed class DapperUserSettingsRepository : IUserSettingsRepository
         }
     }
 
-    public async Task<UserSettingsRecord> LoadAsync(CancellationToken cancellationToken = default)
+    public async Task<AppUserSettingsRecord> LoadAsync(CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
 
@@ -82,15 +85,15 @@ public sealed class DapperUserSettingsRepository : IUserSettingsRepository
 
         if (row is null)
         {
-            return new UserSettingsRecord(UserSettingsDefaults.DefaultTimeFilterKey, null);
+            return new AppUserSettingsRecord(AppUserSettingsDefaults.DefaultTimeFilterKey, null);
         }
 
-        return new UserSettingsRecord(
+        return new AppUserSettingsRecord(
             row.DefaultTimeFilter,
             ConvertResultLimit(row.DefaultResultLimit));
     }
 
-    public async Task SaveAsync(UserSettingsRecord settings, CancellationToken cancellationToken = default)
+    public async Task SaveAsync(AppUserSettingsRecord settings, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(settings);
 
@@ -123,7 +126,7 @@ public sealed class DapperUserSettingsRepository : IUserSettingsRepository
 
     private sealed class UserSettingsRow
     {
-        public string DefaultTimeFilter { get; init; } = UserSettingsDefaults.DefaultTimeFilterKey;
+        public string DefaultTimeFilter { get; init; } = AppUserSettingsDefaults.DefaultTimeFilterKey;
         public long? DefaultResultLimit { get; init; }
     }
 }

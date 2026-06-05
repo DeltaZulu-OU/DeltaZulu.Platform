@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Hunting.Application\Hunting.Application.csproj" />
     <ProjectReference Include="..\Hunting.Core\Hunting.Core.csproj" />
     <ProjectReference Include="..\Hunting.Data\Hunting.Data.csproj" />
     <ProjectReference Include="..\Hunting.Render\Hunting.Render.csproj" />

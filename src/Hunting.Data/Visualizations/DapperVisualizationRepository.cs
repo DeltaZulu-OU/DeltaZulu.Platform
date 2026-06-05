@@ -1,36 +1,60 @@
-namespace Hunting.Data.SavedQueries;
+namespace Hunting.Data.Visualizations;
 
 using Dapper;
 using Hunting.Data.Persistence;
-using AppISavedQueryRepository = Hunting.Application.SavedQueries.ISavedQueryRepository;
-using AppSavedQueryRecord = Hunting.Application.SavedQueries.SavedQueryRecord;
+using AppIVisualizationRepository = Hunting.Application.Visualizations.IVisualizationRepository;
+using AppVisualizationRecord = Hunting.Application.Visualizations.VisualizationRecord;
 
-public sealed class DapperSavedQueryRepository : AppISavedQueryRepository
+public sealed class DapperVisualizationRepository : AppIVisualizationRepository
 {
     private const string CreateSchemaSql =
         """
-        CREATE TABLE IF NOT EXISTS saved_queries (
+        CREATE TABLE IF NOT EXISTS visualizations (
             id TEXT PRIMARY KEY,
+            query_id TEXT NOT NULL,
             name TEXT NOT NULL,
             description TEXT NULL,
-            query_text TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            spec_json TEXT NOT NULL,
             created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            last_run_at TEXT NULL
+            updated_at TEXT NOT NULL
         );
+
+        CREATE INDEX IF NOT EXISTS idx_visualizations_query_id
+            ON visualizations (query_id);
+
+        CREATE INDEX IF NOT EXISTS idx_visualizations_updated_at
+            ON visualizations (updated_at DESC, name ASC);
         """;
 
     private const string ListSql =
         """
         SELECT
             id AS Id,
+            query_id AS QueryId,
             name AS Name,
             description AS Description,
-            query_text AS QueryText,
+            kind AS Kind,
+            spec_json AS SpecJson,
             created_at AS CreatedAt,
-            updated_at AS UpdatedAt,
-            last_run_at AS LastRunAt
-        FROM saved_queries
+            updated_at AS UpdatedAt
+        FROM visualizations
+        ORDER BY updated_at DESC, name ASC;
+        """;
+
+    private const string ListByQuerySql =
+        """
+        SELECT
+            id AS Id,
+            query_id AS QueryId,
+            name AS Name,
+            description AS Description,
+            kind AS Kind,
+            spec_json AS SpecJson,
+            created_at AS CreatedAt,
+            updated_at AS UpdatedAt
+        FROM visualizations
+        WHERE query_id = @QueryId
         ORDER BY updated_at DESC, name ASC;
         """;
 
@@ -38,55 +62,51 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository
         """
         SELECT
             id AS Id,
+            query_id AS QueryId,
             name AS Name,
             description AS Description,
-            query_text AS QueryText,
+            kind AS Kind,
+            spec_json AS SpecJson,
             created_at AS CreatedAt,
-            updated_at AS UpdatedAt,
-            last_run_at AS LastRunAt
-        FROM saved_queries
+            updated_at AS UpdatedAt
+        FROM visualizations
         WHERE id = @Id;
         """;
 
     private const string UpsertSql =
         """
-        INSERT INTO saved_queries (
+        INSERT INTO visualizations (
             id,
+            query_id,
             name,
             description,
-            query_text,
+            kind,
+            spec_json,
             created_at,
-            updated_at,
-            last_run_at
+            updated_at
         )
         VALUES (
             @Id,
+            @QueryId,
             @Name,
             @Description,
-            @QueryText,
+            @Kind,
+            @SpecJson,
             @CreatedAt,
-            @UpdatedAt,
-            @LastRunAt
+            @UpdatedAt
         )
         ON CONFLICT(id) DO UPDATE SET
+            query_id = excluded.query_id,
             name = excluded.name,
             description = excluded.description,
-            query_text = excluded.query_text,
-            updated_at = excluded.updated_at,
-            last_run_at = excluded.last_run_at;
+            kind = excluded.kind,
+            spec_json = excluded.spec_json,
+            updated_at = excluded.updated_at;
         """;
 
     private const string DeleteSql =
         """
-        DELETE FROM saved_queries
-        WHERE id = @Id;
-        """;
-
-    private const string MarkRunSql =
-        """
-        UPDATE saved_queries
-        SET last_run_at = @RunAt,
-            updated_at = @RunAt
+        DELETE FROM visualizations
         WHERE id = @Id;
         """;
 
@@ -94,7 +114,7 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository
     private readonly SemaphoreSlim _schemaSemaphore = new(1, 1);
     private bool _initialized;
 
-    public DapperSavedQueryRepository(IAppDbConnectionFactory connectionFactory)
+    public DapperVisualizationRepository(IAppDbConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory;
     }
@@ -125,40 +145,57 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository
         }
     }
 
-    public async Task<IReadOnlyList<AppSavedQueryRecord>> ListAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<AppVisualizationRecord>> ListAsync(CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
 
-        var rows = await connection.QueryAsync<SavedQueryRow>(
+        var rows = await connection.QueryAsync<VisualizationRow>(
             new CommandDefinition(ListSql, cancellationToken: cancellationToken));
 
         return rows.Select(ToRecord).ToArray();
     }
 
-    public async Task<AppSavedQueryRecord?> GetAsync(string id, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<AppVisualizationRecord>> ListByQueryAsync(
+        string queryId,
+        CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
-
+        ArgumentException.ThrowIfNullOrWhiteSpace(queryId);
         await EnsureInitializedAsync(cancellationToken);
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
 
-        var row = await connection.QuerySingleOrDefaultAsync<SavedQueryRow>(
+        var rows = await connection.QueryAsync<VisualizationRow>(
+            new CommandDefinition(ListByQuerySql, new { QueryId = queryId }, cancellationToken: cancellationToken));
+
+        return rows.Select(ToRecord).ToArray();
+    }
+
+    public async Task<AppVisualizationRecord?> GetAsync(string id, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        await EnsureInitializedAsync(cancellationToken);
+
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        var row = await connection.QuerySingleOrDefaultAsync<VisualizationRow>(
             new CommandDefinition(GetSql, new { Id = id }, cancellationToken: cancellationToken));
 
         return row is null ? null : ToRecord(row);
     }
 
-    public async Task SaveAsync(AppSavedQueryRecord query, CancellationToken cancellationToken = default)
+    public async Task SaveAsync(AppVisualizationRecord visualization, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentException.ThrowIfNullOrWhiteSpace(query.Id);
-        ArgumentException.ThrowIfNullOrWhiteSpace(query.Name);
-        ArgumentException.ThrowIfNullOrWhiteSpace(query.QueryText);
+        ArgumentNullException.ThrowIfNull(visualization);
+        ArgumentException.ThrowIfNullOrWhiteSpace(visualization.Id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(visualization.QueryId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(visualization.Name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(visualization.Kind);
+        ArgumentException.ThrowIfNullOrWhiteSpace(visualization.SpecJson);
 
         await EnsureInitializedAsync(cancellationToken);
 
@@ -169,13 +206,14 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository
             UpsertSql,
             new
             {
-                query.Id,
-                query.Name,
-                query.Description,
-                query.QueryText,
-                CreatedAt = FormatDateTime(query.CreatedAt),
-                UpdatedAt = FormatDateTime(query.UpdatedAt),
-                LastRunAt = FormatNullableDateTime(query.LastRunAt)
+                visualization.Id,
+                visualization.QueryId,
+                visualization.Name,
+                visualization.Description,
+                visualization.Kind,
+                visualization.SpecJson,
+                CreatedAt = FormatDateTime(visualization.CreatedAt),
+                UpdatedAt = FormatDateTime(visualization.UpdatedAt)
             },
             cancellationToken: cancellationToken));
     }
@@ -183,7 +221,6 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository
     public async Task DeleteAsync(string id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
-
         await EnsureInitializedAsync(cancellationToken);
 
         await using var connection = _connectionFactory.CreateConnection();
@@ -195,31 +232,17 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository
             cancellationToken: cancellationToken));
     }
 
-    public async Task MarkRunAsync(string id, DateTime runAt, CancellationToken cancellationToken = default)
+    private static AppVisualizationRecord ToRecord(VisualizationRow row)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
-
-        await EnsureInitializedAsync(cancellationToken);
-
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
-
-        await connection.ExecuteAsync(new CommandDefinition(
-            MarkRunSql,
-            new { Id = id, RunAt = FormatDateTime(runAt) },
-            cancellationToken: cancellationToken));
-    }
-
-    private static AppSavedQueryRecord ToRecord(SavedQueryRow row)
-    {
-        return new AppSavedQueryRecord(
+        return new AppVisualizationRecord(
             row.Id,
+            row.QueryId,
             row.Name,
             row.Description,
-            row.QueryText,
+            row.Kind,
+            row.SpecJson,
             ParseDateTime(row.CreatedAt),
-            ParseDateTime(row.UpdatedAt),
-            ParseNullableDateTime(row.LastRunAt));
+            ParseDateTime(row.UpdatedAt));
     }
 
     private static string FormatDateTime(DateTime value)
@@ -227,19 +250,9 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository
         return NormalizeUtc(value).ToString("O");
     }
 
-    private static string? FormatNullableDateTime(DateTime? value)
-    {
-        return value is null ? null : FormatDateTime(value.Value);
-    }
-
     private static DateTime ParseDateTime(string value)
     {
         return DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-    }
-
-    private static DateTime? ParseNullableDateTime(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? null : ParseDateTime(value);
     }
 
     private static DateTime NormalizeUtc(DateTime value)
@@ -252,14 +265,15 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository
         };
     }
 
-    private sealed class SavedQueryRow
+    private sealed class VisualizationRow
     {
         public string Id { get; init; } = string.Empty;
+        public string QueryId { get; init; } = string.Empty;
         public string Name { get; init; } = string.Empty;
         public string? Description { get; init; }
-        public string QueryText { get; init; } = string.Empty;
+        public string Kind { get; init; } = string.Empty;
+        public string SpecJson { get; init; } = string.Empty;
         public string CreatedAt { get; init; } = string.Empty;
         public string UpdatedAt { get; init; } = string.Empty;
-        public string? LastRunAt { get; init; }
     }
 }

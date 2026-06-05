@@ -143,8 +143,8 @@
     private string _saveName = "";
     private string? _saveDescription;
     private string? _message;
-    private IReadOnlyList<Hunting.Data.SavedQueries.SavedQueryRecord> _savedQueries = [];
-    private IReadOnlyList<Hunting.Data.QueryHistory.QueryHistoryRecord> _recentHistory = [];
+    private IReadOnlyList<Hunting.Application.SavedQueries.SavedQueryRecord> _savedQueries = [];
+    private IReadOnlyList<Hunting.Application.QueryHistory.QueryHistoryRecord> _recentHistory = [];
 
     [Parameter]
     public string CurrentQueryText { get; set; } = string.Empty;

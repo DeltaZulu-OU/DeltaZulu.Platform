@@ -1,4 +1,4 @@
-namespace Hunting.Data.QueryHistory;
+namespace Hunting.Application.QueryHistory;
 
 public sealed record QueryHistoryRecord(
     string Id,
