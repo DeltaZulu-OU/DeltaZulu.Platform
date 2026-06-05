@@ -148,18 +148,56 @@ public sealed class VersionService(
         }
 
         var lines = CreateDiffLines(beforeLines, afterLines);
+        return CreateDiffHunks(lines);
+    }
+
+    private static IReadOnlyList<VersionDiffHunk> CreateDiffHunks(IReadOnlyList<VersionDiffLine> lines)
+    {
+        const int contextLineCount = 3;
+
+        var changedIndexes = lines
+            .Select((line, index) => new { line, index })
+            .Where(item => item.line.Type is not VersionDiffLineType.Context)
+            .Select(item => item.index)
+            .ToArray();
+
+        if (changedIndexes.Length == 0)
+        {
+            return [];
+        }
+
+        var ranges = new List<(int Start, int End)>();
+        foreach (var changedIndex in changedIndexes)
+        {
+            var start = Math.Max(0, changedIndex - contextLineCount);
+            var end = Math.Min(lines.Count - 1, changedIndex + contextLineCount);
+
+            if (ranges.Count > 0 && start <= ranges[^1].End + 1)
+            {
+                ranges[^1] = (ranges[^1].Start, Math.Max(ranges[^1].End, end));
+            }
+            else
+            {
+                ranges.Add((start, end));
+            }
+        }
+
+        return ranges
+            .Select(range => CreateHunk(lines.Skip(range.Start).Take(range.End - range.Start + 1).ToArray()))
+            .ToArray();
+    }
+
+    private static VersionDiffHunk CreateHunk(IReadOnlyList<VersionDiffLine> lines)
+    {
         var beforeLineCount = lines.Count(line => line.BeforeLineNumber is not null);
         var afterLineCount = lines.Count(line => line.AfterLineNumber is not null);
 
-        return
-        [
-            new VersionDiffHunk(
-                lines.FirstOrDefault(line => line.BeforeLineNumber is not null)?.BeforeLineNumber ?? 1,
-                beforeLineCount,
-                lines.FirstOrDefault(line => line.AfterLineNumber is not null)?.AfterLineNumber ?? 1,
-                afterLineCount,
-                lines),
-        ];
+        return new VersionDiffHunk(
+            lines.FirstOrDefault(line => line.BeforeLineNumber is not null)?.BeforeLineNumber ?? 1,
+            beforeLineCount,
+            lines.FirstOrDefault(line => line.AfterLineNumber is not null)?.AfterLineNumber ?? 1,
+            afterLineCount,
+            lines);
     }
 
     private static string[] SplitLines(string? content)

@@ -161,6 +161,56 @@ public sealed class VersionServiceTests : IDisposable
         Assert.AreEqual(VersionDiffLineType.Added, added.Hunks.Single().Lines.Single().Type);
     }
 
+    [TestMethod]
+    public async Task CompareWithPrevious_DistantTextChanges_CreatesSeparateContextHunks()
+    {
+        var detectionId = await ConceiveDetectionAsync("compare-inline-distant");
+        var before = string.Join("\n", Enumerable.Range(1, 12).Select(index => $"row{index:00}"));
+        var after = string.Join("\n", Enumerable.Range(1, 12).Select(index => index switch
+        {
+            2 => "changed-row02",
+            11 => "changed-row11",
+            _ => $"row{index:00}",
+        }));
+
+        await MergeQuickLabAsync(
+            detectionId,
+            "CHG-C5A",
+            "Initial accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, before),
+            });
+        var version2 = await MergeQuickLabAsync(
+            detectionId,
+            "CHG-C5B",
+            "Second accepted content",
+            new[]
+            {
+                ("rule.kql", DraftContentType.HuntingQuery, after),
+            });
+
+        using var scope = _host.CreateScope();
+        var versionSvc = _host.Resolve<VersionService>(scope);
+        var comparison = await versionSvc.CompareWithPreviousAsync(version2.Id, TestContext.CancellationToken);
+
+        var file = comparison.Files.Single(file => file.LogicalPath == "rule.kql");
+        Assert.AreEqual(VersionFileDiffStatus.Modified, file.Status);
+        Assert.HasCount(2, file.Hunks);
+
+        var firstHunk = file.Hunks[0];
+        Assert.AreEqual(1, firstHunk.BeforeStartLine);
+        Assert.AreEqual(1, firstHunk.AfterStartLine);
+        Assert.IsTrue(firstHunk.Lines.Any(line => line.Text == "changed-row02"));
+        Assert.IsFalse(firstHunk.Lines.Any(line => line.Text == "row06"));
+
+        var secondHunk = file.Hunks[1];
+        Assert.AreEqual(8, secondHunk.BeforeStartLine);
+        Assert.AreEqual(8, secondHunk.AfterStartLine);
+        Assert.IsTrue(secondHunk.Lines.Any(line => line.Text == "changed-row11"));
+        Assert.IsFalse(secondHunk.Lines.Any(line => line.Text == "row06"));
+    }
+
     private async Task<DetectionId> ConceiveDetectionAsync(string slug)
     {
         using var scope = _host.CreateScope();
