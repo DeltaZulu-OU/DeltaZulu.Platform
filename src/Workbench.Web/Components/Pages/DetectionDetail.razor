@@ -11,6 +11,7 @@
 @inject IAcceptedContentStore ContentStore
 @inject IDialogService DialogService
 @inject NavigationManager Nav
+@inject PocUserContext UserContext
 
 <PageTitle>Detection — @(_detection?.Title ?? "Loading")</PageTitle>
 
@@ -172,7 +173,7 @@ else
         var parameters = new DialogParameters<OpenChangeDialog>
         {
             { x => x.DetectionId, _detection.Id },
-            { x => x.AuthorId, UserId.New() }, // POC: no auth, generate a user ID per session
+            { x => x.AuthorId, UserContext.CurrentUser.Id },
         };
         var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
         var dialog = await DialogService.ShowAsync<OpenChangeDialog>("Open Change", parameters, options);

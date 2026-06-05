@@ -4,6 +4,7 @@ using Workbench.Infrastructure;
 using Workbench.Persistence;
 using Workbench.Validation;
 using Workbench.Web.Components;
+using Workbench.Web.Services;
 using Workbench.Workflow;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +14,7 @@ builder.Services
     .AddInteractiveServerComponents();
 
 builder.Services.AddMudServices();
+builder.Services.AddScoped<PocUserContext>();
 builder.Services.AddSingleton(TimeProvider.System);
 
 var connectionString = builder.Configuration.GetConnectionString("Workbench")

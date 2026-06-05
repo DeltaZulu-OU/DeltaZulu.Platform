@@ -22,7 +22,7 @@ ADRs remain binding constraints. Later ADRs supersede earlier roadmap or archite
 | Modular monolith shape | Implemented | Solution has Web, Application, Domain, Persistence, Infrastructure, Workflow, Validation, and Tests projects. |
 | Database-owned changes/drafts/checks/reviews | Implemented for the core POC flow | `ChangeRequest`, draft files, check runs, reviews, repositories, and SQLite schema exist. |
 | Domain workflow profiles | Implemented for `quick_lab` and `controlled_review` | Domain profile catalog encodes quick-lab and controlled-review gate policy. |
-| Controlled-review domain gates | Mostly implemented | Required checks, non-author approval, self-approval block, stale flag block, and approval reset on content edit exist in the domain aggregate. |
+| Controlled-review domain gates | Mostly implemented | Required checks, non-author approval, self-approval block, stale flag block, approval reset on content edit, and a POC user switcher for UI demonstration exist. |
 | Check pipeline | Partially implemented | Package schema, query placeholder, fixture parse, test-definition YAML parse plus minimal static query assertions, and note-frontmatter checks are registered. |
 | Version projection | Partially implemented | Merge creates a `DetectionVersion` row linked to the change, author, workflow profile, checks summary, review summary, and commit SHA. |
 | Workflow abstraction and Elsa toggle | Implemented for POC needs | The host chooses Elsa or the domain-driven orchestrator behind `IWorkflowOrchestrator`. |
@@ -39,7 +39,7 @@ ADRs remain binding constraints. Later ADRs supersede earlier roadmap or archite
 | P1 | File-level diff service is basic. | ROADMAP Phase 4 and version actions require compare/diff support; the current service reports file status and content snapshots, but not inline hunks. | Add domain-friendly inline diff hunks over accepted version content. |
 | P2 | Unit test/assertion check is intentionally minimal. | The check can now execute simple static query assertions from test-definition YAML, but it still does not run fixtures through a detection runtime. | Add fixture-backed assertion execution or document the static assertion limit for the POC. |
 | P2 | Check regression coverage should expand with each new check behavior. | Query, test-definition, and note checks have focused coverage for current behavior; future assertion and parser behaviors need the same coverage. | Add focused tests whenever checks gain new pass/fail/skip semantics. |
-| P2 | Controlled-review self-approval cannot be demonstrated through the UI. | The domain rule is tested, but no auth/current-user model lets a user experience the blocked action. | Add a POC current-user provider/user switcher or auth stub. |
+| P2 | Authentication remains a POC stub. | The current user switcher lets demos exercise author and reviewer paths, but it is not a durable identity or authorization model. | Replace the POC switcher with authentication/current-user integration when identity becomes scope. |
 | P1 | Merge writes to the content store before DB projection/state transaction. | A crash after content commit but before DB update can leave accepted content without a version projection, which matters more now that accepted content is durable Git state. | Add merge intent/outbox or reconciliation from Git commits to DB projections. |
 | P2 | Persistence schema is narrower than architecture’s eventual database-owned list. | Users/comments/workflow projections/activity events/locks are either missing or intentionally deferred. | Clarify POC schema vs future schema and add tables as slices require them. |
 | P3 | Documentation was inconsistent about internal case management. | ROADMAP/ARCHITECTURE/AGENTS text still referenced `CaseDetails`, tasks, observables, and case outcomes even though ADR-0014 removed built-in case management. | Documentation now treats cases as issue types with optional external case references. |
@@ -60,7 +60,7 @@ The POC is complete when this statement is true:
 | Checks | Partial | Required-check policy exists and test definitions can run minimal static query assertions; fixture-backed assertion execution remains future work. |
 | Git content store | Implemented for local POC durability | Web host registers a LibGit2Sharp-backed accepted content store with a configurable local repository path; remote synchronization remains out of scope. |
 | Version history | Partial | Compare and restore-as-new-change are available; add richer inline diffs plus reconciliation/repair coverage. |
-| UI | Partial | Nav routes and basic version/check/review/settings views exist; deepen workflow actions and end-to-end UX coverage. |
+| UI | Partial | Nav routes, basic version/check/review/settings views, and a POC user switcher exist; deepen workflow actions and end-to-end UX coverage. |
 | Cases | Aligned after docs refresh | Keep cases as `IssueType.Case` with optional `ExternalCaseRef`; no internal case-management scope in POC. |
 | Workflow engine | Good for POC | Keep domain state canonical; Elsa remains optional/toggled. |
 

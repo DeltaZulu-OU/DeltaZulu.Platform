@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @using Microsoft.Extensions.Configuration
 @inject IConfiguration Configuration
+@inject PocUserContext UserContext
 
 <PageTitle>Settings</PageTitle>
 
@@ -11,6 +12,21 @@
 </MudText>
 
 <MudGrid Spacing="3">
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+            <span class="eyebrow">POC user</span>
+            <MudText Typo="Typo.h6" Class="mt-2 mb-2">Current actor</MudText>
+            <MudSelect Value="UserContext.CurrentPersona" ValueChanged="SwitchUser" Label="Acting as" T="PocUserPersona" Class="mb-2">
+                @foreach (var user in UserContext.AvailableUsers)
+                {
+                    <MudSelectItem Value="user.Persona">@user.DisplayName</MudSelectItem>
+                }
+            </MudSelect>
+            <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary); word-break: break-word;">
+                User ID: @UserContext.CurrentUser.Id
+            </MudText>
+        </MudPaper>
+    </MudItem>
     <MudItem xs="12" md="6">
         <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
             <span class="eyebrow">Workflow</span>
@@ -39,6 +55,11 @@
 @code {
     private bool _useElsa;
     private string _repositoryPath = "accepted-content";
+
+    private void SwitchUser(PocUserPersona persona)
+    {
+        UserContext.SwitchTo(persona);
+    }
 
     protected override void OnInitialized()
     {

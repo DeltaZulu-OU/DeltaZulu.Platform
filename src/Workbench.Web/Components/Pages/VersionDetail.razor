@@ -8,6 +8,7 @@
 @inject RestoreService RestoreService
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
+@inject PocUserContext UserContext
 
 <PageTitle>Version — @(_comparison?.AfterVersion.DisplayVersion ?? "Loading")</PageTitle>
 
@@ -152,7 +153,6 @@ else
     private List<BreadcrumbItem> _breadcrumbs = [];
     private bool _loading = true;
     private bool _restoring;
-    private readonly UserId _pocUserId = UserId.New();
 
     protected override async Task OnParametersSetAsync()
     {
@@ -189,7 +189,7 @@ else
         {
             var change = await RestoreService.RestoreVersionAsChangeAsync(
                 _comparison.AfterVersion.Id,
-                _pocUserId,
+                UserContext.CurrentUser.Id,
                 WorkflowProfileId.QuickLab);
             Snackbar.Add($"Opened {change.Key} from {_comparison.AfterVersion.DisplayVersion}.", Severity.Success);
             Nav.NavigateTo($"/changes/{change.Id}");

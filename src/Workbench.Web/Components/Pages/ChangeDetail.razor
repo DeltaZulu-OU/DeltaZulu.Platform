@@ -13,6 +13,7 @@
 @inject MergeService MergeService
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@inject PocUserContext UserContext
 
 <PageTitle>Change — @(_change?.Key ?? "Loading")</PageTitle>
 
@@ -31,11 +32,14 @@
         <MudText Typo="Typo.h5" Class="mt-1" Style="font-weight: 700;">
             <code style="font-size: 0.85em;">@_change.Key</code> @_change.Title
         </MudText>
-        <div class="d-flex gap-2 mt-2 align-center">
+        <div class="d-flex gap-2 mt-2 align-center flex-wrap">
             <StatusChip ChangeStatus="_change.Status" />
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
                      Style="color: var(--brand-slate); border-color: rgba(39,86,104,0.25);">
                 @_change.WorkflowProfileId
+            </MudChip>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">
+                Acting as @UserContext.CurrentUser.DisplayName
             </MudChip>
             @if (_change.IsStale)
             {
@@ -208,6 +212,15 @@
             {
                 <MudPaper Class="pa-3 mb-3" Elevation="0" Outlined="true">
                     <MudText Typo="Typo.subtitle2" Class="mb-2">Record review</MudText>
+                    <MudAlert Severity="@(IsCurrentUserAuthor ? Severity.Warning : Severity.Info)" Dense="true" Class="mb-3">
+                        Acting as @UserContext.CurrentUser.DisplayName. Controlled review blocks approval by the change author; switch users here to demonstrate both paths.
+                    </MudAlert>
+                    <MudSelect Value="UserContext.CurrentPersona" ValueChanged="SwitchUser" Label="POC user" T="PocUserPersona" Class="mb-3">
+                        @foreach (var user in UserContext.AvailableUsers)
+                        {
+                            <MudSelectItem Value="user.Persona">@user.DisplayName</MudSelectItem>
+                        }
+                    </MudSelect>
                     <MudGrid Spacing="2">
                         <MudItem xs="12" md="4">
                             <MudSelect @bind-Value="_reviewDecision" Label="Decision" T="ReviewDecision">
@@ -283,14 +296,8 @@
     private ReviewDecision _reviewDecision = ReviewDecision.Approved;
     private string _reviewComment = "";
 
-    // POC limitation (P3-1): No authentication. The reviewer ID is a fixed non-author value
-    // generated once per server lifetime. The self-approval block invariant cannot be
-    // demonstrated through the UI because the reviewer is always different from the author
-    // (which is also a generated ID per change-open). The domain invariant is tested in
-    // ChangeRequestTests and ChangeServiceTests.
-    private static readonly UserId ReviewerUserId = UserId.New();
-
     private bool IsTerminal => _change?.Status is ChangeStatus.Merged or ChangeStatus.Closed;
+    private bool IsCurrentUserAuthor => _change?.AuthorId == UserContext.CurrentUser.Id;
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 
@@ -319,7 +326,7 @@
         try
         {
             await ChangeService.UpsertDraftFileAsync(
-                _change.Id, _newPath.Trim(), _newContentType, _newContent, _change.AuthorId);
+                _change.Id, _newPath.Trim(), _newContentType, _newContent, UserContext.CurrentUser.Id);
             _showAddFile = false;
             _newPath = "";
             _newContent = "";
@@ -346,13 +353,18 @@
         finally { _running = false; }
     }
 
+    private void SwitchUser(PocUserPersona persona)
+    {
+        UserContext.SwitchTo(persona);
+    }
+
     private async Task RecordReview()
     {
         if (_change is null) return;
         _running = true;
         try
         {
-            await ChangeService.RecordReviewAsync(_change.Id, ReviewerUserId, _reviewDecision, _reviewComment);
+            await ChangeService.RecordReviewAsync(_change.Id, UserContext.CurrentUser.Id, _reviewDecision, _reviewComment);
             _reviewComment = "";
             Snackbar.Add("Review recorded.", Severity.Success);
             await LoadAsync();
@@ -367,7 +379,7 @@
         _running = true;
         try
         {
-            var version = await MergeService.MergeAsync(_change.Id, "POC User", "poc@workbench.local");
+            var version = await MergeService.MergeAsync(_change.Id, UserContext.CurrentUser.DisplayName, UserContext.CurrentUser.Email);
             Snackbar.Add($"Merged. Version {version.DisplayVersion} created.", Severity.Success);
             await LoadAsync();
         }
