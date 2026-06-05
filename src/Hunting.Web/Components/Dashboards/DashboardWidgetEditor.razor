@@ -1,7 +1,9 @@
 @namespace Hunting.Web.Components.Dashboards
+@using Hunting.Application.Visualizations
 @using Hunting.Web.Dashboards
 @inject IJSRuntime JS
 @inject ILogger<DashboardWidgetEditor> Logger
+@inject Hunting.Web.Services.VisualizationLibraryService VisualizationLibrary
 @implements IAsyncDisposable
 
 @if (IsOpen)
@@ -42,26 +44,61 @@
                     </select>
                 </label>
 
-                <div class="dashboard-editor-wide">
-                    <div class="dashboard-editor-label-row">
-                        <span>@EditorTextLabel</span>
-                        @if (_monacoReady)
-                        {
-                            <span class="dashboard-editor-mode">Monaco</span>
-                        }
-                        else
-                        {
-                            <span class="dashboard-editor-mode">Textarea fallback</span>
-                        }
+                @if (_kind == DashboardWidgetKind.Query)
+                {
+                    <label>
+                        <span>Source</span>
+                        <select class="dashboard-editor-input" value="@SourceValue" @onchange="SourceChangedAsync">
+                            <option value="@WidgetSource.QueryText">Query text</option>
+                            <option value="@WidgetSource.SavedVisualization">Saved visualization</option>
+                        </select>
+                    </label>
+                }
+
+                @if (_kind == DashboardWidgetKind.Query && _source == WidgetSource.SavedVisualization)
+                {
+                    <label class="dashboard-editor-wide">
+                        <span>Saved visualization</span>
+                        <select class="dashboard-editor-input" @bind="_selectedVisualizationId" disabled="@_loadingVisualizations">
+                            <option value="">@(_loadingVisualizations ? "Loading visualizations…" : "Select visualization")</option>
+                            @foreach (var visualization in _visualizations)
+                            {
+                                <option value="@visualization.Id">@FormatVisualizationOption(visualization)</option>
+                            }
+                        </select>
+                    </label>
+
+                    @if (!_loadingVisualizations && _visualizations.Count == 0)
+                    {
+                        <div class="dashboard-editor-wide dashboard-editor-help">
+                            No saved visualizations are available. Save a visualization from a saved query before using this source.
+                        </div>
+                    }
+                }
+
+                @if (UsesTextEditor)
+                {
+                    <div class="dashboard-editor-wide">
+                        <div class="dashboard-editor-label-row">
+                            <span>@EditorTextLabel</span>
+                            @if (_monacoReady)
+                            {
+                                <span class="dashboard-editor-mode">Monaco</span>
+                            }
+                            else
+                            {
+                                <span class="dashboard-editor-mode">Textarea fallback</span>
+                            }
+                        </div>
+
+                        <div id="@_editorElementId" class="dashboard-editor-monaco" hidden="@(!_monacoReady)"></div>
+
+                        <textarea class="dashboard-editor-textarea"
+                                  rows="10"
+                                  hidden="@_monacoReady"
+                                  @bind="_queryText"></textarea>
                     </div>
-
-                    <div id="@_editorElementId" class="dashboard-editor-monaco" hidden="@(!_monacoReady)"></div>
-
-                    <textarea class="dashboard-editor-textarea"
-                              rows="10"
-                              hidden="@_monacoReady"
-                              @bind="_queryText"></textarea>
-                </div>
+                }
             </div>
 
             <footer class="dashboard-editor-footer">
@@ -94,10 +131,14 @@
     private string _queryText = string.Empty;
     private string _title = string.Empty;
     private DashboardWidgetKind _kind = DashboardWidgetKind.Query;
+    private WidgetSource _source = WidgetSource.QueryText;
+    private string? _selectedVisualizationId;
+    private IReadOnlyList<VisualizationRecord> _visualizations = [];
     private DashboardLayout _layout = new();
     private bool _editorInitialized;
     private bool _editorNeedsInitialize;
     private bool _loadedIsOpen;
+    private bool _loadingVisualizations;
     private bool _monacoReady;
     private string? _loadedWidgetId;
 
@@ -113,10 +154,22 @@
     private string KindValue
         => _kind.ToString();
 
+    private string SourceValue
+        => _source.ToString();
+
+    private bool UsesTextEditor
+        => _kind == DashboardWidgetKind.Markdown
+            || (_kind == DashboardWidgetKind.Query && _source == WidgetSource.QueryText);
+
     public ValueTask DisposeAsync()
     {
         MarkEditorDisposed();
         return ValueTask.CompletedTask;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadVisualizationsAsync();
     }
 
     protected override void OnParametersSet()
@@ -145,6 +198,10 @@
             _id = Widget.Id;
             _title = Widget.Title;
             _kind = Widget.Kind;
+            _source = string.IsNullOrWhiteSpace(Widget.VisualizationId)
+                ? WidgetSource.QueryText
+                : WidgetSource.SavedVisualization;
+            _selectedVisualizationId = Widget.VisualizationId;
             _queryText = Widget.QueryText;
             _layout = Widget.Layout;
             return;
@@ -153,6 +210,8 @@
         _id = Guid.NewGuid().ToString("N");
         _title = "New widget";
         _kind = DashboardWidgetKind.Query;
+        _source = WidgetSource.QueryText;
+        _selectedVisualizationId = null;
         _queryText = """
 ProcessEvent
 | summarize Count = count() by AccountName
@@ -164,6 +223,16 @@ ProcessEvent
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!IsOpen)
+        {
+            if (_editorInitialized)
+            {
+                await DisposeEditorWithJsAsync();
+            }
+
+            return;
+        }
+
+        if (!UsesTextEditor)
         {
             if (_editorInitialized)
             {
@@ -223,6 +292,19 @@ ProcessEvent
         await RequestRenderAsync();
     }
 
+    private async Task LoadVisualizationsAsync()
+    {
+        _loadingVisualizations = true;
+
+        try
+        {
+            _visualizations = await VisualizationLibrary.ListVisualizationsAsync();
+        }
+        finally
+        {
+            _loadingVisualizations = false;
+        }
+    }
 
     private async Task KindChangedAsync(ChangeEventArgs args)
     {
@@ -235,27 +317,86 @@ ProcessEvent
             return;
         }
 
-        _queryText = await GetQueryTextAsync();
-        _kind = nextKind;
-
-        if (_editorInitialized)
+        if (UsesTextEditor)
         {
-            await SetEditorLanguageAsync();
+            _queryText = await GetQueryTextAsync();
         }
+
+        _kind = nextKind;
+        if (_kind != DashboardWidgetKind.Query)
+        {
+            _source = WidgetSource.QueryText;
+            _selectedVisualizationId = null;
+        }
+
+        if (UsesTextEditor)
+        {
+            if (_editorInitialized)
+            {
+                await SetEditorLanguageAsync();
+            }
+            else
+            {
+                _editorNeedsInitialize = true;
+            }
+        }
+        else if (_editorInitialized)
+        {
+            await DisposeEditorWithJsAsync();
+        }
+
+        await RequestRenderAsync();
+    }
+
+    private async Task SourceChangedAsync(ChangeEventArgs args)
+    {
+        var nextSource = Enum.TryParse<WidgetSource>(args.Value?.ToString(), out var parsed)
+            ? parsed
+            : WidgetSource.QueryText;
+
+        if (_source == nextSource)
+        {
+            return;
+        }
+
+        if (UsesTextEditor)
+        {
+            _queryText = await GetQueryTextAsync();
+        }
+
+        _source = nextSource;
+        if (_source == WidgetSource.QueryText)
+        {
+            _selectedVisualizationId = null;
+            _editorNeedsInitialize = !_editorInitialized;
+        }
+        else if (_editorInitialized)
+        {
+            await DisposeEditorWithJsAsync();
+        }
+
+        await RequestRenderAsync();
     }
 
     private async Task SaveAsync()
     {
         _errors.Clear();
 
-        var queryText = await GetQueryTextAsync();
+        var queryText = UsesTextEditor
+            ? await GetQueryTextAsync()
+            : string.Empty;
 
         var widget = new DashboardWidgetDefinition
         {
             Id = _id,
             Title = _title.Trim(),
             Kind = _kind,
-            QueryText = queryText.Trim(),
+            VisualizationId = _kind == DashboardWidgetKind.Query && _source == WidgetSource.SavedVisualization
+                ? NormalizeOptionalText(_selectedVisualizationId)
+                : null,
+            QueryText = _kind == DashboardWidgetKind.Query && _source == WidgetSource.SavedVisualization
+                ? string.Empty
+                : queryText.Trim(),
             Layout = _layout,
             Refresh = DashboardRefreshPolicy.Manual()
         };
@@ -278,7 +419,6 @@ ProcessEvent
 
         await SaveWidget.InvokeAsync(widget);
     }
-
 
     private async Task SetEditorLanguageAsync()
     {
@@ -452,4 +592,18 @@ ProcessEvent
             "Dashboard widget editor JS interop {Operation} was skipped or cancelled for {EditorElementId}.",
             operation,
             _editorElementId);
+
+    private static string FormatVisualizationOption(VisualizationRecord visualization)
+        => string.IsNullOrWhiteSpace(visualization.Description)
+            ? $"{visualization.Name} ({visualization.Kind})"
+            : $"{visualization.Name} ({visualization.Kind}) — {visualization.Description}";
+
+    private static string? NormalizeOptionalText(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private enum WidgetSource
+    {
+        QueryText,
+        SavedVisualization
+    }
 }
