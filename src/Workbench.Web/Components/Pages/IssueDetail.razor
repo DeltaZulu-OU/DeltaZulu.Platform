@@ -12,6 +12,7 @@
 @inject DetectionContentService DetectionService
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@inject PocUserContext UserContext
 
 <PageTitle>Issue — @(_issue?.Key ?? "Loading")</PageTitle>
 
@@ -110,6 +111,24 @@
                 else
                 {
                     <MudText Typo="Typo.body2" Class="mt-1" Style="color: var(--color-text-secondary);">None</MudText>
+                }
+            </div>
+            <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
+            <div>
+                <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Assignee</MudText>
+                @{
+                    var assigneeName = ResolveAssignee(_issue.AssigneeId);
+                }
+                @if (assigneeName is not null)
+                {
+                    <div class="d-flex align-center gap-2 mt-1">
+                        <MudIcon Icon="@Icons.Material.Outlined.Person" Size="Size.Small" Color="Color.Primary" />
+                        <MudText Typo="Typo.body2" Style="font-weight: 600;">@assigneeName</MudText>
+                    </div>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Class="mt-1" Style="color: var(--color-text-secondary);">Unassigned</MudText>
                 }
             </div>
             <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
@@ -298,6 +317,13 @@
             await LoadAsync();
         }
         catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+
+    private string? ResolveAssignee(UserId? assigneeId)
+    {
+        if (assigneeId is null) return null;
+        var user = UserContext.AvailableUsers.FirstOrDefault(u => u.Id == assigneeId);
+        return user?.DisplayName;
     }
 
     private static Color PriorityColor(Priority priority) => priority switch
