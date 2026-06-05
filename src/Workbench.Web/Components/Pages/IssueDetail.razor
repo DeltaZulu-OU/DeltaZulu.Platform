@@ -127,6 +127,41 @@
             </div>
             <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
             <div>
+                <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">External case</MudText>
+                @if (_issue.ExternalCase is not null)
+                {
+                    <div class="d-flex align-center gap-2 mt-1">
+                        <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Size="Size.Small" Style="color: var(--color-text-secondary);" />
+                        <MudText Typo="Typo.body2">@_issue.ExternalCase.System: @_issue.ExternalCase.ExternalId</MudText>
+                    </div>
+                }
+                else
+                {
+                    @if (!_showExternalCaseForm)
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                   OnClick="@(() => _showExternalCaseForm = true)" Class="px-0 mt-1"
+                                   Style="font-weight: 600; text-transform: none;">
+                            Link external case
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <div class="mt-1">
+                            <MudTextField @bind-Value="_extSystem" Label="System" Dense="true" Margin="Margin.Dense" Class="mb-2" />
+                            <MudTextField @bind-Value="_extCaseId" Label="Case ID" Dense="true" Margin="Margin.Dense" Class="mb-2" />
+                            <MudTextField @bind-Value="_extCaseUrl" Label="URL (optional)" Dense="true" Margin="Margin.Dense" Class="mb-2" />
+                            <div class="d-flex gap-2">
+                                <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary"
+                                           OnClick="LinkExternalCase">Link</MudButton>
+                                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => _showExternalCaseForm = false)">Cancel</MudButton>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+            <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
+            <div>
                 <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Created</MudText>
                 <MudText Typo="Typo.body2" Class="mt-1" Style="font-family: var(--font-family-mono); font-size: 0.8125rem;">
                     @_issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")
@@ -181,6 +216,12 @@
     private DetectionId? _selectedDetectionId;
     private List<BreadcrumbItem> _breadcrumbs = [];
 
+    // External case linking
+    private bool _showExternalCaseForm;
+    private string _extSystem = "";
+    private string _extCaseId = "";
+    private string _extCaseUrl = "";
+
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 
     private async Task LoadAsync()
@@ -224,6 +265,23 @@
         {
             await IssueService.TransitionStatusAsync(_issue.Id, newStatus);
             Snackbar.Add($"Issue transitioned to {newStatus}.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+
+    private async Task LinkExternalCase()
+    {
+        if (_issue is null || string.IsNullOrWhiteSpace(_extSystem) || string.IsNullOrWhiteSpace(_extCaseId)) return;
+        try
+        {
+            var url = string.IsNullOrWhiteSpace(_extCaseUrl) ? null : _extCaseUrl.Trim();
+            await IssueService.LinkExternalCaseAsync(_issue.Id, _extSystem.Trim(), _extCaseId.Trim(), url);
+            _showExternalCaseForm = false;
+            _extSystem = "";
+            _extCaseId = "";
+            _extCaseUrl = "";
+            Snackbar.Add("External case linked.", Severity.Success);
             await LoadAsync();
         }
         catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }

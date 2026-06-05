@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @using Workbench.Application.Services
 @using Workbench.Domain.Detections
+@using Workbench.Domain.Identifiers
 @inject DetectionContentService DetectionService
 @inject VersionService VersionService
 @inject NavigationManager Nav
@@ -25,7 +26,19 @@ else if (_rows.Count == 0)
 }
 else
 {
-    <MudTable Items="_rows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="VersionRow">
+    <div class="d-flex align-center gap-3 mb-3 flex-wrap">
+        <MudSelect Value="_selectedDetectionId" ValueChanged="OnDetectionFilterChanged"
+                   Label="Filter by detection" T="string" Dense="true" Margin="Margin.Dense"
+                   Style="max-width: 320px;" Clearable="true">
+            @foreach (var det in _detections)
+            {
+                <MudSelectItem Value="@det.Id.ToString()">@det.Slug — @det.Title</MudSelectItem>
+            }
+        </MudSelect>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">@_filteredRows.Count version(s)</MudText>
+    </div>
+
+    <MudTable Items="_filteredRows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="VersionRow">
         <HeaderContent>
             <MudTh>Detection</MudTh>
             <MudTh>Version</MudTh>
@@ -87,20 +100,43 @@ else
 
 @code {
     private readonly List<VersionRow> _rows = [];
+    private List<VersionRow> _filteredRows = [];
+    private List<Detection> _detections = [];
+    private string? _selectedDetectionId;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
         _loading = true;
-        var detections = await DetectionService.ListAsync();
-        foreach (var detection in detections)
+        _detections = (await DetectionService.ListAsync()).ToList();
+        foreach (var detection in _detections)
         {
             var versions = await VersionService.ListByDetectionAsync(detection.Id);
             _rows.AddRange(versions.Select(version => new VersionRow(detection, version)));
         }
 
         _rows.Sort((left, right) => right.Version.AcceptedAt.CompareTo(left.Version.AcceptedAt));
+        ApplyFilter();
         _loading = false;
+    }
+
+    private void OnDetectionFilterChanged(string? detectionId)
+    {
+        _selectedDetectionId = detectionId;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrEmpty(_selectedDetectionId) || !Guid.TryParse(_selectedDetectionId, out var guid))
+        {
+            _filteredRows = _rows.ToList();
+        }
+        else
+        {
+            var id = new DetectionId(guid);
+            _filteredRows = _rows.Where(r => r.Detection.Id == id).ToList();
+        }
     }
 
     private sealed record VersionRow(Detection Detection, DetectionVersion Version);
