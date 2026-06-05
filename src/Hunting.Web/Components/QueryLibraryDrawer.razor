@@ -121,8 +121,14 @@
                                         @visualization.Kind · Query @GetSavedQueryDisplayName(visualization.QueryId) · Updated @FormatTimestamp(visualization.UpdatedAt)
                                     </div>
                                 </div>
+                                <button class="hunt-btn"
+                                        @onclick="() => UpdateVisualizationFromCurrentAsync(visualization)"
+                                        disabled="@(!CanUpdateVisualizationFromCurrent)">
+                                    @(IsUpdatingVisualization(visualization.Id) ? "Updating…" : "Update from editor")
+                                </button>
                                 <button class="hunt-btn hunt-btn-clear"
-                                        @onclick="() => DeleteVisualizationAsync(visualization.Id)">
+                                        @onclick="() => DeleteVisualizationAsync(visualization.Id)"
+                                        disabled="@IsSaving">
                                     Delete
                                 </button>
                             </div>
@@ -182,6 +188,7 @@
     private bool _loading;
     private bool _saving;
     private bool _savingVisualization;
+    private string? _updatingVisualizationId;
     private string _saveName = "";
     private string? _saveDescription;
     private string? _message;
@@ -202,7 +209,7 @@
     [Parameter]
     public bool CloseAfterSelection { get; set; } = true;
 
-    private bool IsSaving => _saving || _savingVisualization;
+    private bool IsSaving => _saving || _savingVisualization || !string.IsNullOrWhiteSpace(_updatingVisualizationId);
 
     private bool CanSaveCurrentQuery =>
         !IsSaving
@@ -210,6 +217,10 @@
         && !string.IsNullOrWhiteSpace(_saveName);
 
     private bool CanSaveCurrentVisualization => CanSaveCurrentQuery;
+
+    private bool CanUpdateVisualizationFromCurrent =>
+        !IsSaving
+        && !string.IsNullOrWhiteSpace(CurrentQueryText);
 
     private async Task OpenAsync()
     {
@@ -307,6 +318,39 @@
         }
     }
 
+    private async Task UpdateVisualizationFromCurrentAsync(
+        Hunting.Application.Visualizations.VisualizationRecord visualization)
+    {
+        if (!CanUpdateVisualizationFromCurrent)
+        {
+            return;
+        }
+
+        _updatingVisualizationId = visualization.Id;
+        _message = null;
+
+        try
+        {
+            await VisualizationLibrary.SaveVisualizationFromRenderedQueryAsync(
+                queryId: visualization.QueryId,
+                visualizationId: visualization.Id,
+                name: visualization.Name,
+                description: visualization.Description,
+                queryText: CurrentQueryText);
+
+            _message = $"Visualization '{visualization.Name}' updated from the current editor content.";
+            await RefreshAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _message = ex.Message;
+        }
+        finally
+        {
+            _updatingVisualizationId = null;
+        }
+    }
+
     private async Task SelectSavedQueryAsync(string id)
     {
         var queryText = await QueryLibrary.LoadSavedQueryTextAsync(id);
@@ -379,6 +423,9 @@
             ? name
             : ShortId(queryId);
     }
+
+    private bool IsUpdatingVisualization(string id)
+        => string.Equals(_updatingVisualizationId, id, StringComparison.OrdinalIgnoreCase);
 
     private static string FormatTimestamp(DateTime value)
     {
