@@ -5,6 +5,9 @@ using Hunting.Web.Services;
 public sealed class LibraryPageState
 {
     public const int PageSize = 12;
+    public const int DefaultRowsPerPage = 20;
+
+    public static readonly int[] PageSizeOptions = [10, 20, 50, 100];
 
     public List<LibraryItem> Items { get; } = [];
 
@@ -27,28 +30,7 @@ public sealed class LibraryPageState
     public LibraryItemKind? KindFilter { get; set; }
 
     public IReadOnlyList<LibraryItem> FilteredItems
-    {
-        get
-        {
-            IEnumerable<LibraryItem> query = Items;
-
-            if (KindFilter is not null)
-            {
-                query = query.Where(item => item.Kind == KindFilter);
-            }
-
-            if (!string.IsNullOrWhiteSpace(SearchText))
-            {
-                query = query.Where(item =>
-                    ContainsSearchText(item.Name)
-                    || ContainsSearchText(item.Description)
-                    || ContainsSearchText(item.DependencyLabel)
-                    || ContainsSearchText(LibraryLabels.KindLabel(item.Kind)));
-            }
-
-            return query.ToArray();
-        }
-    }
+        => Items.Where(FilterItem).ToArray();
 
     public IReadOnlyList<LibraryItem> PagedItems
         => FilteredItems
@@ -88,13 +70,9 @@ public sealed class LibraryPageState
                     : "No library items match the current filter.";
             }
 
-            var first = ((Page - 1) * PageSize) + 1;
-            var last = Math.Min(filteredCount, Page * PageSize);
-            var suffix = filteredCount == Items.Count
-                ? $"{filteredCount} item(s)"
-                : $"{filteredCount} of {Items.Count} item(s)";
-
-            return $"Showing {first}-{last} of {suffix}.";
+            return filteredCount == Items.Count
+                ? $"{filteredCount} item(s)."
+                : $"{filteredCount} of {Items.Count} item(s).";
         }
     }
 
@@ -109,6 +87,25 @@ public sealed class LibraryPageState
 
     public bool HasItems
         => !Loading && FilteredItems.Count > 0;
+
+    public bool FilterItem(LibraryItem item)
+    {
+        if (KindFilter is not null && item.Kind != KindFilter)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            return true;
+        }
+
+        return ContainsSearchText(item.Name)
+            || ContainsSearchText(item.Description)
+            || ContainsSearchText(item.DependencyLabel)
+            || ContainsSearchText(LibraryLabels.KindLabel(item.Kind))
+            || ContainsSearchText(LibraryLabels.StatusLabel(item.Status));
+    }
 
     public void ClampPage()
     {
@@ -156,4 +153,7 @@ public static class LibraryLabels
             LibraryItemStatus.MissingDependency => "Missing dependency",
             _ => status.ToString()
         };
+
+    public static string UpdatedLabel(DateTime updatedAtUtc)
+        => updatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
 }

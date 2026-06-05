@@ -12,17 +12,23 @@
             <p class="dashboard-page-subtitle">Manage saved searches, reusable visualizations, and dashboards from one place.</p>
         </div>
         <div class="dashboard-list-toolbar">
-            <label class="dashboard-search" aria-label="Search library">
-                <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" />
-                <input placeholder="Search library"
-                       value="@State.SearchText"
-                       @oninput="OnSearchChanged" />
-            </label>
-
             <div class="dashboard-list-actions-primary">
-                <button class="hunt-btn dashboard-primary-action" @onclick="Controller.CreateSavedSearch">New saved search</button>
-                <button class="hunt-btn" @onclick="Controller.CreateVisualization">New visualization</button>
-                <button class="hunt-btn" @onclick="Controller.CreateDashboard">New dashboard</button>
+                <MudButton Variant="Variant.Filled"
+                           Size="Size.Small"
+                           Color="Color.Primary"
+                           OnClick="@(() => Controller.CreateSavedSearch())">
+                    New saved search
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Size="Size.Small"
+                           OnClick="@(() => Controller.CreateVisualization())">
+                    New visualization
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Size="Size.Small"
+                           OnClick="@(() => Controller.CreateDashboard())">
+                    New dashboard
+                </MudButton>
             </div>
         </div>
     </header>
@@ -38,107 +44,147 @@
     }
 
     <section class="dashboard-list-panel" aria-label="Library panel">
-        <div class="dashboard-list-panel-header">
-            <div>
-                <h2>@State.FilterTitle</h2>
-                <p>@State.RangeText</p>
-            </div>
+        <MudTable T="LibraryItem"
+                  Items="@State.Items"
+                  Dense="true"
+                  Hover="true"
+                  Elevation="0"
+                  Loading="@State.Loading"
+                  Filter="State.FilterItem"
+                  RowsPerPage="@LibraryPageState.DefaultRowsPerPage"
+                  Class="library-object-table">
+            <ToolBarContent>
+                <div class="dashboard-list-panel-header library-table-toolbar">
+                    <div>
+                        <h2>@State.FilterTitle</h2>
+                        <p>@State.RangeText</p>
+                    </div>
 
-            <div class="dashboard-list-actions-primary">
-                <button class="@Controller.FilterButtonClass(null)" @onclick="() => Controller.SetFilter(null)">All</button>
-                <button class="@Controller.FilterButtonClass(LibraryItemKind.SavedSearch)" @onclick="() => Controller.SetFilter(LibraryItemKind.SavedSearch)">Saved searches</button>
-                <button class="@Controller.FilterButtonClass(LibraryItemKind.Visualization)" @onclick="() => Controller.SetFilter(LibraryItemKind.Visualization)">Visualizations</button>
-                <button class="@Controller.FilterButtonClass(LibraryItemKind.Dashboard)" @onclick="() => Controller.SetFilter(LibraryItemKind.Dashboard)">Dashboards</button>
-            </div>
-        </div>
+                    <MudSpacer />
 
-        @if (State.HasPagination)
-        {
-            <nav class="dashboard-pagination" aria-label="Library pages">
-                <button class="hunt-btn dashboard-page-button"
-                        disabled="@(State.Page <= 1)"
-                        @onclick="Controller.PreviousPage">
-                    Previous
-                </button>
-                <span>Page @State.Page of @State.TotalPages</span>
-                <button class="hunt-btn dashboard-page-button"
-                        disabled="@(State.Page >= State.TotalPages)"
-                        @onclick="Controller.NextPage">
-                    Next
-                </button>
-            </nav>
-        }
+                    <MudTextField T="string"
+                                  Value="@State.SearchText"
+                                  ValueChanged="Controller.SetSearchText"
+                                  Placeholder="Search library"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Immediate="true"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined"
+                                  Class="library-table-search" />
 
-        @if (State.Loading)
-        {
-            <section class="dashboard-empty-state">
-                <h2>Loading library…</h2>
-                <p>Reading saved searches, visualizations, and dashboards from local application persistence.</p>
-            </section>
-        }
-        else if (State.HasNoMatches)
-        {
-            <section class="dashboard-empty-state dashboard-list-empty">
-                <h2>No matching library items</h2>
-                <p>Create a new item or adjust the search/filter.</p>
-                <div class="dashboard-empty-actions">
-                    <button class="hunt-btn" @onclick="Controller.ClearSearch">Clear search</button>
-                    <button class="hunt-btn dashboard-primary-action" @onclick="Controller.CreateSavedSearch">Create saved search</button>
+                    <div class="dashboard-list-actions-primary library-filter-buttons">
+                        <button class="@Controller.FilterButtonClass(null)" @onclick="() => Controller.SetFilter(null)">All</button>
+                        <button class="@Controller.FilterButtonClass(LibraryItemKind.SavedSearch)" @onclick="() => Controller.SetFilter(LibraryItemKind.SavedSearch)">Saved searches</button>
+                        <button class="@Controller.FilterButtonClass(LibraryItemKind.Visualization)" @onclick="() => Controller.SetFilter(LibraryItemKind.Visualization)">Visualizations</button>
+                        <button class="@Controller.FilterButtonClass(LibraryItemKind.Dashboard)" @onclick="() => Controller.SetFilter(LibraryItemKind.Dashboard)">Dashboards</button>
+                    </div>
                 </div>
-            </section>
-        }
-        else
-        {
-            <div class="dashboard-list" aria-label="Library items">
-                @foreach (var item in State.PagedItems)
+            </ToolBarContent>
+
+            <HeaderContent>
+                <MudTh Style="width: 48px;"></MudTh>
+                <MudTh>
+                    <MudTableSortLabel T="LibraryItem" SortBy="item => LibraryLabels.KindLabel(item.Kind)">
+                        Type
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel T="LibraryItem" InitialDirection="SortDirection.Ascending" SortBy="item => item.Name">
+                        Title
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel T="LibraryItem" SortBy="item => item.DependencyLabel">
+                        Source
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel T="LibraryItem" SortBy="item => LibraryLabels.StatusLabel(item.Status)">
+                        Status
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel T="LibraryItem" SortBy="item => item.UpdatedAtUtc">
+                        Updated
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh Style="text-align: right;">Actions</MudTh>
+            </HeaderContent>
+
+            <RowTemplate>
+                <MudTd DataLabel="">
+                    <MudIcon Icon="@GetKindIcon(context.Kind)" Size="Size.Small" />
+                </MudTd>
+                <MudTd DataLabel="Type">@LibraryLabels.KindLabel(context.Kind)</MudTd>
+                <MudTd DataLabel="Title">
+                    <MudButton Variant="Variant.Text"
+                               Size="Size.Small"
+                               Class="library-object-title"
+                               OnClick="@(() => Controller.OpenItemAsync(context))">
+                        @context.Name
+                    </MudButton>
+                    @if (!string.IsNullOrWhiteSpace(context.Description))
+                    {
+                        <div class="dashboard-muted">@context.Description</div>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Source">@context.DependencyLabel</MudTd>
+                <MudTd DataLabel="Status">
+                    @if (context.Status == LibraryItemStatus.MissingDependency)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">Missing dependency</MudChip>
+                    }
+                    else
+                    {
+                        <span class="dashboard-muted">OK</span>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Updated">@LibraryLabels.UpdatedLabel(context.UpdatedAtUtc)</MudTd>
+                <MudTd DataLabel="Actions" Style="text-align: right;">
+                    <MudButton Variant="Variant.Outlined"
+                               Size="Size.Small"
+                               OnClick="@(() => Controller.OpenItemAsync(context))">
+                        Open
+                    </MudButton>
+                    <MudButton Variant="Variant.Text"
+                               Size="Size.Small"
+                               Disabled="@State.Deleting"
+                               Title="@Controller.DeleteButtonTitle(context)"
+                               Class="@Controller.DeleteButtonClass(context)"
+                               OnClick="@(() => Controller.DeleteItemAsync(context))">
+                        @Controller.DeleteButtonText(context)
+                    </MudButton>
+                </MudTd>
+            </RowTemplate>
+
+            <NoRecordsContent>
+                @if (State.Items.Count == 0)
                 {
-                    <article class="dashboard-list-card">
-                        <div class="dashboard-card-main">
-                            <div class="dashboard-card-title-row">
-                                <h2>@item.Name</h2>
-                            </div>
-                            @if (!string.IsNullOrWhiteSpace(item.Description))
-                            {
-                                <p>@item.Description</p>
-                            }
-                            else
-                            {
-                                <p class="dashboard-muted">No description.</p>
-                            }
+                    <section class="dashboard-empty-state dashboard-list-empty">
+                        <h2>No library items</h2>
+                        <p>Create a saved search, visualization, or dashboard to populate the library.</p>
+                        <div class="dashboard-empty-actions">
+                            <button class="hunt-btn dashboard-primary-action" @onclick="Controller.CreateSavedSearch">Create saved search</button>
                         </div>
-
-                        <dl class="dashboard-list-meta">
-                            <div>
-                                <dt>Type</dt>
-                                <dd>@LibraryLabels.KindLabel(item.Kind)</dd>
-                            </div>
-                            <div>
-                                <dt>Source</dt>
-                                <dd>@item.DependencyLabel</dd>
-                            </div>
-                            <div>
-                                <dt>Status</dt>
-                                <dd>@LibraryLabels.StatusLabel(item.Status)</dd>
-                            </div>
-                            <div>
-                                <dt>Updated</dt>
-                                <dd>@item.UpdatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</dd>
-                            </div>
-                        </dl>
-
-                        <div class="dashboard-card-actions">
-                            <button class="hunt-btn dashboard-primary-action" @onclick="() => Controller.OpenItemAsync(item)">Open</button>
-                            <button class="@Controller.DeleteButtonClass(item)"
-                                    disabled="@State.Deleting"
-                                    title="@Controller.DeleteButtonTitle(item)"
-                                    @onclick="() => Controller.DeleteItemAsync(item)">
-                                @Controller.DeleteButtonText(item)
-                            </button>
-                        </div>
-                    </article>
+                    </section>
                 }
-            </div>
-        }
+                else
+                {
+                    <section class="dashboard-empty-state dashboard-list-empty">
+                        <h2>No matching library items</h2>
+                        <p>Clear the search text or use a different filter.</p>
+                        <div class="dashboard-empty-actions">
+                            <button class="hunt-btn" @onclick="Controller.ClearSearch">Clear search</button>
+                        </div>
+                    </section>
+                }
+            </NoRecordsContent>
+
+            <PagerContent>
+                <MudTablePager PageSizeOptions="@LibraryPageState.PageSizeOptions" />
+            </PagerContent>
+        </MudTable>
     </section>
 </div>
 
@@ -150,8 +196,12 @@
         await Controller.LoadAsync();
     }
 
-    private void OnSearchChanged(ChangeEventArgs args)
-    {
-        Controller.SetSearchText(args.Value?.ToString());
-    }
+    private static string GetKindIcon(LibraryItemKind kind)
+        => kind switch
+        {
+            LibraryItemKind.SavedSearch => Icons.Material.Filled.Search,
+            LibraryItemKind.Visualization => Icons.Material.Filled.InsertChart,
+            LibraryItemKind.Dashboard => Icons.Material.Filled.Dashboard,
+            _ => Icons.Material.Filled.Description
+        };
 }
