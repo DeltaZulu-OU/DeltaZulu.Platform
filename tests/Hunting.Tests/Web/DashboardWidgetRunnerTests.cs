@@ -1,5 +1,7 @@
 namespace Hunting.Tests.Web;
 
+using Hunting.Application.SavedQueries;
+using Hunting.Application.Visualizations;
 using Hunting.Core.Policy;
 using Hunting.Data;
 using Hunting.Render.Model;
@@ -28,7 +30,83 @@ public sealed class DashboardWidgetRunnerTests
         Assert.IsNotNull(result.ChartOptions);
         Assert.IsTrue(result.HasRenderableChart);
         Assert.AreEqual(widget.QueryText, fakeRunner.LastQueryText);
+        Assert.IsNull(fakeRunner.LastExplicitDirective);
         Assert.AreEqual(TestContext.CancellationToken, fakeRunner.LastCancellationToken);
+    }
+
+    [TestMethod]
+    public async Task RunAsync_VisualizationWidget_LoadsSavedQueryAndAppliesVisualizationDirective()
+    {
+        var rendered = CreateRenderedResult(CreateSuccessfulQueryResult(), CreateRenderableChart());
+        var fakeRunner = new FakeRenderedQueryRunner(rendered);
+        var savedQueries = new FakeSavedQueryRepository();
+        var visualizations = new FakeVisualizationRepository();
+        var now = new DateTime(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
+
+        savedQueries.Records["query-1"] = new SavedQueryRecord(
+            "query-1",
+            "Recent PowerShell",
+            null,
+            "ProcessEvent | summarize LaunchCount = count() by AccountName",
+            now,
+            now,
+            null);
+
+        visualizations.Records["visualization-1"] = new VisualizationRecord(
+            "visualization-1",
+            "query-1",
+            "Launches by account",
+            null,
+            "barchart",
+            """
+            {
+              "title": "Launches by account",
+              "xColumn": "AccountName",
+              "yColumns": [ "LaunchCount" ],
+              "legend": "right"
+            }
+            """,
+            now,
+            now);
+
+        var runner = CreateRunner(fakeRunner, savedQueries, visualizations);
+        var widget = CreateWidget() with
+        {
+            QueryText = string.Empty,
+            VisualizationId = "visualization-1"
+        };
+
+        var result = await runner.RunAsync(widget, TestContext.CancellationToken);
+
+        Assert.AreEqual(DashboardWidgetRunStatus.Succeeded, result.Status);
+        Assert.AreEqual("ProcessEvent | summarize LaunchCount = count() by AccountName", fakeRunner.LastQueryText);
+        Assert.IsNotNull(fakeRunner.LastExplicitDirective);
+        Assert.AreEqual(RenderKind.Barchart, fakeRunner.LastExplicitDirective.Kind);
+        Assert.AreEqual("Launches by account", fakeRunner.LastExplicitDirective.Title);
+        Assert.AreEqual("AccountName", fakeRunner.LastExplicitDirective.Binding.XColumn);
+        CollectionAssert.AreEqual(
+            new[] { "LaunchCount" },
+            fakeRunner.LastExplicitDirective.Binding.YColumns.ToArray());
+        Assert.AreEqual("right", fakeRunner.LastExplicitDirective.Legend);
+    }
+
+    [TestMethod]
+    public async Task RunAsync_VisualizationWidgetWithMissingVisualization_ReturnsFailedState()
+    {
+        var fakeRunner = new FakeRenderedQueryRunner(CreateRenderedResult(CreateSuccessfulQueryResult(), CreateRenderableChart()));
+        var runner = CreateRunner(fakeRunner);
+        var widget = CreateWidget() with
+        {
+            QueryText = string.Empty,
+            VisualizationId = "missing-visualization"
+        };
+
+        var result = await runner.RunAsync(widget, TestContext.CancellationToken);
+
+        Assert.AreEqual(DashboardWidgetRunStatus.Failed, result.Status);
+        Assert.HasCount(1, result.Diagnostics);
+        Assert.Contains("was not found", result.Diagnostics[0].Message);
+        Assert.IsNull(fakeRunner.LastQueryText);
     }
 
     [TestMethod]
@@ -125,8 +203,15 @@ public sealed class DashboardWidgetRunnerTests
         Assert.AreEqual("Widget execution was cancelled.", result.Diagnostics[0].Message);
     }
 
-    private static DashboardWidgetRunner CreateRunner(FakeRenderedQueryRunner renderedQueryRunner)
-        => new(renderedQueryRunner, new EChartsRenderOptionsBuilder());
+    private static DashboardWidgetRunner CreateRunner(
+        FakeRenderedQueryRunner renderedQueryRunner,
+        FakeSavedQueryRepository? savedQueries = null,
+        FakeVisualizationRepository? visualizations = null)
+        => new(
+            renderedQueryRunner,
+            new EChartsRenderOptionsBuilder(),
+            savedQueries ?? new FakeSavedQueryRepository(),
+            visualizations ?? new FakeVisualizationRepository());
 
     private static DashboardWidgetDefinition CreateWidget()
         => new()
@@ -207,6 +292,7 @@ public sealed class DashboardWidgetRunnerTests
         }
 
         public string? LastQueryText { get; private set; }
+        public RenderDirective? LastExplicitDirective { get; private set; }
         public CancellationToken LastCancellationToken { get; private set; }
 
         public Task<RenderedQueryResult> RunAsync(
@@ -214,6 +300,7 @@ public sealed class DashboardWidgetRunnerTests
             CancellationToken cancellationToken = default)
         {
             LastQueryText = queryText;
+            LastExplicitDirective = null;
             LastCancellationToken = cancellationToken;
 
             if (_exception is not null)
@@ -222,6 +309,84 @@ public sealed class DashboardWidgetRunnerTests
             }
 
             return Task.FromResult(_result!);
+        }
+
+        public Task<RenderedQueryResult> RunAsync(
+            string queryText,
+            RenderDirective directive,
+            CancellationToken cancellationToken = default)
+        {
+            LastQueryText = queryText;
+            LastExplicitDirective = directive;
+            LastCancellationToken = cancellationToken;
+
+            if (_exception is not null)
+            {
+                throw _exception;
+            }
+
+            return Task.FromResult(_result!);
+        }
+    }
+
+    private sealed class FakeSavedQueryRepository : ISavedQueryRepository
+    {
+        public Dictionary<string, SavedQueryRecord> Records { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public Task DeleteAsync(string id, CancellationToken cancellationToken = default)
+        {
+            Records.Remove(id);
+            return Task.CompletedTask;
+        }
+
+        public Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<SavedQueryRecord?> GetAsync(string id, CancellationToken cancellationToken = default)
+            => Task.FromResult(Records.TryGetValue(id, out var record) ? record : null);
+
+        public Task<IReadOnlyList<SavedQueryRecord>> ListAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<SavedQueryRecord>>(Records.Values.ToArray());
+
+        public Task MarkRunAsync(string id, DateTime runAt, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task SaveAsync(SavedQueryRecord query, CancellationToken cancellationToken = default)
+        {
+            Records[query.Id] = query;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeVisualizationRepository : IVisualizationRepository
+    {
+        public Dictionary<string, VisualizationRecord> Records { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public Task DeleteAsync(string id, CancellationToken cancellationToken = default)
+        {
+            Records.Remove(id);
+            return Task.CompletedTask;
+        }
+
+        public Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<VisualizationRecord?> GetAsync(string id, CancellationToken cancellationToken = default)
+            => Task.FromResult(Records.TryGetValue(id, out var record) ? record : null);
+
+        public Task<IReadOnlyList<VisualizationRecord>> ListAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<VisualizationRecord>>(Records.Values.ToArray());
+
+        public Task<IReadOnlyList<VisualizationRecord>> ListByQueryAsync(string queryId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<VisualizationRecord>>(
+                Records.Values
+                    .Where(record => string.Equals(record.QueryId, queryId, StringComparison.OrdinalIgnoreCase))
+                    .ToArray());
+
+        public Task SaveAsync(VisualizationRecord visualization, CancellationToken cancellationToken = default)
+        {
+            Records[visualization.Id] = visualization;
+            return Task.CompletedTask;
         }
     }
 

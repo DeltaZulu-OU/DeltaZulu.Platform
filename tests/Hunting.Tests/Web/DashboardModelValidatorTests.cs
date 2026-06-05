@@ -6,6 +6,67 @@ using Hunting.Web.Dashboards;
 public sealed class DashboardModelValidatorTests
 {
     [TestMethod]
+    public void Validate_QueryWidgetWithQueryText_ReturnsNoExecutionSourceError()
+    {
+        var dashboard = CreateDashboard(CreateWidget("w1", new DashboardLayout()));
+
+        var errors = DashboardModelValidator.Validate(dashboard);
+
+        Assert.IsFalse(
+            errors.Any(error => error.Contains("query text or a visualization ID", StringComparison.Ordinal)),
+            string.Join(Environment.NewLine, errors));
+    }
+
+    [TestMethod]
+    public void Validate_QueryWidgetWithVisualizationId_ReturnsNoExecutionSourceError()
+    {
+        var dashboard = CreateDashboard(
+            CreateWidget("w1", new DashboardLayout()) with
+            {
+                QueryText = string.Empty,
+                VisualizationId = "visualization-1"
+            });
+
+        var errors = DashboardModelValidator.Validate(dashboard);
+
+        Assert.IsFalse(
+            errors.Any(error => error.Contains("query text or a visualization ID", StringComparison.Ordinal)),
+            string.Join(Environment.NewLine, errors));
+    }
+
+    [TestMethod]
+    public void Validate_QueryWidgetWithoutQueryTextOrVisualizationId_ReturnsError()
+    {
+        var dashboard = CreateDashboard(
+            CreateWidget("w1", new DashboardLayout()) with
+            {
+                QueryText = string.Empty
+            });
+
+        var errors = DashboardModelValidator.Validate(dashboard);
+
+        Assert.IsTrue(
+            errors.Any(error => error.Contains("query text or a visualization ID", StringComparison.Ordinal)),
+            string.Join(Environment.NewLine, errors));
+    }
+
+    [TestMethod]
+    public void Validate_QueryWidgetWithQueryTextAndVisualizationId_ReturnsError()
+    {
+        var dashboard = CreateDashboard(
+            CreateWidget("w1", new DashboardLayout()) with
+            {
+                VisualizationId = "visualization-1"
+            });
+
+        var errors = DashboardModelValidator.Validate(dashboard);
+
+        Assert.IsTrue(
+            errors.Any(error => error.Contains("must not define both query text and a visualization ID", StringComparison.Ordinal)),
+            string.Join(Environment.NewLine, errors));
+    }
+
+    [TestMethod]
     public void Validate_WidgetLayoutBeyondGridColumns_ReturnsError()
     {
         var dashboard = CreateDashboard(

@@ -1,6 +1,8 @@
 namespace Hunting.Tests.Web;
 
 using System.Diagnostics;
+using Hunting.Application.SavedQueries;
+using Hunting.Application.Visualizations;
 using Hunting.Core.Policy;
 using Hunting.Data;
 using Hunting.Render.Model;
@@ -60,6 +62,7 @@ public sealed class DashboardPageControllerTests
         Assert.AreEqual(widget.Id, controller.State.Dashboard.Widgets[0].Id);
         Assert.AreEqual(1, renderedRunner.RunCount);
         Assert.AreEqual(widget.QueryText, renderedRunner.LastQueryText);
+        Assert.IsNull(renderedRunner.LastDirective);
         Assert.IsTrue(controller.State.WidgetResults.ContainsKey(widget.Id));
         Assert.AreEqual(DashboardWidgetRunStatus.Succeeded, controller.State.WidgetResults[widget.Id].Status);
     }
@@ -158,7 +161,9 @@ public sealed class DashboardPageControllerTests
     {
         var runner = new DashboardWidgetRunner(
             renderedQueryRunner ?? new FakeRenderedQueryRunner(CreateRenderedResult(CreateSuccessfulQueryResult(), CreateTableFallbackChart())),
-            new EChartsRenderOptionsBuilder());
+            new EChartsRenderOptionsBuilder(),
+            new FakeSavedQueryRepository(),
+            new FakeVisualizationRepository());
 
         return new DashboardPageController(
             repository,
@@ -293,12 +298,26 @@ public sealed class DashboardPageControllerTests
 
         public string? LastQueryText { get; private set; }
 
+        public RenderDirective? LastDirective { get; private set; }
+
         public Task<RenderedQueryResult> RunAsync(
             string queryText,
             CancellationToken cancellationToken = default)
         {
             RunCount++;
             LastQueryText = queryText;
+            LastDirective = null;
+            return Task.FromResult(_result);
+        }
+
+        public Task<RenderedQueryResult> RunAsync(
+            string queryText,
+            RenderDirective directive,
+            CancellationToken cancellationToken = default)
+        {
+            RunCount++;
+            LastQueryText = queryText;
+            LastDirective = directive;
             return Task.FromResult(_result);
         }
     }
@@ -310,9 +329,18 @@ public sealed class DashboardPageControllerTests
 
         public bool CancellationObserved { get; private set; }
 
-        public async Task<RenderedQueryResult> RunAsync(
+        public Task<RenderedQueryResult> RunAsync(
             string queryText,
             CancellationToken cancellationToken = default)
+            => RunBlockingAsync(cancellationToken);
+
+        public Task<RenderedQueryResult> RunAsync(
+            string queryText,
+            RenderDirective directive,
+            CancellationToken cancellationToken = default)
+            => RunBlockingAsync(cancellationToken);
+
+        private async Task<RenderedQueryResult> RunBlockingAsync(CancellationToken cancellationToken)
         {
             _started.TrySetResult();
 
@@ -334,6 +362,48 @@ public sealed class DashboardPageControllerTests
             var completed = await Task.WhenAny(_started.Task, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
             return completed == _started.Task;
         }
+    }
+
+    private sealed class FakeSavedQueryRepository : ISavedQueryRepository
+    {
+        public Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<IReadOnlyList<SavedQueryRecord>> ListAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<SavedQueryRecord>>([]);
+
+        public Task<SavedQueryRecord?> GetAsync(string id, CancellationToken cancellationToken = default)
+            => Task.FromResult<SavedQueryRecord?>(null);
+
+        public Task SaveAsync(SavedQueryRecord query, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task DeleteAsync(string id, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task MarkRunAsync(string id, DateTime runAt, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+    }
+
+    private sealed class FakeVisualizationRepository : IVisualizationRepository
+    {
+        public Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<IReadOnlyList<VisualizationRecord>> ListAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<VisualizationRecord>>([]);
+
+        public Task<IReadOnlyList<VisualizationRecord>> ListByQueryAsync(string queryId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<VisualizationRecord>>([]);
+
+        public Task<VisualizationRecord?> GetAsync(string id, CancellationToken cancellationToken = default)
+            => Task.FromResult<VisualizationRecord?>(null);
+
+        public Task SaveAsync(VisualizationRecord visualization, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task DeleteAsync(string id, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 
     private sealed class TestLogger<T> : ILogger<T>

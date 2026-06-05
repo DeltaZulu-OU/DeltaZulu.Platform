@@ -1,6 +1,7 @@
 namespace Hunting.Web.Rendering;
 
 using Hunting.Render.Directives;
+using Hunting.Render.Model;
 using Hunting.Render.Services;
 
 public sealed class RenderedQueryRunner : IRenderedQueryRunner
@@ -26,17 +27,43 @@ public sealed class RenderedQueryRunner : IRenderedQueryRunner
         ArgumentException.ThrowIfNullOrWhiteSpace(queryText);
 
         var parsed = _renderDirectiveParser.Parse(queryText);
-        var queryResult = await _queryService.ExecuteDataOnlyAsync(
+        return await RunCoreAsync(
             parsed.QueryTextWithoutRender,
+            parsed.Directive,
+            cancellationToken);
+    }
+
+    public async Task<RenderedQueryResult> RunAsync(
+        string queryText,
+        RenderDirective directive,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(queryText);
+        ArgumentNullException.ThrowIfNull(directive);
+
+        var parsed = _renderDirectiveParser.Parse(queryText);
+        return await RunCoreAsync(
+            parsed.QueryTextWithoutRender,
+            directive,
+            cancellationToken);
+    }
+
+    private async Task<RenderedQueryResult> RunCoreAsync(
+        string dataQueryText,
+        RenderDirective directive,
+        CancellationToken cancellationToken)
+    {
+        var queryResult = await _queryService.ExecuteDataOnlyAsync(
+            dataQueryText,
             cancellationToken);
 
         var chart = _chartBuilder.Build(
             new QueryResultRenderAdapter(queryResult),
-            parsed.Directive);
+            directive);
 
         return new RenderedQueryResult(
             queryResult,
-            parsed.Directive,
+            directive,
             chart);
     }
 }

@@ -92,16 +92,36 @@ public static class DashboardModelValidator
                 errors.Add($"Widget '{DisplayWidgetId(widget, i)}' must have a title.");
             }
 
-            if (widget.Kind == DashboardWidgetKind.Query && string.IsNullOrWhiteSpace(widget.QueryText))
-            {
-                errors.Add($"Query widget '{DisplayWidgetId(widget, i)}' must have query text.");
-            }
-
+            ValidateWidgetExecutionSource(widget, i, errors);
             ValidateLayout(widget, i, errors);
             ValidateRefresh(widget, i, errors);
         }
 
         ValidateLayoutConflicts(widgets, errors);
+    }
+
+    private static void ValidateWidgetExecutionSource(
+        DashboardWidgetDefinition widget,
+        int index,
+        List<string> errors)
+    {
+        if (widget.Kind != DashboardWidgetKind.Query)
+        {
+            return;
+        }
+
+        var hasQueryText = !string.IsNullOrWhiteSpace(widget.QueryText);
+        var hasVisualizationId = !string.IsNullOrWhiteSpace(widget.VisualizationId);
+
+        if (!hasQueryText && !hasVisualizationId)
+        {
+            errors.Add($"Query widget '{DisplayWidgetId(widget, index)}' must have query text or a visualization ID.");
+        }
+
+        if (hasQueryText && hasVisualizationId)
+        {
+            errors.Add($"Query widget '{DisplayWidgetId(widget, index)}' must not define both query text and a visualization ID.");
+        }
     }
 
     private static void ValidateLayout(
