@@ -18,6 +18,7 @@ public static class PersistenceServiceCollectionExtensions
         services.AddScoped<IIssueRepository, IssueRepository>();
         services.AddScoped<IChangeRequestRepository, ChangeRequestRepository>();
         services.AddScoped<IDetectionVersionRepository, DetectionVersionRepository>();
+        services.AddScoped<IMergeIntentRepository, MergeIntentRepository>();
         return services;
     }
 }

@@ -17,6 +17,7 @@ public sealed class MergeService(
     IDetectionRepository detections,
     IDetectionVersionRepository versions,
     IAcceptedContentStore contentStore,
+    IMergeIntentRepository mergeIntents,
     IUnitOfWork uow,
     IWorkflowOrchestrator orchestrator,
     TimeProvider time)
@@ -59,11 +60,21 @@ public sealed class MergeService(
         // explicit deletion. This prevents partial edits from deleting unrelated files.
         var commitRequest = CanonicalWriter.BuildCommitRequest(change, detection.Slug, authorName, authorEmail);
 
-        // Commit to Git.
-        // KNOWN RISK: If the process crashes between this commit and the DB writes below,
-        // Git has content that the database doesn't know about. Production needs an intent
-        // log or reconciliation job.
+        await mergeIntents.CreatePendingAsync(new MergeIntent(
+            change.Id,
+            detection.Id,
+            detection.Slug,
+            time.GetUtcNow(),
+            authorName,
+            authorEmail,
+            commitRequest.Message,
+            MergeIntentState.Pending), ct);
+
+        // Commit to Git, then immediately store the resulting commit SHA before the version
+        // projection transaction. If the process fails after this point, the reconciliation
+        // read model can surface committed accepted content that still needs DB repair.
         var commitResult = await contentStore.CommitAsync(commitRequest, ct);
+        await mergeIntents.MarkCommittedAsync(change.Id, commitResult.CommitSha, commitResult.CommittedAt, ct);
 
         // Version projection.
         var now = time.GetUtcNow();
@@ -82,6 +93,7 @@ public sealed class MergeService(
         versions.Add(version);
         change.MarkMerged(version.Id, now);
         detection.MarkAccepted(version.Id, now);
+        await mergeIntents.MarkCompletedAsync(change.Id, version.Id, now, ct);
 
         changes.Save(change);
         detections.Save(detection);

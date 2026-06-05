@@ -13,13 +13,12 @@ Do not start by building a workflow designer, SIEM runtime, publisher, full SOAR
 
 The refreshed gap analysis is maintained in [GAP_ANALYSIS.md](GAP_ANALYSIS.md). The highest-priority gaps are:
 
-1. The web host still uses an in-memory placeholder accepted-content store instead of a real Git-backed store.
-2. Merge must recheck base-version freshness against the current accepted version at merge time.
-3. Draft semantics must be made safe so partial edits cannot delete unrelated accepted files.
-4. Version compare and restore-as-new-change need application services and UI.
-5. Navigation must stop advertising missing pages, or those pages must be implemented.
-6. Controlled-review required-check policy must define and enforce required checks, including missing/skipped checks.
-7. Documentation and implementation should consistently treat cases as issue records with optional external case references, per ADR-0014.
+1. Merge reconciliation needs repair automation now that merge intents can identify committed-but-unprojected accepted content.
+2. Version compare and restore-as-new-change need deeper end-to-end UI hardening.
+3. Version, check, review, and settings pages remain thin read models.
+4. Controlled-review required-check policy must expand as future profiles/check types enter POC scope.
+5. Check quality remains intentionally minimal for static assertions and placeholder query parsing.
+6. Persistence/read-model scope still needs explicit POC deferrals for users, comments, workflow projections, activity events, and locks.
 
 ## 3. Revised POC definition
 
@@ -277,8 +276,9 @@ Deliverables:
 - `VersionHistoryService` for timeline and version detail reads.
 - File-level diff service with domain labels and no Git UI primitives.
 - `RestoreService` implementing restore-as-new-change from accepted version content.
-- Merge intent/reconciliation mechanism for Git commit succeeds / DB update fails scenarios.
-- Tests for compare, restore, and reconciliation paths.
+- Merge intent records for Git commit succeeds / DB update fails scenarios.
+- Operator repair workflow for committed-but-unprojected merge intents.
+- Tests for compare, restore, intent detection, and reconciliation repair paths.
 
 Exit criteria:
 

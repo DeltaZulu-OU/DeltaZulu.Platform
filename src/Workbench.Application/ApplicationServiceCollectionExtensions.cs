@@ -14,6 +14,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<MergeService>();
         services.AddScoped<VersionService>();
         services.AddScoped<RestoreService>();
+        services.AddScoped<MergeReconciliationService>();
         services.AddScoped<CheckPipelineRunner>();
         return services;
     }

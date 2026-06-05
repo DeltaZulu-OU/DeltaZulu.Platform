@@ -114,5 +114,20 @@ public static class SchemaInitializer
             is_superseded       INTEGER NOT NULL DEFAULT 0,
             superseded_at       TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS merge_intents (
+            change_request_id   TEXT PRIMARY KEY,
+            detection_id        TEXT NOT NULL,
+            detection_slug      TEXT NOT NULL,
+            requested_at        TEXT NOT NULL,
+            author_name         TEXT NOT NULL,
+            author_email        TEXT NOT NULL,
+            commit_message      TEXT NOT NULL,
+            state               TEXT NOT NULL,
+            commit_sha          TEXT,
+            committed_at        TEXT,
+            version_id          TEXT,
+            completed_at        TEXT
+        );
         """;
 }
