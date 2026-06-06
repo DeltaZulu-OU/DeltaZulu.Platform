@@ -59,6 +59,24 @@ public sealed class PackageVersionBaselineTests
     }
 
     [TestMethod]
+    public void RestorePolicy_UsesPackageLocksAndCiLockedMode()
+    {
+        var repoRoot = FindRepositoryRoot();
+        var buildPropsPath = Path.Combine(repoRoot.FullName, "Directory.Build.props");
+        var ciWorkflowPath = Path.Combine(repoRoot.FullName, ".github", "workflows", "workbench-ci.yml");
+
+        var buildProps = XDocument.Load(buildPropsPath);
+        var restorePackagesWithLockFile = buildProps.Descendants("RestorePackagesWithLockFile")
+            .Select(element => element.Value.Trim())
+            .SingleOrDefault();
+
+        Assert.AreEqual("true", restorePackagesWithLockFile, "Directory.Build.props must require package lock files for every Workbench project.");
+
+        var ciWorkflow = File.ReadAllText(ciWorkflowPath);
+        StringAssert.Contains(ciWorkflow, "dotnet restore DetectionContentWorkbench.slnx --locked-mode");
+    }
+
+    [TestMethod]
     public void PackageLockFiles_ExistForEveryProject()
     {
         var repoRoot = FindRepositoryRoot();
@@ -72,6 +90,23 @@ public sealed class PackageVersionBaselineTests
             var lockFile = Path.Combine(Path.GetDirectoryName(projectFile)!, "packages.lock.json");
             Assert.IsTrue(File.Exists(lockFile), $"{Path.GetRelativePath(repoRoot.FullName, projectFile)} must have a packages.lock.json for locked restores.");
         }
+    }
+
+
+    [TestMethod]
+    public void HuntingCoreAdapter_DoesNotReferenceWorkbenchWeb()
+    {
+        var repoRoot = FindRepositoryRoot();
+        var adapterProjectPath = Path.Combine(repoRoot.FullName, "src", "Workbench.HuntingCoreAdapter", "Workbench.HuntingCoreAdapter.csproj");
+        var document = XDocument.Load(adapterProjectPath);
+
+        var projectReferences = document.Descendants("ProjectReference")
+            .Select(element => (string?)element.Attribute("Include") ?? string.Empty)
+            .ToList();
+
+        CollectionAssert.DoesNotContain(projectReferences, @"..\Workbench.Web\Workbench.Web.csproj");
+        Assert.IsFalse(projectReferences.Any(reference => reference.Contains("Workbench.Web", StringComparison.OrdinalIgnoreCase)),
+            "The reusable Hunting.Core validation adapter must not reference Workbench.Web or any future Hunting.Web module.");
     }
 
     private static bool IsFloatingVersion(string version) =>

@@ -73,6 +73,7 @@ This repository uses the following documentation files as development constraint
 | [USER_STORIES.md](USER_STORIES.md) | User-centered capability stories for destructuring the tool and supporting gap analysis. |
 | [UI_ACTIVITY_DIAGRAM.md](UI_ACTIVITY_DIAGRAM.md) | UI activity diagram and navigation implications derived from the user stories. |
 | [UX_REDESIGN_ANALYSIS.md](UX_REDESIGN_ANALYSIS.md) | UX bottleneck analysis and interaction redesign guidance for smoother user flows. |
+| [UI_CONVERGENCE_GUIDE.md](UI_CONVERGENCE_GUIDE.md) | Shared MudBlazor/DeltaZulu CSS rules for Workbench and Hunting host convergence. |
 | [adr/](adr/) | Architecture Decision Records. Each ADR captures a design decision that should not be silently reversed. |
 
 ## Architecture decisions
@@ -141,3 +142,7 @@ The following are deliberately out of scope for the POC:
 ## Development posture
 
 Treat this repository as a product architecture seed. Keep code consistent with the ADRs. When implementation pressure suggests a deviation, write or revise an ADR before changing direction.
+
+## Merge-prep guidance
+
+- [UI convergence guide](UI_CONVERGENCE_GUIDE.md) — shared MudBlazor/DeltaZulu CSS rules for Workbench and Hunting host convergence.

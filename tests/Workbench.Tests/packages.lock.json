@@ -275,6 +275,13 @@
         "requested": "[18.0.0, )",
         "resolved": "18.0.0",
         "contentHash": "ptHVgcYmLejGuWXV7RMFoEqFKYMXnieOlWLPzEslfDtzZ9ngMhjYwykfqjBN2+fMEAEyobozkj07lKEpR4dssA=="
+      },
+      "workbench.huntingcoreadapter": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.8, )",
+          "Workbench.Application": "[1.0.0, )"
+        }
       }
     }
   }
