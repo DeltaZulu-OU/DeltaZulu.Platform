@@ -69,7 +69,7 @@ jobs:
           }
 
       - name: Restore Web project
-        run: dotnet restore src/Hunting.Web/Hunting.Web.csproj
+        run: dotnet restore src/Hunting.Web/Hunting.Web.csproj --locked-mode
 
       - name: Build Web project
         run: dotnet build src/Hunting.Web/Hunting.Web.csproj --configuration "${{ env.CONFIGURATION }}" --no-restore
