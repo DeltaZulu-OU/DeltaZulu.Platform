@@ -283,6 +283,7 @@ Implemented:
 - icon-only refresh split buttons for dashboard and widgets
 - dashboard-level auto-refresh
 - coordinate-grid widget layout
+- dashboard readonly/edit mode split with a top-right Edit/Save mode switch and staged edit persistence
 - widget move and resize in edit mode
 - collision prevention during move/resize
 - model-level 12-column grid and overlap validation

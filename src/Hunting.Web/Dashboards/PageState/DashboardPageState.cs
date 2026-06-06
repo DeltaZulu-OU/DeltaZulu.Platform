@@ -21,7 +21,7 @@ public sealed class DashboardPageState
 
     public bool EditorOpen { get; set; }
 
-    public bool LayoutEditMode { get; set; }
+    public bool EditMode { get; set; }
 
     public bool Loading { get; set; } = true;
 
@@ -53,7 +53,7 @@ public sealed class DashboardPageState
         SaveError = null;
         AutoRefreshEnabled = false;
         EditorOpen = false;
-        LayoutEditMode = false;
+        EditMode = false;
         SettingsEditorOpen = false;
         Dashboard = null;
         Loading = true;

@@ -304,6 +304,25 @@
     border-bottom-right-radius: 0;
 }
 
+.dashboard-toolbar-split .dashboard-mode-button {
+    min-width: 72px;
+    width: auto;
+    padding-inline: 14px;
+    border-left-width: 0;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-top-right-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+    margin-left: -1px;
+}
+
+.dashboard-edit-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
 .dashboard-toolbar-split .dashboard-toolbar-menu .mud-button-root,
 .dashboard-toolbar-split .dashboard-toolbar-menu .mud-icon-button,
 .dashboard-toolbar-split .dashboard-toolbar-menu button {

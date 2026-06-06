@@ -164,34 +164,36 @@ public sealed class DashboardPageController
         return Task.CompletedTask;
     }
 
-    public void ToggleLayoutEditMode()
+    public void StartEditMode()
     {
-        State.LayoutEditMode = !State.LayoutEditMode;
+        State.EditMode = true;
         NotifyStateChanged();
     }
 
-    public void OpenDashboardSettingsEditor()
+    public async Task SaveEditModeAsync()
     {
+        if (!State.EditMode || State.Dashboard is null)
+        {
+            return;
+        }
+
         State.SaveError = null;
-        State.SettingsEditorOpen = true;
-        NotifyStateChanged();
-    }
-
-    public void CloseDashboardSettingsEditor()
-    {
-        State.CloseDashboardSettingsEditor();
-        NotifyStateChanged();
-    }
-
-    public async Task SaveDashboardSettingsAsync(DashboardDefinition dashboard)
-    {
-        State.SaveError = null;
+        var updatedDashboard = State.Dashboard with { UpdatedAtUtc = DateTime.UtcNow };
+        var validationErrors = DashboardModelValidator.Validate(updatedDashboard);
+        if (validationErrors.Count > 0)
+        {
+            State.SaveError = string.Join(" ", validationErrors);
+            NotifyStateChanged();
+            return;
+        }
 
         try
         {
-            await _dashboardRepository.SaveAsync(dashboard);
-            State.Dashboard = dashboard;
+            await _dashboardRepository.SaveAsync(updatedDashboard);
+            State.Dashboard = updatedDashboard;
+            State.CloseWidgetEditor();
             State.CloseDashboardSettingsEditor();
+            State.EditMode = false;
 
             if (State.AutoRefreshEnabled && !State.CanStartAutoRefresh)
             {
@@ -205,15 +207,53 @@ public sealed class DashboardPageController
         }
         catch (Exception ex)
         {
-            State.SaveError = $"Could not save dashboard settings. {ex.Message}";
-            _logger.LogWarning(ex, "Could not save dashboard settings for {DashboardId}.", dashboard.Id);
+            State.SaveError = $"Could not save dashboard. {ex.Message}";
+            _logger.LogWarning(ex, "Could not save dashboard {DashboardId}.", updatedDashboard.Id);
         }
 
         NotifyStateChanged();
     }
 
+    public void OpenDashboardSettingsEditor()
+    {
+        if (!State.EditMode)
+        {
+            return;
+        }
+
+        State.SaveError = null;
+        State.SettingsEditorOpen = true;
+        NotifyStateChanged();
+    }
+
+    public void CloseDashboardSettingsEditor()
+    {
+        State.CloseDashboardSettingsEditor();
+        NotifyStateChanged();
+    }
+
+    public Task SaveDashboardSettingsAsync(DashboardDefinition dashboard)
+    {
+        if (!State.EditMode)
+        {
+            return Task.CompletedTask;
+        }
+
+        State.SaveError = null;
+
+        State.Dashboard = dashboard;
+        State.CloseDashboardSettingsEditor();
+        NotifyStateChanged();
+        return Task.CompletedTask;
+    }
+
     public void OpenAddWidgetEditor()
     {
+        if (!State.EditMode)
+        {
+            return;
+        }
+
         State.SaveError = null;
         State.EditingWidget = null;
         State.NextWidgetLayout = GetNextWidgetLayout();
@@ -223,6 +263,11 @@ public sealed class DashboardPageController
 
     public void OpenEditWidgetEditor(DashboardWidgetDefinition widget)
     {
+        if (!State.EditMode)
+        {
+            return;
+        }
+
         State.SaveError = null;
         State.EditingWidget = widget;
         State.NextWidgetLayout = widget.Layout;
@@ -238,6 +283,11 @@ public sealed class DashboardPageController
 
     public async Task SaveWidgetAsync(DashboardWidgetDefinition widget)
     {
+        if (!State.EditMode)
+        {
+            return;
+        }
+
         if (State.Dashboard is null)
         {
             return;
@@ -259,7 +309,7 @@ public sealed class DashboardPageController
             widgets.Add(widget);
         }
 
-        await SaveDashboardWidgetsAsync(widgets);
+        ApplyDashboardWidgets(widgets);
         if (!string.IsNullOrWhiteSpace(State.SaveError))
         {
             NotifyStateChanged();
@@ -278,11 +328,16 @@ public sealed class DashboardPageController
         }
     }
 
-    public async Task DeleteWidgetAsync(DashboardWidgetDefinition widget)
+    public Task DeleteWidgetAsync(DashboardWidgetDefinition widget)
     {
+        if (!State.EditMode)
+        {
+            return Task.CompletedTask;
+        }
+
         if (State.Dashboard is null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         State.SaveError = null;
@@ -293,27 +348,34 @@ public sealed class DashboardPageController
             .Where(candidate => !string.Equals(candidate.Id, widget.Id, StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
-        await SaveDashboardWidgetsAsync(widgets);
+        ApplyDashboardWidgets(widgets);
         NotifyStateChanged();
+        return Task.CompletedTask;
     }
 
-    public async Task SaveWidgetLayoutAsync(DashboardWidgetLayoutChange change)
+    public Task SaveWidgetLayoutAsync(DashboardWidgetLayoutChange change)
     {
+        if (!State.EditMode)
+        {
+            return Task.CompletedTask;
+        }
+
         if (State.Dashboard is null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         var widgets = State.Dashboard.Widgets.ToList();
         var index = widgets.FindIndex(widget => string.Equals(widget.Id, change.WidgetId, StringComparison.OrdinalIgnoreCase));
         if (index < 0)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         widgets[index] = widgets[index] with { Layout = change.Layout };
-        await SaveDashboardWidgetsAsync(widgets);
+        ApplyDashboardWidgets(widgets);
         NotifyStateChanged();
+        return Task.CompletedTask;
     }
 
     public DashboardExport? BuildDashboardExport()
@@ -394,19 +456,14 @@ public sealed class DashboardPageController
         StartAutoRefresh();
     }
 
-    private async Task SaveDashboardWidgetsAsync(IReadOnlyList<DashboardWidgetDefinition> widgets)
+    private void ApplyDashboardWidgets(IReadOnlyList<DashboardWidgetDefinition> widgets)
     {
         if (State.Dashboard is null)
         {
             return;
         }
 
-        var updatedDashboard = State.Dashboard with
-        {
-            Widgets = widgets,
-            UpdatedAtUtc = DateTime.UtcNow
-        };
-
+        var updatedDashboard = State.Dashboard with { Widgets = widgets };
         var validationErrors = DashboardModelValidator.Validate(updatedDashboard);
         if (validationErrors.Count > 0)
         {
@@ -414,17 +471,7 @@ public sealed class DashboardPageController
             return;
         }
 
-        try
-        {
-            await _dashboardRepository.SaveAsync(updatedDashboard);
-            State.Dashboard = updatedDashboard;
-            RestartAutoRefreshIfEnabled();
-        }
-        catch (Exception ex)
-        {
-            State.SaveError = $"Could not save dashboard. {ex.Message}";
-            _logger.LogWarning(ex, "Could not save dashboard {DashboardId}.", updatedDashboard.Id);
-        }
+        State.Dashboard = updatedDashboard;
     }
 
     private DashboardLayout GetNextWidgetLayout()

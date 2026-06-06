@@ -35,15 +35,19 @@
                 }
                 else
                 {
-                    <p class="dashboard-page-subtitle">Run, edit, import, export, and refresh dashboard widgets.</p>
+                    <p class="dashboard-page-subtitle">Run and refresh dashboard widgets. Select Edit to change settings, widgets, or layout.</p>
                 }
                 @if (State.AutoRefreshEnabled)
                 {
                     <p class="dashboard-page-subtitle">@State.AutoRefreshStatus</p>
                 }
-                @if (State.LayoutEditMode)
+                @if (State.EditMode)
                 {
-                    <p class="dashboard-page-subtitle">Layout edit mode is active. Drag widgets by the handle and resize them from the edges.</p>
+                    <p class="dashboard-page-subtitle">Edit mode is active. Change settings, add widgets, or drag and resize widgets, then select Save to persist changes.</p>
+                    <div class="dashboard-edit-actions" role="group" aria-label="Dashboard editing actions">
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="Controller.OpenDashboardSettingsEditor">Settings</MudButton>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="Controller.OpenAddWidgetEditor">Add widget</MudButton>
+                    </div>
                 }
             </div>
             <div class="dashboard-toolbar">
@@ -57,23 +61,26 @@
                                aria-label="Refresh dashboard">
                         <MudIcon Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" />
                     </MudButton>
-                    <MudMenu Class="dashboard-toolbar-menu"
-                             Dense="true"
-                             AnchorOrigin="Origin.BottomRight"
-                             TransformOrigin="Origin.TopRight"
-                             Icon="@Icons.Material.Filled.ArrowDropDown"
-                             Size="Size.Small"
-                             Variant="Variant.Outlined">
-                        <MudMenuItem Disabled="@(!State.CanStartAutoRefresh)" OnClick="Controller.ToggleAutoRefreshAsync">
-                            @(State.AutoRefreshEnabled ? "Stop auto-refresh" : "Start auto-refresh")
-                        </MudMenuItem>
-                        <MudMenuItem OnClick="Controller.ToggleLayoutEditMode">
-                            @(State.LayoutEditMode ? "Done editing layout" : "Edit layout")
-                        </MudMenuItem>
-                        <MudMenuItem OnClick="Controller.OpenDashboardSettingsEditor">Edit dashboard</MudMenuItem>
-                        <MudMenuItem OnClick="Controller.OpenAddWidgetEditor">Add widget</MudMenuItem>
-                        <MudMenuItem OnClick="ExportDashboardAsync">Export JSON</MudMenuItem>
-                    </MudMenu>
+                    @if (State.EditMode)
+                    {
+                        <MudButton Class="dashboard-toolbar-primary dashboard-mode-button"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="Controller.SaveEditModeAsync">
+                            Save
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Class="dashboard-toolbar-primary dashboard-mode-button"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="Controller.StartEditMode">
+                            Edit
+                        </MudButton>
+                    }
                 </div>
             </div>
         </header>
@@ -85,7 +92,7 @@
 
         <DashboardGrid Dashboard="State.Dashboard"
                        Results="State.WidgetResults"
-                       IsEditMode="State.LayoutEditMode"
+                       IsEditMode="State.EditMode"
                        RunWidget="Controller.RunWidgetAsync"
                        LayoutChanged="Controller.SaveWidgetLayoutAsync"
                        EditWidget="Controller.OpenEditWidgetEditor"

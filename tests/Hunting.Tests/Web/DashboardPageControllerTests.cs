@@ -42,33 +42,22 @@ public sealed class DashboardPageControllerTests
         Assert.AreEqual("The requested dashboard was not found.", controller.State.Error);
     }
 
+
     [TestMethod]
-    public async Task SaveWidgetAsync_NewQueryWidget_SavesAndRunsWidget()
+    public async Task LoadAsync_ExistingDashboard_DefaultsToReadonlyMode()
     {
         var dashboard = CreateDashboard(widgets: []);
-        var repository = new FakeDashboardRepository(dashboard);
-        var renderedRunner = new FakeRenderedQueryRunner(CreateRenderedResult(CreateSuccessfulQueryResult(), CreateTableFallbackChart()));
-        var controller = CreateController(repository, renderedRunner);
+        var controller = CreateController(new FakeDashboardRepository(dashboard));
 
         await controller.LoadAsync(dashboard.Id);
-        var widget = CreateWidget("widget-1");
 
-        await controller.SaveWidgetAsync(widget);
-
-        Assert.IsNull(controller.State.SaveError);
+        Assert.IsFalse(controller.State.EditMode);
         Assert.IsFalse(controller.State.EditorOpen);
-        Assert.AreEqual(1, repository.SaveCount);
-        Assert.HasCount(1, controller.State.Dashboard!.Widgets);
-        Assert.AreEqual(widget.Id, controller.State.Dashboard.Widgets[0].Id);
-        Assert.AreEqual(1, renderedRunner.RunCount);
-        Assert.AreEqual(widget.QueryText, renderedRunner.LastQueryText);
-        Assert.IsNull(renderedRunner.LastDirective);
-        Assert.IsTrue(controller.State.WidgetResults.ContainsKey(widget.Id));
-        Assert.AreEqual(DashboardWidgetRunStatus.Succeeded, controller.State.WidgetResults[widget.Id].Status);
+        Assert.IsFalse(controller.State.SettingsEditorOpen);
     }
 
     [TestMethod]
-    public async Task DeleteWidgetAsync_RemovesWidgetAndResult()
+    public async Task ReadonlyMode_EditOperationsDoNotPersistOrOpenEditors()
     {
         var widget = CreateWidget("widget-1");
         var dashboard = CreateDashboard(widgets: [widget]);
@@ -76,6 +65,105 @@ public sealed class DashboardPageControllerTests
         var controller = CreateController(repository);
 
         await controller.LoadAsync(dashboard.Id);
+
+        controller.OpenDashboardSettingsEditor();
+        controller.OpenAddWidgetEditor();
+        controller.OpenEditWidgetEditor(widget);
+        await controller.SaveWidgetAsync(CreateWidget("widget-2"));
+        await controller.DeleteWidgetAsync(widget);
+        await controller.SaveWidgetLayoutAsync(new DashboardWidgetLayoutChange(
+            widget.Id,
+            widget.Layout with { X = 2 }));
+
+        Assert.IsFalse(controller.State.EditMode);
+        Assert.IsFalse(controller.State.SettingsEditorOpen);
+        Assert.IsFalse(controller.State.EditorOpen);
+        Assert.AreEqual(0, repository.SaveCount);
+        Assert.HasCount(1, controller.State.Dashboard!.Widgets);
+        Assert.AreEqual(0, controller.State.Dashboard.Widgets[0].Layout.X);
+    }
+
+    [TestMethod]
+    public async Task SaveEditModeAsync_ValidDraft_PersistsClosesEditorsAndReturnsToReadonlyMode()
+    {
+        var dashboard = CreateDashboard(widgets: []);
+        var repository = new FakeDashboardRepository(dashboard);
+        var controller = CreateController(repository);
+
+        await controller.LoadAsync(dashboard.Id);
+        controller.StartEditMode();
+        controller.OpenAddWidgetEditor();
+        controller.OpenDashboardSettingsEditor();
+
+        await controller.SaveEditModeAsync();
+
+        Assert.AreEqual(1, repository.SaveCount);
+        Assert.IsFalse(controller.State.EditMode);
+        Assert.IsFalse(controller.State.EditorOpen);
+        Assert.IsFalse(controller.State.SettingsEditorOpen);
+        Assert.IsNull(controller.State.EditingWidget);
+    }
+
+    [TestMethod]
+    public async Task SaveEditModeAsync_InvalidDraft_StaysInEditModeAndDoesNotPersist()
+    {
+        var dashboard = CreateDashboard(widgets: []);
+        var repository = new FakeDashboardRepository(dashboard);
+        var controller = CreateController(repository);
+
+        await controller.LoadAsync(dashboard.Id);
+        controller.StartEditMode();
+        await controller.SaveDashboardSettingsAsync(dashboard with { Name = string.Empty });
+
+        await controller.SaveEditModeAsync();
+
+        Assert.AreEqual(0, repository.SaveCount);
+        Assert.IsTrue(controller.State.EditMode);
+        Assert.IsNotNull(controller.State.SaveError);
+        Assert.Contains("Dashboard name is required.", controller.State.SaveError);
+    }
+
+    [TestMethod]
+    public async Task SaveWidgetAsync_NewQueryWidget_StagesRunsAndPersistsOnModeSave()
+    {
+        var dashboard = CreateDashboard(widgets: []);
+        var repository = new FakeDashboardRepository(dashboard);
+        var renderedRunner = new FakeRenderedQueryRunner(CreateRenderedResult(CreateSuccessfulQueryResult(), CreateTableFallbackChart()));
+        var controller = CreateController(repository, renderedRunner);
+
+        await controller.LoadAsync(dashboard.Id);
+        controller.StartEditMode();
+        var widget = CreateWidget("widget-1");
+
+        await controller.SaveWidgetAsync(widget);
+
+        Assert.IsNull(controller.State.SaveError);
+        Assert.IsFalse(controller.State.EditorOpen);
+        Assert.AreEqual(0, repository.SaveCount);
+        Assert.HasCount(1, controller.State.Dashboard!.Widgets);
+        Assert.AreEqual(widget.Id, controller.State.Dashboard.Widgets[0].Id);
+        Assert.AreEqual(1, renderedRunner.RunCount);
+        Assert.AreEqual(widget.QueryText, renderedRunner.LastQueryText);
+        Assert.IsNull(renderedRunner.LastDirective);
+        Assert.IsTrue(controller.State.WidgetResults.ContainsKey(widget.Id));
+        Assert.AreEqual(DashboardWidgetRunStatus.Succeeded, controller.State.WidgetResults[widget.Id].Status);
+
+        await controller.SaveEditModeAsync();
+
+        Assert.AreEqual(1, repository.SaveCount);
+        Assert.IsFalse(controller.State.EditMode);
+    }
+
+    [TestMethod]
+    public async Task DeleteWidgetAsync_StagesWidgetRemovalAndRemovesResult()
+    {
+        var widget = CreateWidget("widget-1");
+        var dashboard = CreateDashboard(widgets: [widget]);
+        var repository = new FakeDashboardRepository(dashboard);
+        var controller = CreateController(repository);
+
+        await controller.LoadAsync(dashboard.Id);
+        controller.StartEditMode();
         controller.State.WidgetResults[widget.Id] = new DashboardWidgetRunResult
         {
             WidgetId = widget.Id,
@@ -86,7 +174,7 @@ public sealed class DashboardPageControllerTests
         await controller.DeleteWidgetAsync(widget);
 
         Assert.IsNull(controller.State.SaveError);
-        Assert.AreEqual(1, repository.SaveCount);
+        Assert.AreEqual(0, repository.SaveCount);
         Assert.IsEmpty(controller.State.Dashboard!.Widgets);
         Assert.IsFalse(controller.State.WidgetResults.ContainsKey(widget.Id));
     }
@@ -108,6 +196,7 @@ public sealed class DashboardPageControllerTests
         var controller = CreateController(repository);
 
         await controller.LoadAsync(dashboard.Id);
+        controller.StartEditMode();
 
         await controller.SaveWidgetLayoutAsync(new DashboardWidgetLayoutChange(
             second.Id,
