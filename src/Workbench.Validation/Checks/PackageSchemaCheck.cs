@@ -53,15 +53,9 @@ public sealed class PackageSchemaCheck : ICheck
                     continue;
                 }
 
-                var presentKeys = root.Children.Keys
-                    .OfType<YamlScalarNode>()
-                    .Select(k => k.Value)
-                    .Where(v => v is not null)
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
                 foreach (var field in RequiredFields)
                 {
-                    if (!presentKeys.Contains(field))
+                    if (!root.ContainsScalarKey(field))
                     {
                         errors.Add($"{file.LogicalPath}: missing required field '{field}'.");
                     }

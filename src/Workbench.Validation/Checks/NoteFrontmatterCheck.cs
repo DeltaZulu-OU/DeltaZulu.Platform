@@ -59,28 +59,18 @@ public sealed class NoteFrontmatterCheck : ICheck
                 }
 
                 // Validate observables if present.
-                var observablesKey = root.Children.Keys
-                    .OfType<YamlScalarNode>()
-                    .FirstOrDefault(k => string.Equals(k.Value, "observables", StringComparison.OrdinalIgnoreCase));
-
-                if (observablesKey is not null && root.Children[observablesKey] is YamlSequenceNode seq)
+                if (root.TryGetChild("observables", out var observablesNode) && observablesNode is YamlSequenceNode seq)
                 {
                     for (var i = 0; i < seq.Children.Count; i++)
                     {
                         if (seq.Children[i] is YamlMappingNode entry)
                         {
-                            var keys = entry.Children.Keys
-                                .OfType<YamlScalarNode>()
-                                .Select(k => k.Value)
-                                .Where(v => v is not null)
-                                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                            if (!keys.Contains("type"))
+                            if (!entry.ContainsScalarKey("type"))
                             {
                                 warnings.Add($"{note.LogicalPath}: observable [{i}] missing 'type' field.");
                             }
 
-                            if (!keys.Contains("value"))
+                            if (!entry.ContainsScalarKey("value"))
                             {
                                 warnings.Add($"{note.LogicalPath}: observable [{i}] missing 'value' field.");
                             }

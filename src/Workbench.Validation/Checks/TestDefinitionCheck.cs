@@ -87,7 +87,7 @@ public sealed class TestDefinitionCheck : ICheck
         string queryText,
         List<string> errors)
     {
-        if (!TryGetNode(root, "assertions", out var assertionsNode))
+        if (!root.TryGetChild("assertions", out var assertionsNode))
         {
             return 0;
         }
@@ -110,13 +110,13 @@ public sealed class TestDefinitionCheck : ICheck
                 continue;
             }
 
-            if (!TryGetScalar(assertion, "type", out var type) || string.IsNullOrWhiteSpace(type))
+            if (!assertion.TryGetScalar("type", out var type) || string.IsNullOrWhiteSpace(type))
             {
                 errors.Add($"{assertionPath}: missing assertion type.");
                 continue;
             }
 
-            if (!TryGetScalar(assertion, "value", out var value) || string.IsNullOrEmpty(value))
+            if (!assertion.TryGetScalar("value", out var value) || string.IsNullOrEmpty(value))
             {
                 errors.Add($"{assertionPath}: missing assertion value.");
                 continue;
@@ -151,31 +151,4 @@ public sealed class TestDefinitionCheck : ICheck
         return executed;
     }
 
-    private static bool TryGetNode(YamlMappingNode mapping, string key, out YamlNode node)
-    {
-        foreach (var child in mapping.Children)
-        {
-            if (child.Key is YamlScalarNode { Value: { } value } &&
-                string.Equals(value, key, StringComparison.OrdinalIgnoreCase))
-            {
-                node = child.Value;
-                return true;
-            }
-        }
-
-        node = new YamlScalarNode(string.Empty);
-        return false;
-    }
-
-    private static bool TryGetScalar(YamlMappingNode mapping, string key, out string value)
-    {
-        if (TryGetNode(mapping, key, out var node) && node is YamlScalarNode scalar && scalar.Value is not null)
-        {
-            value = scalar.Value;
-            return true;
-        }
-
-        value = string.Empty;
-        return false;
-    }
 }
