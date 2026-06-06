@@ -13,8 +13,8 @@ public static class SampleQueryCatalog
         new("Process", "Process: count by device",
             """
             ProcessEvent
-            | summarize count() by DeviceName
-            | sort by count_ desc
+            | summarize Count = count() by DeviceName
+            | sort by Count desc
             """),
         new("Process", "Process: PowerShell activity",
             """
