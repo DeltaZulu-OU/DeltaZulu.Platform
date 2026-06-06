@@ -58,6 +58,16 @@ jobs:
             exit 1
           }
 
+      - name: Verify package lock generation is enabled
+        shell: pwsh
+        run: |
+          $props = [xml](Get-Content Directory.Build.props)
+          $enabled = $props.Project.PropertyGroup.RestorePackagesWithLockFile
+          if ($enabled -ne "true") {
+            Write-Error "Directory.Build.props must keep RestorePackagesWithLockFile=true."
+            exit 1
+          }
+
       - name: Restore Web project
         run: dotnet restore src/Hunting.Web/Hunting.Web.csproj
 

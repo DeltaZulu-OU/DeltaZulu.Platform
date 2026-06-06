@@ -1,0 +1,1797 @@
+diff --git a/Directory.Build.props b/Directory.Build.props
+index eaa1c2aa649769700253b21dd69ffac6d60de0df..026dc8849be579ed30cfd2eff965d6bac58b2302 100644
+--- a/Directory.Build.props
++++ b/Directory.Build.props
+@@ -1,12 +1,16 @@
+ <Project>
+   <PropertyGroup>
+     <TargetFramework>net10.0</TargetFramework>
++    <LangVersion>latest</LangVersion>
+     <ImplicitUsings>enable</ImplicitUsings>
+     <Nullable>enable</Nullable>
+-    <AnalysisLevel>latest</AnalysisLevel>
+-    <AnalysisMode>Recommended</AnalysisMode>
++    <AnalysisLevel>latest-recommended</AnalysisLevel>
++    <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+     <Deterministic>true</Deterministic>
++    <IsPackable>false</IsPackable>
++    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
++    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+   </PropertyGroup>
+ </Project>
+diff --git a/README.md b/README.md
+index cc08b1d56d9d2ea34709a358df5280828f1143c8..c9dc6fb6742ee15edd795b1b4663799664e4ef93 100644
+--- a/README.md
++++ b/README.md
+@@ -1,48 +1,49 @@
+ # Hunting
+ 
+ ## Description
+ 
+ Hunting is a schema-first KQL-on-DuckDB security hunting workbench built with .NET.
+ 
+ Analysts write a controlled KQL subset against logical security tables such as `ProcessEvent`, `NetworkSession`, and `Dns`. The application parses KQL with `Microsoft.Azure.Kusto.Language`, translates it through an internal relational model, emits transient DuckDB SQL, executes the query, and returns bounded tabular or rendered results in a Blazor Server UI.
+ 
+ Runtime SQL is generated and discarded. It is not a durable project artifact.
+ 
+ ## Purpose
+ 
+ Hunting is intended to provide a familiar threat-hunting experience over local or embedded security data without becoming a generic SQL explorer. The current implementation focuses on:
+ 
+ - KQL-style analyst workflow over governed Golden security views.
+-- DuckDB-backed local execution for development, validation, and early product exploration.
++- DuckDB-backed local execution for development, validation, and early product exploration, with database paths configurable through `Hunting:DuckDbPath` and `Hunting:AppDbPath`.
+ - Schema-first Bronze/Silver/Golden contracts for telemetry normalization.
+-- Deterministic query translation, diagnostics, and tests for supported KQL constructs.
++- Deterministic query translation, diagnostics, reusable KQL syntax validation, and tests for supported KQL constructs.
+ - Render-aware query execution and dashboard composition without introducing a second query runtime.
++- Saved queries can be projected into draft-only content-library artifacts for later Workbench governance without treating local hunting state as accepted content.
+ - Dashboard detail pages default to readonly mode; edit-mode changes are staged locally, including collision-aware title-bar layout drags, and persisted by the top-right Save action.
+ - Dashboard widgets prioritize visualization/table content while keeping source and execution metadata for all run outcomes in Debug logs.
+ 
+-Implemented feature status is tracked in the documentation, not in this README:
++Implementation-status snapshot: dependency versions are centrally pinned, package-lock generation is enabled, shared build props now use the future monorepo analyzer/style baseline, reusable validation lives in `Hunting.Core`, and Hunting CSS uses DeltaZulu-scoped aliases rather than a root-level parallel token system. Detailed feature status is tracked in the documentation, not in this README:
+ 
+ - Roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+ - KQL syntax coverage: [`docs/kql-syntax-coverage-checklist.md`](docs/kql-syntax-coverage-checklist.md)
+ - Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+ - Dashboard architecture: [`docs/DASHBOARD-ARCHITECTURE.md`](docs/DASHBOARD-ARCHITECTURE.md)
+ - Dashboard QA checklist: [`docs/DASHBOARD-PR-CHECKLIST.md`](docs/DASHBOARD-PR-CHECKLIST.md)
+ 
+ ## Usage
+ 
+ Install the .NET SDK required by the solution, then run the Blazor application from the repository root:
+ 
+ ```bash
+ dotnet restore
+ dotnet run --project src/Hunting.Web
+ ```
+ 
+ Open the local application URL printed by `dotnet run`. Use the query editor to run KQL against the active Golden schema.
+ 
+ Example queries:
+ 
+ ```kql
+ ProcessEvent
+ | project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine
+ | take 50
+ ```
+@@ -73,35 +74,36 @@ Repository layout:
+ 
+ ```text
+ src/
+   Hunting.Application/ # Application-level records and repository contracts
+   Hunting.Core/        # Query model, translation, planner, SQL emission, schema contracts/types
+   Hunting.Schema/      # Active medallion Bronze/Silver/Golden schema definitions
+   Hunting.Data/        # DuckDB runtime, schema application, Dapper persistence, and seed data
+   Hunting.Render/      # Render contracts, directive parsing, binding, and chart-model construction
+   Hunting.Web/         # Blazor Server UI, query orchestration, dashboards, and ECharts adaptation
+ 
+ tests/
+   Hunting.Tests/       # MSTest coverage across translation, emitter, runtime, render, Web, dashboard, and E2E seams
+ 
+ docs/
+   ARCHITECTURE.md
+   DASHBOARD-ARCHITECTURE.md
+   DASHBOARD-PR-CHECKLIST.md
+   ROADMAP.md
+   KQL-to-DuckDB-translation-spec.md
+   kql-syntax-coverage-checklist.md
+   adr/
+ ```
+ 
+ Development constraints:
+ 
+-- Shared build conventions live in `Directory.Build.props`; keep common nullable, implicit using, analysis, and deterministic build settings centralized there.
+-- Package versions are centrally pinned in `Directory.Packages.props`; project files should not reintroduce floating package versions.
++- Shared build conventions live in `Directory.Build.props`; keep common nullable, implicit using, analysis, deterministic build, package-lock, and warning policy settings centralized there.
++- Package versions are centrally pinned in `Directory.Packages.props`; project files should not reintroduce floating package versions, and lock files should be regenerated with a local .NET SDK after package changes.
+ - Keep user-facing queries on Golden views.
+ - Reject unsupported KQL constructs with diagnostics rather than silent approximation.
+ - Keep `Hunting.Data` data-only; render parsing and dashboard composition stay outside the runtime.
+ - Update the roadmap and coverage checklist when feature status changes.
++- Keep product CSS scoped to Hunting roots and shared DeltaZulu/MudBlazor tokens so Hunting can mount inside a Workbench-owned shell.
+ 
+ ## License
+ 
+ This project is licensed under the terms in [`LICENSE`](LICENSE).
+diff --git a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
+index 59ce094a786a4909e2fd08b841917da0db016f72..4ba4630006ae8f65a563fa4195e4febeb9052b36 100644
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -1,50 +1,50 @@
+ # Architecture
+ 
+ ## What This System Is
+ 
+ Hunting is a schema-first KQL-on-DuckDB security hunting workbench built with .NET. Users write KQL in a Blazor Server web interface. The backend parses KQL using Microsoft Kusto language tooling, translates a controlled subset into a relational intermediate model, emits transient DuckDB SQL, executes it, and returns bounded results.
+ 
+-Users query logical Golden event contracts. They do not write SQL, do not query Bronze or Silver objects, and do not depend on DuckDB-internal table names.
++Users query logical Golden event contracts. They do not write SQL, do not query Bronze or Silver objects, and do not depend on DuckDB-internal table names. In a future Workbench-owned host, Hunting is the reusable runtime/query/schema/render/dashboard capability layer: Workbench owns governance and shell composition, while Hunting.Core exposes validation and translation seams that do not execute DuckDB SQL.
+ 
+ ## ADR Alignment Snapshot
+ 
+ The current implementation aligns with accepted ADRs for parser-view SQL boundaries, Golden-only query surface, two-seam testing, semantics-preserving planner rewrites, single-connection DuckDB MVP runtime, semantic-safety rejection policy, medallion schema direction, schema provenance, governed seed fixtures, parser specifications as a validation layer, and render decoupling.
+ 
+ Phase 1A is the accepted medallion checkpoint. It is not a broad schema expansion milestone. Its purpose is to prove the Bronze/Silver/Golden shape, remove legacy vertical-slice assumptions, and establish the active contracts before hardening and expansion.
+ 
+ Phases 1B, 1C, and 1D harden that checkpoint. Phase 1B adds schema provenance and conservative migration safety. Phase 1C governs development seed fixtures. Phase 1D makes parser behavior reviewable and guarded without replacing the existing parser-view generation path.
+ 
+ ## Structural Pattern
+ 
+ The architecture is structurally CQRS because the write-side schema pipeline and read-side query pipeline have different models and failure modes.
+ 
+ **Write side:** C# schema models → `SchemaEmitter` DDL → `SchemaApplier` → DuckDB state mutation.
+ 
+-**Read side:** KQL → public `KustoToRelational` compatibility adapter → internal `KustoQueryTranslator` → `RelNode` IR → `RelationalPlanner` → `DuckDbQueryEmitter` → read-only DuckDB execution → bounded results.
++**Read side:** KQL → optional `IQuerySyntaxValidator` validation adapter → public `KustoToRelational` compatibility adapter → internal `KustoQueryTranslator` → `RelNode` IR → `RelationalPlanner` → `DuckDbQueryEmitter` → read-only DuckDB execution → bounded results.
+ 
+-`ApprovedViewCatalog` bridges the two pipelines by projecting Golden schema models into Kusto.Language symbols.
++`ApprovedViewCatalog` bridges the two pipelines by projecting Golden schema models into Kusto.Language symbols. Validation-only consumers can stop at the `Hunting.Core.Validation` seam and receive `QueryDiagnostic` results without referencing `Hunting.Web`, opening a DuckDB connection, or materializing transient SQL.
+ 
+ ## Core Architectural Bets
+ 
+ | Bet | Decision |
+ |---|---|
+ | KQL frontend | Use Microsoft Kusto language tooling rather than a custom parser |
+ | Translation seam | Lower KQL into `RelNode`, then emit DuckDB SQL |
+ | Schema source of truth | Keep C# schema models as durable contract definitions |
+ | Execution engine | Use embedded DuckDB for MVP/local/dev execution |
+ | Public query surface | Expose Golden contracts only |
+ 
+ ## Medallion Schema Boundary
+ 
+ The database is organized into medallion schemas:
+ 
+ | Schema | Visibility | Purpose |
+ |---|---|---|
+ | `bronze` | Internal only | Source-shaped evidence preservation |
+ | `silver` | Internal only | Source/event-specific parser and interpretation views |
+ | `golden` | Operator-facing | Stable hunting contracts exposed to KQL |
+ | `internal` | Internal only | Schema provenance, seed fixture metadata, and other control-plane tables |
+ | `accelerator` | Internal only, optional | Future derived/optimized tables behind Golden views |
+ 
+ Bronze stores source-shaped records. Silver interprets those records using source/event filters and parser-specific projections. Golden consolidates Silver outputs into operator-facing contracts. Golden may perform thin harmonization but must not hide source-specific payload parsing.
+ 
+@@ -123,51 +123,51 @@ The model validator rejects layouts that exceed the 12-column grid or overlap an
+ 
+ MudBlazor components are UI primitives in this feature. `MudDropZone` is a passive dashboard surface only. It does not own widget ordering or placement.
+ 
+ See `docs/DASHBOARD-ARCHITECTURE.md` for the detailed dashboard architecture notes.
+ 
+ ## Schema Pipeline
+ 
+ ```text
+ C# schema and mapping models
+   -> SchemaEmitter
+       -> CREATE SCHEMA
+       -> CREATE TABLE
+       -> CREATE OR REPLACE VIEW for Silver parser views
+       -> CREATE OR REPLACE VIEW for Golden canonical views
+   -> SchemaApplier
+       -> Executes DDL through DuckDB.NET
+       -> Validates with DESCRIBE
+ ```
+ 
+ Golden views must emit explicit canonical projections per Silver branch. `SELECT *` is not acceptable at the Golden boundary.
+ 
+ ## Implemented Component Areas
+ 
+ | Project | Responsibility |
+ |---|---|
+-| `Hunting.Core` | Query model, translation, planner, policy, catalog, SQL emission, sample-query catalog |
++| `Hunting.Core` | Query model, translation, planner, policy, catalog, SQL emission, sample-query catalog, reusable KQL validation interface/adapter |
+ | `Hunting.Schema` | C# schema definitions and active medallion catalog |
+ | `Hunting.Data` | DuckDB connection factory, schema application, data-only runtime orchestration, application persistence, mock seeding |
+ | `Hunting.Render` | Dependency-light render contracts, terminal directive parser, render resolver, tabular abstraction, chart-model builder; intentionally has no `Hunting.*` project references |
+ | `Hunting.Web` | Blazor UI, schema browser, query execution surface, render orchestration, QueryResult render adapter, ECharts adapter, dashboard UI/persistence/controller |
+ | `Hunting.Tests` | Translation, emitter, runtime, schema, planner, render, Web, sample, dashboard, and E2E tests |
+ 
+ ## SQL Artifact Policy
+ 
+ | SQL Type | Persisted? | Notes |
+ |---|---:|---|
+ | Schema DDL | No | Generated from C# models and applied |
+ | Mapping-backed parser-view SQL | No | Generated from schema/mapping definitions |
+ | SQL-backed parser-view SQL | Yes, embedded in C# | Allowed only when explicitly chosen |
+ | Golden view SQL | No by default | Generated from `CanonicalViewDef` |
+ | Runtime query SQL | No | Generated, executed, discarded |
+ | Debug SQL preview | Optional | Exposed in developer mode |
+ 
+ ## Expansion Rule
+ 
+ A new source or Golden family must not be added by changing only the catalog. It must include contract definitions, Silver parser specs or mappings, positive parser tests, negative source-shape tests, Golden projection/type tests, seed fixture coverage, policy/catalog tests, metadata updates, and documentation.
+ 
+ ## Known Current Limitations
+ 
+ | Area | Limitation |
+ |---|---|
+diff --git a/docs/LIBRARY-WORKFLOW.md b/docs/LIBRARY-WORKFLOW.md
+index 371f81edb7e5ee824c6470452c570b7366716602..27d2f24d50488bbeb4ca347ee5f989ff97ddb966 100644
+--- a/docs/LIBRARY-WORKFLOW.md
++++ b/docs/LIBRARY-WORKFLOW.md
+@@ -1,111 +1,111 @@
+ # Library Workflow
+ 
+ ## Purpose
+ 
+-The Library page is the primary management surface for reusable hunting artifacts. It brings saved searches, visualizations, and dashboards into one place without changing project boundaries or persistence ownership.
++The Library page is the primary management surface for reusable hunting artifacts. It brings saved queries, visualizations, and dashboards into one place without changing project boundaries or persistence ownership.
+ 
+ The Query Library drawer remains useful for editor-local work, recent history, and quick save/open actions. The Library page is for artifact discovery, opening, deletion, dependency visibility, and later richer management.
+ 
+ ## Artifact model
+ 
+ ```text
+-Saved search
++Saved query
+   -> query text without requiring a render clause
+ 
+ Visualization
+   -> saved query reference
+   -> visualization/render specification
+   -> opens back into the editor as saved query + terminal | render clause
+ 
+ Dashboard
+   -> dashboard definition
+   -> widgets
+   -> widgets may reference saved visualizations
+ ```
+ 
+ The intended dependency chain is:
+ 
+ ```text
+-Saved search
++Saved query
+   -> Visualization
+       -> Dashboard widget
+ ```
+ 
+ Direct query-text dashboard widgets still exist for compatibility. They should not be removed until migration and UX coverage are explicitly planned.
+ 
+ ## Current user stories
+ 
+ | User story | Current status |
+ |---|---|
+-| As an analyst, I can see saved searches, visualizations, and dashboards in one Library page. | Implemented |
++| As an analyst, I can see saved queries, visualizations, and dashboards in one Library page. | Implemented |
+ | As an analyst, I can filter Library items by type. | Implemented |
+ | As an analyst, I can search Library items by name, description, dependency label, or type. | Implemented |
+-| As an analyst, I can open a saved search into the threat-hunting editor. | Implemented |
++| As an analyst, I can open a saved query into the threat-hunting editor. | Implemented |
+ | As an analyst, I can open a saved visualization into the threat-hunting editor as query text plus terminal render clause. | Implemented |
+ | As an analyst, I can open a dashboard from the Library. | Implemented |
+ | As an analyst, I can create starter saved-search and visualization drafts from the Library. | Implemented as editor seeding |
+ | As an analyst, I can delete Library items through protected delete paths. | Implemented |
+ | As an analyst, I get a two-step confirmation before deletion. | Implemented |
+ | As an analyst, I can page through large Library result sets. | Implemented |
+ 
+ ## Current lifecycle protection
+ 
+ Deletion is delegated through existing protected paths.
+ 
+ | Deleted artifact | Protection |
+ |---|---|
+-| Saved search | Blocked when saved visualizations reference it. |
++| Saved query | Blocked when saved visualizations reference it. |
+ | Visualization | Blocked when dashboard widgets reference it. |
+ | Dashboard | Uses the existing dashboard repository delete path. |
+ 
+ These checks stay in Web/application-facing services. The DAL should not know dashboard or visualization lifecycle policy.
+ 
+ ## Current routing behavior
+ 
+-The Library page opens saved searches and visualizations by placing query text into `EditorBus`, then navigating to `/threat-hunting`.
++The Library page opens saved queries and visualizations by placing query text into `EditorBus`, then navigating to `/threat-hunting`.
+ 
+ `EditorBus` stores one pending insert when the threat-hunting page is not yet mounted. This avoids losing the requested query during navigation.
+ 
+ Dashboards open directly through `/dashboards/{id}`.
+ 
+ ## Project boundary rule
+ 
+ The Library page is a Web-layer composition surface.
+ 
+ Do not introduce new project decoupling for this feature unless there is a separate architectural reason.
+ 
+ Current intended placement:
+ 
+ | Concern | Location |
+ |---|---|
+ | Library page UI | `Hunting.Web/Pages/Library.razor` |
+ | Library aggregate service | `Hunting.Web/Services/LibraryService.cs` |
+ | Saved query persistence contract | `Hunting.Application` |
+ | Visualization persistence contract | `Hunting.Application` |
+ | DAL implementations | `Hunting.Data` |
+ | Dashboard persistence | Current dashboard Web persistence |
+ | Render parsing/model | `Hunting.Render` |
+ 
+ ## Near-term next steps
+ 
+ | Priority | Step | Notes |
+ |---|---|---|
+-| 1 | Manual UI test of the full Library workflow. | Create saved search, create visualization, create dashboard, add visualization to dashboard, open/delete through Library. |
++| 1 | Manual UI test of the full Library workflow. | Create saved query, create visualization, create dashboard, add visualization to dashboard, open/delete through Library. |
+ | 1 | Fix any compile/test failures from the Library sequence. | Run full `dotnet test`. |
+-| 2 | Add clearer empty-state guidance per filter. | Saved searches, visualizations, and dashboards should each explain the next action. |
++| 2 | Add clearer empty-state guidance per filter. | Saved queries, visualizations, and dashboards should each explain the next action. |
+ | 2 | Add dependency/status emphasis. | Missing dependencies should stand out; healthy `OK` status can be visually quieter. |
+ | 2 | Add “Create dashboard” direct creation from Library. | Current behavior navigates to the dashboards page. Direct creation can be added later by reusing existing dashboard creation logic. |
+ | 3 | Add duplicate/copy actions. | Useful for dashboards and visualizations, but not required for first workflow. |
+-| 3 | Add usage details. | Example: show which dashboards use a visualization and which visualizations use a saved search. |
++| 3 | Add usage details. | Example: show which dashboards use a visualization and which visualizations use a saved query. |
+ 
+ ## Non-goals for the current phase
+ 
+ Do not remove the Query Library drawer yet.
+ 
+ Do not remove direct query-text dashboard widgets yet.
+ 
+ Do not move dashboard persistence or Library orchestration into `Hunting.Data`.
+ 
+ Do not add a new storage abstraction solely for the Library page.
+ 
+ Do not convert this into a generic BI-style object model. The product remains a threat-hunting workbench.
+diff --git a/docs/ROADMAP.md b/docs/ROADMAP.md
+index 7e9474f4ebf56e82b06f33685a9f4344de3911bd..c730a68f15fcea8713d278491f3976b7723f6845 100644
+--- a/docs/ROADMAP.md
++++ b/docs/ROADMAP.md
+@@ -1,111 +1,112 @@
+ # Roadmap
+ 
+ ## Project
+ 
+ KQL-on-DuckDB Security Hunting Workbench — a schema-first KQL hunting platform over DuckDB providing a Sentinel/Defender-like hunting experience against local or embedded security data.
+ 
+ ---
+ 
+ 
+ ## Merge-Preparation Roadmap
+ 
+ These items are prioritized ahead of broad schema expansion because they reduce migration risk before
+ Hunting is absorbed into a shared Workbench host or monorepo. The sequence is intentionally ordered:
+ deterministic restore/build first, reusable validation seams second, and host/UI migration cleanup after
+ runtime boundaries are protected.
+ 
+ ### MP0 — Deterministic dependency and build baseline 🚧 IN PROGRESS
+ 
+ **Objective:** Make Hunting restores, builds, analyzer behavior, and CI outcomes deterministic before any
+ monorepo migration.
+ 
+ | Order | Priority | Status | Task | Outcome |
+ |---:|---|---|---|---|
+ | 1 | P0 | Implemented | Pin all package versions and remove floating versions such as `Dapper` `2.*` and DuckDB `1.*`. | CI and future monorepo restores become deterministic. |
+ | 2 | P0 | Implemented locally; awaiting external baseline confirmation | Align Hunting package versions with the shared dependency baseline. | Hunting does not introduce duplicate or conflicting transitive dependency graphs. |
+-| 3 | P0 | Implemented | Add or adopt shared `Directory.Build.props` conventions. | Nullable, implicit usings, analysis level, deterministic build, and style behavior match Workbench. |
+-| 4 | P0 | Blocked on local SDK in this environment | Verify Hunting builds cleanly under the future shared build props. | Analyzer/style/build setting breakage is caught before migration. |
++| 3 | P0 | Implemented | Add or adopt shared `Directory.Build.props` conventions. | Nullable, implicit usings, analysis level, deterministic build, package-lock generation, warning policy, and style behavior match the future Workbench baseline. |
++| 4 | P0 | Blocked on local SDK in this environment | Verify Hunting builds cleanly under the future shared build props and generate package lock files. | Analyzer/style/build setting breakage and lock-file drift are caught before migration. |
+ | 5 | P1 | Implemented with existing OS matrix plus floating-version guard | Add CI coverage for build/test using the same OS matrix expected for the future monorepo. | Platform-specific restore/build/test failures are caught before merge. |
+ 
+ Exit criteria:
+ 
+ - No direct package reference uses a floating version range.
+ - Package versions are either centrally managed or demonstrably aligned to the shared baseline.
+ - Common build properties are centralized instead of duplicated per project unless project-specific.
++- `RestorePackagesWithLockFile=true` is enabled; package lock files must be generated and committed once a .NET SDK is available in the execution environment.
+ - `dotnet restore`, `dotnet build`, and `dotnet test` run in the future shared-build configuration.
+ - CI exercises the future shared OS matrix.
+ 
+ ### MP1 — Reusable runtime and validation boundaries 🚧 NEXT
+ 
+ **Objective:** Preserve Hunting as reusable runtime, schema, render, and validation modules while Workbench
+ owns product hosting and detection-content governance.
+ 
+ | Order | Priority | Task | Outcome |
+ |---:|---|---|---|
+-| 1 | P0 | Keep `Hunting.Core`, `Hunting.Schema`, `Hunting.Data`, and `Hunting.Render` independent from `Hunting.Web`. | Reusable modules remain host-agnostic and can be consumed by Workbench validation or shared hosting. |
+-| 2 | P0 | Extract a reusable KQL validation service from the current query pipeline. | Workbench can validate detection-library KQL without depending on Hunting Web or executing queries. |
+-| 3 | P2 | Add public or internal interfaces around schema catalog access needed by Workbench validation. | Workbench consumes approved schema/catalog contracts without reaching into translator internals. |
++| 1 | P0 | Implemented: keep `Hunting.Core`, `Hunting.Schema`, `Hunting.Data`, and `Hunting.Render` independent from `Hunting.Web`, with a regression test. | Reusable modules remain host-agnostic and can be consumed by Workbench validation or shared hosting. |
++| 2 | P0 | Implemented: extract a reusable KQL validation service from the current query pipeline. | Workbench can validate detection-library KQL without depending on Hunting Web or executing queries. |
++| 3 | P2 | Implemented baseline: expose a Core validation interface over approved catalog translation. | Workbench consumes approved schema/catalog contracts without reaching into translator internals. |
+ | 4 | P2 | Review generated SQL/debug SQL exposure and ensure it remains developer/runtime-only. | Detection-content governance stays separate from runtime internals. |
+ | 5 | P2 | Reduce Web-layer coupling around `QueryService`, `RenderedQueryRunner`, and dashboard execution. | Later migration into a shared host shell requires less service-registration and orchestration rewrite. |
+ 
+ Exit criteria:
+ 
+ - A test or build check prevents reusable projects from referencing `Hunting.Web`.
+ - Validation-only tests instantiate the schema/catalog and KQL translator path without a DuckDB connection.
+ - Runtime SQL remains transient and exposed only through explicit developer-mode/debug paths.
+ - Web composition is factored behind registration/mapping seams suitable for a shared host.
+ 
+ ### MP2 — Content library and application-state separation
+ 
+ **Objective:** Prepare saved queries, visualizations, and dashboards for Workbench governance without
+ confusing accepted detection content with local hunting state.
+ 
+ | Order | Priority | Task | Outcome |
+ |---:|---|---|---|
+-| 1 | P1 | Refactor saved queries toward a content-library abstraction. | Saved searches can evolve into detection-content library artifacts. |
+-| 2 | P1 | Separate saved query storage contracts from Hunting-specific UI behavior. | Workbench can govern, version, review, or accept query artifacts later. |
++| 1 | P1 | Implemented baseline: map saved queries to draft-only content-library artifacts. | Saved queries can evolve into detection-content library artifacts without becoming accepted content by default. |
++| 2 | P1 | Implemented vocabulary transition: library UI classifies local query records as saved queries, with compatibility aliases only. | Workbench can govern, version, review, or accept query artifacts later. |
+ | 3 | P1 | Make query library, visualization library, and dashboard persistence clearly application-state modules. | Transient hunting state is not mistaken for accepted detection content. |
+ 
+ Exit criteria:
+ 
+ - Content records and runtime/editor state have separate contracts.
+ - Run history, last-run timestamps, drawer state, and dashboard layout state are explicitly application state.
+ - Compatibility paths preserve current saved-query, visualization, and dashboard workflows during migration.
+ 
+ ### MP3 — Shared host routing, settings, and web assets
+ 
+ **Objective:** Make Hunting mount cleanly inside a Workbench-owned host shell and visual system.
+ 
+ | Order | Priority | Task | Outcome |
+ |---:|---|---|---|
+ | 1 | P1 | Make Hunting pages mountable below a product route such as `/threat-hunting` or `/hunt`. | Workbench can own `/` while Hunting remains a product area. |
+ | 2 | P1 | Rename or route Hunting's settings page as runtime/query settings, or prepare to remove it. | Hunting does not conflict with Workbench operator/product settings. |
+-| 3 | P1 | Review all static assets, JS files, and CSS files for common design-system alignment. | Assets can move into a shared host with less styling and script friction. |
+-| 4 | P1 | Ensure dashboard UI uses shared design tokens and common MudBlazor styling conventions. | The merged app does not carry a second visual system. |
++| 3 | P1 | Implemented baseline: Hunting `app.css` scopes compatibility aliases under `.hunt-app` and sources values from DeltaZulu semantic tokens. | Assets can move into a shared host with less styling and script friction. |
++| 4 | P1 | In progress: continue dashboard/component cleanup against shared design tokens and common MudBlazor styling conventions. | The merged app does not carry a second visual system. |
+ | 5 | P2 | Add migration notes for moving `Hunting.Web` from classic Blazor Server hosting to the selected common host model. | The later server merge is explicit, reviewable, and testable. |
+-| 6 | P2 | Document Hunting's intended role in the merged architecture: runtime, KQL validation, schema catalog, render, dashboards. | Workbench/Hunting responsibilities do not drift during merge work. |
++| 6 | P2 | Implemented baseline: document Hunting's intended role in the merged architecture: runtime, KQL validation, schema catalog, render, dashboards. | Workbench/Hunting responsibilities do not drift during merge work. |
+ 
+ Exit criteria:
+ 
+ - Hunting routes can be grouped under the selected product prefix without conflicting with Workbench-owned `/` or `/settings`.
+ - Static assets are namespaced or documented for shared-host loading order.
+ - Dashboard styling uses shared tokens and MudBlazor conventions consistently.
+ - Architecture docs identify Workbench-owned concerns versus Hunting-owned reusable services.
+ 
+ ---
+ 
+ ## Medallion Schema Roadmap
+ 
+ ### Current checkpoint — Phase 1A complete
+ 
+ Phase 1A is the active medallion checkpoint. It is intentionally narrow and should be treated as a structural baseline, not as approval for broad table expansion.
+ 
+ | Layer | Active objects |
+ |---|---|
+ | Bronze | `windows_sysmon_event`, `windows_security_event`, `dns_server_event` |
+ | Silver | Six source/event-specific parser contributors |
+ | Golden | `ProcessEvent`, `NetworkSession`, `Dns` |
+ 
+ The Phase 1A cleanup removed the older vertical-slice names and seed entry point:
+ 
+ ```text
+diff --git a/docs/kql-syntax-coverage-checklist.md b/docs/kql-syntax-coverage-checklist.md
+index 69b94146aedd94977141093c040c637615cd2d75..212678ee111b4d4480b49c282a21899f2bb6268e 100644
+--- a/docs/kql-syntax-coverage-checklist.md
++++ b/docs/kql-syntax-coverage-checklist.md
+@@ -3,50 +3,53 @@
+ Authoritative translation reference: `docs/KQL-to-DuckDB-translation-spec.md`
+ 
+ ## Status labels
+ 
+ - `[x]` — **MVP**: direct translation to DuckDB SQL, status `exact` or `equivalent_with_caveat`
+ - `[m]` — **Metadata-only**: no SQL emitted; captured as side-channel data or runtime/UI metadata
+ - `[B]` — **Blocked**: could be translated but deliberately refused because doing so would silently change detection semantics. Only items where wrong SQL is worse than no SQL.
+ 
+ Deferred items carry an inline reason:
+ 
+ - `complexity` — significant implementation effort, for example `mv-expand` or `make-series`
+ - `frequency` — valid translation exists but rare in hunting queries
+ - `dependency` — depends on another deferred item being implemented first
+ - `format` — requires a format/syntax translation table, for example Kusto datetime formats to `strftime`
+ 
+ Items that have no meaning in a read-only DuckDB hunting workbench, such as management commands, Kusto service functions, external code plugins, and cross-cluster references, are listed in **Section 10: Out of Scope** and are not counted in coverage stats.
+ 
+ For the POC, canonical SQL emission uses CTE staging (`__kql_stage_N`) to preserve KQL pipe semantics clearly. A post-translation planner can collapse, inline, retain, or reshape these stages when enabled. Planner rewrites are implemented as an optimization layer and must preserve semantics. Safety rule: when KQL and DuckDB differ, the converter must preserve KQL semantics, use a documented helper, emit a visible approximation diagnostic, or reject.
+ 
+ Emitter optimization maintenance: single computed-column scopes produced by `where | extend | project` and `where | extend | project | take` now render as derived SELECT blocks, and `sample-distinct` now emits compact `SELECT DISTINCT ... LIMIT` SQL instead of distinct/sample CTE staging. This tightens SQL-shape simplification only and does not change construct coverage or KQL semantics.
+ 
+ Emitter decomposition is structural only and is now complete: `DuckDbQueryEmitter` remains the public compatibility façade, retaining immutable options and mutable `LastRunStats` publication only. Each `Emit(RelNode)` call constructs a fresh `DuckDbEmitterContext` plus run-scoped `DuckDbFunctionEmitter`, `DuckDbScalarEmitter`, `DuckDbJoinEmitter`, and `DuckDbRelNodeEmitter` collaborators. `DuckDbStageRegistry` owns stage state, caches, mutation operations, reference counting, and registry statistics; `DuckDbSqlShapeRewriter` owns SQL-shape simplifications; and the internal stateless `DuckDbSqlText` helper owns identifier escaping, qualified-identifier escaping, string escaping, and SQL indentation. `StageFrom` lives with relational orchestration. Statistics assembly remains a trivial context adapter, so no separate stats builder was added. Removing façade context storage does not claim shared-emitter thread safety because `LastRunStats` remains mutable publication state. This does not change construct coverage or emitted SQL semantics.
+ 
+ Translator decomposition is also structural only: public `KustoToRelational` remains the compatibility adapter over internal `KustoQueryTranslator`. Document analysis, management-command guarding, approved-table policy, Kusto SDK syntax adaptation, projection naming, function validation, and integer-literal reading are isolated internal services. This refactor does not change construct coverage or translation semantics.
+ 
++
++Validation adapter note: reusable query validation is now structural only and does not change KQL construct coverage. `Hunting.Core.Validation.IQuerySyntaxValidator` runs the approved-catalog translator path and returns `QueryDiagnostic` results without executing DuckDB SQL or referencing `Hunting.Web`.
++
+ Dashboard readonly/edit mode is UI-only: dashboard detail pages default to readonly mode, expose a top-right Edit/Save mode switch, gate dashboard settings, widget editing, widget deletion, widget creation, and layout changes behind edit mode, and persist staged edit-mode changes only when Save is selected. Dashboard layout drag behavior is also UI-only: edit-mode widget movement starts from the title bar, excludes widget action controls, uses push-down displacement to keep free-axis movement non-overlapping, and batches changed layout updates into the staged draft only. This does not change construct coverage or KQL translation semantics.
+ 
+ Dashboard markdown widgets are UI-only: Markdown content is rendered by the Web dashboard host with Markdig 1.2.0, Monaco switches the widget editor between `kql` and `markdown` language modes by widget kind, and this does not change construct coverage or KQL translation semantics.
+ 
+ Editor metadata projection is structural only: the same Golden C# contracts used by SQL view generation now project into a UI-agnostic `EditorSchemaMetadata` snapshot for Monaco hosts. The snapshot also carries a C#-owned supported-language subset for Monaco keywords, operators, and render kinds. Monaco tokenizes and replaces supported hyphenated terms such as `sample-distinct` as one unit, preserves underscore terms such as `contains_cs`, and does not suggest deferred constructs such as `mv-expand`, `fork`, or `union`. This removes duplicated Web/JavaScript metadata ownership, does not expose Bronze/Silver objects as query targets, and does not change construct coverage or translation semantics.
+  
+ ---
+ 
+ ## 1. Tabular Operators
+ 
+ ### 1.1 Core Query Operators
+ 
+ - [x] `where` — row filter → `WHERE`
+ - [x] `project` — select and rename columns → explicit `SELECT` list; output order equals argument order
+ - [x] `extend` — add computed columns → `SELECT *, expr AS name`; staged CTE when referencing prior extend aliases
+ - [x] `summarize ... by` — aggregate with grouping → `GROUP BY`
+ - [x] `sort by` / `order by` — row ordering → `ORDER BY`; caveat: KQL default is `desc`, DuckDB default is `asc`
+ - [x] `take` / `limit` — row count cap → `LIMIT`; caveat: without sort, row identity is nondeterministic
+ - [ ] `project-away` — *deferred: requires schema-aware binder for column expansion*
+ - [ ] `project-rename` — *deferred: requires schema-aware binder for position preservation*
+ - [ ] `project-reorder` — *deferred: requires schema-aware binder for remainder ordering*
+ - [ ] `project-keep` — *deferred: requires schema-aware binder for input-order preservation*
+ - [x] `count` — shorthand for `summarize count()` → `SELECT count(*) AS Count`
+ - [x] `distinct` — emits `SELECT DISTINCT` over explicit projected columns
+ - [x] `top` — sort + take combined → `ORDER BY ... LIMIT`
+diff --git a/src/Hunting.Application/ContentLibrary/ContentLibraryArtifact.cs b/src/Hunting.Application/ContentLibrary/ContentLibraryArtifact.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..052b166046bd847596ebec9a8d2e7b30dfb8ea19
+--- /dev/null
++++ b/src/Hunting.Application/ContentLibrary/ContentLibraryArtifact.cs
+@@ -0,0 +1,30 @@
++namespace Hunting.Application.ContentLibrary;
++
++public sealed record ContentLibraryArtifact(
++    string Id,
++    ContentLibraryArtifactType Type,
++    ContentLibraryArtifactState State,
++    string Name,
++    string? Description,
++    string Body,
++    DateTime CreatedAtUtc,
++    DateTime UpdatedAtUtc,
++    IReadOnlyDictionary<string, string> Metadata);
++
++public enum ContentLibraryArtifactType
++{
++    SavedQuery,
++    DetectionQuery,
++    Visualization,
++    Fixture,
++    Test,
++    Note,
++    PackageMetadata
++}
++
++public enum ContentLibraryArtifactState
++{
++    DraftOnly,
++    AcceptedContent,
++    RuntimeOnly
++}
+diff --git a/src/Hunting.Application/ContentLibrary/SavedQueryContentLibraryMapper.cs b/src/Hunting.Application/ContentLibrary/SavedQueryContentLibraryMapper.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..bcd71f212f27dbe42756a99922b19175ffdf108d
+--- /dev/null
++++ b/src/Hunting.Application/ContentLibrary/SavedQueryContentLibraryMapper.cs
+@@ -0,0 +1,38 @@
++namespace Hunting.Application.ContentLibrary;
++
++using Hunting.Application.SavedQueries;
++
++public static class SavedQueryContentLibraryMapper
++{
++    public static ContentLibraryArtifact ToDraftArtifact(SavedQueryRecord savedQuery)
++    {
++        ArgumentNullException.ThrowIfNull(savedQuery);
++
++        return new ContentLibraryArtifact(
++            savedQuery.Id,
++            ContentLibraryArtifactType.SavedQuery,
++            ContentLibraryArtifactState.DraftOnly,
++            savedQuery.Name,
++            savedQuery.Description,
++            savedQuery.QueryText,
++            savedQuery.CreatedAt,
++            savedQuery.UpdatedAt,
++            BuildMetadata(savedQuery));
++    }
++
++    private static IReadOnlyDictionary<string, string> BuildMetadata(SavedQueryRecord savedQuery)
++    {
++        var metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
++        {
++            ["source"] = "hunting.saved-query",
++            ["governance"] = "draft-only"
++        };
++
++        if (savedQuery.LastRunAt is { } lastRunAt)
++        {
++            metadata["lastRunAtUtc"] = lastRunAt.ToString("O");
++        }
++
++        return metadata;
++    }
++}
+diff --git a/src/Hunting.Core/Validation/IQuerySyntaxValidator.cs b/src/Hunting.Core/Validation/IQuerySyntaxValidator.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..979a0c3f08cfc09cd247bad34dcd6baf98021745
+--- /dev/null
++++ b/src/Hunting.Core/Validation/IQuerySyntaxValidator.cs
+@@ -0,0 +1,11 @@
++namespace Hunting.Core.Validation;
++
++/// <summary>
++/// Host-agnostic query syntax validation seam for consumers such as Workbench.
++/// Implementations must parse and translate KQL only; they must not execute queries,
++/// open DuckDB connections, or depend on web/runtime composition.
++/// </summary>
++public interface IQuerySyntaxValidator
++{
++    QuerySyntaxValidationResult Validate(string queryText);
++}
+diff --git a/src/Hunting.Core/Validation/KqlQuerySyntaxValidator.cs b/src/Hunting.Core/Validation/KqlQuerySyntaxValidator.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..1c1d835a15d3deaf88f390fd06b3366a258dce18
+--- /dev/null
++++ b/src/Hunting.Core/Validation/KqlQuerySyntaxValidator.cs
+@@ -0,0 +1,41 @@
++namespace Hunting.Core.Validation;
++
++using Hunting.Core.Catalog;
++using Hunting.Core.Policy;
++using Hunting.Core.Translation;
++
++/// <summary>
++/// Reusable Hunting.Core-backed KQL validation adapter. It exercises the same
++/// catalog policy and translator path as runtime query execution, but stops at
++/// the RelNode boundary so Workbench and other hosts can validate query content
++/// without referencing Hunting.Web or executing generated DuckDB SQL.
++/// </summary>
++public sealed class KqlQuerySyntaxValidator : IQuerySyntaxValidator
++{
++    private readonly ApprovedViewCatalog _catalog;
++
++    public KqlQuerySyntaxValidator(ApprovedViewCatalog catalog)
++    {
++        _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
++    }
++
++    public QuerySyntaxValidationResult Validate(string queryText)
++    {
++        if (string.IsNullOrWhiteSpace(queryText))
++        {
++            return new QuerySyntaxValidationResult(
++                false,
++                [new QueryDiagnostic(
++                    DiagnosticSeverity.Error,
++                    DiagnosticPhase.Parse,
++                    QueryDiagnosticCodes.Unspecified,
++                    "Query text is required.")]);
++        }
++
++        var diagnostics = new DiagnosticBag();
++        var translator = new KustoToRelational(_catalog, diagnostics);
++        _ = translator.Translate(queryText);
++
++        return QuerySyntaxValidationResult.FromDiagnostics(diagnostics.All);
++    }
++}
+diff --git a/src/Hunting.Core/Validation/QuerySyntaxValidationResult.cs b/src/Hunting.Core/Validation/QuerySyntaxValidationResult.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..a646d696e2bce4e818a75809929bb283c8ca2bc9
+--- /dev/null
++++ b/src/Hunting.Core/Validation/QuerySyntaxValidationResult.cs
+@@ -0,0 +1,11 @@
++namespace Hunting.Core.Validation;
++
++using Hunting.Core.Policy;
++
++public sealed record QuerySyntaxValidationResult(
++    bool IsValid,
++    IReadOnlyList<QueryDiagnostic> Diagnostics)
++{
++    public static QuerySyntaxValidationResult FromDiagnostics(IReadOnlyList<QueryDiagnostic> diagnostics) =>
++        new(!diagnostics.Any(diagnostic => diagnostic.IsError), diagnostics);
++}
+diff --git a/src/Hunting.Web/Library/LibraryPageController.cs b/src/Hunting.Web/Library/LibraryPageController.cs
+index 0edff0069f29e07e1a4d8d6c0e5b5a0544346ecf..e2af316b4fbe477092725287738e149a0d7b1e15 100644
+--- a/src/Hunting.Web/Library/LibraryPageController.cs
++++ b/src/Hunting.Web/Library/LibraryPageController.cs
+@@ -31,99 +31,99 @@ public sealed class LibraryPageController
+             var items = await _library.ListAsync(cancellationToken);
+             State.Items.Clear();
+             State.Items.AddRange(items);
+             State.ClampPage();
+         }
+         catch (Exception ex)
+         {
+             State.Error = $"Could not load library. {ex.Message}";
+         }
+         finally
+         {
+             State.Loading = false;
+         }
+     }
+ 
+     public async Task OpenItemAsync(LibraryItem item, CancellationToken cancellationToken = default)
+     {
+         State.ResetPendingDelete();
+ 
+         switch (item.Kind)
+         {
+             case LibraryItemKind.Dashboard:
+                 _navigation.NavigateTo($"/dashboards/{item.Id}");
+                 return;
+ 
+-            case LibraryItemKind.SavedSearch:
+-                await OpenSavedSearchAsync(item.Id, cancellationToken);
++            case LibraryItemKind.SavedQuery:
++                await OpenSavedQueryAsync(item.Id, cancellationToken);
+                 return;
+ 
+             case LibraryItemKind.Visualization:
+                 await OpenVisualizationAsync(item.Id, cancellationToken);
+                 return;
+         }
+     }
+ 
+     public async Task DeleteItemAsync(LibraryItem item, CancellationToken cancellationToken = default)
+     {
+         if (!State.IsDeletePendingFor(item))
+         {
+             State.Error = null;
+             State.PendingDeleteId = item.Id;
+             State.PendingDeleteKind = item.Kind;
+             State.Message = $"Click Confirm delete to delete {LibraryLabels.KindLabel(item.Kind).ToLowerInvariant()} '{item.Name}'.";
+             return;
+         }
+ 
+         State.Deleting = true;
+         State.Error = null;
+         State.Message = null;
+ 
+         try
+         {
+             await _library.DeleteAsync(item, cancellationToken);
+             State.Message = $"{LibraryLabels.KindLabel(item.Kind)} '{item.Name}' deleted.";
+             State.ResetPendingDelete();
+             await LoadAsync(cancellationToken);
+         }
+         catch (InvalidOperationException ex)
+         {
+             State.Message = ex.Message;
+             State.ResetPendingDelete();
+         }
+         catch (Exception ex)
+         {
+             State.Error = $"Could not delete {LibraryLabels.KindLabel(item.Kind).ToLowerInvariant()} '{item.Name}'. {ex.Message}";
+             State.ResetPendingDelete();
+         }
+         finally
+         {
+             State.Deleting = false;
+         }
+     }
+ 
+-    public void CreateSavedSearch()
++    public void CreateSavedQuery()
+     {
+         State.ResetPendingDelete();
+         _editorBus.RequestInsert(
+             """
+             ProcessEvent
+             | where FileName has "powershell"
+             | project Timestamp, DeviceName, AccountName, ProcessCommandLine
+             | take 50
+             """);
+         _navigation.NavigateTo("/threat-hunting");
+     }
+ 
+     public void CreateVisualization()
+     {
+         State.ResetPendingDelete();
+         _editorBus.RequestInsert(
+             """
+             ProcessEvent
+             | summarize Count = count() by AccountName
+             | render barchart xcolumn=AccountName ycolumns=Count title='Events by account'
+             """);
+         _navigation.NavigateTo("/threat-hunting");
+     }
+ 
+     public void CreateDashboard()
+@@ -172,51 +172,51 @@ public sealed class LibraryPageController
+             return;
+         }
+ 
+         State.Page++;
+         State.ResetPendingDelete();
+     }
+ 
+     public string FilterButtonClass(LibraryItemKind? kind)
+         => State.KindFilter == kind
+             ? "hunt-btn dashboard-primary-action"
+             : "hunt-btn";
+ 
+     public string DeleteButtonText(LibraryItem item)
+         => State.IsDeletePendingFor(item) ? "Confirm delete" : "Delete";
+ 
+     public string DeleteButtonTitle(LibraryItem item)
+         => State.IsDeletePendingFor(item)
+             ? $"Confirm deleting {LibraryLabels.KindLabel(item.Kind).ToLowerInvariant()} '{item.Name}'"
+             : $"Delete {LibraryLabels.KindLabel(item.Kind).ToLowerInvariant()} '{item.Name}'";
+ 
+     public string DeleteButtonClass(LibraryItem item)
+         => State.IsDeletePendingFor(item)
+             ? "hunt-btn dashboard-primary-action"
+             : "hunt-btn hunt-btn-clear";
+ 
+-    private async Task OpenSavedSearchAsync(string id, CancellationToken cancellationToken)
++    private async Task OpenSavedQueryAsync(string id, CancellationToken cancellationToken)
+     {
+-        var queryText = await _library.LoadSavedSearchTextAsync(id, cancellationToken);
++        var queryText = await _library.LoadSavedQueryTextAsync(id, cancellationToken);
+         if (string.IsNullOrWhiteSpace(queryText))
+         {
+-            State.Error = "Saved search could not be opened because its query text was not found.";
++            State.Error = "Saved query could not be opened because its query text was not found.";
+             return;
+         }
+ 
+         _editorBus.RequestInsert(queryText);
+         _navigation.NavigateTo("/threat-hunting");
+     }
+ 
+     private async Task OpenVisualizationAsync(string id, CancellationToken cancellationToken)
+     {
+         var queryText = await _library.LoadVisualizationTextAsync(id, cancellationToken);
+         if (string.IsNullOrWhiteSpace(queryText))
+         {
+             State.Error = "Visualization could not be opened because its saved query or visualization definition was not found.";
+             return;
+         }
+ 
+         _editorBus.RequestInsert(queryText);
+         _navigation.NavigateTo("/threat-hunting");
+     }
+ }
+diff --git a/src/Hunting.Web/Library/LibraryPageState.cs b/src/Hunting.Web/Library/LibraryPageState.cs
+index 28eff9355af11e8cc213c7be381d8dae0045fca3..aedb98f4d0056ae66cc9a44ed90535013b45f851 100644
+--- a/src/Hunting.Web/Library/LibraryPageState.cs
++++ b/src/Hunting.Web/Library/LibraryPageState.cs
+@@ -25,51 +25,51 @@ public sealed class LibraryPageState
+ 
+     public bool Deleting { get; set; }
+ 
+     public int Page { get; set; } = 1;
+ 
+     public LibraryItemKind? KindFilter { get; set; }
+ 
+     public IReadOnlyList<LibraryItem> FilteredItems
+         => Items.Where(FilterItem).ToArray();
+ 
+     public IReadOnlyList<LibraryItem> PagedItems
+         => FilteredItems
+             .Skip((Page - 1) * PageSize)
+             .Take(PageSize)
+             .ToArray();
+ 
+     public int TotalPages
+         => Math.Max(1, (int)Math.Ceiling(FilteredItems.Count / (double)PageSize));
+ 
+     public bool HasPagination
+         => !Loading && FilteredItems.Count > PageSize;
+ 
+     public string FilterTitle
+         => KindFilter switch
+         {
+-            LibraryItemKind.SavedSearch => "Saved searches",
++            LibraryItemKind.SavedQuery => "Saved queries",
+             LibraryItemKind.Visualization => "Visualizations",
+             LibraryItemKind.Dashboard => "Dashboards",
+             _ => "All library items"
+         };
+ 
+     public string RangeText
+     {
+         get
+         {
+             if (Loading)
+             {
+                 return "Loading library items.";
+             }
+ 
+             var filteredCount = FilteredItems.Count;
+             if (filteredCount == 0)
+             {
+                 return Items.Count == 0
+                     ? "No library items yet."
+                     : "No library items match the current filter.";
+             }
+ 
+             return filteredCount == Items.Count
+                 ? $"{filteredCount} item(s)."
+                 : $"{filteredCount} of {Items.Count} item(s).";
+@@ -118,42 +118,42 @@ public sealed class LibraryPageState
+         {
+             Page = 1;
+         }
+     }
+ 
+     public bool IsDeletePendingFor(LibraryItem item)
+         => string.Equals(PendingDeleteId, item.Id, StringComparison.OrdinalIgnoreCase)
+             && PendingDeleteKind == item.Kind;
+ 
+     public void ResetPendingDelete()
+     {
+         PendingDeleteId = null;
+         PendingDeleteKind = null;
+     }
+ 
+     private bool ContainsSearchText(string? value)
+         => !string.IsNullOrWhiteSpace(value)
+             && value.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
+ }
+ 
+ public static class LibraryLabels
+ {
+     public static string KindLabel(LibraryItemKind kind)
+         => kind switch
+         {
+-            LibraryItemKind.SavedSearch => "Saved search",
++            LibraryItemKind.SavedQuery => "Saved query",
+             LibraryItemKind.Visualization => "Visualization",
+             LibraryItemKind.Dashboard => "Dashboard",
+             _ => kind.ToString()
+         };
+ 
+     public static string StatusLabel(LibraryItemStatus status)
+         => status switch
+         {
+             LibraryItemStatus.Ok => "OK",
+             LibraryItemStatus.MissingDependency => "Missing dependency",
+             _ => status.ToString()
+         };
+ 
+     public static string UpdatedLabel(DateTime updatedAtUtc)
+         => updatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+ }
+diff --git a/src/Hunting.Web/Pages/Library.razor b/src/Hunting.Web/Pages/Library.razor
+index 95824e21358aeebdbbcb2cc7c7ba04266f5ba10e..ecffec10b3069ffb6b27f55c98478d3055a15c2c 100644
+--- a/src/Hunting.Web/Pages/Library.razor
++++ b/src/Hunting.Web/Pages/Library.razor
+@@ -1,45 +1,45 @@
+ @page "/library"
+ @namespace Hunting.Web.Pages
+ @using Hunting.Web.Library
+ @using Hunting.Web.Services
+ @inject LibraryPageController Controller
+ 
+ <div class="dashboard-list-page">
+     <header class="dashboard-page-header dashboard-list-header">
+         <div>
+             <p class="dashboard-eyebrow">Library</p>
+             <h1>Library</h1>
+-            <p class="dashboard-page-subtitle">Manage saved searches, reusable visualizations, and dashboards from one place.</p>
++            <p class="dashboard-page-subtitle">Manage saved queries, reusable visualizations, and dashboards from one place.</p>
+         </div>
+         <div class="dashboard-list-toolbar">
+             <div class="dashboard-list-actions-primary">
+                 <MudButton Variant="Variant.Filled"
+                            Size="Size.Small"
+                            Color="Color.Primary"
+-                           OnClick="@(() => Controller.CreateSavedSearch())">
+-                    New saved search
++                           OnClick="@(() => Controller.CreateSavedQuery())">
++                    New saved query
+                 </MudButton>
+                 <MudButton Variant="Variant.Outlined"
+                            Size="Size.Small"
+                            OnClick="@(() => Controller.CreateVisualization())">
+                     New visualization
+                 </MudButton>
+                 <MudButton Variant="Variant.Outlined"
+                            Size="Size.Small"
+                            OnClick="@(() => Controller.CreateDashboard())">
+                     New dashboard
+                 </MudButton>
+             </div>
+         </div>
+     </header>
+ 
+     @if (State.HasError)
+     {
+         <div class="dashboard-error">@State.Error</div>
+     }
+ 
+     @if (State.HasMessage)
+     {
+         <div class="hunt-query-library-message">@State.Message</div>
+     }
+ 
+@@ -53,51 +53,51 @@
+                   Filter="State.FilterItem"
+                   RowsPerPage="@LibraryPageState.DefaultRowsPerPage"
+                   Class="library-object-table">
+             <ToolBarContent>
+                 <div class="dashboard-list-panel-header library-table-toolbar">
+                     <div>
+                         <h2>@State.FilterTitle</h2>
+                         <p>@State.RangeText</p>
+                     </div>
+ 
+                     <MudSpacer />
+ 
+                     <MudTextField T="string"
+                                   Value="@State.SearchText"
+                                   ValueChanged="Controller.SetSearchText"
+                                   Placeholder="Search library"
+                                   Adornment="Adornment.Start"
+                                   AdornmentIcon="@Icons.Material.Filled.Search"
+                                   Immediate="true"
+                                   Margin="Margin.Dense"
+                                   Variant="Variant.Outlined"
+                                   Class="library-table-search" />
+ 
+                     <div class="dashboard-list-actions-primary library-filter-buttons">
+                         <button class="@Controller.FilterButtonClass(null)" @onclick="() => Controller.SetFilter(null)">All</button>
+-                        <button class="@Controller.FilterButtonClass(LibraryItemKind.SavedSearch)" @onclick="() => Controller.SetFilter(LibraryItemKind.SavedSearch)">Saved searches</button>
++                        <button class="@Controller.FilterButtonClass(LibraryItemKind.SavedQuery)" @onclick="() => Controller.SetFilter(LibraryItemKind.SavedQuery)">Saved queries</button>
+                         <button class="@Controller.FilterButtonClass(LibraryItemKind.Visualization)" @onclick="() => Controller.SetFilter(LibraryItemKind.Visualization)">Visualizations</button>
+                         <button class="@Controller.FilterButtonClass(LibraryItemKind.Dashboard)" @onclick="() => Controller.SetFilter(LibraryItemKind.Dashboard)">Dashboards</button>
+                     </div>
+                 </div>
+             </ToolBarContent>
+ 
+             <HeaderContent>
+                 <MudTh Style="width: 48px;"></MudTh>
+                 <MudTh>
+                     <MudTableSortLabel T="LibraryItem" SortBy="item => LibraryLabels.KindLabel(item.Kind)">
+                         Type
+                     </MudTableSortLabel>
+                 </MudTh>
+                 <MudTh>
+                     <MudTableSortLabel T="LibraryItem" InitialDirection="SortDirection.Ascending" SortBy="item => item.Name">
+                         Title
+                     </MudTableSortLabel>
+                 </MudTh>
+                 <MudTh>
+                     <MudTableSortLabel T="LibraryItem" SortBy="item => item.DependencyLabel">
+                         Source
+                     </MudTableSortLabel>
+                 </MudTh>
+                 <MudTh>
+                     <MudTableSortLabel T="LibraryItem" SortBy="item => LibraryLabels.StatusLabel(item.Status)">
+@@ -141,67 +141,67 @@
+                     }
+                 </MudTd>
+                 <MudTd DataLabel="Updated">@LibraryLabels.UpdatedLabel(context.UpdatedAtUtc)</MudTd>
+                 <MudTd DataLabel="Actions" Style="text-align: right;">
+                     <MudButton Variant="Variant.Outlined"
+                                Size="Size.Small"
+                                OnClick="@(() => Controller.OpenItemAsync(context))">
+                         Open
+                     </MudButton>
+                     <MudButton Variant="Variant.Text"
+                                Size="Size.Small"
+                                Disabled="@State.Deleting"
+                                Title="@Controller.DeleteButtonTitle(context)"
+                                Class="@Controller.DeleteButtonClass(context)"
+                                OnClick="@(() => Controller.DeleteItemAsync(context))">
+                         @Controller.DeleteButtonText(context)
+                     </MudButton>
+                 </MudTd>
+             </RowTemplate>
+ 
+             <NoRecordsContent>
+                 @if (State.Items.Count == 0)
+                 {
+                     <section class="dashboard-empty-state dashboard-list-empty">
+                         <h2>No library items</h2>
+-                        <p>Create a saved search, visualization, or dashboard to populate the library.</p>
++                        <p>Create a saved query, visualization, or dashboard to populate the library.</p>
+                         <div class="dashboard-empty-actions">
+-                            <button class="hunt-btn dashboard-primary-action" @onclick="Controller.CreateSavedSearch">Create saved search</button>
++                            <button class="hunt-btn dashboard-primary-action" @onclick="Controller.CreateSavedQuery">Create saved query</button>
+                         </div>
+                     </section>
+                 }
+                 else
+                 {
+                     <section class="dashboard-empty-state dashboard-list-empty">
+                         <h2>No matching library items</h2>
+                         <p>Clear the search text or use a different filter.</p>
+                         <div class="dashboard-empty-actions">
+                             <button class="hunt-btn" @onclick="Controller.ClearSearch">Clear search</button>
+                         </div>
+                     </section>
+                 }
+             </NoRecordsContent>
+ 
+             <PagerContent>
+                 <MudTablePager PageSizeOptions="@LibraryPageState.PageSizeOptions" />
+             </PagerContent>
+         </MudTable>
+     </section>
+ </div>
+ 
+ @code {
+     private LibraryPageState State => Controller.State;
+ 
+     protected override async Task OnInitializedAsync()
+     {
+         await Controller.LoadAsync();
+     }
+ 
+     private static string GetKindIcon(LibraryItemKind kind)
+         => kind switch
+         {
+-            LibraryItemKind.SavedSearch => Icons.Material.Filled.Search,
++            LibraryItemKind.SavedQuery => Icons.Material.Filled.Search,
+             LibraryItemKind.Visualization => Icons.Material.Filled.InsertChart,
+             LibraryItemKind.Dashboard => Icons.Material.Filled.Dashboard,
+             _ => Icons.Material.Filled.Description
+         };
+ }
+
+diff --git a/src/Hunting.Web/Services/LibraryService.cs b/src/Hunting.Web/Services/LibraryService.cs
+index fa6fd34a2b98a2268a4c8baa8ec76ac69b1b7021..21231998419199c3adf50d122efff40208c0a6be 100644
+--- a/src/Hunting.Web/Services/LibraryService.cs
++++ b/src/Hunting.Web/Services/LibraryService.cs
+@@ -1,170 +1,170 @@
+ namespace Hunting.Web.Services;
+ 
+ using Hunting.Application.SavedQueries;
+ using Hunting.Application.Visualizations;
+ using Hunting.Web.Dashboards.Persistence;
+ 
+ /// <summary>
+-/// Web-facing aggregate over saved searches, visualizations, and dashboards.
++/// Web-facing aggregate over saved queries, visualizations, and dashboards.
+ /// This is intentionally a UI/application composition service; it does not move
+ /// persistence responsibilities or create new project boundaries.
+ /// </summary>
+ public sealed class LibraryService
+ {
+     private readonly IDashboardRepository _dashboards;
+     private readonly QueryLibraryService _queries;
+     private readonly VisualizationLibraryService _visualizations;
+ 
+     public LibraryService(
+         QueryLibraryService queries,
+         VisualizationLibraryService visualizations,
+         IDashboardRepository dashboards)
+     {
+         _queries = queries ?? throw new ArgumentNullException(nameof(queries));
+         _visualizations = visualizations ?? throw new ArgumentNullException(nameof(visualizations));
+         _dashboards = dashboards ?? throw new ArgumentNullException(nameof(dashboards));
+     }
+ 
+     public async Task<IReadOnlyList<LibraryItem>> ListAsync(
+         CancellationToken cancellationToken = default)
+     {
+         var queries = await _queries.ListSavedQueriesAsync(cancellationToken);
+         var visualizations = await _visualizations.ListVisualizationsAsync(cancellationToken);
+         var dashboards = await _dashboards.ListAsync(cancellationToken);
+ 
+         var queryNames = queries.ToDictionary(
+             query => query.Id,
+             query => string.IsNullOrWhiteSpace(query.Name) ? query.Id : query.Name,
+             StringComparer.OrdinalIgnoreCase);
+ 
+         var visualizationCountsByQuery = visualizations
+             .GroupBy(visualization => visualization.QueryId, StringComparer.OrdinalIgnoreCase)
+             .ToDictionary(
+                 group => group.Key,
+                 group => group.Count(),
+                 StringComparer.OrdinalIgnoreCase);
+ 
+         var items = new List<LibraryItem>(
+             queries.Count + visualizations.Count + dashboards.Count);
+ 
+         foreach (var query in queries)
+         {
+             visualizationCountsByQuery.TryGetValue(query.Id, out var visualizationCount);
+             items.Add(new LibraryItem(
+                 query.Id,
+-                LibraryItemKind.SavedSearch,
++                LibraryItemKind.SavedQuery,
+                 query.Name,
+                 query.Description,
+                 visualizationCount == 0
+                     ? "No saved visualizations"
+                     : $"{visualizationCount} saved visualization(s)",
+                 query.UpdatedAt,
+                 LibraryItemStatus.Ok));
+         }
+ 
+         foreach (var visualization in visualizations)
+         {
+             var hasQuery = queryNames.TryGetValue(visualization.QueryId, out var queryName);
+             items.Add(new LibraryItem(
+                 visualization.Id,
+                 LibraryItemKind.Visualization,
+                 visualization.Name,
+                 visualization.Description,
+                 hasQuery
+                     ? $"Query: {queryName}"
+                     : $"Missing query: {ShortId(visualization.QueryId)}",
+                 visualization.UpdatedAt,
+                 hasQuery ? LibraryItemStatus.Ok : LibraryItemStatus.MissingDependency));
+         }
+ 
+         foreach (var dashboard in dashboards)
+         {
+             items.Add(new LibraryItem(
+                 dashboard.Id,
+                 LibraryItemKind.Dashboard,
+                 dashboard.Name,
+                 dashboard.Description,
+                 $"{dashboard.WidgetCount} widget(s)",
+                 dashboard.UpdatedAtUtc,
+                 LibraryItemStatus.Ok));
+         }
+ 
+         return items
+             .OrderByDescending(item => item.UpdatedAtUtc)
+             .ThenBy(item => item.Kind)
+             .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+             .ToArray();
+     }
+ 
+-    public Task<string?> LoadSavedSearchTextAsync(
++    public Task<string?> LoadSavedQueryTextAsync(
+         string id,
+         CancellationToken cancellationToken = default)
+     {
+         ArgumentException.ThrowIfNullOrWhiteSpace(id);
+         return _queries.LoadSavedQueryTextAsync(id, cancellationToken);
+     }
+ 
+     public Task<string?> LoadVisualizationTextAsync(
+         string id,
+         CancellationToken cancellationToken = default)
+     {
+         ArgumentException.ThrowIfNullOrWhiteSpace(id);
+         return _visualizations.LoadVisualizationQueryTextAsync(id, cancellationToken);
+     }
+ 
+     public Task DeleteAsync(
+         LibraryItem item,
+         CancellationToken cancellationToken = default)
+     {
+         ArgumentNullException.ThrowIfNull(item);
+         return DeleteAsync(item.Id, item.Kind, cancellationToken);
+     }
+ 
+     public Task DeleteAsync(
+         string id,
+         LibraryItemKind kind,
+         CancellationToken cancellationToken = default)
+     {
+         ArgumentException.ThrowIfNullOrWhiteSpace(id);
+ 
+         return kind switch
+         {
+-            LibraryItemKind.SavedSearch => _queries.DeleteSavedQueryAsync(id, cancellationToken),
++            LibraryItemKind.SavedQuery => _queries.DeleteSavedQueryAsync(id, cancellationToken),
+             LibraryItemKind.Visualization => _visualizations.DeleteVisualizationAsync(id, cancellationToken),
+             LibraryItemKind.Dashboard => _dashboards.DeleteAsync(id, cancellationToken),
+             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported library item kind.")
+         };
+     }
+ 
+     private static string ShortId(string id)
+     {
+         if (string.IsNullOrWhiteSpace(id))
+         {
+             return "(none)";
+         }
+ 
+         return id.Length <= 8 ? id : id[..8];
+     }
+ }
+ 
+ public sealed record LibraryItem(
+     string Id,
+     LibraryItemKind Kind,
+     string Name,
+     string? Description,
+     string DependencyLabel,
+     DateTime UpdatedAtUtc,
+     LibraryItemStatus Status);
+ 
+ public enum LibraryItemKind
+ {
+-    SavedSearch,
++    SavedQuery,
+     Visualization,
+     Dashboard
+ }
+ 
+ public enum LibraryItemStatus
+ {
+     Ok,
+     MissingDependency
+ }
+diff --git a/src/Hunting.Web/appsettings.json b/src/Hunting.Web/appsettings.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..1b5cf6ab19c391be65a1b438d1a9a1dbabfdfba5
+--- /dev/null
++++ b/src/Hunting.Web/appsettings.json
+@@ -0,0 +1,9 @@
++{
++  "Hunting": {
++    "DuckDbPath": "hunting.db",
++    "AppDbPath": "settings.db"
++  },
++  "Planner": {
++    "MaxIterations": 3
++  }
++}
+diff --git a/src/Hunting.Web/wwwroot/css/app.css b/src/Hunting.Web/wwwroot/css/app.css
+index ac4aa04a4ab67888c5f1cb8eab9557322cc078b8..5f68acd93703f555c2e872ac4a0c9cf8beeb4c83 100644
+--- a/src/Hunting.Web/wwwroot/css/app.css
++++ b/src/Hunting.Web/wwwroot/css/app.css
+@@ -1,62 +1,87 @@
+-/* ─── Reset and base ────────────────────────────────────────────────────── */
+-*, *::before, *::after {
++/* ─── DeltaZulu-scoped Hunting token aliases ────────────────────────────── */
++.hunt-app {
++    --hunt-surface-canvas: var(--color-surface-dark, var(--brand-ink));
++    --hunt-surface-panel: var(--color-surface-dark-alt, var(--brand-navy));
++    --hunt-surface-sidebar: var(--color-surface-dark, var(--brand-ink));
++    --hunt-surface-input: color-mix(in srgb, var(--color-surface-dark-alt, #122f42) 82%, white);
++    --hunt-surface-table-header: color-mix(in srgb, var(--color-surface-dark-alt, #122f42) 88%, white);
++    --hunt-surface-table-row: var(--color-surface-dark-alt, var(--brand-navy));
++    --hunt-surface-table-alt: color-mix(in srgb, var(--color-surface-dark-alt, #122f42) 92%, white);
++    --hunt-border: var(--color-border-inverse, rgba(255, 255, 255, 0.10));
++    --hunt-accent: var(--color-cta-bg, var(--brand-accent));
++    --hunt-accent-hover: var(--color-cta-bg-hover, var(--brand-accent));
++    --hunt-success: var(--color-success, #1f7a53);
++    --hunt-warning: var(--color-warning, #8a5a12);
++    --hunt-error: var(--color-error, #b73e3e);
++    --hunt-info: var(--viz-info, var(--brand-slate));
++    --hunt-text-main: var(--color-text-inverse-muted, rgba(255, 255, 255, 0.78));
++    --hunt-text-dim: color-mix(in srgb, var(--color-text-inverse-muted, rgba(255, 255, 255, 0.78)) 72%, transparent);
++    --hunt-text-head: var(--color-text-inverse, #fff);
++    --hunt-font-mono: var(--font-family-mono, 'IBM Plex Mono', 'Cascadia Code', 'Consolas', monospace);
++    --hunt-font-ui: var(--font-family-sans, 'IBM Plex Sans', system-ui, sans-serif);
++    --hunt-radius: var(--radius-md, 6px);
++    --hunt-shadow: var(--shadow-lg, 0 4px 16px rgba(0, 0, 0, .4));
++
++    /* Compatibility aliases are intentionally scoped to Hunting's product root
++       so a future shared Workbench host does not inherit a second global token system. */
++    --bg-dark: var(--hunt-surface-canvas);
++    --bg-panel: var(--hunt-surface-panel);
++    --bg-sidebar: var(--hunt-surface-sidebar);
++    --bg-input: var(--hunt-surface-input);
++    --bg-table-h: var(--hunt-surface-table-header);
++    --bg-table-r: var(--hunt-surface-table-row);
++    --bg-table-a: var(--hunt-surface-table-alt);
++    --border: var(--hunt-border);
++    --accent: var(--hunt-accent);
++    --accent-h: var(--hunt-accent-hover);
++    --success: var(--hunt-success);
++    --warning: var(--hunt-warning);
++    --error: var(--hunt-error);
++    --info: var(--hunt-info);
++    --text-main: var(--hunt-text-main);
++    --text-dim: var(--hunt-text-dim);
++    --text-head: var(--hunt-text-head);
++    --font-mono: var(--hunt-font-mono);
++    --font-ui: var(--hunt-font-ui);
++    --radius: var(--hunt-radius);
++    --shadow: var(--hunt-shadow);
++
+     box-sizing: border-box;
+-    margin: 0;
+-    padding: 0;
++    color: var(--hunt-text-main);
++    font-family: var(--hunt-font-ui);
++    font-size: 14px;
+ }
+ 
+-:root {
+-    --bg-dark: #0d1117;
+-    --bg-panel: #161b22;
+-    --bg-sidebar: #0d1117;
+-    --bg-input: #1c2128;
+-    --bg-table-h: #1c2128;
+-    --bg-table-r: #161b22;
+-    --bg-table-a: #1a2030;
+-    --border: #30363d;
+-    --accent: #1f6feb;
+-    --accent-h: #388bfd;
+-    --success: #3fb950;
+-    --warning: #d29922;
+-    --error: #f85149;
+-    --info: #58a6ff;
+-    --text-main: #c9d1d9;
+-    --text-dim: #8b949e;
+-    --text-head: #e6edf3;
+-    --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+-    --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+-    --radius: 6px;
+-    --shadow: 0 4px 16px rgba(0,0,0,.4);
+-}
+-
+-html, body {
+-    height: 100%;
+-    background: var(--bg-dark);
+-    color: var(--text-main);
+-    font-family: var(--font-ui);
+-    font-size: 14px;
++.hunt-app *,
++.hunt-app *::before,
++.hunt-app *::after {
++    box-sizing: inherit;
++}
++
++body:has(.hunt-app) {
++    background: var(--color-surface-dark, var(--brand-ink));
+ }
+ 
+ /* ─── App + shell layout ───────────────────────────────────────────────── */
+ .hunt-app {
+     height: 100vh;
+     display: flex;
+     flex-direction: column;
+     overflow: hidden;
+ }
+ 
+ .hunt-topbar {
+     background: var(--bg-sidebar) !important;
+     border-bottom: 1px solid var(--border);
+     min-height: 52px !important;
+     padding: 0 16px;
+ }
+ 
+ .hunt-brand {
+     color: var(--text-head);
+     text-decoration: none;
+     font-size: 16px;
+     font-weight: 700;
+     text-transform: lowercase;
+     letter-spacing: .02em;
+ }
+diff --git a/tests/Hunting.Tests/ReusableProjectBoundaryTests.cs b/tests/Hunting.Tests/ReusableProjectBoundaryTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..ad370ce76f95a1a47b135d897fea2ad46d985fad
+--- /dev/null
++++ b/tests/Hunting.Tests/ReusableProjectBoundaryTests.cs
+@@ -0,0 +1,49 @@
++namespace Hunting.Tests;
++
++[TestClass]
++public sealed class ReusableProjectBoundaryTests
++{
++    private static readonly string[] ReusableProjectFiles =
++    [
++        "src/Hunting.Core/Hunting.Core.csproj",
++        "src/Hunting.Schema/Hunting.Schema.csproj",
++        "src/Hunting.Data/Hunting.Data.csproj",
++        "src/Hunting.Render/Hunting.Render.csproj",
++        "src/Hunting.Application/Hunting.Application.csproj"
++    ];
++
++    [TestMethod]
++    [Description("Reusable Hunting projects stay independent of Hunting.Web for future Workbench validation and host composition.")]
++    public void ReusableProjects_DoNotReferenceHuntingWeb()
++    {
++        var repositoryRoot = FindRepositoryRoot();
++
++        foreach (var relativePath in ReusableProjectFiles)
++        {
++            var fullPath = Path.Combine(repositoryRoot, relativePath);
++            var projectXml = File.ReadAllText(fullPath);
++
++            Assert.IsFalse(
++                projectXml.Contains("Hunting.Web", StringComparison.OrdinalIgnoreCase),
++                $"Reusable project {relativePath} must not reference Hunting.Web.");
++        }
++    }
++
++    private static string FindRepositoryRoot()
++    {
++        var directory = new DirectoryInfo(AppContext.BaseDirectory);
++
++        while (directory is not null)
++        {
++            if (File.Exists(Path.Combine(directory.FullName, "Hunting.slnx")))
++            {
++                return directory.FullName;
++            }
++
++            directory = directory.Parent;
++        }
++
++        Assert.Fail("Could not locate repository root from test base directory.");
++        return string.Empty;
++    }
++}
+diff --git a/tests/Hunting.Tests/SavedQueryContentLibraryMapperTests.cs b/tests/Hunting.Tests/SavedQueryContentLibraryMapperTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..a5af76646509255a0f8fd65beacd2aec54067fc4
+--- /dev/null
++++ b/tests/Hunting.Tests/SavedQueryContentLibraryMapperTests.cs
+@@ -0,0 +1,37 @@
++namespace Hunting.Tests;
++
++using Hunting.Application.ContentLibrary;
++using Hunting.Application.SavedQueries;
++
++[TestClass]
++public sealed class SavedQueryContentLibraryMapperTests
++{
++    [TestMethod]
++    [Description("Existing Hunting saved queries map to draft-only SavedQuery content-library artifacts.")]
++    public void ToDraftArtifact_MapsSavedQueryToDraftOnlyArtifact()
++    {
++        var createdAt = new DateTime(2026, 01, 02, 03, 04, 05, DateTimeKind.Utc);
++        var updatedAt = createdAt.AddHours(1);
++        var lastRunAt = updatedAt.AddMinutes(5);
++        var savedQuery = new SavedQueryRecord(
++            "query-1",
++            "Suspicious PowerShell",
++            "Find encoded commands.",
++            "ProcessEvent | where ProcessName == 'powershell.exe'",
++            createdAt,
++            updatedAt,
++            lastRunAt);
++
++        var artifact = SavedQueryContentLibraryMapper.ToDraftArtifact(savedQuery);
++
++        Assert.AreEqual("query-1", artifact.Id);
++        Assert.AreEqual(ContentLibraryArtifactType.SavedQuery, artifact.Type);
++        Assert.AreEqual(ContentLibraryArtifactState.DraftOnly, artifact.State);
++        Assert.AreEqual(savedQuery.Name, artifact.Name);
++        Assert.AreEqual(savedQuery.Description, artifact.Description);
++        Assert.AreEqual(savedQuery.QueryText, artifact.Body);
++        Assert.AreEqual("hunting.saved-query", artifact.Metadata["source"]);
++        Assert.AreEqual("draft-only", artifact.Metadata["governance"]);
++        Assert.AreEqual(lastRunAt.ToString("O"), artifact.Metadata["lastRunAtUtc"]);
++    }
++}
+diff --git a/tests/Hunting.Tests/Validation/KqlQuerySyntaxValidatorTests.cs b/tests/Hunting.Tests/Validation/KqlQuerySyntaxValidatorTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..550102e63a2f19ec89076e43a2d8f43d531e6ee1
+--- /dev/null
++++ b/tests/Hunting.Tests/Validation/KqlQuerySyntaxValidatorTests.cs
+@@ -0,0 +1,53 @@
++namespace Hunting.Tests.Validation;
++
++using Hunting.Core.Catalog;
++using Hunting.Core.Validation;
++using Hunting.Schema;
++
++[TestClass]
++public sealed class KqlQuerySyntaxValidatorTests
++{
++    [TestMethod]
++    [Description("Validation adapter accepts valid KQL through the reusable Core translation seam without DuckDB execution.")]
++    public void Validate_ValidKql_ReturnsValidResult()
++    {
++        var validator = CreateValidator();
++
++        var result = validator.Validate("ProcessEvent | take 1");
++
++        Assert.IsTrue(result.IsValid);
++        Assert.AreEqual(0, result.Diagnostics.Count(diagnostic => diagnostic.IsError));
++    }
++
++    [TestMethod]
++    [Description("Validation adapter returns translator diagnostics for invalid KQL instead of throwing or executing runtime SQL.")]
++    public void Validate_InvalidKql_ReturnsDiagnostics()
++    {
++        var validator = CreateValidator();
++
++        var result = validator.Validate("raw.windows_sysmon_event | take 1");
++
++        Assert.IsFalse(result.IsValid);
++        Assert.IsTrue(result.Diagnostics.Count > 0);
++        Assert.IsTrue(result.Diagnostics.Any(diagnostic => diagnostic.IsError));
++    }
++
++    [TestMethod]
++    [Description("Validation adapter treats blank query text as a parse validation error.")]
++    public void Validate_BlankQuery_ReturnsParseDiagnostic()
++    {
++        var validator = CreateValidator();
++
++        var result = validator.Validate("   ");
++
++        Assert.IsFalse(result.IsValid);
++        Assert.AreEqual("Query text is required.", result.Diagnostics.Single().Message);
++    }
++
++    private static KqlQuerySyntaxValidator CreateValidator()
++    {
++        var catalog = new ApprovedViewCatalog();
++        SchemaConventions.RegisterCanonicalViews(catalog);
++        return new KqlQuerySyntaxValidator(catalog);
++    }
++}
+diff --git a/tests/Hunting.Tests/Web/LibraryServiceTests.cs b/tests/Hunting.Tests/Web/LibraryServiceTests.cs
+index 6f0ceded3ce5840e8fe135e77e0bd6623613bf70..0d46abc70c9690ab6bf5493d639e6d2b8a9e3554 100644
+--- a/tests/Hunting.Tests/Web/LibraryServiceTests.cs
++++ b/tests/Hunting.Tests/Web/LibraryServiceTests.cs
+@@ -1,167 +1,167 @@
+ namespace Hunting.Tests.Web;
+ 
+ using Hunting.Application.QueryHistory;
+ using Hunting.Application.SavedQueries;
+ using Hunting.Application.Visualizations;
+ using Hunting.Render.Directives;
+ using Hunting.Render.Model;
+ using Hunting.Web.Dashboards;
+ using Hunting.Web.Dashboards.Persistence;
+ using Hunting.Web.Services;
+ 
+ [TestClass]
+ public sealed class LibraryServiceTests
+ {
+     [TestMethod]
+-    public async Task ListAsync_ReturnsSavedSearchVisualizationAndDashboardItems()
++    public async Task ListAsync_ReturnsSavedQueryVisualizationAndDashboardItems()
+     {
+         var now = new DateTime(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
+         var savedQueries = new InMemorySavedQueryRepository();
+         var visualizations = new InMemoryVisualizationRepository();
+         var dashboards = new InMemoryDashboardRepository();
+ 
+         await savedQueries.SaveAsync(new SavedQueryRecord(
+             "query-1",
+             "PowerShell search",
+             "Process launches",
+             "ProcessEvent | take 10",
+             now.AddMinutes(-3),
+             now.AddMinutes(-2),
+             null), TestContext.CancellationToken);
+ 
+         await visualizations.SaveAsync(new VisualizationRecord(
+             "viz-1",
+             "query-1",
+             "PowerShell chart",
+             "Launches by account",
+             "Barchart",
+             "{}",
+             now.AddMinutes(-2),
+             now.AddMinutes(-1)), TestContext.CancellationToken);
+ 
+         await dashboards.SaveAsync(new DashboardDefinition
+         {
+             Id = "dashboard-1",
+             Name = "SOC overview",
+             Description = "Daily view",
+             Widgets =
+             [
+                 new DashboardWidgetDefinition
+                 {
+                     Id = "widget-1",
+                     Title = "Widget",
+                     QueryText = "ProcessEvent | take 10"
+                 }
+             ],
+             CreatedAtUtc = now.AddMinutes(-1),
+             UpdatedAtUtc = now
+         }, TestContext.CancellationToken);
+ 
+         var service = CreateService(savedQueries, visualizations, dashboards);
+ 
+         var items = await service.ListAsync(TestContext.CancellationToken);
+ 
+         Assert.HasCount(3, items);
+ 
+-        var queryItem = items.Single(item => item.Kind == LibraryItemKind.SavedSearch);
++        var queryItem = items.Single(item => item.Kind == LibraryItemKind.SavedQuery);
+         Assert.AreEqual("query-1", queryItem.Id);
+         Assert.AreEqual("PowerShell search", queryItem.Name);
+         Assert.AreEqual("1 saved visualization(s)", queryItem.DependencyLabel);
+         Assert.AreEqual(LibraryItemStatus.Ok, queryItem.Status);
+ 
+         var visualizationItem = items.Single(item => item.Kind == LibraryItemKind.Visualization);
+         Assert.AreEqual("viz-1", visualizationItem.Id);
+         Assert.AreEqual("PowerShell chart", visualizationItem.Name);
+         Assert.AreEqual("Query: PowerShell search", visualizationItem.DependencyLabel);
+         Assert.AreEqual(LibraryItemStatus.Ok, visualizationItem.Status);
+ 
+         var dashboardItem = items.Single(item => item.Kind == LibraryItemKind.Dashboard);
+         Assert.AreEqual("dashboard-1", dashboardItem.Id);
+         Assert.AreEqual("SOC overview", dashboardItem.Name);
+         Assert.AreEqual("1 widget(s)", dashboardItem.DependencyLabel);
+         Assert.AreEqual(LibraryItemStatus.Ok, dashboardItem.Status);
+     }
+ 
+     [TestMethod]
+     public async Task ListAsync_VisualizationWithMissingQuery_ReturnsMissingDependencyStatus()
+     {
+         var now = new DateTime(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
+         var visualizations = new InMemoryVisualizationRepository();
+ 
+         await visualizations.SaveAsync(new VisualizationRecord(
+             "viz-1",
+             "missing-query-id",
+             "Broken chart",
+             null,
+             "Barchart",
+             "{}",
+             now,
+             now), TestContext.CancellationToken);
+ 
+         var service = CreateService(visualizations: visualizations);
+ 
+         var item = (await service.ListAsync(TestContext.CancellationToken)).Single();
+ 
+         Assert.AreEqual(LibraryItemKind.Visualization, item.Kind);
+         Assert.AreEqual(LibraryItemStatus.MissingDependency, item.Status);
+         Assert.Contains("Missing query", item.DependencyLabel);
+     }
+ 
+     [TestMethod]
+-    public async Task DeleteAsync_SavedSearch_UsesProtectedQueryDeletePath()
++    public async Task DeleteAsync_SavedQuery_UsesProtectedQueryDeletePath()
+     {
+         var now = new DateTime(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
+         var savedQueries = new InMemorySavedQueryRepository();
+         var visualizations = new InMemoryVisualizationRepository();
+ 
+         await savedQueries.SaveAsync(new SavedQueryRecord(
+             "query-1",
+             "Used search",
+             null,
+             "ProcessEvent | take 10",
+             now,
+             now,
+             null), TestContext.CancellationToken);
+ 
+         await visualizations.SaveAsync(new VisualizationRecord(
+             "viz-1",
+             "query-1",
+             "Dependent chart",
+             null,
+             "Barchart",
+             "{}",
+             now,
+             now), TestContext.CancellationToken);
+ 
+         var service = CreateService(savedQueries, visualizations);
+ 
+         var ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+             service.DeleteAsync(
+                 new LibraryItem(
+                     "query-1",
+-                    LibraryItemKind.SavedSearch,
++                    LibraryItemKind.SavedQuery,
+                     "Used search",
+                     null,
+                     "1 saved visualization(s)",
+                     now,
+                     LibraryItemStatus.Ok),
+                 TestContext.CancellationToken));
+ 
+         Assert.Contains("Dependent chart", ex.Message);
+         Assert.IsNotNull(await savedQueries.GetAsync("query-1", TestContext.CancellationToken));
+     }
+ 
+     [TestMethod]
+     public async Task DeleteAsync_Dashboard_DeletesDashboard()
+     {
+         var now = new DateTime(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
+         var dashboards = new InMemoryDashboardRepository();
+ 
+         await dashboards.SaveAsync(new DashboardDefinition
+         {
+             Id = "dashboard-1",
+             Name = "SOC overview",
+             CreatedAtUtc = now,
+             UpdatedAtUtc = now
+         }, TestContext.CancellationToken);
+ 

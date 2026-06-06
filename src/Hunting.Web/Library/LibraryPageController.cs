@@ -53,8 +53,8 @@ public sealed class LibraryPageController
                 _navigation.NavigateTo($"/dashboards/{item.Id}");
                 return;
 
-            case LibraryItemKind.SavedSearch:
-                await OpenSavedSearchAsync(item.Id, cancellationToken);
+            case LibraryItemKind.SavedQuery:
+                await OpenSavedQueryAsync(item.Id, cancellationToken);
                 return;
 
             case LibraryItemKind.Visualization:
@@ -101,7 +101,7 @@ public sealed class LibraryPageController
         }
     }
 
-    public void CreateSavedSearch()
+    public void CreateSavedQuery()
     {
         State.ResetPendingDelete();
         _editorBus.RequestInsert(
@@ -194,12 +194,12 @@ public sealed class LibraryPageController
             ? "hunt-btn dashboard-primary-action"
             : "hunt-btn hunt-btn-clear";
 
-    private async Task OpenSavedSearchAsync(string id, CancellationToken cancellationToken)
+    private async Task OpenSavedQueryAsync(string id, CancellationToken cancellationToken)
     {
-        var queryText = await _library.LoadSavedSearchTextAsync(id, cancellationToken);
+        var queryText = await _library.LoadSavedQueryTextAsync(id, cancellationToken);
         if (string.IsNullOrWhiteSpace(queryText))
         {
-            State.Error = "Saved search could not be opened because its query text was not found.";
+            State.Error = "Saved query could not be opened because its query text was not found.";
             return;
         }
 

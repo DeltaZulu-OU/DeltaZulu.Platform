@@ -1,40 +1,65 @@
-/* ─── Reset and base ────────────────────────────────────────────────────── */
-*, *::before, *::after {
+/* ─── DeltaZulu-scoped Hunting token aliases ────────────────────────────── */
+.hunt-app {
+    --hunt-surface-canvas: var(--color-surface-dark, var(--brand-ink));
+    --hunt-surface-panel: var(--color-surface-dark-alt, var(--brand-navy));
+    --hunt-surface-sidebar: var(--color-surface-dark, var(--brand-ink));
+    --hunt-surface-input: color-mix(in srgb, var(--color-surface-dark-alt, #122f42) 82%, white);
+    --hunt-surface-table-header: color-mix(in srgb, var(--color-surface-dark-alt, #122f42) 88%, white);
+    --hunt-surface-table-row: var(--color-surface-dark-alt, var(--brand-navy));
+    --hunt-surface-table-alt: color-mix(in srgb, var(--color-surface-dark-alt, #122f42) 92%, white);
+    --hunt-border: var(--color-border-inverse, rgba(255, 255, 255, 0.10));
+    --hunt-accent: var(--color-cta-bg, var(--brand-accent));
+    --hunt-accent-hover: var(--color-cta-bg-hover, var(--brand-accent));
+    --hunt-success: var(--color-success, #1f7a53);
+    --hunt-warning: var(--color-warning, #8a5a12);
+    --hunt-error: var(--color-error, #b73e3e);
+    --hunt-info: var(--viz-info, var(--brand-slate));
+    --hunt-text-main: var(--color-text-inverse-muted, rgba(255, 255, 255, 0.78));
+    --hunt-text-dim: color-mix(in srgb, var(--color-text-inverse-muted, rgba(255, 255, 255, 0.78)) 72%, transparent);
+    --hunt-text-head: var(--color-text-inverse, #fff);
+    --hunt-font-mono: var(--font-family-mono, 'IBM Plex Mono', 'Cascadia Code', 'Consolas', monospace);
+    --hunt-font-ui: var(--font-family-sans, 'IBM Plex Sans', system-ui, sans-serif);
+    --hunt-radius: var(--radius-md, 6px);
+    --hunt-shadow: var(--shadow-lg, 0 4px 16px rgba(0, 0, 0, .4));
+
+    /* Compatibility aliases are intentionally scoped to Hunting's product root
+       so a future shared Workbench host does not inherit a second global token system. */
+    --bg-dark: var(--hunt-surface-canvas);
+    --bg-panel: var(--hunt-surface-panel);
+    --bg-sidebar: var(--hunt-surface-sidebar);
+    --bg-input: var(--hunt-surface-input);
+    --bg-table-h: var(--hunt-surface-table-header);
+    --bg-table-r: var(--hunt-surface-table-row);
+    --bg-table-a: var(--hunt-surface-table-alt);
+    --border: var(--hunt-border);
+    --accent: var(--hunt-accent);
+    --accent-h: var(--hunt-accent-hover);
+    --success: var(--hunt-success);
+    --warning: var(--hunt-warning);
+    --error: var(--hunt-error);
+    --info: var(--hunt-info);
+    --text-main: var(--hunt-text-main);
+    --text-dim: var(--hunt-text-dim);
+    --text-head: var(--hunt-text-head);
+    --font-mono: var(--hunt-font-mono);
+    --font-ui: var(--hunt-font-ui);
+    --radius: var(--hunt-radius);
+    --shadow: var(--hunt-shadow);
+
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
-:root {
-    --bg-dark: #0d1117;
-    --bg-panel: #161b22;
-    --bg-sidebar: #0d1117;
-    --bg-input: #1c2128;
-    --bg-table-h: #1c2128;
-    --bg-table-r: #161b22;
-    --bg-table-a: #1a2030;
-    --border: #30363d;
-    --accent: #1f6feb;
-    --accent-h: #388bfd;
-    --success: #3fb950;
-    --warning: #d29922;
-    --error: #f85149;
-    --info: #58a6ff;
-    --text-main: #c9d1d9;
-    --text-dim: #8b949e;
-    --text-head: #e6edf3;
-    --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
-    --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    --radius: 6px;
-    --shadow: 0 4px 16px rgba(0,0,0,.4);
-}
-
-html, body {
-    height: 100%;
-    background: var(--bg-dark);
-    color: var(--text-main);
-    font-family: var(--font-ui);
+    color: var(--hunt-text-main);
+    font-family: var(--hunt-font-ui);
     font-size: 14px;
+}
+
+.hunt-app *,
+.hunt-app *::before,
+.hunt-app *::after {
+    box-sizing: inherit;
+}
+
+body:has(.hunt-app) {
+    background: var(--color-surface-dark, var(--brand-ink));
 }
 
 /* ─── App + shell layout ───────────────────────────────────────────────── */

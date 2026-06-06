@@ -5,7 +5,7 @@ using Hunting.Application.Visualizations;
 using Hunting.Web.Dashboards.Persistence;
 
 /// <summary>
-/// Web-facing aggregate over saved searches, visualizations, and dashboards.
+/// Web-facing aggregate over saved queries, visualizations, and dashboards.
 /// This is intentionally a UI/application composition service; it does not move
 /// persistence responsibilities or create new project boundaries.
 /// </summary>
@@ -52,7 +52,7 @@ public sealed class LibraryService
             visualizationCountsByQuery.TryGetValue(query.Id, out var visualizationCount);
             items.Add(new LibraryItem(
                 query.Id,
-                LibraryItemKind.SavedSearch,
+                LibraryItemKind.SavedQuery,
                 query.Name,
                 query.Description,
                 visualizationCount == 0
@@ -96,7 +96,7 @@ public sealed class LibraryService
             .ToArray();
     }
 
-    public Task<string?> LoadSavedSearchTextAsync(
+    public Task<string?> LoadSavedQueryTextAsync(
         string id,
         CancellationToken cancellationToken = default)
     {
@@ -129,7 +129,7 @@ public sealed class LibraryService
 
         return kind switch
         {
-            LibraryItemKind.SavedSearch => _queries.DeleteSavedQueryAsync(id, cancellationToken),
+            LibraryItemKind.SavedQuery => _queries.DeleteSavedQueryAsync(id, cancellationToken),
             LibraryItemKind.Visualization => _visualizations.DeleteVisualizationAsync(id, cancellationToken),
             LibraryItemKind.Dashboard => _dashboards.DeleteAsync(id, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported library item kind.")
@@ -158,7 +158,7 @@ public sealed record LibraryItem(
 
 public enum LibraryItemKind
 {
-    SavedSearch,
+    SavedQuery,
     Visualization,
     Dashboard
 }

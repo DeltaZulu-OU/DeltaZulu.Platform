@@ -13,7 +13,7 @@ using Hunting.Web.Services;
 public sealed class LibraryServiceTests
 {
     [TestMethod]
-    public async Task ListAsync_ReturnsSavedSearchVisualizationAndDashboardItems()
+    public async Task ListAsync_ReturnsSavedQueryVisualizationAndDashboardItems()
     {
         var now = new DateTime(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
         var savedQueries = new InMemorySavedQueryRepository();
@@ -63,7 +63,7 @@ public sealed class LibraryServiceTests
 
         Assert.HasCount(3, items);
 
-        var queryItem = items.Single(item => item.Kind == LibraryItemKind.SavedSearch);
+        var queryItem = items.Single(item => item.Kind == LibraryItemKind.SavedQuery);
         Assert.AreEqual("query-1", queryItem.Id);
         Assert.AreEqual("PowerShell search", queryItem.Name);
         Assert.AreEqual("1 saved visualization(s)", queryItem.DependencyLabel);
@@ -108,7 +108,7 @@ public sealed class LibraryServiceTests
     }
 
     [TestMethod]
-    public async Task DeleteAsync_SavedSearch_UsesProtectedQueryDeletePath()
+    public async Task DeleteAsync_SavedQuery_UsesProtectedQueryDeletePath()
     {
         var now = new DateTime(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
         var savedQueries = new InMemorySavedQueryRepository();
@@ -139,7 +139,7 @@ public sealed class LibraryServiceTests
             service.DeleteAsync(
                 new LibraryItem(
                     "query-1",
-                    LibraryItemKind.SavedSearch,
+                    LibraryItemKind.SavedQuery,
                     "Used search",
                     null,
                     "1 saved visualization(s)",

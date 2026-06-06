@@ -25,8 +25,14 @@ builder.Services.AddSingleton(_ => {
 });
 
 // DuckDB connection factory — singleton MVP model
-builder.Services.AddSingleton(_ =>
-    new DuckDbConnectionFactory("DataSource=hunting.db"));
+builder.Services.AddSingleton(_ => {
+    var duckDbPath = ResolveConfiguredPath(
+        builder.Configuration["Hunting:DuckDbPath"],
+        builder.Environment.ContentRootPath,
+        "hunting.db");
+
+    return new DuckDbConnectionFactory($"DataSource={duckDbPath}");
+});
 
 // Schema applier — used at startup to bootstrap schema
 builder.Services.AddSingleton<SchemaApplier>();
@@ -51,7 +57,10 @@ builder.Services.AddSingleton<QueryService>();
 builder.Services.AddScoped<EditorBus>();
 builder.Services.AddScoped<LanguageService>();
 
-var settingsDbPath = Path.Combine(builder.Environment.ContentRootPath, "settings.db");
+var settingsDbPath = ResolveConfiguredPath(
+    builder.Configuration["Hunting:AppDbPath"],
+    builder.Environment.ContentRootPath,
+    "settings.db");
 builder.Services.AddApplicationPersistence($"Data Source={settingsDbPath}");
 builder.Services.AddDashboards();
 builder.Services.AddHuntingRenderWeb();
@@ -142,4 +151,15 @@ static async Task BootstrapApplicationPersistenceAsync(WebApplication app)
 {
     await app.Services.InitializeApplicationPersistenceAsync();
     app.Logger.LogInformation("Application persistence initialized");
+}
+
+static string ResolveConfiguredPath(string? configuredPath, string contentRootPath, string defaultFileName)
+{
+    var path = string.IsNullOrWhiteSpace(configuredPath)
+        ? defaultFileName
+        : configuredPath;
+
+    return Path.IsPathRooted(path)
+        ? path
+        : Path.Combine(contentRootPath, path);
 }

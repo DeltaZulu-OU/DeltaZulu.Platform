@@ -13,14 +13,15 @@ Runtime SQL is generated and discarded. It is not a durable project artifact.
 Hunting is intended to provide a familiar threat-hunting experience over local or embedded security data without becoming a generic SQL explorer. The current implementation focuses on:
 
 - KQL-style analyst workflow over governed Golden security views.
-- DuckDB-backed local execution for development, validation, and early product exploration.
+- DuckDB-backed local execution for development, validation, and early product exploration, with database paths configurable through `Hunting:DuckDbPath` and `Hunting:AppDbPath`.
 - Schema-first Bronze/Silver/Golden contracts for telemetry normalization.
-- Deterministic query translation, diagnostics, and tests for supported KQL constructs.
+- Deterministic query translation, diagnostics, reusable KQL syntax validation, and tests for supported KQL constructs.
 - Render-aware query execution and dashboard composition without introducing a second query runtime.
+- Saved queries can be projected into draft-only content-library artifacts for later Workbench governance without treating local hunting state as accepted content.
 - Dashboard detail pages default to readonly mode; edit-mode changes are staged locally, including collision-aware title-bar layout drags, and persisted by the top-right Save action.
 - Dashboard widgets prioritize visualization/table content while keeping source and execution metadata for all run outcomes in Debug logs.
 
-Implemented feature status is tracked in the documentation, not in this README:
+Implementation-status snapshot: dependency versions are centrally pinned, package-lock generation is enabled, shared build props now use the future monorepo analyzer/style baseline, reusable validation lives in `Hunting.Core`, and Hunting CSS uses DeltaZulu-scoped aliases rather than a root-level parallel token system. Detailed feature status is tracked in the documentation, not in this README:
 
 - Roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - KQL syntax coverage: [`docs/kql-syntax-coverage-checklist.md`](docs/kql-syntax-coverage-checklist.md)
@@ -95,12 +96,13 @@ docs/
 
 Development constraints:
 
-- Shared build conventions live in `Directory.Build.props`; keep common nullable, implicit using, analysis, and deterministic build settings centralized there.
-- Package versions are centrally pinned in `Directory.Packages.props`; project files should not reintroduce floating package versions.
+- Shared build conventions live in `Directory.Build.props`; keep common nullable, implicit using, analysis, deterministic build, package-lock, and warning policy settings centralized there.
+- Package versions are centrally pinned in `Directory.Packages.props`; project files should not reintroduce floating package versions, and lock files should be regenerated with a local .NET SDK after package changes.
 - Keep user-facing queries on Golden views.
 - Reject unsupported KQL constructs with diagnostics rather than silent approximation.
 - Keep `Hunting.Data` data-only; render parsing and dashboard composition stay outside the runtime.
 - Update the roadmap and coverage checklist when feature status changes.
+- Keep product CSS scoped to Hunting roots and shared DeltaZulu/MudBlazor tokens so Hunting can mount inside a Workbench-owned shell.
 
 ## License
 

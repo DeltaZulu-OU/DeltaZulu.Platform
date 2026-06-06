@@ -9,15 +9,15 @@
         <div>
             <p class="dashboard-eyebrow">Library</p>
             <h1>Library</h1>
-            <p class="dashboard-page-subtitle">Manage saved searches, reusable visualizations, and dashboards from one place.</p>
+            <p class="dashboard-page-subtitle">Manage saved queries, reusable visualizations, and dashboards from one place.</p>
         </div>
         <div class="dashboard-list-toolbar">
             <div class="dashboard-list-actions-primary">
                 <MudButton Variant="Variant.Filled"
                            Size="Size.Small"
                            Color="Color.Primary"
-                           OnClick="@(() => Controller.CreateSavedSearch())">
-                    New saved search
+                           OnClick="@(() => Controller.CreateSavedQuery())">
+                    New saved query
                 </MudButton>
                 <MudButton Variant="Variant.Outlined"
                            Size="Size.Small"
@@ -75,7 +75,7 @@
 
                     <div class="dashboard-list-actions-primary library-filter-buttons">
                         <button class="@Controller.FilterButtonClass(null)" @onclick="() => Controller.SetFilter(null)">All</button>
-                        <button class="@Controller.FilterButtonClass(LibraryItemKind.SavedSearch)" @onclick="() => Controller.SetFilter(LibraryItemKind.SavedSearch)">Saved searches</button>
+                        <button class="@Controller.FilterButtonClass(LibraryItemKind.SavedQuery)" @onclick="() => Controller.SetFilter(LibraryItemKind.SavedQuery)">Saved queries</button>
                         <button class="@Controller.FilterButtonClass(LibraryItemKind.Visualization)" @onclick="() => Controller.SetFilter(LibraryItemKind.Visualization)">Visualizations</button>
                         <button class="@Controller.FilterButtonClass(LibraryItemKind.Dashboard)" @onclick="() => Controller.SetFilter(LibraryItemKind.Dashboard)">Dashboards</button>
                     </div>
@@ -163,9 +163,9 @@
                 {
                     <section class="dashboard-empty-state dashboard-list-empty">
                         <h2>No library items</h2>
-                        <p>Create a saved search, visualization, or dashboard to populate the library.</p>
+                        <p>Create a saved query, visualization, or dashboard to populate the library.</p>
                         <div class="dashboard-empty-actions">
-                            <button class="hunt-btn dashboard-primary-action" @onclick="Controller.CreateSavedSearch">Create saved search</button>
+                            <button class="hunt-btn dashboard-primary-action" @onclick="Controller.CreateSavedQuery">Create saved query</button>
                         </div>
                     </section>
                 }
@@ -199,7 +199,7 @@
     private static string GetKindIcon(LibraryItemKind kind)
         => kind switch
         {
-            LibraryItemKind.SavedSearch => Icons.Material.Filled.Search,
+            LibraryItemKind.SavedQuery => Icons.Material.Filled.Search,
             LibraryItemKind.Visualization => Icons.Material.Filled.InsertChart,
             LibraryItemKind.Dashboard => Icons.Material.Filled.Dashboard,
             _ => Icons.Material.Filled.Description

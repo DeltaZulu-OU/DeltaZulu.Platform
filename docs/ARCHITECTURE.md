@@ -4,7 +4,7 @@
 
 Hunting is a schema-first KQL-on-DuckDB security hunting workbench built with .NET. Users write KQL in a Blazor Server web interface. The backend parses KQL using Microsoft Kusto language tooling, translates a controlled subset into a relational intermediate model, emits transient DuckDB SQL, executes it, and returns bounded results.
 
-Users query logical Golden event contracts. They do not write SQL, do not query Bronze or Silver objects, and do not depend on DuckDB-internal table names.
+Users query logical Golden event contracts. They do not write SQL, do not query Bronze or Silver objects, and do not depend on DuckDB-internal table names. In a future Workbench-owned host, Hunting is the reusable runtime/query/schema/render/dashboard capability layer: Workbench owns governance and shell composition, while Hunting.Core exposes validation and translation seams that do not execute DuckDB SQL.
 
 ## ADR Alignment Snapshot
 
@@ -20,9 +20,9 @@ The architecture is structurally CQRS because the write-side schema pipeline and
 
 **Write side:** C# schema models → `SchemaEmitter` DDL → `SchemaApplier` → DuckDB state mutation.
 
-**Read side:** KQL → public `KustoToRelational` compatibility adapter → internal `KustoQueryTranslator` → `RelNode` IR → `RelationalPlanner` → `DuckDbQueryEmitter` → read-only DuckDB execution → bounded results.
+**Read side:** KQL → optional `IQuerySyntaxValidator` validation adapter → public `KustoToRelational` compatibility adapter → internal `KustoQueryTranslator` → `RelNode` IR → `RelationalPlanner` → `DuckDbQueryEmitter` → read-only DuckDB execution → bounded results.
 
-`ApprovedViewCatalog` bridges the two pipelines by projecting Golden schema models into Kusto.Language symbols.
+`ApprovedViewCatalog` bridges the two pipelines by projecting Golden schema models into Kusto.Language symbols. Validation-only consumers can stop at the `Hunting.Core.Validation` seam and receive `QueryDiagnostic` results without referencing `Hunting.Web`, opening a DuckDB connection, or materializing transient SQL.
 
 ## Core Architectural Bets
 
@@ -145,7 +145,7 @@ Golden views must emit explicit canonical projections per Silver branch. `SELECT
 
 | Project | Responsibility |
 |---|---|
-| `Hunting.Core` | Query model, translation, planner, policy, catalog, SQL emission, sample-query catalog |
+| `Hunting.Core` | Query model, translation, planner, policy, catalog, SQL emission, sample-query catalog, reusable KQL validation interface/adapter |
 | `Hunting.Schema` | C# schema definitions and active medallion catalog |
 | `Hunting.Data` | DuckDB connection factory, schema application, data-only runtime orchestration, application persistence, mock seeding |
 | `Hunting.Render` | Dependency-light render contracts, terminal directive parser, render resolver, tabular abstraction, chart-model builder; intentionally has no `Hunting.*` project references |

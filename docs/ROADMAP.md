@@ -23,8 +23,8 @@ monorepo migration.
 |---:|---|---|---|---|
 | 1 | P0 | Implemented | Pin all package versions and remove floating versions such as `Dapper` `2.*` and DuckDB `1.*`. | CI and future monorepo restores become deterministic. |
 | 2 | P0 | Implemented locally; awaiting external baseline confirmation | Align Hunting package versions with the shared dependency baseline. | Hunting does not introduce duplicate or conflicting transitive dependency graphs. |
-| 3 | P0 | Implemented | Add or adopt shared `Directory.Build.props` conventions. | Nullable, implicit usings, analysis level, deterministic build, and style behavior match Workbench. |
-| 4 | P0 | Blocked on local SDK in this environment | Verify Hunting builds cleanly under the future shared build props. | Analyzer/style/build setting breakage is caught before migration. |
+| 3 | P0 | Implemented | Add or adopt shared `Directory.Build.props` conventions. | Nullable, implicit usings, analysis level, deterministic build, package-lock generation, warning policy, and style behavior match the future Workbench baseline. |
+| 4 | P0 | Blocked on local SDK in this environment | Verify Hunting builds cleanly under the future shared build props and generate package lock files. | Analyzer/style/build setting breakage and lock-file drift are caught before migration. |
 | 5 | P1 | Implemented with existing OS matrix plus floating-version guard | Add CI coverage for build/test using the same OS matrix expected for the future monorepo. | Platform-specific restore/build/test failures are caught before merge. |
 
 Exit criteria:
@@ -32,6 +32,7 @@ Exit criteria:
 - No direct package reference uses a floating version range.
 - Package versions are either centrally managed or demonstrably aligned to the shared baseline.
 - Common build properties are centralized instead of duplicated per project unless project-specific.
+- `RestorePackagesWithLockFile=true` is enabled; package lock files must be generated and committed once a .NET SDK is available in the execution environment.
 - `dotnet restore`, `dotnet build`, and `dotnet test` run in the future shared-build configuration.
 - CI exercises the future shared OS matrix.
 
@@ -42,9 +43,9 @@ owns product hosting and detection-content governance.
 
 | Order | Priority | Task | Outcome |
 |---:|---|---|---|
-| 1 | P0 | Keep `Hunting.Core`, `Hunting.Schema`, `Hunting.Data`, and `Hunting.Render` independent from `Hunting.Web`. | Reusable modules remain host-agnostic and can be consumed by Workbench validation or shared hosting. |
-| 2 | P0 | Extract a reusable KQL validation service from the current query pipeline. | Workbench can validate detection-library KQL without depending on Hunting Web or executing queries. |
-| 3 | P2 | Add public or internal interfaces around schema catalog access needed by Workbench validation. | Workbench consumes approved schema/catalog contracts without reaching into translator internals. |
+| 1 | P0 | Implemented: keep `Hunting.Core`, `Hunting.Schema`, `Hunting.Data`, and `Hunting.Render` independent from `Hunting.Web`, with a regression test. | Reusable modules remain host-agnostic and can be consumed by Workbench validation or shared hosting. |
+| 2 | P0 | Implemented: extract a reusable KQL validation service from the current query pipeline. | Workbench can validate detection-library KQL without depending on Hunting Web or executing queries. |
+| 3 | P2 | Implemented baseline: expose a Core validation interface over approved catalog translation. | Workbench consumes approved schema/catalog contracts without reaching into translator internals. |
 | 4 | P2 | Review generated SQL/debug SQL exposure and ensure it remains developer/runtime-only. | Detection-content governance stays separate from runtime internals. |
 | 5 | P2 | Reduce Web-layer coupling around `QueryService`, `RenderedQueryRunner`, and dashboard execution. | Later migration into a shared host shell requires less service-registration and orchestration rewrite. |
 
@@ -62,8 +63,8 @@ confusing accepted detection content with local hunting state.
 
 | Order | Priority | Task | Outcome |
 |---:|---|---|---|
-| 1 | P1 | Refactor saved queries toward a content-library abstraction. | Saved searches can evolve into detection-content library artifacts. |
-| 2 | P1 | Separate saved query storage contracts from Hunting-specific UI behavior. | Workbench can govern, version, review, or accept query artifacts later. |
+| 1 | P1 | Implemented baseline: map saved queries to draft-only content-library artifacts. | Saved queries can evolve into detection-content library artifacts without becoming accepted content by default. |
+| 2 | P1 | Implemented vocabulary transition: library UI classifies local query records as saved queries, with compatibility aliases only. | Workbench can govern, version, review, or accept query artifacts later. |
 | 3 | P1 | Make query library, visualization library, and dashboard persistence clearly application-state modules. | Transient hunting state is not mistaken for accepted detection content. |
 
 Exit criteria:
@@ -80,10 +81,10 @@ Exit criteria:
 |---:|---|---|---|
 | 1 | P1 | Make Hunting pages mountable below a product route such as `/threat-hunting` or `/hunt`. | Workbench can own `/` while Hunting remains a product area. |
 | 2 | P1 | Rename or route Hunting's settings page as runtime/query settings, or prepare to remove it. | Hunting does not conflict with Workbench operator/product settings. |
-| 3 | P1 | Review all static assets, JS files, and CSS files for common design-system alignment. | Assets can move into a shared host with less styling and script friction. |
-| 4 | P1 | Ensure dashboard UI uses shared design tokens and common MudBlazor styling conventions. | The merged app does not carry a second visual system. |
+| 3 | P1 | Implemented baseline: Hunting `app.css` scopes compatibility aliases under `.hunt-app` and sources values from DeltaZulu semantic tokens. | Assets can move into a shared host with less styling and script friction. |
+| 4 | P1 | In progress: continue dashboard/component cleanup against shared design tokens and common MudBlazor styling conventions. | The merged app does not carry a second visual system. |
 | 5 | P2 | Add migration notes for moving `Hunting.Web` from classic Blazor Server hosting to the selected common host model. | The later server merge is explicit, reviewable, and testable. |
-| 6 | P2 | Document Hunting's intended role in the merged architecture: runtime, KQL validation, schema catalog, render, dashboards. | Workbench/Hunting responsibilities do not drift during merge work. |
+| 6 | P2 | Implemented baseline: document Hunting's intended role in the merged architecture: runtime, KQL validation, schema catalog, render, dashboards. | Workbench/Hunting responsibilities do not drift during merge work. |
 
 Exit criteria:
 

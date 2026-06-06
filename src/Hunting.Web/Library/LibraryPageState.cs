@@ -47,7 +47,7 @@ public sealed class LibraryPageState
     public string FilterTitle
         => KindFilter switch
         {
-            LibraryItemKind.SavedSearch => "Saved searches",
+            LibraryItemKind.SavedQuery => "Saved queries",
             LibraryItemKind.Visualization => "Visualizations",
             LibraryItemKind.Dashboard => "Dashboards",
             _ => "All library items"
@@ -140,7 +140,7 @@ public static class LibraryLabels
     public static string KindLabel(LibraryItemKind kind)
         => kind switch
         {
-            LibraryItemKind.SavedSearch => "Saved search",
+            LibraryItemKind.SavedQuery => "Saved query",
             LibraryItemKind.Visualization => "Visualization",
             LibraryItemKind.Dashboard => "Dashboard",
             _ => kind.ToString()
