@@ -7,7 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class SchemaBrowserSampleQueryGuardTests
 {
     [TestMethod]
-    public void SchemaBrowser_SampleCatalog_DoesNotUseStringEmptyCheckOnNumericProcessId()
+    public void SampleCatalog_DoesNotUseStringEmptyCheckOnNumericProcessId()
     {
         var samples = SampleQueryCatalog.All;
 
@@ -17,7 +17,7 @@ public sealed class SchemaBrowserSampleQueryGuardTests
     }
 
     [TestMethod]
-    public void SchemaBrowser_SampleCatalog_DoesNotReferenceLegacyTableNames()
+    public void SampleCatalog_DoesNotReferenceLegacyTableNames()
     {
         var samples = SampleQueryCatalog.All;
 
@@ -32,7 +32,7 @@ public sealed class SchemaBrowserSampleQueryGuardTests
     }
 
     [TestMethod]
-    public void SchemaBrowser_SampleCatalog_ReferencesOnlyActiveGoldenTables()
+    public void SampleCatalog_ReferencesOnlyActiveGoldenTables()
     {
         var samples = SampleQueryCatalog.All;
 
@@ -42,14 +42,13 @@ public sealed class SchemaBrowserSampleQueryGuardTests
     }
 
     [TestMethod]
-    public void SchemaBrowser_RendersCentralSampleCatalog()
+    public void SchemaBrowser_RendersSavedQueriesButNotSampleQueries()
     {
         var source = ReadSchemaBrowserSource();
 
-        Assert.Contains("SampleQueryCatalog.All", source);
-        Assert.DoesNotContain("new(\"Process:", source);
-        Assert.DoesNotContain("new(\"Network:", source);
-        Assert.DoesNotContain("new(\"DNS:", source);
+        Assert.Contains("Title="Saved queries"", source);
+        Assert.DoesNotContain("Title="Sample queries"", source);
+        Assert.DoesNotContain("SampleQueryCatalog.All", source);
     }
 
     [TestMethod]
@@ -58,9 +57,8 @@ public sealed class SchemaBrowserSampleQueryGuardTests
         var source = ReadSchemaBrowserSource();
 
         Assert.Contains("<MudNavMenu", source);
-        Assert.Contains("Title=\"Schema\"", source);
-        Assert.Contains("Title=\"Saved queries\"", source);
-        Assert.Contains("Title=\"Sample queries\"", source);
+        Assert.Contains("Title="Schema"", source);
+        Assert.Contains("Title="Saved queries"", source);
     }
 
     private static string ReadSchemaBrowserSource()

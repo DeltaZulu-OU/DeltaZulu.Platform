@@ -40,6 +40,7 @@ public static class ApplicationPersistenceServiceCollectionExtensions
 
         var savedQueries = services.GetRequiredService<ISavedQueryRepository>();
         await savedQueries.EnsureInitializedAsync(cancellationToken);
+        await SampleSavedQuerySeeder.SeedMissingAsync(savedQueries, cancellationToken);
 
         var queryHistory = services.GetRequiredService<IQueryHistoryRepository>();
         await queryHistory.EnsureInitializedAsync(cancellationToken);

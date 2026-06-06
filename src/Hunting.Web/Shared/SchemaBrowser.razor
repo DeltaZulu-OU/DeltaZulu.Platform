@@ -1,7 +1,6 @@
 @namespace Hunting.Web.Shared
 @using Hunting.Application.SavedQueries
 @using Hunting.Core.Schema
-@using Hunting.Core.Samples
 @inject Hunting.Core.Catalog.ApprovedViewCatalog Catalog
 @inject Hunting.Web.Services.EditorBus EditorBus
 @inject Hunting.Web.Services.QueryLibraryService QueryLibrary
@@ -57,20 +56,10 @@
                 </MudNavLink>
             }
         </MudNavGroup>
-
-        <MudNavGroup Title="Sample queries" Expanded="false">
-            @foreach (var sample in _samples)
-            {
-                <MudNavLink OnClick="@(() => OnSampleClick(sample.Kql))">
-                    @sample.Label
-                </MudNavLink>
-            }
-        </MudNavGroup>
     </MudNavMenu>
 </nav>
 
 @code {
-    private readonly IReadOnlyList<SampleQuery> _samples = SampleQueryCatalog.All;
     private IReadOnlyList<SavedQueryRecord> _savedQueries = [];
     private bool _loadingSavedQueries;
 
@@ -84,9 +73,6 @@
 
     private void OnColumnClick(string col)
         => EditorBus.RequestInsert(col);
-
-    private void OnSampleClick(string kql)
-        => EditorBus.RequestInsert(kql);
 
     private async Task RefreshSavedQueriesAsync()
     {
