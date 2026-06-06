@@ -82,3 +82,38 @@ The POC is complete when this statement is true:
 | UI | Partial | Nav routes, basic version/check/review/settings views, a POC user switcher, and a settings-based merge-reconciliation operator surface exist; deepen workflow actions and end-to-end UX coverage. |
 | Cases | Aligned after docs refresh | Keep cases as `IssueType.Case` with optional `ExternalCaseRef`; no internal case-management scope in POC. |
 | Workflow engine | Good for POC | Keep domain state canonical; Elsa remains optional/toggled. |
+
+## 8. Merge-preparation validation refresh
+
+This section validates the explicit Workbench merge-preparation checklist and separates the
+items that are complete for merge preparation from intentionally deferred hardening work.
+
+| Priority | Checklist item | Validation status | Evidence / implementation outcome |
+|---|---|---|---|
+| P0 | Remove stale EF Core documentation when persistence is Dapper/SQLite. | Complete | README and architecture now describe Dapper + SQLite; no EF Core guidance remains in current merge-preparation docs. |
+| P0 | Pin package versions and remove floating references such as `MudBlazor 9.*`. | Complete | Central package management pins versions in `Directory.Packages.props`, lock files are enabled, and CI restores in locked mode. |
+| P0 | Align Workbench package versions with the shared dependency baseline. | Complete | Shared package versions are centralized in `Directory.Packages.props` and consumed by project references without per-project floating versions. |
+| P0 | Add a Workbench CI equivalent to Hunting's cross-platform build/test workflow. | Complete | `.github/workflows/workbench-ci.yml` builds and tests on Ubuntu, Windows, and macOS with locked restore. |
+| P0 | Confirm Workbench builds cleanly under shared `Directory.Build.props`. | Blocked in this environment | The repository is configured for the shared props, but this container does not include the `dotnet` SDK, so local build/test verification cannot run here. CI remains the authoritative check. |
+| P0 | Keep domain/application/persistence independent from Workbench Web. | Complete | Product modules expose application services and abstractions; Web composes services and does not own domain/persistence behavior. |
+| P0 | Replace placeholder query syntax validation with an interface-backed validator. | Complete | `IQuerySyntaxValidator` is the parser adapter boundary and `QuerySyntaxCheck` delegates parser-specific diagnostics to it. |
+| P0 | Define validation adapter boundary without Hunting.Web or runtime query execution services. | Complete | The validation boundary is deterministic and side-effect-light; it does not reference web modules or runtime execution services. |
+| P1 | Redesign saved queries as detection content library artifacts. | Complete for merge preparation | `ContentLibraryArtifact` models saved queries as governed library objects, and imported Hunting saved queries now become draft-only library records. |
+| P1 | Define content-library object types. | Complete for merge preparation | Saved query, detection query, visualization, fixture, test, note, and package metadata are modeled as content-library artifact types. |
+| P1 | Decide draft-only, accepted-content, and runtime-only artifact states. | Complete | `ContentLibraryArtifactState` separates editor drafts, accepted Git-backed content, and runtime/operator-only objects. |
+| P1 | Prepare navigation for Hunting modules under clear routes. | Documented / future mount point | README reserves `/threat-hunting`, `/dashboards`, and `/runtime` for later modules without collapsing Workbench boundaries. |
+| P1 | Treat `/settings` as future product/operator settings root. | Complete for POC | Settings is the operator/product settings root and includes POC runtime configuration and merge-reconciliation operations. |
+| P1 | Extract reusable MudBlazor theme/layout conventions. | Partial | Workbench has centralized theme assets, but packaging them as shared shell assets remains a later monorepo extraction task. |
+| P1 | Separate operator-only surfaces such as merge reconciliation from normal user settings. | Complete for POC | Merge reconciliation is surfaced through Settings as an operator repair flow rather than as normal authoring work. |
+| P1 | Document Workbench's role in merged architecture. | Complete | README documents content lifecycle, review/checks, Git-backed versions, module boundaries, and POC stubs. |
+| P2 | Add tests around query-validation abstraction using a fake validator first. | Complete | Validation tests exercise `QuerySyntaxCheck` through injected validators and the default validator registration. |
+| P2 | Prepare accepted-content Git layout for query artifacts. | Complete for POC | Canonical writer maps detection draft files into `detections/<slug>/...` accepted-content paths. |
+| P2 | Add import/conversion path from Hunting saved queries into Workbench records. | Complete | `HuntingSavedQueryImporter` converts existing saved-query exports into draft-only Workbench content-library records plus `rule.kql` draft payloads. |
+| P2 | Review UI for task-first flow before adding Hunting pages. | Gap remains | Home and Work views support a task loop, but broader UX hardening is still needed before adding Hunting pages. |
+| P2 | Document current POC stubs explicitly. | Complete | README and this gap analysis call out user identity, remote Git sync, fixture-backed execution limitations, and workflow durability as intentional POC boundaries. |
+
+### Prioritized remaining gaps
+
+1. **P1: Extract reusable shell assets.** Keep Workbench as the shell, but package theme/layout conventions only after the monorepo shape is known to avoid premature shared API design.
+2. **P2: Continue task-first UI hardening.** Before adding Hunting pages, make Home/Work/Change Detail the default guided loop and keep object pages secondary.
+3. **P2: Runtime-quality hardening remains deferred.** Remote Git synchronization, fixture-backed execution, production identity, and durable workflow storage are explicitly outside the current merge-preparation slice.

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Workbench.Application.ContentLibrary;
 using Workbench.Application.Services;
 
 namespace Workbench.Application;
@@ -16,6 +17,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<RestoreService>();
         services.AddScoped<MergeReconciliationService>();
         services.AddScoped<CheckPipelineRunner>();
+        services.AddScoped<HuntingSavedQueryImporter>();
         return services;
     }
 }
