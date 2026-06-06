@@ -93,6 +93,8 @@ docs/
 
 Development constraints:
 
+- Shared build conventions live in `Directory.Build.props`; keep common nullable, implicit using, analysis, and deterministic build settings centralized there.
+- Package versions are centrally pinned in `Directory.Packages.props`; project files should not reintroduce floating package versions.
 - Keep user-facing queries on Golden views.
 - Reject unsupported KQL constructs with diagnostics rather than silent approximation.
 - Keep `Hunting.Data` data-only; render parsing and dashboard composition stay outside the runtime.

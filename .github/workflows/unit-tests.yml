@@ -48,6 +48,16 @@ jobs:
       - name: Show .NET info
         run: dotnet --info
 
+      - name: Verify package versions are pinned
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path . -Recurse -File -Include *.csproj,Directory.Packages.props | Where-Object { $_.FullName -notmatch "[\\/]bin[\\/]|[\\/]obj[\\/]" }
+          $floating = Select-String -Path $files.FullName -Pattern 'Version="[^"]*\*'
+          if ($floating) {
+            $floating | ForEach-Object { Write-Error "$($_.Path):$($_.LineNumber): $($_.Line.Trim())" }
+            exit 1
+          }
+
       - name: Restore Web project
         run: dotnet restore src/Hunting.Web/Hunting.Web.csproj
 

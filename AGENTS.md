@@ -141,18 +141,28 @@ docs/
 
 ## Dependencies
 
+Package versions are centrally pinned in `Directory.Packages.props`; project files should not
+reintroduce inline or floating package versions.
+
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `Microsoft.Azure.Kusto.Language` | 17.* | KQL parsing, AST, semantic analysis |
-| `Kusto.Toolkit` | 2.* | `GlobalState` builder ergonomics |
-| `DuckDB.NET.Data` | 1.* | DuckDB ADO.NET provider |
-| `DuckDB.NET.Bindings` | 1.* | DuckDB native bindings |
-| `MSTest.TestFramework` | 3.* | Test framework |
-| `MSTest.TestAdapter` | 3.* | Test adapter |
-| `Microsoft.NET.Test.Sdk` | 17.* | Test host |
+| `Microsoft.Azure.Kusto.Language` | 12.4.0 | KQL parsing, AST, semantic analysis |
+| `Kusto.Toolkit` | 2.2.0 | `GlobalState` builder ergonomics |
+| `DuckDB.NET.Data.Full` | 1.5.3 | DuckDB ADO.NET provider with native runtime assets |
+| `DuckDB.NET.Bindings.Full` | 1.5.3 | DuckDB native bindings with runtime assets |
+| `Dapper` | 2.1.79 | Lightweight SQLite/DuckDB persistence helpers |
+| `Microsoft.Data.Sqlite` | 10.0.8 | SQLite-backed application-state persistence |
+| `Microsoft.Extensions.DependencyInjection*` | 10.0.8 | Dependency injection contracts and test services |
+| `MSTest.TestFramework` | 4.2.3 | Test framework |
+| `MSTest.TestAdapter` | 4.2.3 | Test adapter |
+| `Microsoft.NET.Test.Sdk` | 18.6.0 | Test host |
+| `MudBlazor` | 9.5.0 | Blazor component library |
+| `Markdig` | 1.2.0 | Markdown rendering for dashboard widgets |
+| `Vizor.ECharts` | 0.9.7 | ECharts Blazor interop |
 
-Target framework: `net10.0`. Nullable reference types enabled. Implicit usings enabled (includes
-`System.Linq`, `System.Collections.Generic`, `System.Threading.Tasks`).
+Target framework and common build conventions are centralized in `Directory.Build.props`: `net10.0`,
+nullable reference types, implicit usings, recommended analyzer mode, code-style enforcement, and
+deterministic builds.
 
 ## Architectural Constraints
 
