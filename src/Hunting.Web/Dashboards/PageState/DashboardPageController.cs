@@ -354,25 +354,43 @@ public sealed class DashboardPageController
     }
 
     public Task SaveWidgetLayoutAsync(DashboardWidgetLayoutChange change)
+        => SaveWidgetLayoutsAsync([change]);
+
+    public Task SaveWidgetLayoutsAsync(IReadOnlyList<DashboardWidgetLayoutChange> changes)
     {
         if (!State.EditMode)
         {
             return Task.CompletedTask;
         }
 
-        if (State.Dashboard is null)
+        if (State.Dashboard is null || changes.Count == 0)
         {
             return Task.CompletedTask;
         }
 
-        var widgets = State.Dashboard.Widgets.ToList();
-        var index = widgets.FindIndex(widget => string.Equals(widget.Id, change.WidgetId, StringComparison.OrdinalIgnoreCase));
-        if (index < 0)
+        var changesByWidgetId = changes
+            .GroupBy(change => change.WidgetId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Last().Layout, StringComparer.OrdinalIgnoreCase);
+        var changed = false;
+        var widgets = State.Dashboard.Widgets
+            .Select(widget =>
+            {
+                if (!changesByWidgetId.TryGetValue(widget.Id, out var layout))
+                {
+                    return widget;
+                }
+
+                changed = true;
+                return widget with { Layout = layout };
+            })
+            .ToArray();
+
+        if (!changed)
         {
             return Task.CompletedTask;
         }
 
-        widgets[index] = widgets[index] with { Layout = change.Layout };
+        State.SaveError = null;
         ApplyDashboardWidgets(widgets);
         NotifyStateChanged();
         return Task.CompletedTask;

@@ -22,10 +22,12 @@ window.huntingDashboardGridLayout = (() => {
                 return;
             }
 
-            const dragHandle = event.target.closest(".dashboard-widget-drag-handle");
             const resizeEdge = event.target.closest(".dashboard-widget-resize-edge");
+            const dragSurface = event.target.closest(".dashboard-widget-drag-surface");
+            const dragHandle = event.target.closest(".dashboard-widget-drag-handle");
+            const canDragFromSurface = dragSurface && !isDragIgnoredTarget(event.target);
 
-            if (!dragHandle && !resizeEdge) {
+            if (!resizeEdge && !dragHandle && !canDragFromSurface) {
                 return;
             }
 
@@ -48,7 +50,8 @@ window.huntingDashboardGridLayout = (() => {
 
         const dragStart = event => {
             if (event.target.closest(".dashboard-widget-resize-edge")
-                || event.target.closest(".dashboard-widget-drag-handle")) {
+                || event.target.closest(".dashboard-widget-drag-handle")
+                || (event.target.closest(".dashboard-widget-drag-surface") && !isDragIgnoredTarget(event.target))) {
                 event.preventDefault();
                 event.stopPropagation();
             }
@@ -64,6 +67,11 @@ window.huntingDashboardGridLayout = (() => {
 
     function isEditMode(gridShell) {
         return gridShell.dataset.dashboardEditMode === "true";
+    }
+
+    function isDragIgnoredTarget(target) {
+        return Boolean(target.closest(
+            "[data-dashboard-drag-ignore], button, a, input, textarea, select, option, label, .mud-button-root, .mud-menu, .mud-popover"));
     }
 
     function findGridItem(widget) {
@@ -90,24 +98,36 @@ window.huntingDashboardGridLayout = (() => {
         };
 
         const blockedLayouts = getBlockedLayouts(grid, gridItem);
-        let latest = {
+        const startLayout = {
             x: start.x,
             y: start.y,
             width: start.width,
             height: start.height
         };
+        let latest = createLayoutResult(gridItem, widget, startLayout, startLayout);
 
         widget.classList.add("dashboard-widget-layout-active");
+        gridItem.classList.add("dashboard-layout-item-active");
+
+        if (event.target.setPointerCapture) {
+            try {
+                event.target.setPointerCapture(event.pointerId);
+            } catch {
+                // Pointer capture is best-effort; document-level listeners keep dragging usable.
+            }
+        }
 
         const move = moveEvent => {
             const deltaColumns = Math.round((moveEvent.clientX - start.pointerX) / gridMetrics.columnStep);
             const deltaRows = Math.round((moveEvent.clientY - start.pointerY) / gridMetrics.rowStep);
             const candidate = calculateLayout(operation, start, deltaColumns, deltaRows);
-            const valid = findNearestValidLayout(start, candidate, blockedLayouts);
+            const resolved = operation === "move"
+                ? resolveMoveLayouts(gridItem, widget, candidate, startLayout, blockedLayouts)
+                : createLayoutResult(gridItem, widget, findNearestValidLayout(start, candidate, blockedLayouts), startLayout);
 
-            if (!sameLayout(valid, latest)) {
-                latest = valid;
-                applyLayout(gridItem, widget, latest);
+            if (!sameLayoutResult(resolved, latest)) {
+                latest = resolved;
+                applyLayoutResult(latest);
             }
         };
 
@@ -117,16 +137,17 @@ window.huntingDashboardGridLayout = (() => {
             document.removeEventListener("pointercancel", up);
 
             widget.classList.remove("dashboard-widget-layout-active");
+            gridItem.classList.remove("dashboard-layout-item-active");
 
-            const widgetId = widget.dataset.dashboardWidgetId;
-            if (widgetId) {
+            const layoutChanges = latest.layouts
+                .filter(isChangedLayout)
+                .map(toInteropLayoutChange)
+                .filter(change => change.widgetId);
+
+            if (layoutChanges.length > 0) {
                 registration.dotNetReference.invokeMethodAsync(
-                    "UpdateWidgetLayoutAsync",
-                    widgetId,
-                    latest.x,
-                    latest.y,
-                    latest.width,
-                    latest.height);
+                    "UpdateWidgetLayoutsAsync",
+                    layoutChanges);
             }
 
             resizeDashboardCharts();
@@ -191,12 +212,23 @@ window.huntingDashboardGridLayout = (() => {
     function getBlockedLayouts(grid, activeGridItem) {
         return [...grid.querySelectorAll("[data-dashboard-layout-item]")]
             .filter(item => item !== activeGridItem)
-            .map(item => ({
-                x: readInt(item, "layoutX", 0),
-                y: readInt(item, "layoutY", 0),
-                width: readInt(item, "layoutWidth", 1),
-                height: readInt(item, "layoutHeight", 1)
-            }))
+            .map(item => {
+                const widget = item.querySelector("[data-dashboard-widget-id]");
+
+                return {
+                    gridItem: item,
+                    widget,
+                    widgetId: widget?.dataset.dashboardWidgetId || "",
+                    x: readInt(item, "layoutX", 0),
+                    y: readInt(item, "layoutY", 0),
+                    width: readInt(item, "layoutWidth", 1),
+                    height: readInt(item, "layoutHeight", 1),
+                    originalX: readInt(item, "layoutX", 0),
+                    originalY: readInt(item, "layoutY", 0),
+                    originalWidth: readInt(item, "layoutWidth", 1),
+                    originalHeight: readInt(item, "layoutHeight", 1)
+                };
+            })
             .filter(isPositiveLayout);
     }
 
@@ -242,6 +274,120 @@ window.huntingDashboardGridLayout = (() => {
         }
 
         return latest;
+    }
+
+    function resolveMoveLayouts(activeGridItem, activeWidget, candidate, originalActiveLayout, blockedLayouts) {
+        const active = createLayoutItem(
+            activeGridItem,
+            activeWidget,
+            activeWidget?.dataset.dashboardWidgetId || "",
+            candidate,
+            originalActiveLayout);
+        const resolved = [active];
+        const orderedBlocked = blockedLayouts
+            .map(blocked => createLayoutItem(blocked.gridItem, blocked.widget, blocked.widgetId, blocked, {
+                x: blocked.originalX,
+                y: blocked.originalY,
+                width: blocked.originalWidth,
+                height: blocked.originalHeight
+            }))
+            .sort(compareLayoutPosition);
+
+        for (const blocked of orderedBlocked) {
+            const resolvedBlocked = moveLayoutBelowOverlaps(blocked, resolved);
+            resolved.push(resolvedBlocked);
+        }
+
+        return { layouts: resolved };
+    }
+
+    function moveLayoutBelowOverlaps(layout, placedLayouts) {
+        const resolved = { ...layout };
+        let guard = 0;
+
+        while (guard < 1000) {
+            const overlap = placedLayouts.find(placed => rectanglesOverlap(resolved, placed));
+            if (!overlap) {
+                return resolved;
+            }
+
+            resolved.y = Math.max(resolved.y + 1, overlap.y + overlap.height);
+            guard++;
+        }
+
+        return resolved;
+    }
+
+    function createLayoutResult(gridItem, widget, layout, originalLayout) {
+        const item = createLayoutItem(gridItem, widget, widget?.dataset.dashboardWidgetId || "", layout, originalLayout);
+
+        return { layouts: [item] };
+    }
+
+    function createLayoutItem(gridItem, widget, widgetId, layout, originalLayout) {
+        return {
+            gridItem,
+            widget,
+            widgetId,
+            x: layout.x,
+            y: layout.y,
+            width: layout.width,
+            height: layout.height,
+            originalX: originalLayout.x,
+            originalY: originalLayout.y,
+            originalWidth: originalLayout.width,
+            originalHeight: originalLayout.height
+        };
+    }
+
+    function compareLayoutPosition(first, second) {
+        if (first.y !== second.y) {
+            return first.y - second.y;
+        }
+
+        if (first.x !== second.x) {
+            return first.x - second.x;
+        }
+
+        return first.widgetId.localeCompare(second.widgetId);
+    }
+
+    function sameLayoutResult(first, second) {
+        if (first.layouts.length !== second.layouts.length) {
+            return false;
+        }
+
+        return first.layouts.every((layout, index) => {
+            const other = second.layouts[index];
+            return other
+                && layout.widgetId === other.widgetId
+                && sameLayout(layout, other);
+        });
+    }
+
+    function isChangedLayout(layout) {
+        return layout.x !== layout.originalX
+            || layout.y !== layout.originalY
+            || layout.width !== layout.originalWidth
+            || layout.height !== layout.originalHeight;
+    }
+
+    function applyLayoutResult(result) {
+        for (const layout of result.layouts) {
+            if (layout.gridItem && layout.widget) {
+                applyLayout(layout.gridItem, layout.widget, layout);
+            }
+        }
+    }
+
+    function toInteropLayoutChange(layout) {
+        return {
+            widgetId: layout.widgetId,
+            x: layout.x,
+            y: layout.y,
+            width: layout.width,
+            height: layout.height
+        };
     }
 
     function isValidLayout(layout, blockedLayouts) {
@@ -337,6 +483,7 @@ window.huntingDashboardGridLayout = (() => {
 
         registrations.delete(gridId);
     }
+
 
     return {
         initialize,

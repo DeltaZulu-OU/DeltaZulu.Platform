@@ -22,7 +22,7 @@ Dashboard changes should include coverage for the following seams:
 |---|---|
 | `DashboardModelValidator` | 12-column bounds, invalid width, overlap rejection, non-overlap on touching edges |
 | `DashboardWidgetRunner` | query success, visualization-backed query success, table fallback, query failure, missing visualization, non-query widget rejection, invalid widget rejection, runner exception, cancellation |
-| `DashboardPageController` | load success, load missing dashboard, save widget and rerun, delete widget, layout validation failure, export preparation, deactivation cancellation |
+| `DashboardPageController` | load success, load missing dashboard, save widget and rerun, delete widget, layout validation failure, batched layout staging, export preparation, deactivation cancellation |
 | `DashboardListPageController` | load success, create, import, malformed import failure, delete, search, pagination, clear search, open navigation |
 
 ## Manual smoke test
@@ -45,8 +45,8 @@ Use a local seeded database and run the Blazor app.
 | Add widget | New widget is persisted and rendered |
 | Delete widget | Widget disappears and stale result state is removed |
 | Edit dashboard settings | Name, description, and refresh settings persist |
-| Toggle layout edit mode | Move handle and resize edges become usable |
-| Move widget into occupied area | Widget stops at last valid non-overlapping position |
+| Toggle layout edit mode | Widget title bars become drag surfaces, widget action controls remain clickable, and resize edges become usable |
+| Move widget into occupied area | Active widget follows the free-axis target and displaced widgets are pushed downward into non-overlapping staged grid positions |
 | Resize widget into occupied area | Resize stops at last valid non-overlapping size |
 | Resize chart widget | Chart uses the widget area and does not collapse to a narrow strip |
 | Export dashboard JSON | Browser downloads JSON with a safe dashboard-derived filename |

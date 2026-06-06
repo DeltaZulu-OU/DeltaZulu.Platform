@@ -208,6 +208,44 @@ public sealed class DashboardPageControllerTests
         Assert.AreEqual(5, controller.State.Dashboard!.Widgets[1].Layout.X);
     }
 
+
+    [TestMethod]
+    public async Task SaveWidgetLayoutsAsync_MultipleNonOverlappingChanges_StagesAtomically()
+    {
+        var first = CreateWidget("widget-1") with
+        {
+            Layout = new DashboardLayout { X = 0, Y = 0, Width = 4, Height = 3, MinimumWidth = 1, MinimumHeight = 1 }
+        };
+        var second = CreateWidget("widget-2") with
+        {
+            Layout = new DashboardLayout { X = 5, Y = 0, Width = 4, Height = 3, MinimumWidth = 1, MinimumHeight = 1 }
+        };
+
+        var dashboard = CreateDashboard(widgets: [first, second]);
+        var repository = new FakeDashboardRepository(dashboard);
+        var controller = CreateController(repository);
+
+        await controller.LoadAsync(dashboard.Id);
+        controller.StartEditMode();
+
+        await controller.SaveWidgetLayoutsAsync(
+            [
+                new DashboardWidgetLayoutChange(first.Id, first.Layout with { X = 5 }),
+                new DashboardWidgetLayoutChange(second.Id, second.Layout with { X = 5, Y = 3 })
+            ]);
+
+        Assert.IsNull(controller.State.SaveError);
+        Assert.AreEqual(0, repository.SaveCount);
+        Assert.AreEqual(5, controller.State.Dashboard!.Widgets[0].Layout.X);
+        Assert.AreEqual(0, controller.State.Dashboard.Widgets[0].Layout.Y);
+        Assert.AreEqual(5, controller.State.Dashboard.Widgets[1].Layout.X);
+        Assert.AreEqual(3, controller.State.Dashboard.Widgets[1].Layout.Y);
+
+        await controller.SaveEditModeAsync();
+
+        Assert.AreEqual(1, repository.SaveCount);
+    }
+
     [TestMethod]
     public async Task BuildDashboardExport_LoadedDashboard_ReturnsFileNameAndJson()
     {

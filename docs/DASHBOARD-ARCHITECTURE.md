@@ -49,7 +49,7 @@ The query runtime remains data-only. Terminal `| render ...` parsing, render bin
 | `DashboardWidgetHost` | Widget chrome, refresh action, edit/delete menu, and chart/table body selection |
 | `DashboardWidgetEditor` | Widget add/edit modal and Monaco-backed query editing |
 | `DashboardSettingsEditor` | Dashboard name, description, and dashboard refresh settings |
-| `dashboard-grid-layout.js` | Pointer-based widget move/resize, grid snapping, and collision prevention |
+| `dashboard-grid-layout.js` | Pointer-based widget move/resize, title-bar drag activation, grid snapping, push-down displacement, and collision prevention |
 | `dashboard-chart-resize.js` | Best-effort ECharts resize observation |
 
 ## Layout model
@@ -77,7 +77,7 @@ X + Width greater than 12
 overlap with another widget
 ```
 
-The browser-side layout helper applies the same placement principle during move and resize. If a proposed layout overlaps another widget, the active widget stays at the last valid non-overlapping position.
+The browser-side layout helper applies the same placement principle during move and resize. Widget movement can start from the title bar in edit mode while widget action controls opt out of drag activation. If a move proposal overlaps another widget, the active widget stays under the pointer target and the helper pushes displaced widgets downward until the coordinate grid is non-overlapping, so movement is not artificially constrained to only horizontal or only vertical paths. Only changed widget layouts are submitted as a batch into the staged edit-mode draft; persistence still happens through the dashboard Save action. Resize proposals retain edge-specific axis behavior and stop at the last valid non-overlapping size.
 
 Overlap uses the standard rectangle intersection rule:
 

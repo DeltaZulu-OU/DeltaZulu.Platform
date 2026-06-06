@@ -100,6 +100,9 @@
     [Parameter]
     public EventCallback<DashboardWidgetLayoutChange> LayoutChanged { get; set; }
 
+    [Parameter]
+    public EventCallback<IReadOnlyList<DashboardWidgetLayoutChange>> LayoutsChanged { get; set; }
+
     private readonly string _gridElementId = $"dashboard-grid-{Guid.NewGuid():N}";
     private DotNetObjectReference<DashboardGrid>? _dotNetReference;
     private bool _layoutInteropInitialized;
@@ -201,25 +204,96 @@
     }
 
     [JSInvokable]
-    public async Task UpdateWidgetLayoutAsync(string widgetId, int x, int y, int width, int height)
+    public Task UpdateWidgetLayoutAsync(string widgetId, int x, int y, int width, int height)
     {
-        var existing = Dashboard.Widgets.FirstOrDefault(widget => string.Equals(widget.Id, widgetId, StringComparison.OrdinalIgnoreCase));
-        if (existing is null)
+        var change = new DashboardWidgetLayoutInteropChange
+        {
+            WidgetId = widgetId,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height
+        };
+
+        return UpdateWidgetLayoutsAsync([change]);
+    }
+
+    [JSInvokable]
+    public async Task UpdateWidgetLayoutsAsync(DashboardWidgetLayoutInteropChange[] changes)
+    {
+        var layoutChanges = changes
+            .Select(ToLayoutChange)
+            .OfType<DashboardWidgetLayoutChange>()
+            .ToArray();
+
+        if (layoutChanges.Length == 0)
         {
             return;
         }
 
+        if (LayoutsChanged.HasDelegate)
+        {
+            await LayoutsChanged.InvokeAsync(layoutChanges);
+            return;
+        }
+
+        foreach (var change in layoutChanges)
+        {
+            await LayoutChanged.InvokeAsync(change);
+        }
+    }
+
+    private DashboardWidgetLayoutChange? ToLayoutChange(DashboardWidgetLayoutInteropChange change)
+    {
+        var widgetId = change.WidgetId;
+        if (string.IsNullOrWhiteSpace(widgetId))
+        {
+            return null;
+        }
+
+        var existing = Dashboard.Widgets.FirstOrDefault(widget => string.Equals(widget.Id, widgetId, StringComparison.OrdinalIgnoreCase));
+        if (existing is null)
+        {
+            return null;
+        }
+
         var layout = new DashboardLayout
         {
-            X = Math.Max(0, x),
-            Y = Math.Max(0, y),
-            Width = Math.Max(existing.Layout.MinimumWidth, width),
-            Height = Math.Max(existing.Layout.MinimumHeight, height),
+            X = Math.Max(0, change.X),
+            Y = Math.Max(0, change.Y),
+            Width = Math.Max(existing.Layout.MinimumWidth, change.Width),
+            Height = Math.Max(existing.Layout.MinimumHeight, change.Height),
             MinimumWidth = existing.Layout.MinimumWidth,
             MinimumHeight = existing.Layout.MinimumHeight
         };
 
-        await LayoutChanged.InvokeAsync(new DashboardWidgetLayoutChange(widgetId, layout));
+        if (SameLayout(existing.Layout, layout))
+        {
+            return null;
+        }
+
+        return new DashboardWidgetLayoutChange(widgetId, layout);
+    }
+
+    private static bool SameLayout(DashboardLayout first, DashboardLayout second)
+        => first.X == second.X
+            && first.Y == second.Y
+            && first.Width == second.Width
+            && first.Height == second.Height
+            && first.MinimumWidth == second.MinimumWidth
+            && first.MinimumHeight == second.MinimumHeight;
+
+    public sealed class DashboardWidgetLayoutInteropChange
+    {
+        public string? WidgetId { get; set; }
+
+        public int X { get; set; }
+
+        public int Y { get; set; }
+
+        public int Width { get; set; }
+
+        public int Height { get; set; }
     }
 
     private Task OnWidgetDroppedAsync(MudItemDropInfo<DashboardWidgetDefinition> dropInfo)

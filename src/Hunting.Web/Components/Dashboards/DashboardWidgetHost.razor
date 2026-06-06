@@ -11,11 +11,11 @@
          data-layout-height="@Widget.Layout.Height"
          data-layout-min-width="@Widget.Layout.MinimumWidth"
          data-layout-min-height="@Widget.Layout.MinimumHeight">
-    <header class="dashboard-widget-header">
+    <header class="@HeaderClass">
         <div>
             <h2>@Widget.Title</h2>
         </div>
-        <div class="dashboard-widget-actions">
+        <div class="dashboard-widget-actions" data-dashboard-drag-ignore="true">
             <div class="dashboard-widget-split" role="group" aria-label="@WidgetActionLabel">
                 <MudButton Class="dashboard-widget-refresh-button"
                            Variant="Variant.Outlined"
@@ -42,7 +42,7 @@
             </div>
             @if (IsEditMode)
             {
-                <span class="dashboard-widget-drag-handle" title="Move widget" aria-hidden="true">⋮⋮</span>
+                <span class="dashboard-widget-drag-handle" title="Drag from the title bar to move widget" aria-hidden="true">⋮⋮</span>
             }
         </div>
     </header>
@@ -130,6 +130,11 @@
         => IsEditMode
             ? "dashboard-widget-host dashboard-widget-editable"
             : "dashboard-widget-host";
+
+    private string HeaderClass
+        => IsEditMode
+            ? "dashboard-widget-header dashboard-widget-drag-surface"
+            : "dashboard-widget-header";
 
     private string WidgetActionLabel
         => $"{Widget.Title} actions";

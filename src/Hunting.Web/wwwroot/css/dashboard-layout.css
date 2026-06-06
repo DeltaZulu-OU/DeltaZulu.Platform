@@ -2,6 +2,21 @@
     position: relative;
 }
 
+.dashboard-widget-drag-surface {
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+}
+
+.dashboard-widget-layout-active .dashboard-widget-drag-surface {
+    cursor: grabbing;
+}
+
+.dashboard-widget-drag-surface [data-dashboard-drag-ignore] {
+    cursor: auto;
+    user-select: auto;
+}
+
 .dashboard-widget-drag-handle {
     display: inline-flex;
     align-items: center;
@@ -11,7 +26,7 @@
     border: 1px solid var(--border);
     border-radius: 6px;
     color: var(--text-dim);
-    cursor: move;
+    cursor: grab;
     user-select: none;
     touch-action: none;
 }

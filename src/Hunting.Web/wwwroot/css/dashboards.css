@@ -441,6 +441,21 @@
     border-bottom: 1px solid var(--border);
 }
 
+.dashboard-widget-drag-surface {
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+}
+
+.dashboard-widget-layout-active .dashboard-widget-drag-surface {
+    cursor: grabbing;
+}
+
+.dashboard-widget-drag-surface [data-dashboard-drag-ignore] {
+    cursor: auto;
+    user-select: auto;
+}
+
 .dashboard-widget-header h2 {
     margin: 0;
     color: var(--text-head);
@@ -482,6 +497,7 @@
 
 
 .dashboard-widget-drag-handle {
+    flex: 0 0 auto;
     cursor: grab;
     user-select: none;
 }

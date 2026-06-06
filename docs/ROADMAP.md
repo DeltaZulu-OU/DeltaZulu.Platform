@@ -284,6 +284,9 @@ Implemented:
 - dashboard-level auto-refresh
 - coordinate-grid widget layout
 - dashboard readonly/edit mode split with a top-right Edit/Save mode switch and staged edit persistence
+- full title-bar widget drag surface in edit mode
+- free-axis collision-aware widget movement with push-down displacement during drag
+- changed-layout batching for staged drag updates
 - widget move and resize in edit mode
 - collision prevention during move/resize
 - model-level 12-column grid and overlap validation
