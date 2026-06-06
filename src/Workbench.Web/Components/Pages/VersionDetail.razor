@@ -1,3 +1,4 @@
+@page "/history/{Id}"
 @page "/versions/{Id}"
 @rendermode InteractiveServer
 @using Workbench.Application.Services
@@ -252,7 +253,7 @@ else
 
         _breadcrumbs =
         [
-            new("Versions", "/versions"),
+            new("History", "/history"),
             new(_comparison.Detection.Slug, $"/detections/{_comparison.Detection.Id}"),
             new(_comparison.AfterVersion.DisplayVersion, null, disabled: true),
         ];

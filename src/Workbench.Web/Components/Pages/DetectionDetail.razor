@@ -64,7 +64,7 @@ else
                         <div class="d-flex align-center gap-2 mt-1">
                             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success">@_latestVersion.DisplayVersion</MudChip>
                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                       OnClick="@(() => Nav.NavigateTo($"/versions/{_latestVersion.Id}"))"
+                                       OnClick="@(() => Nav.NavigateTo($"/history/{_latestVersion.Id}"))"
                                        Class="px-0" Style="font-weight: 600; text-transform: none;">
                                 Compare
                             </MudButton>
@@ -114,7 +114,7 @@ else
                         <MudTd DataLabel="Accepted"><MudText Typo="Typo.caption">@context.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
                         <MudTd DataLabel="Actions">
                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                            OnClick="@(() => Nav.NavigateTo($"/versions/{context.Id}"))">
+                            OnClick="@(() => Nav.NavigateTo($"/history/{context.Id}"))">
                                 Compare / restore
                             </MudButton>
                         </MudTd>

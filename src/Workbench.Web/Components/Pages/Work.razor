@@ -1,19 +1,20 @@
-@page "/work"
-@page "/issues"
 @page "/changes"
+@page "/work"
 @rendermode InteractiveServer
 @using Workbench.Application.Services
 @using Workbench.Domain.Changes
-@using Workbench.Domain.Issues
 @using Workbench.Domain.Enums
-@using Workbench.Domain.Identifiers
 @inject ChangeService ChangeService
-@inject IssueService IssueService
 @inject IDialogService DialogService
 @inject NavigationManager Nav
 @inject PocUserContext UserContext
 
-<PageTitle>Work</PageTitle>
+<PageTitle>Changes</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-1">Changes</MudText>
+<MudText Typo="Typo.body2" Class="mb-4" Style="color: var(--color-text-secondary); max-width: 720px;">
+    Proposed detection content changes. Each change carries its draft content, checks, reviews, and acceptance state.
+</MudText>
 
 @if (_loading)
 {
@@ -21,411 +22,77 @@
     return;
 }
 
-<MudTabs Elevation="0" Rounded="false" ApplyEffectsToContainer="false" Class="mb-4"
-         ActivePanelIndex="_activeTab" ActivePanelIndexChanged="OnTabChanged">
-    <MudTabPanel Text="Issues" />
-    <MudTabPanel Text="Changes" />
-</MudTabs>
+<MudPaper Class="pa-3 mb-3" Elevation="1">
+    <div class="d-flex align-center gap-3 flex-wrap">
+        <MudChipSet T="string" SelectionMode="SelectionMode.SingleSelection" SelectedValue="_changeFilter"
+                    SelectedValueChanged="OnChangeFilterChanged">
+            <MudChip T="string" Value="@("all")" Variant="Variant.Outlined" SelectedColor="Color.Primary">All (@_allChanges.Count)</MudChip>
+            <MudChip T="string" Value="@("mine")" Variant="Variant.Outlined" SelectedColor="Color.Primary">My changes</MudChip>
+            <MudChip T="string" Value="@("review")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Awaiting review</MudChip>
+            <MudChip T="string" Value="@("stale")" Variant="Variant.Outlined" SelectedColor="Color.Warning">Stale</MudChip>
+        </MudChipSet>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenNewChangeDialog">
+            New change
+        </MudButton>
+    </div>
+</MudPaper>
 
-@if (_activeTab == 0)
+@if (_filteredChanges.Count == 0)
 {
-    @* ══════════════════════════════════════════════════════
-       ISSUES — Jira-style dashboard + table
-       ══════════════════════════════════════════════════════ *@
-
-    @* ── KPI cards ── *@
-    <MudGrid Spacing="2" Class="mb-4">
-        <MudItem xs="6" sm="4" md="2">
-            <MudPaper Class="pa-3 text-center cursor-pointer" Elevation="1"
-                      @onclick="@(() => SetIssueFilter("all"))"
-                      Style="@KpiStyle("all")">
-                <MudText Typo="Typo.h4" Style="font-weight: 700;">@_allIssues.Count</MudText>
-                <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Total</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="6" sm="4" md="2">
-            <MudPaper Class="pa-3 text-center cursor-pointer" Elevation="1"
-                      @onclick="@(() => SetIssueFilter("open"))"
-                      Style="@KpiStyle("open")">
-                <MudText Typo="Typo.h4" Style="font-weight: 700; color: var(--mud-palette-info);">@StatusCount(IssueStatus.Open)</MudText>
-                <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Open</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="6" sm="4" md="2">
-            <MudPaper Class="pa-3 text-center cursor-pointer" Elevation="1"
-                      @onclick="@(() => SetIssueFilter("inprogress"))"
-                      Style="@KpiStyle("inprogress")">
-                <MudText Typo="Typo.h4" Style="font-weight: 700; color: var(--mud-palette-primary);">@StatusCount(IssueStatus.InProgress)</MudText>
-                <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">In progress</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="6" sm="4" md="2">
-            <MudPaper Class="pa-3 text-center cursor-pointer" Elevation="1"
-                      @onclick="@(() => SetIssueFilter("blocked"))"
-                      Style="@KpiStyle("blocked")">
-                <MudText Typo="Typo.h4" Style="font-weight: 700; color: var(--mud-palette-warning);">@StatusCount(IssueStatus.Blocked)</MudText>
-                <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Blocked</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="6" sm="4" md="2">
-            <MudPaper Class="pa-3 text-center cursor-pointer" Elevation="1"
-                      @onclick="@(() => SetIssueFilter("resolved"))"
-                      Style="@KpiStyle("resolved")">
-                <MudText Typo="Typo.h4" Style="font-weight: 700; color: var(--mud-palette-success);">@StatusCount(IssueStatus.Resolved)</MudText>
-                <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Resolved</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="6" sm="4" md="2">
-            <MudPaper Class="pa-3 text-center cursor-pointer" Elevation="1"
-                      @onclick="@(() => SetIssueFilter("closed"))"
-                      Style="@KpiStyle("closed")">
-                <MudText Typo="Typo.h4" Style="font-weight: 700;">@StatusCount(IssueStatus.Closed)</MudText>
-                <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Closed</MudText>
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
-
-    @* ── Priority distribution bar ── *@
-    @if (_allIssues.Count > 0)
-    {
-        var activeIssues = _allIssues.Where(i => i.Status is not IssueStatus.Closed).ToList();
-        if (activeIssues.Count > 0)
-        {
-            <MudPaper Class="pa-3 mb-4" Elevation="1">
-                <div class="d-flex align-center gap-3 mb-2">
-                    <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary); font-weight: 600;">PRIORITY DISTRIBUTION</MudText>
-                    <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">@activeIssues.Count active issue(s)</MudText>
-                </div>
-                <div class="d-flex" style="height: 8px; border-radius: 4px; overflow: hidden;">
-                    @{
-                        var total = (double)activeIssues.Count;
-                    }
-                    @if (activeIssues.Any(i => i.Priority == Priority.Critical))
-                    {
-                        <div style="width: @($"{activeIssues.Count(i => i.Priority == Priority.Critical) / total * 100:F1}%"); background: var(--mud-palette-error); cursor: pointer;"
-                             title="@($"Critical: {activeIssues.Count(i => i.Priority == Priority.Critical)}")"
-                             @onclick="@(() => SetPriorityFilter(Priority.Critical))"></div>
-                    }
-                    @if (activeIssues.Any(i => i.Priority == Priority.High))
-                    {
-                        <div style="width: @($"{activeIssues.Count(i => i.Priority == Priority.High) / total * 100:F1}%"); background: var(--mud-palette-warning); cursor: pointer;"
-                             title="@($"High: {activeIssues.Count(i => i.Priority == Priority.High)}")"
-                             @onclick="@(() => SetPriorityFilter(Priority.High))"></div>
-                    }
-                    @if (activeIssues.Any(i => i.Priority == Priority.Normal))
-                    {
-                        <div style="width: @($"{activeIssues.Count(i => i.Priority == Priority.Normal) / total * 100:F1}%"); background: var(--mud-palette-info); cursor: pointer;"
-                             title="@($"Normal: {activeIssues.Count(i => i.Priority == Priority.Normal)}")"
-                             @onclick="@(() => SetPriorityFilter(Priority.Normal))"></div>
-                    }
-                    @if (activeIssues.Any(i => i.Priority == Priority.Low))
-                    {
-                        <div style="width: @($"{activeIssues.Count(i => i.Priority == Priority.Low) / total * 100:F1}%"); background: var(--mud-palette-dark-lighten); cursor: pointer;"
-                             title="@($"Low: {activeIssues.Count(i => i.Priority == Priority.Low)}")"
-                             @onclick="@(() => SetPriorityFilter(Priority.Low))"></div>
-                    }
-                </div>
-                <div class="d-flex gap-4 mt-2">
-                    <span class="d-flex align-center gap-1"><span style="width:10px;height:10px;border-radius:2px;background:var(--mud-palette-error);"></span><MudText Typo="Typo.caption">Critical @activeIssues.Count(i => i.Priority == Priority.Critical)</MudText></span>
-                    <span class="d-flex align-center gap-1"><span style="width:10px;height:10px;border-radius:2px;background:var(--mud-palette-warning);"></span><MudText Typo="Typo.caption">High @activeIssues.Count(i => i.Priority == Priority.High)</MudText></span>
-                    <span class="d-flex align-center gap-1"><span style="width:10px;height:10px;border-radius:2px;background:var(--mud-palette-info);"></span><MudText Typo="Typo.caption">Normal @activeIssues.Count(i => i.Priority == Priority.Normal)</MudText></span>
-                    <span class="d-flex align-center gap-1"><span style="width:10px;height:10px;border-radius:2px;background:var(--mud-palette-dark-lighten);"></span><MudText Typo="Typo.caption">Low @activeIssues.Count(i => i.Priority == Priority.Low)</MudText></span>
-                </div>
-            </MudPaper>
-        }
-    }
-
-    @* ── Toolbar: search + filters + create ── *@
-    <MudPaper Class="pa-3 mb-3" Elevation="1">
-        <div class="d-flex align-center gap-3 flex-wrap">
-            <MudTextField Value="_searchText" ValueChanged="OnSearchChanged" Placeholder="Search by key or title"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
-                          Immediate="true" DebounceInterval="200" Style="max-width: 280px;" Dense="true"
-                          Margin="Margin.Dense" T="string" />
-            <MudSelect Value="_statusFilter" ValueChanged="OnStatusFilterChanged" Label="Status"
-                       T="string" Dense="true" Margin="Margin.Dense" Style="max-width: 160px;" Clearable="true">
-                <MudSelectItem Value="@("Open")">Open</MudSelectItem>
-                <MudSelectItem Value="@("InProgress")">In progress</MudSelectItem>
-                <MudSelectItem Value="@("Blocked")">Blocked</MudSelectItem>
-                <MudSelectItem Value="@("Resolved")">Resolved</MudSelectItem>
-                <MudSelectItem Value="@("Closed")">Closed</MudSelectItem>
-            </MudSelect>
-            <MudSelect Value="_typeFilter" ValueChanged="OnTypeFilterChanged" Label="Type"
-                       T="string" Dense="true" Margin="Margin.Dense" Style="max-width: 160px;" Clearable="true">
-                @foreach (var t in Enum.GetValues<IssueType>())
-                {
-                    <MudSelectItem Value="@t.ToString()">@t</MudSelectItem>
-                }
-            </MudSelect>
-            <MudSelect Value="_priorityFilter" ValueChanged="OnPriorityFilterChanged" Label="Priority"
-                       T="string" Dense="true" Margin="Margin.Dense" Style="max-width: 140px;" Clearable="true">
-                @foreach (var p in Enum.GetValues<Priority>())
-                {
-                    <MudSelectItem Value="@p.ToString()">@p</MudSelectItem>
-                }
-            </MudSelect>
-            <MudSelect Value="_assigneeFilter" ValueChanged="OnAssigneeFilterChanged" Label="Assignee"
-                       T="string" Dense="true" Margin="Margin.Dense" Style="max-width: 160px;" Clearable="true">
-                <MudSelectItem Value="@("unassigned")">Unassigned</MudSelectItem>
-                @foreach (var user in UserContext.AvailableUsers)
-                {
-                    <MudSelectItem Value="@user.Id.ToString()">@user.DisplayName</MudSelectItem>
-                }
-            </MudSelect>
-            <MudSpacer />
-            @if (HasActiveFilters)
-            {
-                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                           OnClick="ClearAllFilters" StartIcon="@Icons.Material.Outlined.FilterListOff">
-                    Clear filters
-                </MudButton>
-            }
-            <MudButtonGroup Variant="Variant.Filled" Size="Size.Small">
-                <MudButton Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                           OnClick="@(() => OpenCreateIssueDialog(false))">New issue</MudButton>
-                <MudButton Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Cases"
-                           OnClick="@(() => OpenCreateIssueDialog(true))">External case</MudButton>
-            </MudButtonGroup>
-        </div>
-    </MudPaper>
-
-    @* ── Issue table ── *@
-    @if (_filteredIssues.Count == 0)
-    {
-        <MudAlert Severity="Severity.Info">No issues match the current filters.</MudAlert>
-    }
-    else
-    {
-        <MudText Typo="Typo.caption" Class="mb-2" Style="color: var(--color-text-secondary);">
-            Showing @_filteredIssues.Count of @_allIssues.Count issue(s)
-        </MudText>
-        <MudTable Items="_filteredIssues" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
-                  OnRowClick="@(args => Nav.NavigateTo($"/issues/{args.Item.Id}"))"
-                  T="Issue" RowClass="cursor-pointer" Elevation="1"
-                  SortLabel="Sort by">
-            <HeaderContent>
-                <MudTh><MudTableSortLabel SortBy="new Func<Issue, object>(x => x.Key)" T="Issue">Key</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortBy="new Func<Issue, object>(x => x.Title)" T="Issue">Title</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortBy="new Func<Issue, object>(x => x.Type)" T="Issue">Type</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortBy="new Func<Issue, object>(x => x.Status)" T="Issue">Status</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortBy="new Func<Issue, object>(x => x.Priority)" InitialDirection="SortDirection.Descending" T="Issue">Priority</MudTableSortLabel></MudTh>
-                <MudTh>Assignee</MudTh>
-                <MudTh>External</MudTh>
-                <MudTh><MudTableSortLabel SortBy="new Func<Issue, object>(x => x.CreatedAt)" T="Issue">Created</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortBy="new Func<Issue, object>(x => x.UpdatedAt)" T="Issue">Updated</MudTableSortLabel></MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
-                <MudTd DataLabel="Title">
-                    <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.Title</MudText>
-                </MudTd>
-                <MudTd DataLabel="Type"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.Type</MudChip></MudTd>
-                <MudTd DataLabel="Status"><StatusChip IssueStatus="context.Status" /></MudTd>
-                <MudTd DataLabel="Priority">
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@PriorityColor(context.Priority)">
-                        @context.Priority
-                    </MudChip>
-                </MudTd>
-                <MudTd DataLabel="Assignee">
-                    @{
-                        var assigneeName = ResolveAssignee(context.AssigneeId);
-                    }
-                    @if (assigneeName is not null)
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
-                                 Icon="@Icons.Material.Outlined.Person">@assigneeName</MudChip>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Unassigned</MudText>
-                    }
-                </MudTd>
-                <MudTd DataLabel="External">
-                    @if (context.ExternalCase is not null)
-                    {
-                        <MudTooltip Text="@($"{context.ExternalCase.System}: {context.ExternalCase.ExternalId}")">
-                            <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Size="Size.Small" Color="Color.Info" />
-                        </MudTooltip>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
-                    }
-                </MudTd>
-                <MudTd DataLabel="Created"><MudText Typo="Typo.caption">@context.CreatedAt.ToString("yyyy-MM-dd")</MudText></MudTd>
-                <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
-            </RowTemplate>
-        </MudTable>
-    }
+    <MudAlert Severity="Severity.Info">No changes match the current filter.</MudAlert>
 }
 else
 {
-    @* ══════════════════════════════════════════════════════
-       CHANGES — kept as secondary tab
-       ══════════════════════════════════════════════════════ *@
-
-    <MudPaper Class="pa-3 mb-3" Elevation="1">
-        <div class="d-flex align-center gap-3 flex-wrap">
-            <MudChipSet T="string" SelectionMode="SelectionMode.SingleSelection" SelectedValue="_changeFilter"
-                        SelectedValueChanged="OnChangeFilterChanged">
-                <MudChip T="string" Value="@("all")" Variant="Variant.Outlined" SelectedColor="Color.Primary">All (@_allChanges.Count)</MudChip>
-                <MudChip T="string" Value="@("mine")" Variant="Variant.Outlined" SelectedColor="Color.Primary">My changes</MudChip>
-                <MudChip T="string" Value="@("review")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Awaiting review</MudChip>
-                <MudChip T="string" Value="@("stale")" Variant="Variant.Outlined" SelectedColor="Color.Warning">Stale</MudChip>
-            </MudChipSet>
-        </div>
-    </MudPaper>
-
-    @if (_filteredChanges.Count == 0)
-    {
-        <MudAlert Severity="Severity.Info">No changes match the current filter.</MudAlert>
-    }
-    else
-    {
-        <MudTable Items="_filteredChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
-                  OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
-                  T="ChangeRequest" RowClass="cursor-pointer" Elevation="1">
-            <HeaderContent>
-                <MudTh>Key</MudTh>
-                <MudTh>Title</MudTh>
-                <MudTh>Profile</MudTh>
-                <MudTh>Status</MudTh>
-                <MudTh>Files</MudTh>
-                <MudTh>Checks</MudTh>
-                <MudTh>Stale</MudTh>
-                <MudTh>Updated</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
-                <MudTd DataLabel="Title">@context.Title</MudTd>
-                <MudTd DataLabel="Profile"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.WorkflowProfileId</MudChip></MudTd>
-                <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
-                <MudTd DataLabel="Files">@context.DraftFiles.Count</MudTd>
-                <MudTd DataLabel="Checks">@context.Checks.Count</MudTd>
-                <MudTd DataLabel="Stale">
-                    @if (context.IsStale)
-                    {
-                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
-                    }
-                </MudTd>
-                <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
-            </RowTemplate>
-        </MudTable>
-    }
+    <MudTable Items="_filteredChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
+              OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
+              T="ChangeRequest" RowClass="cursor-pointer" Elevation="1">
+        <HeaderContent>
+            <MudTh>Key</MudTh>
+            <MudTh>Title</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Files</MudTh>
+            <MudTh>Checks</MudTh>
+            <MudTh>Stale</MudTh>
+            <MudTh>Updated</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
+            <MudTd DataLabel="Title">@context.Title</MudTd>
+            <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
+            <MudTd DataLabel="Files">@context.DraftFiles.Count</MudTd>
+            <MudTd DataLabel="Checks">@context.Checks.Count</MudTd>
+            <MudTd DataLabel="Stale">
+                @if (context.IsStale)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                }
+            </MudTd>
+            <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
+        </RowTemplate>
+    </MudTable>
 }
 
 @code {
-    private List<Issue> _allIssues = [];
-    private List<Issue> _filteredIssues = [];
     private List<ChangeRequest> _allChanges = [];
     private List<ChangeRequest> _filteredChanges = [];
     private bool _loading = true;
-    private int _activeTab;
-
-    // Issue filters
-    private string _searchText = "";
-    private string? _statusFilter;
-    private string? _typeFilter;
-    private string? _priorityFilter;
-    private string? _assigneeFilter;
-
-    // Change filter
     private string _changeFilter = "all";
-
-    // Assignee lookup
-    private Dictionary<string, string> _userNames = new();
-
-    private bool HasActiveFilters => !string.IsNullOrEmpty(_searchText) || _statusFilter is not null
-        || _typeFilter is not null || _priorityFilter is not null || _assigneeFilter is not null;
 
     protected override async Task OnInitializedAsync()
     {
-        foreach (var user in UserContext.AvailableUsers)
-        {
-            _userNames[user.Id.ToString()] = user.DisplayName;
-        }
         await LoadAsync();
     }
 
     private async Task LoadAsync()
     {
         _loading = true;
-        var issuesTask = IssueService.ListAsync();
-        var changesTask = ChangeService.ListAsync();
-        await Task.WhenAll(issuesTask, changesTask);
-        _allIssues = issuesTask.Result.ToList();
-        _allChanges = changesTask.Result.ToList();
-        ApplyIssueFilter();
+        _allChanges = (await ChangeService.ListAsync()).ToList();
         ApplyChangeFilter();
         _loading = false;
     }
-
-    private void OnTabChanged(int index) => _activeTab = index;
-
-    // ── Issue filtering ──
-
-    private int StatusCount(IssueStatus status) => _allIssues.Count(i => i.Status == status);
-
-    private void SetIssueFilter(string filter)
-    {
-        _statusFilter = filter switch
-        {
-            "all" => null,
-            "open" => "Open",
-            "inprogress" => "InProgress",
-            "blocked" => "Blocked",
-            "resolved" => "Resolved",
-            "closed" => "Closed",
-            _ => null,
-        };
-        ApplyIssueFilter();
-    }
-
-    private void SetPriorityFilter(Priority priority)
-    {
-        _priorityFilter = priority.ToString();
-        ApplyIssueFilter();
-    }
-
-    private void OnSearchChanged(string text) { _searchText = text ?? ""; ApplyIssueFilter(); }
-    private void OnStatusFilterChanged(string? value) { _statusFilter = value; ApplyIssueFilter(); }
-    private void OnTypeFilterChanged(string? value) { _typeFilter = value; ApplyIssueFilter(); }
-    private void OnPriorityFilterChanged(string? value) { _priorityFilter = value; ApplyIssueFilter(); }
-    private void OnAssigneeFilterChanged(string? value) { _assigneeFilter = value; ApplyIssueFilter(); }
-
-    private void ClearAllFilters()
-    {
-        _searchText = "";
-        _statusFilter = null;
-        _typeFilter = null;
-        _priorityFilter = null;
-        _assigneeFilter = null;
-        ApplyIssueFilter();
-    }
-
-    private void ApplyIssueFilter()
-    {
-        var query = _searchText.Trim();
-        _filteredIssues = _allIssues
-            .Where(i => string.IsNullOrEmpty(query)
-                || i.Key.Contains(query, StringComparison.OrdinalIgnoreCase)
-                || i.Title.Contains(query, StringComparison.OrdinalIgnoreCase))
-            .Where(i => _statusFilter is null || i.Status.ToString() == _statusFilter)
-            .Where(i => _typeFilter is null || i.Type.ToString() == _typeFilter)
-            .Where(i => _priorityFilter is null || i.Priority.ToString() == _priorityFilter)
-            .Where(i => _assigneeFilter is null
-                || (_assigneeFilter == "unassigned" && i.AssigneeId is null)
-                || (i.AssigneeId is not null && i.AssigneeId.ToString() == _assigneeFilter))
-            .ToList();
-    }
-
-    private string? ResolveAssignee(UserId? assigneeId)
-    {
-        if (assigneeId is null) return null;
-        return _userNames.GetValueOrDefault(assigneeId.ToString());
-    }
-
-    // ── Change filtering ──
 
     private void OnChangeFilterChanged(string filter)
     {
@@ -445,41 +112,11 @@ else
         };
     }
 
-    // ── Dialogs ──
-
-    private async Task OpenCreateIssueDialog(bool withExternalCase)
+    private async Task OpenNewChangeDialog()
     {
-        var parameters = new DialogParameters<CreateIssueDialog> { { x => x.WithExternalCase, withExternalCase } };
         var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<CreateIssueDialog>(
-            withExternalCase ? "From external case" : "New issue", parameters, options);
+        var dialog = await DialogService.ShowAsync<OpenChangeDialog>("New change", options);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled) await LoadAsync();
-    }
-
-    // ── Helpers ──
-
-    private static Color PriorityColor(Priority priority) => priority switch
-    {
-        Priority.Critical => Color.Error,
-        Priority.High => Color.Warning,
-        Priority.Normal => Color.Info,
-        Priority.Low => Color.Default,
-        _ => Color.Default,
-    };
-
-    private string KpiStyle(string filter)
-    {
-        var isActive = filter switch
-        {
-            "all" => _statusFilter is null && !HasActiveFilters,
-            "open" => _statusFilter == "Open",
-            "inprogress" => _statusFilter == "InProgress",
-            "blocked" => _statusFilter == "Blocked",
-            "resolved" => _statusFilter == "Resolved",
-            "closed" => _statusFilter == "Closed",
-            _ => false,
-        };
-        return isActive ? "border: 2px solid var(--mud-palette-primary); border-radius: 4px;" : "";
     }
 }

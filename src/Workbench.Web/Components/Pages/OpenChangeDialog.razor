@@ -11,13 +11,7 @@
     <DialogContent>
         <MudTextField @bind-Value="_key" Label="Change Key" HelperText="E.g. CHG-042" Required="true" Class="mb-3" />
         <MudTextField @bind-Value="_title" Label="Title" Required="true" Class="mb-3" />
-        <MudSelect @bind-Value="_profileId" Label="Workflow Profile" Class="mb-3" T="WorkflowProfileId">
-            <MudSelectItem Value="WorkflowProfileId.QuickLab">QuickLab</MudSelectItem>
-            <MudSelectItem Value="WorkflowProfileId.ControlledReview">ControlledReview</MudSelectItem>
-        </MudSelect>
-        <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);" Class="mb-3">
-            @ProfileDescription(_profileId)
-        </MudText>
+        <MudTextField @bind-Value="_reason" Label="Reason for change (optional)" Lines="2" Class="mb-3" />
 
         @if (_issues.Count > 0)
         {
@@ -47,7 +41,7 @@
 
     private string _key = "";
     private string _title = "";
-    private WorkflowProfileId _profileId = WorkflowProfileId.QuickLab;
+    private string _reason = "";
     private IssueId? _linkedIssueId;
     private List<Issue> _issues = [];
     private string? _error;
@@ -68,18 +62,11 @@
         try
         {
             var change = await ChangeService.OpenChangeAsync(
-                _key.Trim(), _title.Trim(), DetectionId, AuthorId, _profileId, _linkedIssueId);
+                _key.Trim(), _title.Trim(), DetectionId, AuthorId, WorkflowProfileId.QuickLab, _linkedIssueId);
             Snackbar.Add($"Change '{_key}' opened.", Severity.Success);
             MudDialog.Close(DialogResult.Ok(change.Id));
         }
         catch (DomainException ex) { _error = ex.Message; }
         finally { _submitting = false; }
     }
-
-    private static string ProfileDescription(WorkflowProfileId id) => id switch
-    {
-        WorkflowProfileId.QuickLab => "No approval required. Checks are optional. Best for experimentation.",
-        WorkflowProfileId.ControlledReview => "Requires passing checks and non-author approval before acceptance.",
-        _ => "",
-    };
 }

@@ -1,3 +1,4 @@
+@page "/history"
 @page "/versions"
 @rendermode InteractiveServer
 @using Workbench.Application.Services
@@ -7,9 +8,9 @@
 @inject VersionService VersionService
 @inject NavigationManager Nav
 
-<PageTitle>Versions</PageTitle>
+<PageTitle>History</PageTitle>
 
-<MudText Typo="Typo.h5" Class="mb-1">Versions</MudText>
+<MudText Typo="Typo.h5" Class="mb-1">History</MudText>
 <MudText Typo="Typo.body2" Class="mb-4" Style="color: var(--color-text-secondary); max-width: 720px;">
     Accepted detection content versions. Compare changes and restore previous content safely.
 </MudText>
@@ -90,7 +91,7 @@ else
             </MudTd>
             <MudTd DataLabel="Actions">
                 <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                           OnClick="@(() => Nav.NavigateTo($"/versions/{context.Version.Id}"))">
+                           OnClick="@(() => Nav.NavigateTo($"/history/{context.Version.Id}"))">
                     Compare / restore
                 </MudButton>
             </MudTd>

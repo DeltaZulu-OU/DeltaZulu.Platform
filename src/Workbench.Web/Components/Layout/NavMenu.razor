@@ -1,29 +1,18 @@
-@* Navigation — domain terms only. No Git verbs (ADR-0003). No emoji (DZ rule 4). *@
+@* Navigation — three user concepts + operator settings (ADR-0017). *@
 <MudNavMenu>
     <MudNavLink Href="/" Match="NavLinkMatch.All"
                 Icon="@Icons.Material.Outlined.Dashboard">Home</MudNavLink>
 
-    <div style="padding: var(--space-4) var(--space-5) var(--space-1); opacity: 0.55;">
-        <span class="eyebrow" style="font-size: 0.625rem;">Content</span>
-    </div>
     <MudNavLink Href="/detections"
                 Icon="@Icons.Material.Outlined.Radar">Detections</MudNavLink>
 
-    <div style="padding: var(--space-4) var(--space-5) var(--space-1); opacity: 0.55;">
-        <span class="eyebrow" style="font-size: 0.625rem;">Workflow</span>
-    </div>
-    <MudNavLink Href="/work"
-                Icon="@Icons.Material.Outlined.Assignment">Work</MudNavLink>
-    <MudNavLink Href="/reviews"
-                Icon="@Icons.Material.Outlined.RateReview">Reviews</MudNavLink>
-    <MudNavLink Href="/checks"
-                Icon="@Icons.Material.Outlined.PlaylistAddCheck">Checks</MudNavLink>
-    <MudNavLink Href="/versions"
-                Icon="@Icons.Material.Outlined.History">Versions</MudNavLink>
+    <MudNavLink Href="/changes"
+                Icon="@Icons.Material.Outlined.Assignment">Changes</MudNavLink>
+
+    <MudNavLink Href="/history"
+                Icon="@Icons.Material.Outlined.History">History</MudNavLink>
 
     <MudDivider Class="my-3 mx-4" Style="border-color: var(--color-divider);" />
     <MudNavLink Href="/settings"
                 Icon="@Icons.Material.Outlined.Settings">Settings</MudNavLink>
 </MudNavMenu>
-
-    

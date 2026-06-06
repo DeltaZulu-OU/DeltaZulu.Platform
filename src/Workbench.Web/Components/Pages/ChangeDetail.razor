@@ -39,7 +39,7 @@
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
                      Style="color: var(--brand-slate); border-color: rgba(39,86,104,0.25);"
                      Title="@ProfileDescription(_change.WorkflowProfileId)">
-                @_change.WorkflowProfileId
+                @GovernanceLabel(_change.WorkflowProfileId)
             </MudChip>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">
                 Acting as @UserContext.CurrentUser.DisplayName
@@ -540,7 +540,7 @@
 
         _breadcrumbs =
         [
-            new("Work", "/work"),
+            new("Changes", "/changes"),
             new(_change.Key, null, disabled: true),
         ];
 
@@ -697,6 +697,13 @@
         WorkflowProfileId.QuickLab => "No approval required. Checks are optional.",
         WorkflowProfileId.ControlledReview => "Requires passing checks and non-author approval.",
         _ => "",
+    };
+
+    private static string GovernanceLabel(WorkflowProfileId id) => id switch
+    {
+        WorkflowProfileId.QuickLab => "No approval required",
+        WorkflowProfileId.ControlledReview => "Requires approval",
+        _ => id.ToString(),
     };
 
     private static DraftContentType InferContentType(string path)
