@@ -15,6 +15,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<MergeService>();
         services.AddScoped<VersionService>();
         services.AddScoped<RestoreService>();
+        services.AddScoped<AcceptedContentReadService>();
         services.AddScoped<MergeReconciliationService>();
         services.AddScoped<CheckPipelineRunner>();
         services.AddScoped<HuntingSavedQueryImporter>();

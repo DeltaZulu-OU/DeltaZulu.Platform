@@ -1,7 +1,6 @@
 @page "/detections/{Id}"
 @rendermode InteractiveServer
 @using Workbench.Application.Services
-@using Workbench.Application.Abstractions
 @using Workbench.Domain.Detections
 @using Workbench.Domain.Changes
 @using Workbench.Domain.Identifiers
@@ -12,7 +11,7 @@
 @inject IssueService IssueService
 @inject ChangeService ChangeService
 @inject VersionService VersionService
-@inject IAcceptedContentStore ContentStore
+@inject AcceptedContentReadService AcceptedContentReadService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
@@ -206,7 +205,7 @@ else
     private int _activeChangeCount;
     private List<DetectionVersion> _versions = [];
     private List<ChangeRequest> _changes = [];
-    private List<ContentFile> _acceptedFiles = [];
+    private List<AcceptedContentFileSummary> _acceptedFiles = [];
     private List<Issue> _relatedIssues = [];
     private List<BreadcrumbItem> _breadcrumbs = [];
 
@@ -229,8 +228,7 @@ else
         _changes = (await ChangeService.ListByDetectionAsync(detId)).ToList();
         _activeChangeCount = _changes.Count(c => c.Status is not Domain.Enums.ChangeStatus.Merged and not Domain.Enums.ChangeStatus.Closed);
 
-        var prefix = Application.ContentPipeline.CanonicalPathResolver.DetectionPrefix(_detection.Slug);
-        _acceptedFiles = (await ContentStore.ListFilesAsync(prefix)).ToList();
+        _acceptedFiles = (await AcceptedContentReadService.ListAcceptedFilesForDetectionAsync(_detection.Id)).ToList();
 
         var allIssues = await IssueService.ListAsync();
         _relatedIssues = allIssues.Where(i => i.LinkedDetectionId == detId).ToList();

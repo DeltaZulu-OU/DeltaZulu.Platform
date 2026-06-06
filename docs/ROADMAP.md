@@ -230,6 +230,7 @@ Deliverables:
 - Align ROADMAP and ARCHITECTURE with ADR-0014 external-case direction.
 - Maintain [GAP_ANALYSIS.md](GAP_ANALYSIS.md) as the source of current implementation gaps.
 - Keep docs explicit about what is POC scope vs post-POC scope.
+- Keep module-boundary and library-extraction guidance summarized in [ARCHITECTURE.md](ARCHITECTURE.md), not in separate standalone boundary documents.
 
 Exit criteria:
 
@@ -299,11 +300,13 @@ Deliverables:
 - Review view showing effective/superseded approvals.
 - POC current-user provider/user switcher so self-approval blocking can be demonstrated.
 - Settings page for repository path/workflow toggle/status where appropriate.
+- Preserve the application-read-service boundary for accepted content: UI pages should use application DTOs/read models and should not inject `IAcceptedContentStore`, repository ports, or compute canonical accepted-content paths directly.
 
 Exit criteria:
 
 - End-to-end quick lab, controlled review, stale-change, partial-edit safety, and restore flows can be demonstrated manually.
 - No navigation link routes to a missing page.
+- UI-visible accepted-content reads flow through application services/read models rather than storage ports or Git/path primitives.
 
 ### Phase 5: Check quality and test execution
 
@@ -350,7 +353,15 @@ Exit criteria:
 
 ## 7. Post-POC roadmap
 
-### 7.1 Better validation
+### 7.1 Library extraction and boundary hardening
+
+- Treat `Workbench.Domain` as the first independent-library candidate.
+- Treat `Workbench.Application` as the next candidate only after command/query DTOs and read-service boundaries are stable.
+- Keep persistence, infrastructure, workflow, and validation as Workbench-specific adapter packages until another host or deployment variant justifies extraction.
+- Split pure validation routines from `Workbench.Validation` only when a CLI, CI tool, or external SDK needs them.
+- Consider composition packages only when deployments genuinely need to omit Elsa, swap persistence, or run checks out of process.
+
+### 7.2 Better validation
 
 - Real KQL parser integration.
 - KQL-to-DuckDB validation path.
@@ -358,7 +369,7 @@ Exit criteria:
 - More assertion types.
 - Check artifacts and logs.
 
-### 7.2 Better version experience
+### 7.3 Better version experience
 
 - Semantic changed-section summaries.
 - Side-by-side query diff.
@@ -366,7 +377,7 @@ Exit criteria:
 - Fixture diff summarization.
 - Version compare across content packs.
 
-### 7.3 External case integrations
+### 7.4 External case integrations
 
 - FlowIntel webhook/API connector.
 - TheHive webhook/API connector.
@@ -374,13 +385,13 @@ Exit criteria:
 - Optional import of investigation summary into issue descriptions or Markdown notes.
 - Case-to-detection improvement report derived from issue/change/version context.
 
-### 7.4 Background execution
+### 7.5 Background execution
 
 - Separate worker process if needed.
 - Hangfire for durable validation job queues if robust retries and dashboarding are required.
 - Quartz only if calendar-grade scheduling becomes important.
 
-### 7.5 Future runtime/publishing
+### 7.6 Future runtime/publishing
 
 - Vendor-neutral content package export.
 - Local runtime adapter.

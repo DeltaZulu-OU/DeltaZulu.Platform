@@ -86,11 +86,11 @@ Versions
 Settings
 ```
 
-The UI calls application services. It must not call Git, workflow engine APIs, or database repositories directly.
+The UI calls application services and application read services. It must not call Git, workflow engine APIs, database repositories, accepted-content store ports, or adapter APIs directly. UI pages also must not compute accepted-content repository prefixes or paths directly; canonical accepted-content path logic belongs in the application layer.
 
 ### 5.2 Application module
 
-Application services coordinate user commands, permissions, domain rules, workflow signals, validation requests, persistence, and version operations.
+Application services coordinate user commands, permissions, domain rules, workflow signals, validation requests, persistence, accepted-content reads, and version operations. The application layer defines ports for persistence, accepted content, validation checks, workflow orchestration, and units of work. Application services may use those ports, but must not depend on Dapper, SQLite, LibGit2Sharp, Elsa, MudBlazor, or other adapter implementations. UI-facing reads should return application read models/DTOs rather than storage primitives such as `ContentFile` or ports such as `IAcceptedContentStore`.
 
 Core services:
 
@@ -204,6 +204,22 @@ Unit test/assertion check
 ```
 
 Check results are stored in the database and surfaced on PR/change pages.
+
+### 5.8 Library roles and extraction readiness
+
+The modular monolith is organized so that some projects can later become packages, but package extraction is not required for the POC. Current roles are:
+
+| Project | Role | Extraction guidance |
+|---|---|---|
+| `Workbench.Domain` | Domain model and invariant library. | Best independent-library candidate; keep free of Workbench project references and adapter dependencies. |
+| `Workbench.Application` | Workbench use-case, port, canonical-content, and read-model layer. | Candidate after domain; preserve application read services so UI and external consumers do not bind directly to storage ports. |
+| `Workbench.Validation` | Workbench-specific check adapter package. | Keep coupled to `ICheck` until a second consumer justifies extracting neutral parsing/checking routines. |
+| `Workbench.Infrastructure` | Infrastructure adapters, currently Git-backed accepted content. | Treat as an adapter package behind application ports; do not expose Git mechanics to UI. |
+| `Workbench.Persistence` | SQLite/Dapper database adapter. | Treat as `Workbench.Persistence.Sqlite` if packaged; schema and reconstitution remain product-specific. |
+| `Workbench.Workflow` | Optional workflow adapter. | Keep Elsa supplementary; domain state remains canonical. |
+| `Workbench.Web` | Blazor/MudBlazor host and composition root. | Host-only; compose adapters and call application services/read services. |
+
+The highest-priority decoupling rule is that presentation code does not consume infrastructure-facing ports directly. Accepted-content listing and draft-to-accepted comparison therefore go through an application read service, while `IAcceptedContentStore` remains an application port used by application services.
 
 ## 6. Data ownership model
 

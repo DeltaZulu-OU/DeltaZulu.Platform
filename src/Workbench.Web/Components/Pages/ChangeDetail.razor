@@ -1,16 +1,14 @@
 @page "/changes/{Id}"
 @rendermode InteractiveServer
 @using Workbench.Application.Services
-@using Workbench.Application.Abstractions
 @using Workbench.Domain.Changes
 @using Workbench.Domain.Detections
 @using Workbench.Domain.Issues
 @using Workbench.Domain.Enums
 @using Workbench.Domain.Identifiers
 @using Workbench.Domain.Workflow
-@using Workbench.Application.ContentPipeline
 @inject ChangeService ChangeService
-@inject IAcceptedContentStore ContentStore
+@inject AcceptedContentReadService AcceptedContentReadService
 @inject DetectionContentService DetectionService
 @inject IssueService IssueService
 @inject CheckPipelineRunner PipelineRunner
@@ -221,7 +219,7 @@
     </MudTabPanel>
 
     @* ── Draft vs Accepted tab ── *@
-    <MudTabPanel Text="Draft vs accepted" BadgeData="@_draftComparisons.Count(c => c.Status != DraftComparisonStatus.Unchanged)" BadgeColor="Color.Warning">
+    <MudTabPanel Text="Draft vs accepted" BadgeData="@_draftComparisons.Count(c => c.Status != DraftAcceptedComparisonStatus.Unchanged)" BadgeColor="Color.Warning">
         <div class="ma-3">
             @if (_draftComparisons.Count == 0)
             {
@@ -245,7 +243,7 @@
                                 </div>
                             </TitleContent>
                             <ChildContent>
-                                @if (comp.Status == DraftComparisonStatus.Unchanged)
+                                @if (comp.Status == DraftAcceptedComparisonStatus.Unchanged)
                                 {
                                     <MudAlert Severity="Severity.Info" Dense="true">Draft content is identical to the accepted version.</MudAlert>
                                 }
@@ -492,7 +490,7 @@
     private MudTabs? _tabs;
 
     // Draft vs accepted comparison
-    private List<DraftComparison> _draftComparisons = [];
+    private List<DraftAcceptedComparison> _draftComparisons = [];
 
     // Add file
     private bool _showAddFile;
@@ -554,31 +552,7 @@
         _draftComparisons = [];
         if (_change is null || _detection is null) return;
 
-        var prefix = CanonicalPathResolver.DetectionPrefix(_detection.Slug);
-        var acceptedFiles = await ContentStore.ListFilesAsync(prefix);
-        var acceptedByLogical = new Dictionary<string, ContentFile>(StringComparer.Ordinal);
-        var prefixWithSlash = prefix.TrimEnd('/') + "/";
-        foreach (var file in acceptedFiles)
-        {
-            if (file.RepositoryPath.StartsWith(prefixWithSlash, StringComparison.Ordinal))
-            {
-                acceptedByLogical[file.RepositoryPath[prefixWithSlash.Length..]] = file;
-            }
-        }
-
-        foreach (var draft in _change.DraftFiles.OrderBy(f => f.Path.Value))
-        {
-            var logicalPath = draft.Path.Value;
-            acceptedByLogical.TryGetValue(logicalPath, out var accepted);
-
-            var status = accepted is null
-                ? DraftComparisonStatus.New
-                : draft.Content == accepted.Content
-                    ? DraftComparisonStatus.Unchanged
-                    : DraftComparisonStatus.Modified;
-
-            _draftComparisons.Add(new DraftComparison(logicalPath, status, accepted?.Content, draft.Content));
-        }
+        _draftComparisons = (await AcceptedContentReadService.CompareDraftToAcceptedAsync(_change.Id)).ToList();
     }
 
     private async Task SaveDraftFile()
@@ -752,15 +726,11 @@
 
     // ── Draft vs Accepted comparison ──
 
-    private static Color DraftComparisonColor(DraftComparisonStatus status) => status switch
+    private static Color DraftComparisonColor(DraftAcceptedComparisonStatus status) => status switch
     {
-        DraftComparisonStatus.New => Color.Success,
-        DraftComparisonStatus.Modified => Color.Warning,
-        DraftComparisonStatus.Unchanged => Color.Default,
+        DraftAcceptedComparisonStatus.New => Color.Success,
+        DraftAcceptedComparisonStatus.Modified => Color.Warning,
+        DraftAcceptedComparisonStatus.Unchanged => Color.Default,
         _ => Color.Default,
     };
-
-    private enum DraftComparisonStatus { New, Modified, Unchanged }
-
-    private sealed record DraftComparison(string LogicalPath, DraftComparisonStatus Status, string? AcceptedContent, string DraftContent);
 }
