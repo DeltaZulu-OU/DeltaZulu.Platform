@@ -178,7 +178,7 @@ public sealed class LibraryPageController
 
     public string FilterButtonClass(LibraryItemKind? kind)
         => State.KindFilter == kind
-            ? "hunt-btn dashboard-primary-action"
+            ? "hunt-btn hunt-btn-run dashboard-primary-action"
             : "hunt-btn";
 
     public string DeleteButtonText(LibraryItem item)
@@ -191,7 +191,7 @@ public sealed class LibraryPageController
 
     public string DeleteButtonClass(LibraryItem item)
         => State.IsDeletePendingFor(item)
-            ? "hunt-btn dashboard-primary-action"
+            ? "hunt-btn hunt-btn-run dashboard-primary-action"
             : "hunt-btn hunt-btn-clear";
 
     private async Task OpenSavedQueryAsync(string id, CancellationToken cancellationToken)

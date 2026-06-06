@@ -13,22 +13,18 @@
         </div>
         <div class="dashboard-list-toolbar">
             <div class="dashboard-list-actions-primary">
-                <MudButton Variant="Variant.Filled"
-                           Size="Size.Small"
-                           Color="Color.Primary"
-                           OnClick="@(() => Controller.CreateSavedQuery())">
+                <button class="hunt-btn hunt-btn-run dashboard-primary-action"
+                        @onclick="Controller.CreateSavedQuery">
                     New saved query
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Size="Size.Small"
-                           OnClick="@(() => Controller.CreateVisualization())">
+                </button>
+                <button class="hunt-btn"
+                        @onclick="Controller.CreateVisualization">
                     New visualization
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Size="Size.Small"
-                           OnClick="@(() => Controller.CreateDashboard())">
+                </button>
+                <button class="hunt-btn"
+                        @onclick="Controller.CreateDashboard">
                     New dashboard
-                </MudButton>
+                </button>
             </div>
         </div>
     </header>
@@ -118,12 +114,10 @@
                 </MudTd>
                 <MudTd DataLabel="Type">@LibraryLabels.KindLabel(context.Kind)</MudTd>
                 <MudTd DataLabel="Title">
-                    <MudButton Variant="Variant.Text"
-                               Size="Size.Small"
-                               Class="library-object-title"
-                               OnClick="@(() => Controller.OpenItemAsync(context))">
+                    <button class="hunt-link-button library-object-title"
+                            @onclick="() => Controller.OpenItemAsync(context)">
                         @context.Name
-                    </MudButton>
+                    </button>
                     @if (!string.IsNullOrWhiteSpace(context.Description))
                     {
                         <div class="dashboard-muted">@context.Description</div>
@@ -142,19 +136,16 @@
                 </MudTd>
                 <MudTd DataLabel="Updated">@LibraryLabels.UpdatedLabel(context.UpdatedAtUtc)</MudTd>
                 <MudTd DataLabel="Actions" Style="text-align: right;">
-                    <MudButton Variant="Variant.Outlined"
-                               Size="Size.Small"
-                               OnClick="@(() => Controller.OpenItemAsync(context))">
+                    <button class="hunt-btn"
+                            @onclick="() => Controller.OpenItemAsync(context)">
                         Open
-                    </MudButton>
-                    <MudButton Variant="Variant.Text"
-                               Size="Size.Small"
-                               Disabled="@State.Deleting"
-                               Title="@Controller.DeleteButtonTitle(context)"
-                               Class="@Controller.DeleteButtonClass(context)"
-                               OnClick="@(() => Controller.DeleteItemAsync(context))">
+                    </button>
+                    <button class="@Controller.DeleteButtonClass(context)"
+                            disabled="@State.Deleting"
+                            title="@Controller.DeleteButtonTitle(context)"
+                            @onclick="() => Controller.DeleteItemAsync(context)">
                         @Controller.DeleteButtonText(context)
-                    </MudButton>
+                    </button>
                 </MudTd>
             </RowTemplate>
 
@@ -165,7 +156,7 @@
                         <h2>No library items</h2>
                         <p>Create a saved query, visualization, or dashboard to populate the library.</p>
                         <div class="dashboard-empty-actions">
-                            <button class="hunt-btn dashboard-primary-action" @onclick="Controller.CreateSavedQuery">Create saved query</button>
+                            <button class="hunt-btn hunt-btn-run dashboard-primary-action" @onclick="Controller.CreateSavedQuery">Create saved query</button>
                         </div>
                     </section>
                 }
