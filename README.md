@@ -59,7 +59,10 @@ dotnet test DetectionContentWorkbench.slnx
 Target framework: `net10.0`. Package versions are centrally pinned in
 [`Directory.Packages.props`](Directory.Packages.props), package lock files are enabled by
 [`Directory.Build.props`](Directory.Build.props), and CI uses the central baseline so monorepo
-restores stay deterministic once lock files are produced by a .NET-enabled environment.
+restores stay deterministic once lock files are produced by a .NET-enabled environment. The
+build test suite also rejects floating central versions, per-project package-version overrides,
+and missing `packages.lock.json` files so merge preparation cannot silently reintroduce
+non-deterministic restores.
 
 ## Merge architecture notes
 
