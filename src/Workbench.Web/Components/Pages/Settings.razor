@@ -155,7 +155,7 @@
                             <MudText Typo="Typo.caption"><strong>Recommended:</strong> @guidance.RecommendedAction</MudText>
                         </MudTd>
                         <MudTd DataLabel="Action">
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
                                        Disabled="@(!guidance.CanRepair || _repairingChangeId == context.ChangeId)"
                                        OnClick="@(() => RepairIntentAsync(context.ChangeId))"
                                        StartIcon="@Icons.Material.Outlined.Healing">

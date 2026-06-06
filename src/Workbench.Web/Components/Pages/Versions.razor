@@ -89,7 +89,7 @@ else
                 <MudText Typo="Typo.caption">@context.Version.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
             </MudTd>
             <MudTd DataLabel="Actions">
-                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
                            OnClick="@(() => Nav.NavigateTo($"/versions/{context.Version.Id}"))">
                     Compare / restore
                 </MudButton>

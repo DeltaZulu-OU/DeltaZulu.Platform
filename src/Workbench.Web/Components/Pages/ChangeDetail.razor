@@ -48,7 +48,7 @@
             </MudChip>
             @if (_change.IsStale)
             {
-                <MudChip T="string" Size="Size.Small" Style="background: rgba(138,90,18,0.12); color: #8A5A12;">
+                <MudChip T="string" Size="Size.Small" Style="background: var(--color-warning-bg); color: var(--color-warning);">
                     Stale
                 </MudChip>
             }
@@ -199,7 +199,7 @@
                                     @if (!IsTerminal)
                                     {
                                         <div class="d-flex gap-2 mt-3">
-                                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary"
+                                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Secondary"
                                                        StartIcon="@Icons.Material.Outlined.Edit"
                                                        OnClick="@(() => BeginEditFile(file))">
                                                 Edit
@@ -260,12 +260,12 @@
                                             }
                                             else
                                             {
-                                                <pre style="white-space: pre-wrap; font-size: 0.8125rem; max-height: 400px; overflow-y: auto; background: rgba(19,31,42,0.03); padding: 0.75rem; border-radius: 4px;">@comp.AcceptedContent</pre>
+                                                <pre style="white-space: pre-wrap; font-size: 0.8125rem; max-height: 400px; overflow-y: auto; background: var(--color-surface-secondary); padding: 0.75rem; border-radius: 4px;">@comp.AcceptedContent</pre>
                                             }
                                         </MudItem>
                                         <MudItem xs="12" md="6">
                                             <MudText Typo="Typo.subtitle2" Class="mb-1" Style="color: var(--color-text-secondary);">Draft</MudText>
-                                            <pre style="white-space: pre-wrap; font-size: 0.8125rem; max-height: 400px; overflow-y: auto; background: rgba(46,125,50,0.06); padding: 0.75rem; border-radius: 4px;">@comp.DraftContent</pre>
+                                            <pre style="white-space: pre-wrap; font-size: 0.8125rem; max-height: 400px; overflow-y: auto; background: var(--color-success-bg); padding: 0.75rem; border-radius: 4px;">@comp.DraftContent</pre>
                                         </MudItem>
                                     </MudGrid>
                                 }
@@ -319,7 +319,7 @@
                 <MudAlert Severity="Severity.Info">No checks have been run yet.</MudAlert>
                 @if (!IsTerminal)
                 {
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary"
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Secondary"
                                OnClick="RunChecks" Disabled="_running" Class="mt-2"
                                StartIcon="@Icons.Material.Outlined.PlaylistAddCheck">
                         Run checks

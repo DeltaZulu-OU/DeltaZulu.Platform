@@ -101,7 +101,7 @@
                 @if (_linkedDetection is not null)
                 {
                     <div class="d-flex align-center gap-2 mt-1">
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
                                    OnClick="@(() => Nav.NavigateTo($"/detections/{_linkedDetection.Id}"))"
                                    Class="px-0" Style="font-weight: 600; text-transform: none;">
                             @_linkedDetection.Slug — @_linkedDetection.Title
@@ -113,7 +113,7 @@
                     <MudText Typo="Typo.body2" Class="mt-1" Style="color: var(--color-text-secondary);">None</MudText>
                 }
             </div>
-            <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
+                <MudDivider Class="my-3" Style="border-color: var(--color-divider);" />
             <div>
                 <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Assignee</MudText>
                 @{
@@ -131,7 +131,7 @@
                     <MudText Typo="Typo.body2" Class="mt-1" Style="color: var(--color-text-secondary);">Unassigned</MudText>
                 }
             </div>
-            <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
+            <MudDivider Class="my-3" Style="border-color: var(--color-divider);" />
             <div>
                 <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Link detection</MudText>
                 <div class="mt-1">
@@ -171,22 +171,22 @@
                             <MudTextField @bind-Value="_extCaseId" Label="Case ID" Dense="true" Margin="Margin.Dense" Class="mb-2" />
                             <MudTextField @bind-Value="_extCaseUrl" Label="URL (optional)" Dense="true" Margin="Margin.Dense" Class="mb-2" />
                             <div class="d-flex gap-2">
-                                <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary"
-                                           OnClick="LinkExternalCase">Link</MudButton>
+                                <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Secondary"
+                                            OnClick="LinkExternalCase">Link</MudButton>
                                 <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => _showExternalCaseForm = false)">Cancel</MudButton>
                             </div>
                         </div>
                     }
                 }
             </div>
-            <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
+            <MudDivider Class="my-3" Style="border-color: var(--color-divider);" />
             <div>
                 <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Created</MudText>
                 <MudText Typo="Typo.body2" Class="mt-1" Style="font-family: var(--font-family-mono); font-size: 0.8125rem;">
                     @_issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")
                 </MudText>
             </div>
-            <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
+            <MudDivider Class="my-3" Style="border-color: var(--color-divider);" />
             <div>
                 <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Updated</MudText>
                 <MudText Typo="Typo.body2" Class="mt-1" Style="font-family: var(--font-family-mono); font-size: 0.8125rem;">

@@ -3,13 +3,13 @@
     <MudNavLink Href="/" Match="NavLinkMatch.All"
                 Icon="@Icons.Material.Outlined.Dashboard">Home</MudNavLink>
 
-    <div style="padding: 16px 20px 6px; opacity: 0.55;">
+    <div style="padding: var(--space-4) var(--space-5) var(--space-1); opacity: 0.55;">
         <span class="eyebrow" style="font-size: 0.625rem;">Content</span>
     </div>
     <MudNavLink Href="/detections"
                 Icon="@Icons.Material.Outlined.Radar">Detections</MudNavLink>
 
-    <div style="padding: 16px 20px 6px; opacity: 0.55;">
+    <div style="padding: var(--space-4) var(--space-5) var(--space-1); opacity: 0.55;">
         <span class="eyebrow" style="font-size: 0.625rem;">Workflow</span>
     </div>
     <MudNavLink Href="/work"
@@ -21,7 +21,9 @@
     <MudNavLink Href="/versions"
                 Icon="@Icons.Material.Outlined.History">Versions</MudNavLink>
 
-    <MudDivider Class="my-3 mx-4" Style="border-color: rgba(19,31,42,0.08);" />
+    <MudDivider Class="my-3 mx-4" Style="border-color: var(--color-divider);" />
     <MudNavLink Href="/settings"
                 Icon="@Icons.Material.Outlined.Settings">Settings</MudNavLink>
 </MudNavMenu>
+
+    

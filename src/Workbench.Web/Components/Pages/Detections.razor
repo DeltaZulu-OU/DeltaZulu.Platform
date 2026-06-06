@@ -72,7 +72,7 @@ else
                 <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
             </MudTd>
             <MudTd DataLabel="Actions" @onclick:stopPropagation="true">
-                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
                            StartIcon="@Icons.Material.Outlined.Add"
                            OnClick="@(() => OpenChangeForDetection(context.Id))">
                     Open change

@@ -178,10 +178,10 @@ else
                             </div>
                             @foreach (var hunk in file.Hunks)
                             {
-                                <div class="px-3 py-2 mud-text-secondary" style="font-family: var(--font-mono); font-size: 0.75rem; border-top: 1px solid var(--mud-palette-divider);">
+                                <div class="px-3 py-2 mud-text-secondary" style="font-family: var(--font-family-mono); font-size: 0.75rem; border-top: 1px solid var(--mud-palette-divider);">
                                     @@ -@hunk.BeforeStartLine,@hunk.BeforeLineCount +@hunk.AfterStartLine,@hunk.AfterLineCount
                                 </div>
-                                <div style="font-family: var(--font-mono); font-size: 0.8125rem; overflow-x: auto;">
+                                <div style="font-family: var(--font-family-mono); font-size: 0.8125rem; overflow-x: auto;">
                                     @foreach (var line in hunk.Lines)
                                     {
                                         <div class="d-flex px-3 py-1" style="background: @LineBackground(line.Type);">
@@ -333,8 +333,8 @@ else
 
     private static string LineBackground(VersionDiffLineType type) => type switch
     {
-        VersionDiffLineType.Added => "rgba(46, 125, 50, 0.12)",
-        VersionDiffLineType.Removed => "rgba(198, 40, 40, 0.12)",
+        VersionDiffLineType.Added => "var(--color-success-bg)",
+        VersionDiffLineType.Removed => "var(--color-error-bg)",
         _ => "transparent"
     };
 }

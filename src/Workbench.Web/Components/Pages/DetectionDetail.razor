@@ -76,12 +76,12 @@ else
                         <MudText Typo="Typo.body2" Class="mt-1" Style="color: var(--color-text-secondary);">None</MudText>
                     }
                 </div>
-                <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
+                    <MudDivider Class="my-3" Style="border-color: var(--color-divider);" />
                 <div>
                     <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Active changes</MudText>
                     <MudText Typo="Typo.body2" Class="mt-1">@_activeChangeCount</MudText>
                 </div>
-                <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
+                    <MudDivider Class="my-3" Style="border-color: var(--color-divider);" />
                 <div>
                     <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Updated</MudText>
                     <MudText Typo="Typo.body2" Class="mt-1" Style="font-family: var(--font-family-mono); font-size: 0.8125rem;">
@@ -114,8 +114,8 @@ else
                         <MudTd DataLabel="Profile"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.WorkflowProfile</MudChip></MudTd>
                         <MudTd DataLabel="Accepted"><MudText Typo="Typo.caption">@context.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
                         <MudTd DataLabel="Actions">
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
-                                       OnClick="@(() => Nav.NavigateTo($"/versions/{context.Id}"))">
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                            OnClick="@(() => Nav.NavigateTo($"/versions/{context.Id}"))">
                                 Compare / restore
                             </MudButton>
                         </MudTd>

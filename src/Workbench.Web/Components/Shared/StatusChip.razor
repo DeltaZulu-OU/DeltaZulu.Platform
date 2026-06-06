@@ -16,13 +16,13 @@
 
     // DZ design system: use semantic/viz tokens for status colours.
     // Orange is CTA-only — never on status chips.
-    private const string ChipSuccess = "background: rgba(31,122,83,0.12); color: #1F7A53;";
-    private const string ChipWarning = "background: rgba(138,90,18,0.12); color: #8A5A12;";
-    private const string ChipError = "background: rgba(183,62,62,0.12); color: #B73E3E;";
-    private const string ChipInfo = "background: rgba(39,86,104,0.10); color: #275668;";
-    private const string ChipNeutral = "background: rgba(19,31,42,0.06); color: #44515B;";
-    private const string ChipDark = "background: #131F2A; color: #FFFFFF;";
-    private const string ChipMuted = "background: rgba(19,31,42,0.04); color: #5C6770;";
+    private const string ChipSuccess = "background: var(--color-success-bg); color: var(--color-success);";
+    private const string ChipWarning = "background: var(--color-warning-bg); color: var(--color-warning);";
+    private const string ChipError = "background: var(--color-error-bg); color: var(--color-error);";
+    private const string ChipInfo = "background: var(--color-surface-muted); color: var(--brand-slate);";
+    private const string ChipNeutral = "background: var(--color-divider); color: var(--color-text-secondary);";
+    private const string ChipDark = "background: var(--brand-ink); color: var(--color-text-inverse);";
+    private const string ChipMuted = "background: var(--color-divider); color: var(--color-text-muted);";
 
     protected override void OnParametersSet()
     {

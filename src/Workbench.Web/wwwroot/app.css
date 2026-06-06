@@ -21,8 +21,8 @@ code, pre, kbd, samp, .mud-code, .text-mono {
 }
 
 code {
-    background: #DEE5E8;
-    color: #1F4756;
+    background: var(--color-surface-secondary);
+    color: var(--brand-navy);
     padding: 1px 6px;
     border-radius: 4px;
     font-weight: 500;
@@ -137,8 +137,8 @@ pre {
 
     .markdown-viewer code {
         font-family: var(--font-family-mono);
-        background: #DEE5E8;
-        color: #1F4756;
+        background: var(--color-surface-secondary);
+        color: var(--brand-navy);
         padding: 1px 6px;
         border-radius: 4px;
         font-size: 0.88em;
