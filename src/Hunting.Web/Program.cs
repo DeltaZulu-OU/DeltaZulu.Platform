@@ -134,7 +134,7 @@ static void SeedMedallionSources(SchemaApplier applier, ILogger logger)
 
         applier.ExecuteRaw(seedSql);
         var insertedRows = applier.QueryScalar($"SELECT count(*) FROM {tableName}");
-        logger.LogInformation("Seeded {RowCount} rows into {TableName}", insertedRows);
+        logger.LogInformation("Seeded {RowCount} rows into {TableName}", insertedRows, tableName);
     }
 }
 

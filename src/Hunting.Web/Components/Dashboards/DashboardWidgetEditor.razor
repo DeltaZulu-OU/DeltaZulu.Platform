@@ -1,5 +1,4 @@
 @namespace Hunting.Web.Components.Dashboards
-@using Hunting.Application.SavedQueries
 @using Hunting.Application.Visualizations
 @using Hunting.Web.Dashboards
 @inject IJSRuntime JS
@@ -99,12 +98,19 @@
                             }
                         </div>
 
-                        <div id="@_editorElementId" class="dashboard-editor-monaco" hidden="@(!_monacoReady)"></div>
+                        <div class="dashboard-editor-text-shell">
+                            <div id="@_editorElementId"
+                                 class="@EditorHostClass"
+                                 aria-hidden="@(!_monacoReady)"></div>
 
-                        <textarea class="dashboard-editor-textarea"
-                                  rows="10"
-                                  hidden="@_monacoReady"
-                                  @bind="_queryText"></textarea>
+                            @if (!_monacoReady)
+                            {
+                                <textarea class="dashboard-editor-textarea"
+                                          rows="10"
+                                          @bind="_queryText"
+                                          @bind:event="oninput"></textarea>
+                            }
+                        </div>
                     </div>
                 }
             </div>
@@ -143,6 +149,7 @@
     private readonly string _editorElementId = $"dashboard-widget-editor-{Guid.NewGuid():N}";
     private string _id = string.Empty;
     private string _queryText = string.Empty;
+    private string _markdownText = string.Empty;
     private string _title = string.Empty;
     private DashboardWidgetKind _kind = DashboardWidgetKind.Query;
     private DashboardLayout _layout = new();
@@ -233,6 +240,11 @@ ProcessEvent
 | summarize Count = count() by AccountName
 | render barchart xcolumn=AccountName ycolumns=Count title='Events by account'
 """;
+        _markdownText = """
+# This is a headline
+
+Lorem *ipsum* **dolor** sit amet.
+""";
         _layout = SuggestedLayout;
     }
 
@@ -248,11 +260,15 @@ ProcessEvent
             return;
         }
 
-        if (_visualizationsNeedLoad)
+        if (_visualizationsNeedLoad && _kind == DashboardWidgetKind.Query)
         {
             _visualizationsNeedLoad = false;
             await LoadVisualizationsAsync();
             await RequestRenderAsync();
+        }
+        else if (_visualizationsNeedLoad)
+        {
+            _visualizationsNeedLoad = false;
         }
 
         if (!ShouldShowTextEditor)
@@ -277,7 +293,7 @@ ProcessEvent
             _monacoReady = await JS.InvokeAsync<bool>(
                 "huntingDashboardWidgetEditor.initialize",
                 _editorElementId,
-                _queryText,
+                EditorLanguage == "kql" ? _queryText : _markdownText,
                 EditorLanguage);
             _editorInitialized = _monacoReady;
         }
@@ -672,4 +688,8 @@ ProcessEvent
             "Dashboard widget editor JS interop {Operation} was skipped or cancelled for {EditorElementId}.",
             operation,
             _editorElementId);
+
+    private string EditorHostClass => _monacoReady
+        ? "dashboard-editor-monaco"
+        : "dashboard-editor-monaco dashboard-editor-monaco--initializing";
 }

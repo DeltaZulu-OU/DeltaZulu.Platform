@@ -119,6 +119,18 @@
     resize: vertical;
 }
 
+.dashboard-editor-text-shell {
+    position: relative;
+    min-height: 16rem;
+}
+
+.dashboard-editor-monaco--initializing {
+    position: absolute;
+    inset: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
 .dashboard-editor-monaco {
     height: 280px;
     min-height: 220px;
