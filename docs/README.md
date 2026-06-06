@@ -105,7 +105,7 @@ The first code slice should not try to implement the entire product. It should i
 1. Create a detection draft in the database.
 2. Create an issue and a PR/change linked to that detection draft.
 3. Select either `quick_lab` or `controlled_review` workflow profile.
-4. Run a minimal check pipeline: package schema, KQL parse placeholder, fixture parse, and unit test placeholder.
+4. Run a minimal check pipeline: package schema, interface-backed query syntax validation, fixture parse, and unit test placeholder.
 5. In `controlled_review`, require approval from a second user before merge.
 6. Merge the change into Git as canonical detection files.
 7. Create a database projection of the version.

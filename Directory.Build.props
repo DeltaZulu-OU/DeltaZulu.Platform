@@ -17,8 +17,9 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1014</NoWarn>
     <!-- CA1014 (CLSCompliant) is noise for an internal product. -->
-    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <IsPackable>false</IsPackable>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <PropertyGroup Label="Determinism and reproducibility">

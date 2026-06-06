@@ -1,20 +1,19 @@
+using System.Text.Json;
 using Workbench.Application.Abstractions;
 using Workbench.Domain.Enums;
 
 namespace Workbench.Validation.Checks;
 
 /// <summary>
-/// Placeholder query syntax check. In the POC, this validates only that the query content
-/// is non-empty. A real implementation would parse KQL, SPL, YARA, or Sigma depending on
-/// the detection's query language.
+/// Interface-backed query syntax check. The check owns check orchestration while
+/// <see cref="IQuerySyntaxValidator"/> owns parser-specific validation behind a deterministic
+/// adapter boundary.
 /// </summary>
-/// <remarks>
-/// Per AGENTS.md: "A placeholder parser is acceptable in the earliest POC if clearly
-/// isolated." This check is clearly isolated — replace the body of <see cref="RunAsync"/>
-/// when a real parser is integrated.
-/// </remarks>
-public sealed class QuerySyntaxCheck : ICheck
+public sealed class QuerySyntaxCheck(IQuerySyntaxValidator validator) : ICheck
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly IQuerySyntaxValidator _validator = validator ?? throw new ArgumentNullException(nameof(validator));
+
     public string Name => "query-syntax";
     public bool IsBlocking => true;
 
@@ -23,6 +22,8 @@ public sealed class QuerySyntaxCheck : ICheck
 
     public Task<CheckOutcome> RunAsync(CheckContext context, CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         var queries = context.DraftFiles
             .Where(f => f.ContentType == DraftContentType.HuntingQuery)
             .ToList();
@@ -32,29 +33,48 @@ public sealed class QuerySyntaxCheck : ICheck
             return Task.FromResult(CheckOutcome.Skip("No query files in draft set."));
         }
 
-        var errors = new List<string>();
+        var diagnostics = new List<QueryFileDiagnostic>();
 
         foreach (var query in queries)
         {
-            if (string.IsNullOrWhiteSpace(query.Content))
-            {
-                errors.Add($"{query.LogicalPath}: query content is empty.");
-            }
+            ct.ThrowIfCancellationRequested();
 
-            // TODO: integrate a real KQL/SPL/Sigma parser here.
-            // For now, any non-empty content passes.
+            var result = _validator.Validate(new QuerySyntaxValidationRequest(
+                query.LogicalPath,
+                query.ContentType,
+                query.Content,
+                context.DetectionSlug));
+
+            if (!result.IsValid)
+            {
+                diagnostics.Add(new QueryFileDiagnostic(query.LogicalPath, result.Diagnostics));
+            }
         }
 
-        if (errors.Count == 0)
+        if (diagnostics.Count == 0)
         {
             return Task.FromResult(CheckOutcome.Pass(
-                $"Query syntax check passed ({queries.Count} file(s)). " +
-                "Note: POC stub — only non-empty validation performed."));
+                $"Query syntax check passed ({queries.Count} file(s)) using {_validator.GetType().Name}."));
         }
 
+        var logs = string.Join('\n', diagnostics.SelectMany(d => d.Diagnostics.Select(x => x.Format(d.LogicalPath))));
+        var details = JsonSerializer.Serialize(new
+        {
+            validator = _validator.GetType().Name,
+            diagnostics = diagnostics.Select(d => new
+            {
+                logicalPath = d.LogicalPath,
+                diagnostics = d.Diagnostics,
+            }),
+        }, JsonOptions);
+
         return Task.FromResult(CheckOutcome.Fail(
-            $"{errors.Count} query syntax error(s).",
-            "{}",
-            string.Join('\n', errors)));
+            $"{diagnostics.Sum(d => d.Diagnostics.Count)} query syntax error(s).",
+            details,
+            logs));
     }
+
+    private sealed record QueryFileDiagnostic(
+        string LogicalPath,
+        IReadOnlyList<QuerySyntaxDiagnostic> Diagnostics);
 }

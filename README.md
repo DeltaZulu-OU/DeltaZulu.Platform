@@ -5,47 +5,82 @@ work. See [`docs/`](docs/) for the specification copied from `dac-workbench-spec
 
 ## Status
 
-This repository contains **Phase 0** (solution skeleton) and **Phase 1** (persistence
-foundation) of the implementation order defined in [`docs/AGENTS.md`](docs/AGENTS.md):
+This repository contains the current proof-of-concept slice of the Workbench merge-preparation
+baseline:
 
-- Domain entities, enums, value objects, invariants (step 1).
-- Database persistence via EF Core 10 + SQLite with strongly-typed ID value converters,
-  owned entity mapping for `CaseDetails`, and eager-loading repositories (step 2).
-- Application services — `DetectionContentService`, `IssueService`, `ChangeService` —
-  wired through DI with scoped lifetime and `TimeProvider` for deterministic testing.
-- MSTest domain invariant tests and integration tests against in-memory SQLite.
+- Domain entities, enums, value objects, invariants, workflow profiles, merge readiness, and
+  content-library artifact states.
+- Database persistence via **Dapper + SQLite** repositories. Operational collaboration state
+  stays in SQLite while accepted canonical content is projected to Git-backed storage.
+- Application services for detection content, issues, changes, checks, merges, versions, restore,
+  and merge reconciliation, wired through DI with scoped lifetimes and `TimeProvider` for
+  deterministic testing.
+- Infrastructure for the accepted-content Git store and canonical writer/path resolver.
+- Validation checks for package schema, query syntax, fixtures, test definitions, and note
+  frontmatter. Query syntax validation is now interface-backed so a future Hunting.Core KQL
+  adapter can replace the deterministic default without referencing web or runtime execution
+  services.
+- Blazor/MudBlazor Workbench screens for work, detections, issues, changes, reviews, checks,
+  versions, and operator settings.
+- MSTest domain and integration tests against in-memory SQLite plus a cross-platform CI workflow.
 
-The remaining steps — Git content store, canonical writer, check pipeline, gate evaluator,
-merge service, version projection, MudBlazor screens, Elsa adapter — are not yet
-implemented.
+Known POC stubs are intentional and documented rather than merge breakage: user identity is a
+local POC user context, remote Git sync is out of scope, query execution is fixture/check-backed
+rather than runtime-backed, and workflow durability is represented through the internal workflow
+abstraction before a production workflow engine is selected.
 
 ## Project layout
 
 ```text
 src/
-├── Workbench.Web              ASP.NET Core Blazor Web App (Server interactive), MudBlazor 9
-├── Workbench.Application      Application services, repository interfaces (this slice)
-├── Workbench.Domain           Domain entities, enums, invariants (this slice)
-├── Workbench.Infrastructure   Git store, file system, time, current-user accessors (planned)
-├── Workbench.Persistence      EF Core 10 + SQLite, value converters, repositories (this slice)
-├── Workbench.Workflow         Internal IWorkflowOrchestrator + Elsa adapter (planned)
-└── Workbench.Validation       Check pipeline + check implementations (planned)
+├── Workbench.Web              ASP.NET Core Blazor Web App (Server interactive), MudBlazor shell
+├── Workbench.Application      Application services and module-owned abstractions
+├── Workbench.Domain           Domain entities, content-library model, enums, invariants
+├── Workbench.Infrastructure   Accepted-content Git store and infrastructure adapters
+├── Workbench.Persistence      Dapper + SQLite repositories and schema initializer
+├── Workbench.Workflow         Internal IWorkflowOrchestrator + Elsa adapter boundary
+└── Workbench.Validation       Check pipeline checks and query-validator adapter boundary
 
 tests/
-└── Workbench.Tests            MSTest, domain + integration tests (this slice)
+└── Workbench.Tests            MSTest domain + integration tests
 ```
+
+The domain, application, persistence, infrastructure, workflow, and validation modules do not
+depend on `Workbench.Web`; the web project composes those modules at the edge.
 
 ## Build
 
 ```bash
-dotnet restore
-dotnet build
-dotnet test
+dotnet restore DetectionContentWorkbench.slnx
+dotnet build DetectionContentWorkbench.slnx
+dotnet test DetectionContentWorkbench.slnx
 ```
 
-Target framework: `net10.0`. Tested package versions are pinned in each `.csproj`; on first
-restore, confirm the `MudBlazor` 9.x patch version matches the latest available — see the
-note in `src/Workbench.Web/Workbench.Web.csproj`.
+Target framework: `net10.0`. Package versions are centrally pinned in
+[`Directory.Packages.props`](Directory.Packages.props), package lock files are enabled by
+[`Directory.Build.props`](Directory.Build.props), and CI uses the central baseline so monorepo
+restores stay deterministic once lock files are produced by a .NET-enabled environment.
+
+## Merge architecture notes
+
+Workbench is the governance shell for the shared detection-content lifecycle:
+
+- **Draft-only artifacts** live in operational persistence for editing, review, reconciliation,
+  and workflow gates.
+- **Accepted-content artifacts** are written to canonical Git-backed paths only after checks and
+  review gates pass.
+- **Runtime-only artifacts** stay separate from accepted content so operator/runtime settings do
+  not leak into Git-backed library history.
+
+The shared content-library object types are saved query, detection query, visualization, fixture,
+test, note, and package metadata. Existing Hunting saved queries can be converted into draft-only
+library records first, then governed into accepted detection queries or notes through the normal
+Workbench change flow.
+
+Navigation should keep Workbench as the shell: `/settings` is the future product/operator settings
+root; normal user settings remain separate from operator-only recovery surfaces such as merge
+reconciliation; Hunting modules can later mount under clear routes such as `/threat-hunting`,
+`/dashboards`, and `/runtime` without collapsing Workbench into a web-app-only implementation.
 
 ## Architectural guard rails
 
@@ -55,7 +90,7 @@ Read **before** writing code:
 - [`docs/AGENTS.md`](docs/AGENTS.md) — mandatory architectural constraints
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — module boundaries, data ownership
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — phase plan, acceptance criteria
-- [`docs/adr/`](docs/adr/) — twelve binding architecture decisions
+- [`docs/adr/`](docs/adr/) — binding architecture decisions
 
 Deviations from any ADR require a new ADR before the code change lands.
 
@@ -69,4 +104,4 @@ Deviations from any ADR require a new ADR before the code change lands.
 - **Vendor-neutral terminology.** Domain types, properties and method names avoid SIEM
   vendor product names, per ADR-0009.
 - **Git is hidden.** No domain or application type references LibGit2Sharp; the Git store
-  lives behind `Workbench.Infrastructure` interfaces (planned).
+  lives behind application/infrastructure interfaces.

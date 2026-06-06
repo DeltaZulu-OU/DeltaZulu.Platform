@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Workbench.Application.Abstractions;
 using Workbench.Validation.Checks;
 
@@ -12,6 +13,7 @@ public static class ValidationServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddWorkbenchValidation(this IServiceCollection services)
     {
+        services.TryAddSingleton<IQuerySyntaxValidator, NonEmptyQuerySyntaxValidator>();
         services.AddSingleton<ICheck, PackageSchemaCheck>();
         services.AddSingleton<ICheck, QuerySyntaxCheck>();
         services.AddSingleton<ICheck, FixtureParseCheck>();

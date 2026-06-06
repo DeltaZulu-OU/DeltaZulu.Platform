@@ -16,14 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!--
-      MudBlazor 9.x is requested per user constraint. The 9.* range is intentional for first
-      restore; pin to a concrete patch (e.g. 9.0.0) once the CI baseline is locked. MudBlazor
-      9 currently targets net9.0 and forward-compatible runtime; verify on first restore that
-      net10.0 transitive resolution does not require a prerelease feed.
-    -->
-    <PackageReference Include="MudBlazor" Version="9.*" />
-    <PackageReference Include="Markdig" Version="1.2.0" />
+    <PackageReference Include="MudBlazor" />
+    <PackageReference Include="Markdig" />
   </ItemGroup>
 
 </Project>

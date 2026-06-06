@@ -17,7 +17,7 @@ The refreshed gap analysis is maintained in [GAP_ANALYSIS.md](GAP_ANALYSIS.md). 
 2. Version, check, review, and settings pages need richer workflow actions and demo-path validation.
 3. Merge reconciliation has a basic settings operator surface, but still needs deeper failure-state guidance and end-to-end operational hardening.
 4. Controlled-review required-check policy must expand as future profiles/check types enter POC scope.
-5. Check quality remains intentionally minimal for static assertions and placeholder query parsing.
+5. Check quality remains intentionally minimal for static assertions and interface-backed query validation until a real parser adapter is integrated.
 6. Persistence/read-model scope still needs explicit POC deferrals for users, comments, workflow projections, activity events, and locks.
 
 ## 3. Revised POC definition
@@ -94,7 +94,7 @@ Minimum POC checks:
 
 ```text
 Package schema check
-Query syntax check (placeholder parser acceptable if clearly isolated)
+Query syntax check (interface-backed validator; parser adapter can be replaced without web/runtime dependencies)
 Fixture parse/load check
 Test definition parse check
 Unit test/assertion check (may start minimal, but must be distinct from YAML parsing before POC completion)
