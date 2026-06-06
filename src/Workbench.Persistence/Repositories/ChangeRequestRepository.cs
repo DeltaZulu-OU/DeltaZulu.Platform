@@ -245,7 +245,7 @@ internal sealed class ChangeRequestRepository(DapperSession session) : IChangeRe
                 new UserId(Guid.Parse(author_id)),
                 Enum.Parse<WorkflowProfileId>(workflow_profile_id),
                 base_version_id is not null ? new VersionId(Guid.Parse(base_version_id)) : null,
-                Enum.Parse<ChangeStatus>(status),
+                Enum.TryParse<ChangeStatus>(status, out var parsedStatus) ? parsedStatus : ChangeStatus.Draft,
                 is_stale != 0, stale_reason,
                 linked_issue_id is not null ? new IssueId(Guid.Parse(linked_issue_id)) : null,
                 DateTimeOffset.Parse(created_at), DateTimeOffset.Parse(updated_at),

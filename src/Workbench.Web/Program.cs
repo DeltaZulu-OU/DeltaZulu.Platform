@@ -20,6 +20,10 @@ builder.Services.AddSingleton(TimeProvider.System);
 var connectionString = builder.Configuration.GetConnectionString("Workbench")
     ?? "Data Source=workbench.db";
 builder.Services.AddWorkbenchPersistence(connectionString);
+
+if (builder.Configuration.GetValue<bool>("DemoSeed:Enabled"))
+    Workbench.Persistence.DemoSeeder.Seed(connectionString);
+
 builder.Services.AddWorkbenchApplication();
 builder.Services.AddWorkbenchValidation();
 
