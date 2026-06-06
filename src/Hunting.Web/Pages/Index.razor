@@ -113,19 +113,24 @@
                             }
                         </span>
 
-                        <button class="hunt-btn"
-                                disabled="@_savingQuery"
-                                @onclick="SaveCurrentQueryAsync">
-                            @(_savingQuery ? "Saving…" : "Save query")
-                        </button>
+                        <div class="hunt-results-toolbar-actions">
+                            @if (_result?.Success == true)
+                            {
+                                <button class="hunt-btn"
+                                        disabled="@IsSaveActionDisabled"
+                                        @onclick="SaveActiveResultArtifactAsync">
+                                    @SaveActionText
+                                </button>
+                            }
 
-                        @if (IsDebugBuild && _result?.GeneratedSql is string)
-                        {
-                            <button class="hunt-btn hunt-btn-sql"
-                                    @onclick="OpenSqlDrawer">
-                                Show SQL
-                            </button>
-                        }
+                            @if (IsDebugBuild && _result?.GeneratedSql is string)
+                            {
+                                <button class="hunt-btn hunt-btn-sql"
+                                        @onclick="OpenSqlDrawer">
+                                    Show SQL
+                                </button>
+                            }
+                        </div>
                     </div>
 
                     @if (IsDebugBuild && _showSql && _result?.GeneratedSql is string sql)
@@ -136,16 +141,24 @@
                     @if (_result?.Success == true && _result.RowCount > 0)
                     {
                         <div class="hunt-results-tabs" role="tablist" aria-label="Result views">
-                            <button class="hunt-btn hunt-tab-button @GetTabButtonClass(ResultTab.Table)" role="tab" aria-selected="@(_activeTab == ResultTab.Table)" aria-controls="results-table-panel" id="results-table-tab" @onclick="() => SelectTab(ResultTab.Table)">Table</button>
-                            <button class="hunt-btn hunt-tab-button @GetTabButtonClass(ResultTab.Render)" role="tab" aria-selected="@(_activeTab == ResultTab.Render)" aria-controls="results-render-panel" id="results-render-tab" disabled="@(!HasRenderOutput)" @onclick="() => SelectTab(ResultTab.Render)">Render</button>
-                            @if (HasRenderOutput)
-                            {
-                                <button class="hunt-btn hunt-tab-button"
-                                        disabled="@_savingVisualization"
-                                        @onclick="SaveCurrentVisualizationAsync">
-                                    @(_savingVisualization ? "Saving…" : "Save visualization")
-                                </button>
-                            }
+                            <button class="hunt-btn hunt-tab-button @GetTabButtonClass(ResultTab.Table)"
+                                    role="tab"
+                                    aria-selected="@(_activeTab == ResultTab.Table)"
+                                    aria-controls="results-table-panel"
+                                    id="results-table-tab"
+                                    @onclick="() => SelectTab(ResultTab.Table)">
+                                Table
+                            </button>
+
+                            <button class="hunt-btn hunt-tab-button @GetTabButtonClass(ResultTab.Render)"
+                                    role="tab"
+                                    aria-selected="@(_activeTab == ResultTab.Render)"
+                                    aria-controls="results-render-panel"
+                                    id="results-render-tab"
+                                    disabled="@(!HasRenderOutput)"
+                                    @onclick="() => SelectTab(ResultTab.Render)">
+                                Render
+                            </button>
                         </div>
 
                         <div class="hunt-results-content">
@@ -659,6 +672,21 @@
            && !_renderDirective.IsFallback
            && _chart?.CanRender == true
            && _chartOptions is not null;
+
+    private bool IsSaveActionDisabled
+        => _activeTab == ResultTab.Render
+         ? _savingVisualization || !HasRenderOutput
+         : _savingQuery;
+
+    private string SaveActionText
+        => _activeTab == ResultTab.Render
+            ? (_savingVisualization ? "Saving…" : "Save visualization")
+            : (_savingQuery ? "Saving…" : "Save query");
+
+    private Task SaveActiveResultArtifactAsync()
+        => _activeTab == ResultTab.Render
+            ? SaveCurrentVisualizationAsync()
+            : SaveCurrentQueryAsync();
 
     private void SelectTab(ResultTab tab)
     {
