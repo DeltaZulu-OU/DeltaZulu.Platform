@@ -252,7 +252,8 @@ public sealed class DashboardPageControllerTests
             renderedQueryRunner ?? new FakeRenderedQueryRunner(CreateRenderedResult(CreateSuccessfulQueryResult(), CreateTableFallbackChart())),
             new EChartsRenderOptionsBuilder(),
             new FakeSavedQueryRepository(),
-            new FakeVisualizationRepository());
+            new FakeVisualizationRepository(),
+            new TestLogger<DashboardWidgetRunner>());
 
         return new DashboardPageController(
             repository,

@@ -14,7 +14,6 @@
     <header class="dashboard-widget-header">
         <div>
             <h2>@Widget.Title</h2>
-            <p>@SourceLabel</p>
         </div>
         <div class="dashboard-widget-actions">
             <div class="dashboard-widget-split" role="group" aria-label="@WidgetActionLabel">
@@ -122,39 +121,6 @@
         => !string.IsNullOrWhiteSpace(Widget.QueryText)
             || !string.IsNullOrWhiteSpace(Widget.VisualizationId);
 
-    private bool UsesSavedVisualization
-        => !string.IsNullOrWhiteSpace(Widget.VisualizationId);
-
-    private string SourceLabel
-        => Widget.Kind switch
-        {
-            DashboardWidgetKind.Markdown => "Markdown",
-            DashboardWidgetKind.Query when UsesSavedVisualization => SavedVisualizationLabel,
-            DashboardWidgetKind.Query => "Query text",
-            _ => Widget.Kind.ToString()
-        };
-
-    private string SavedVisualizationLabel
-    {
-        get
-        {
-            var visualizationName = NormalizeOptionalText(Result?.VisualizationName);
-            var queryName = NormalizeOptionalText(Result?.SavedQueryName);
-
-            if (visualizationName is not null && queryName is not null)
-            {
-                return $"Saved visualization · {visualizationName} · Query: {queryName}";
-            }
-
-            if (visualizationName is not null)
-            {
-                return $"Saved visualization · {visualizationName}";
-            }
-
-            return $"Saved visualization · {ShortId(Widget.VisualizationId)}";
-        }
-    }
-
     private string RefreshTitle
         => CanRunWidget
             ? "Refresh widget"
@@ -176,7 +142,7 @@
         get
         {
             var rowHeight = Math.Max(1, Widget.Layout.Height) * 96;
-            var fixedChrome = IsEditMode ? 174 : 126;
+            var fixedChrome = IsEditMode ? 150 : 102;
             return $"{Math.Max(180, rowHeight - fixedChrome)}px";
         }
     }
@@ -195,17 +161,4 @@
         => DeleteWidget.HasDelegate
             ? DeleteWidget.InvokeAsync(Widget)
             : Task.CompletedTask;
-
-    private static string? NormalizeOptionalText(string? value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private static string ShortId(string? id)
-    {
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            return "(none)";
-        }
-
-        return id.Length <= 8 ? id : id[..8];
-    }
 }

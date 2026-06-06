@@ -5,7 +5,7 @@ using Hunting.Data.Persistence;
 using AppIQueryHistoryRepository = Hunting.Application.QueryHistory.IQueryHistoryRepository;
 using AppQueryHistoryRecord = Hunting.Application.QueryHistory.QueryHistoryRecord;
 
-public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository
+public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, IDisposable
 {
     private const string CreateSchemaSql =
         """
@@ -212,5 +212,10 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository
         public long? RowCount { get; init; }
         public long? DurationMs { get; init; }
         public string? DiagnosticSummary { get; init; }
+    }
+
+    public void Dispose()
+    {
+        _schemaSemaphore.Dispose();
     }
 }

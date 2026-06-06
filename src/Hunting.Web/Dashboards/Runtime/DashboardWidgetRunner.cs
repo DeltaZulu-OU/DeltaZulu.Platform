@@ -11,6 +11,7 @@ using Hunting.Web.Visualizations;
 public sealed class DashboardWidgetRunner
 {
     private readonly EChartsRenderOptionsBuilder _chartOptionsBuilder;
+    private readonly ILogger<DashboardWidgetRunner> _logger;
     private readonly IRenderedQueryRunner _renderedQueryRunner;
     private readonly ISavedQueryRepository _savedQueries;
     private readonly IVisualizationRepository _visualizations;
@@ -19,12 +20,14 @@ public sealed class DashboardWidgetRunner
         IRenderedQueryRunner renderedQueryRunner,
         EChartsRenderOptionsBuilder chartOptionsBuilder,
         ISavedQueryRepository savedQueries,
-        IVisualizationRepository visualizations)
+        IVisualizationRepository visualizations,
+        ILogger<DashboardWidgetRunner> logger)
     {
         _renderedQueryRunner = renderedQueryRunner ?? throw new ArgumentNullException(nameof(renderedQueryRunner));
         _chartOptionsBuilder = chartOptionsBuilder ?? throw new ArgumentNullException(nameof(chartOptionsBuilder));
         _savedQueries = savedQueries ?? throw new ArgumentNullException(nameof(savedQueries));
         _visualizations = visualizations ?? throw new ArgumentNullException(nameof(visualizations));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<DashboardWidgetRunResult> RunAsync(
@@ -39,10 +42,12 @@ public sealed class DashboardWidgetRunner
         if (widget.Kind != DashboardWidgetKind.Query)
         {
             stopwatch.Stop();
+            var duration = stopwatch.Elapsed;
+            LogWidgetRunDebug(widget, DashboardWidgetRunStatus.Failed, duration);
             return Failed(
                 widget.Id,
                 startedAtUtc,
-                stopwatch.Elapsed,
+                duration,
                 CreateError($"Widget kind '{widget.Kind}' is not executable."));
         }
 
@@ -58,10 +63,12 @@ public sealed class DashboardWidgetRunner
         if (validationErrors.Count > 0)
         {
             stopwatch.Stop();
+            var duration = stopwatch.Elapsed;
+            LogWidgetRunDebug(widget, DashboardWidgetRunStatus.Failed, duration);
             return Failed(
                 widget.Id,
                 startedAtUtc,
-                stopwatch.Elapsed,
+                duration,
                 validationErrors.Select(err => CreateError(err)).ToArray());
         }
 
@@ -79,13 +86,16 @@ public sealed class DashboardWidgetRunner
             var chartOptions = rendered.Chart.CanRender
                 ? _chartOptionsBuilder.Build(rendered.Chart)
                 : null;
+            var status = rendered.QueryResult.Success
+                ? DashboardWidgetRunStatus.Succeeded
+                : DashboardWidgetRunStatus.Failed;
+
+            LogWidgetRunDebug(widget, status, stopwatch.Elapsed, execution, rendered);
 
             return new DashboardWidgetRunResult
             {
                 WidgetId = widget.Id,
-                Status = rendered.QueryResult.Success
-                    ? DashboardWidgetRunStatus.Succeeded
-                    : DashboardWidgetRunStatus.Failed,
+                Status = status,
                 QueryResult = rendered.QueryResult,
                 RenderDirective = rendered.Directive,
                 Chart = rendered.Chart,
@@ -102,31 +112,37 @@ public sealed class DashboardWidgetRunner
         catch (DashboardWidgetRunException ex)
         {
             stopwatch.Stop();
+            var duration = stopwatch.Elapsed;
+            LogWidgetRunDebug(widget, DashboardWidgetRunStatus.Failed, duration);
             return Failed(
                 widget.Id,
                 startedAtUtc,
-                stopwatch.Elapsed,
+                duration,
                 CreateError(ex.Message, ex.DeveloperDetail));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             stopwatch.Stop();
+            var duration = stopwatch.Elapsed;
+            LogWidgetRunDebug(widget, DashboardWidgetRunStatus.Cancelled, duration);
             return new DashboardWidgetRunResult
             {
                 WidgetId = widget.Id,
                 Status = DashboardWidgetRunStatus.Cancelled,
                 Diagnostics = [CreateError("Widget execution was cancelled.")],
                 StartedAtUtc = startedAtUtc,
-                Duration = stopwatch.Elapsed
+                Duration = duration
             };
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
+            var duration = stopwatch.Elapsed;
+            LogWidgetRunDebug(widget, DashboardWidgetRunStatus.Failed, duration);
             return Failed(
                 widget.Id,
                 startedAtUtc,
-                stopwatch.Elapsed,
+                duration,
                 CreateError("Widget execution failed.", ex.Message));
         }
     }
@@ -135,20 +151,11 @@ public sealed class DashboardWidgetRunner
         string visualizationId,
         CancellationToken cancellationToken)
     {
-        var visualization = await _visualizations.GetAsync(visualizationId, cancellationToken);
-        if (visualization is null)
-        {
-            throw new DashboardWidgetRunException(
+        var visualization = await _visualizations.GetAsync(visualizationId, cancellationToken) ?? throw new DashboardWidgetRunException(
                 $"Visualization '{visualizationId}' was not found.");
-        }
 
-        var query = await _savedQueries.GetAsync(visualization.QueryId, cancellationToken);
-        if (query is null)
-        {
-            throw new DashboardWidgetRunException(
+        var query = await _savedQueries.GetAsync(visualization.QueryId, cancellationToken) ?? throw new DashboardWidgetRunException(
                 $"Saved query '{visualization.QueryId}' for visualization '{visualization.Id}' was not found.");
-        }
-
         if (!VisualizationDirectiveMapper.TryMap(visualization, out var directive, out var error))
         {
             throw new DashboardWidgetRunException(error);
@@ -166,6 +173,38 @@ public sealed class DashboardWidgetRunner
             query.Id,
             query.Name);
     }
+
+    private void LogWidgetRunDebug(
+        DashboardWidgetDefinition widget,
+        DashboardWidgetRunStatus status,
+        TimeSpan duration,
+        DashboardWidgetExecution? execution = null,
+        RenderedQueryResult? rendered = null)
+    {
+        var xColumn = rendered?.Directive.Binding.XColumn;
+
+        _logger.LogDebug(
+            "Dashboard widget {WidgetId} ({WidgetTitle}) executed from {WidgetSource} with status {Status} in {DurationMs} ms. RenderKind={RenderKind}; XColumn={XColumn}; SeriesCount={SeriesCount}; VisualizationId={VisualizationId}; VisualizationName={VisualizationName}; SavedQueryId={SavedQueryId}; SavedQueryName={SavedQueryName}; RowCount={RowCount}; ColumnCount={ColumnCount}.",
+            widget.Id,
+            widget.Title,
+            GetWidgetSource(widget),
+            status,
+            duration.TotalMilliseconds,
+            rendered?.Directive.Kind,
+            string.IsNullOrWhiteSpace(xColumn) ? "auto" : xColumn,
+            rendered?.Chart.Series.Count,
+            execution?.VisualizationId,
+            execution?.VisualizationName,
+            execution?.SavedQueryId,
+            execution?.SavedQueryName,
+            rendered?.QueryResult.RowCount,
+            rendered?.QueryResult.ColumnCount);
+    }
+
+    private static string GetWidgetSource(DashboardWidgetDefinition widget)
+        => string.IsNullOrWhiteSpace(widget.VisualizationId)
+            ? "query text"
+            : "saved visualization";
 
     private static DashboardWidgetRunResult Failed(
         string widgetId,
@@ -201,6 +240,18 @@ public sealed class DashboardWidgetRunner
             : base(message)
         {
             DeveloperDetail = developerDetail;
+        }
+
+        public DashboardWidgetRunException() : base()
+        {
+        }
+
+        public DashboardWidgetRunException(string? message) : base(message)
+        {
+        }
+
+        public DashboardWidgetRunException(string? message, Exception? innerException) : base(message, innerException)
+        {
         }
 
         public string? DeveloperDetail { get; }

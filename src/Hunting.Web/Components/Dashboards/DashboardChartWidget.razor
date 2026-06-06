@@ -48,18 +48,10 @@
         <div class="dashboard-chart-state">
             <h3>Chart not renderable</h3>
             <p>The render directive did not produce chart options.</p>
-            <p>@RenderSummary</p>
         </div>
     }
     else
     {
-        <div class="dashboard-chart-meta">
-            <span>@RenderSummary</span>
-            @if (Result.Duration.TotalMilliseconds is double durationMs)
-            {
-                <span>@durationMs ms</span>
-            }
-        </div>
         <div class="dashboard-chart-surface" style="height:@Height">
             <Vizor.ECharts.EChart Options="Result.ChartOptions" Width="@Width" Height="@Height" />
         </div>
@@ -85,25 +77,6 @@
 
     private bool HasRenderableChart
         => Result?.HasRenderableChart == true;
-
-    private string RenderSummary
-    {
-        get
-        {
-            if (Result?.RenderDirective is null)
-            {
-                return "No render directive";
-            }
-
-            var directive = Result.RenderDirective;
-            var xColumn = string.IsNullOrWhiteSpace(directive.Binding.XColumn)
-                ? "auto"
-                : directive.Binding.XColumn;
-
-            var seriesCount = Result.Chart?.Series.Count ?? 0;
-            return $"{directive.Kind}   x: {xColumn}   {seriesCount} series";
-        }
-    }
 
     public async ValueTask DisposeAsync()
     {

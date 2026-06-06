@@ -447,18 +447,9 @@
     font-size: 15px;
 }
 
-.dashboard-widget-header p,
-.dashboard-widget-footer,
-.dashboard-widget-status {
+.dashboard-widget-footer {
     color: var(--text-dim);
     font-size: 12px;
-}
-
-.dashboard-widget-status {
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 2px 8px;
-    white-space: nowrap;
 }
 
 .dashboard-widget-body {

@@ -27,17 +27,11 @@ public sealed class QueryLibraryService
     }
 
     public Task<IReadOnlyList<SavedQueryRecord>> ListSavedQueriesAsync(
-        CancellationToken cancellationToken = default)
-    {
-        return _savedQueries.ListAsync(cancellationToken);
-    }
+        CancellationToken cancellationToken = default) => _savedQueries.ListAsync(cancellationToken);
 
     public Task<IReadOnlyList<QueryHistoryRecord>> ListRecentHistoryAsync(
         int limit = DefaultRecentHistoryLimit,
-        CancellationToken cancellationToken = default)
-    {
-        return _queryHistory.ListRecentAsync(limit, cancellationToken);
-    }
+        CancellationToken cancellationToken = default) => _queryHistory.ListRecentAsync(limit, cancellationToken);
 
     public async Task<SavedQueryRecord> SaveQueryAsync(
         string? id,
@@ -101,10 +95,7 @@ public sealed class QueryLibraryService
 
     public Task MarkSavedQueryRunAsync(
         string id,
-        CancellationToken cancellationToken = default)
-    {
-        return _savedQueries.MarkRunAsync(id, DateTime.UtcNow, cancellationToken);
-    }
+        CancellationToken cancellationToken = default) => _savedQueries.MarkRunAsync(id, DateTime.UtcNow, cancellationToken);
 
     private static string CreateInUseDeleteMessage(
         string queryId,
@@ -120,8 +111,5 @@ public sealed class QueryLibraryService
         return $"Saved query '{queryId}' is used by {visualizations.Count} saved visualization(s): {string.Join(", ", names)}{suffix}. Delete or reassign those visualizations before deleting the query.";
     }
 
-    private static string? NormalizeOptionalText(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    }
+    private static string? NormalizeOptionalText(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

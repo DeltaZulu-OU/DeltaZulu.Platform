@@ -8,6 +8,7 @@ using Hunting.Render.Model;
 using Hunting.Web.Dashboards;
 using Hunting.Web.Dashboards.Runtime;
 using Hunting.Web.Rendering;
+using Microsoft.Extensions.Logging;
 
 [TestClass]
 public sealed class DashboardWidgetRunnerTests
@@ -88,6 +89,48 @@ public sealed class DashboardWidgetRunnerTests
             new[] { "LaunchCount" },
             fakeRunner.LastExplicitDirective.Binding.YColumns.ToArray());
         Assert.AreEqual("right", fakeRunner.LastExplicitDirective.Legend);
+    }
+
+    [TestMethod]
+    public async Task RunAsync_QueryWidget_WritesExecutionDetailsToDebugLog()
+    {
+        var logger = new RecordingLogger<DashboardWidgetRunner>();
+        var runner = CreateRunner(
+            new FakeRenderedQueryRunner(CreateRenderedResult(CreateSuccessfulQueryResult(), CreateRenderableChart())),
+            logger: logger);
+
+        var result = await runner.RunAsync(CreateWidget(), TestContext.CancellationToken);
+
+        Assert.AreEqual(DashboardWidgetRunStatus.Succeeded, result.Status);
+        Assert.IsTrue(
+            logger.Entries.Any(entry =>
+                entry.Level == LogLevel.Debug
+                    && entry.Message.Contains("widget-1", StringComparison.OrdinalIgnoreCase)
+                    && entry.Message.Contains("Widget 1", StringComparison.OrdinalIgnoreCase)
+                    && entry.Message.Contains("query text", StringComparison.OrdinalIgnoreCase)
+                    && entry.Message.Contains("Succeeded", StringComparison.OrdinalIgnoreCase)
+                    && entry.Message.Contains("XColumn=auto", StringComparison.OrdinalIgnoreCase)
+                    && entry.Message.Contains("SeriesCount=1", StringComparison.OrdinalIgnoreCase)),
+            "Expected execution metadata to be available through Debug logging instead of chart chrome.");
+    }
+
+    [TestMethod]
+    public async Task RunAsync_InvalidQueryWidget_WritesFailureDetailsToDebugLog()
+    {
+        var logger = new RecordingLogger<DashboardWidgetRunner>();
+        var fakeRunner = new FakeRenderedQueryRunner(CreateRenderedResult(CreateSuccessfulQueryResult(), CreateRenderableChart()));
+        var runner = CreateRunner(fakeRunner, logger: logger);
+        var widget = CreateWidget() with { QueryText = string.Empty };
+
+        var result = await runner.RunAsync(widget, TestContext.CancellationToken);
+
+        Assert.AreEqual(DashboardWidgetRunStatus.Failed, result.Status);
+        Assert.IsTrue(
+            logger.Entries.Any(entry =>
+                entry.Level == LogLevel.Debug
+                    && entry.Message.Contains("widget-1", StringComparison.OrdinalIgnoreCase)
+                    && entry.Message.Contains("Failed", StringComparison.OrdinalIgnoreCase)),
+            "Expected failed widget execution metadata to be available through Debug logging.");
     }
 
     [TestMethod]
@@ -206,12 +249,14 @@ public sealed class DashboardWidgetRunnerTests
     private static DashboardWidgetRunner CreateRunner(
         FakeRenderedQueryRunner renderedQueryRunner,
         FakeSavedQueryRepository? savedQueries = null,
-        FakeVisualizationRepository? visualizations = null)
+        FakeVisualizationRepository? visualizations = null,
+        RecordingLogger<DashboardWidgetRunner>? logger = null)
         => new(
             renderedQueryRunner,
             new EChartsRenderOptionsBuilder(),
             savedQueries ?? new FakeSavedQueryRepository(),
-            visualizations ?? new FakeVisualizationRepository());
+            visualizations ?? new FakeVisualizationRepository(),
+            logger ?? new RecordingLogger<DashboardWidgetRunner>());
 
     private static DashboardWidgetDefinition CreateWidget()
         => new()
@@ -389,6 +434,29 @@ public sealed class DashboardWidgetRunnerTests
             return Task.CompletedTask;
         }
     }
+
+    private sealed class RecordingLogger<T> : ILogger<T>
+    {
+        public List<LogEntry> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
+            => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Entries.Add(new LogEntry(logLevel, formatter(state, exception)));
+        }
+    }
+
+    private sealed record LogEntry(LogLevel Level, string Message);
 
     public TestContext TestContext { get; set; }
 }

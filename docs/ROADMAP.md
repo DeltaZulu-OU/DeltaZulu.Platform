@@ -291,6 +291,7 @@ Implemented:
 - scoped `DashboardListPageController` and explicit `DashboardListPageState`
 - JS lifecycle hardening and debug-level logging
 - standard right-side drawer base shell shared by generated-SQL/cell-detail drawers and the query library drawer
+- widget source and execution metadata for all run outcomes moved out of visible chart chrome and into Debug logs
 
 Architecture note: `MudDropZone` is retained only as a passive dashboard surface. It does not own widget ordering or placement. Persisted `X/Y/Width/Height` layout remains authoritative.
 

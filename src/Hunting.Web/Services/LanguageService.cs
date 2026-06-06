@@ -42,10 +42,7 @@ public sealed class LanguageService : IAsyncDisposable
     public ValueTask<string> GetEditorValueAsync()
         => _jsRuntime.InvokeAsync<string>("huntingMonaco.getValue", _containerId);
 
-    public async ValueTask SetEditorValueAsync(string value)
-    {
-        await TryInvokeVoidAsync("huntingMonaco.setValue", "setValue", _containerId, value);
-    }
+    public async ValueTask SetEditorValueAsync(string value) => await TryInvokeVoidAsync("huntingMonaco.setValue", "setValue", _containerId, value);
 
     public async ValueTask DisposeAsync()
     {

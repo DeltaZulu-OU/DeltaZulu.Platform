@@ -34,10 +34,7 @@ public sealed class VisualizationLibraryService
     }
 
     public Task<IReadOnlyList<VisualizationRecord>> ListVisualizationsAsync(
-        CancellationToken cancellationToken = default)
-    {
-        return _visualizations.ListAsync(cancellationToken);
-    }
+        CancellationToken cancellationToken = default) => _visualizations.ListAsync(cancellationToken);
 
     public Task<IReadOnlyList<VisualizationRecord>> ListVisualizationsByQueryAsync(
         string queryId,
@@ -151,13 +148,8 @@ public sealed class VisualizationLibraryService
         ArgumentNullException.ThrowIfNull(spec);
 
         var normalizedQueryId = queryId.Trim();
-        var query = await _savedQueries.GetAsync(normalizedQueryId, cancellationToken);
-        if (query is null)
-        {
-            throw new InvalidOperationException(
+        var query = await _savedQueries.GetAsync(normalizedQueryId, cancellationToken) ?? throw new InvalidOperationException(
                 $"Saved query '{normalizedQueryId}' was not found. A visualization must reference an existing saved query.");
-        }
-
         var normalizedId = string.IsNullOrWhiteSpace(id)
             ? Guid.NewGuid().ToString("N")
             : id.Trim();

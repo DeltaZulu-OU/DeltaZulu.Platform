@@ -18,6 +18,7 @@ Hunting is intended to provide a familiar threat-hunting experience over local o
 - Deterministic query translation, diagnostics, and tests for supported KQL constructs.
 - Render-aware query execution and dashboard composition without introducing a second query runtime.
 - Dashboard detail pages default to readonly mode; edit-mode changes are staged locally and persisted by the top-right Save action.
+- Dashboard widgets prioritize visualization/table content while keeping source and execution metadata for all run outcomes in Debug logs.
 
 Implemented feature status is tracked in the documentation, not in this README:
 

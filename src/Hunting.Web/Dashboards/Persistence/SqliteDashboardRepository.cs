@@ -4,7 +4,7 @@ using System.Text.Json;
 using Dapper;
 using Hunting.Data.Persistence;
 
-public sealed class SqliteDashboardRepository : IDashboardRepository
+public sealed class SqliteDashboardRepository : IDashboardRepository, IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -177,4 +177,6 @@ public sealed class SqliteDashboardRepository : IDashboardRepository
     {
         public string DefinitionJson { get; init; } = string.Empty;
     }
+
+    public void Dispose() => _schemaSemaphore.Dispose();
 }

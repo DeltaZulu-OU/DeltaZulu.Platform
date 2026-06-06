@@ -94,11 +94,6 @@
     flex-direction: column;
 }
 
-.dashboard-chart-meta {
-    flex: 0 0 auto;
-    margin-bottom: 8px;
-}
-
 .dashboard-chart-surface {
     flex: 0 0 auto;
     min-height: 180px;

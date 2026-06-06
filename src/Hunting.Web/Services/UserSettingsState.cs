@@ -37,17 +37,11 @@ public sealed class UserSettingsState
         return _settings.SaveAsync(settings, cancellationToken);
     }
 
-    private string NormalizeTimeFilter(string candidate)
-    {
-        return AvailableTimeFilters.Any(p => string.Equals(p.Key, candidate, StringComparison.OrdinalIgnoreCase))
+    private string NormalizeTimeFilter(string candidate) => AvailableTimeFilters.Any(p => string.Equals(p.Key, candidate, StringComparison.OrdinalIgnoreCase))
             ? candidate
             : UserSettingsDefaults.DefaultTimeFilterKey;
-    }
 
-    private int? NormalizeResultLimit(int? candidate)
-    {
-        return AvailableResultLimits.Contains(candidate)
+    private int? NormalizeResultLimit(int? candidate) => AvailableResultLimits.Contains(candidate)
             ? candidate
             : null;
-    }
 }
