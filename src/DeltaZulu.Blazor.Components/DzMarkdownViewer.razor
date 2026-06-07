@@ -1,0 +1,17 @@
+<div class="dz-markdown-viewer markdown-viewer @Class" @attributes="AdditionalAttributes">
+    @if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+    else if (!string.IsNullOrWhiteSpace(Html))
+    {
+        @((MarkupString)Html)
+    }
+</div>
+
+@code {
+    [Parameter] public string? Html { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+}

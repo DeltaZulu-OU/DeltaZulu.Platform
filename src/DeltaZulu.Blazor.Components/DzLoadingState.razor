@@ -1,0 +1,15 @@
+<div class="dz-loading-state @Class" @attributes="AdditionalAttributes">
+    <MudProgressLinear Indeterminate="true" Color="@Color" />
+
+    @if (!string.IsNullOrWhiteSpace(Text))
+    {
+        <MudText Typo="Typo.caption" Class="dz-loading-state__text">@Text</MudText>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public Color Color { get; set; } = Color.Secondary;
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+}

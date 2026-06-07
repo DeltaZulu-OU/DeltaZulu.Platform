@@ -7,37 +7,30 @@
 <MudSnackbarProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="0">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu"
-                       Color="Color.Inherit"
-                       Edge="Edge.Start"
-                       OnClick="@ToggleDrawer" />
-        <img src="logo-light.png" alt="DeltaZulu" height="28" class="ml-2 mr-3 dz-shell-logo" />
-        <MudText Typo="Typo.subtitle1" Class="dz-shell-title">
-            Detection Content Workbench
-        </MudText>
-        <MudSpacer />
-        <MudText Typo="Typo.caption" Class="dz-shell-badge">
-            POC
-        </MudText>
-    </MudAppBar>
+    <DzAppBar ProductName="Detection Content Workbench"
+              ProductBadge="POC"
+              LogoSrc="logo-light.png"
+              OnMenuClick="@ToggleDrawer" />
 
-    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="0">
-        <div class="dz-shell-nav-heading">
-            <span class="eyebrow">Navigation</span>
-        </div>
-        <NavMenu />
-    </MudDrawer>
+    <DzSideNav @bind-Open="_drawerOpen" Items="_navItems" />
 
-    <MudMainContent>
-        <div class="dz-shell-main">
-            @Body
-        </div>
-    </MudMainContent>
+    <DzMainContent>
+        @Body
+    </DzMainContent>
 </MudLayout>
 
 @code {
     private static readonly MudTheme _theme = Workbench.Web.WorkbenchTheme.Create();
+
+    private static readonly IReadOnlyList<DzNavItem> _navItems =
+    [
+        new("Home", "/", Icons.Material.Outlined.Dashboard, NavLinkMatch.All),
+        new("Detections", "/detections", Icons.Material.Outlined.Radar),
+        new("Changes", "/changes", Icons.Material.Outlined.Assignment),
+        new("History", "/history", Icons.Material.Outlined.History),
+        new("Settings", "/settings", Icons.Material.Outlined.Settings, DividerBefore: true),
+    ];
+
     private bool _drawerOpen = true;
 
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;

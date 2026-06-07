@@ -1,19 +1,14 @@
 @namespace Workbench.Web.Components.Layout
-@* Navigation — three user concepts + operator settings (ADR-0017). *@
-<MudNavMenu>
-    <MudNavLink Href="/" Match="NavLinkMatch.All"
-                Icon="@Icons.Material.Outlined.Dashboard">Home</MudNavLink>
+@* Navigation moved to shared DzSideNav via MainLayout. This component remains as a temporary compatibility shim. *@
+<DzSideNav Items="_navItems" Heading="" />
 
-    <MudNavLink Href="/detections"
-                Icon="@Icons.Material.Outlined.Radar">Detections</MudNavLink>
-
-    <MudNavLink Href="/changes"
-                Icon="@Icons.Material.Outlined.Assignment">Changes</MudNavLink>
-
-    <MudNavLink Href="/history"
-                Icon="@Icons.Material.Outlined.History">History</MudNavLink>
-
-    <MudDivider Class="my-3 mx-4 dz-nav-divider" />
-    <MudNavLink Href="/settings"
-                Icon="@Icons.Material.Outlined.Settings">Settings</MudNavLink>
-</MudNavMenu>
+@code {
+    private static readonly IReadOnlyList<DzNavItem> _navItems =
+    [
+        new("Home", "/", Icons.Material.Outlined.Dashboard, NavLinkMatch.All),
+        new("Detections", "/detections", Icons.Material.Outlined.Radar),
+        new("Changes", "/changes", Icons.Material.Outlined.Assignment),
+        new("History", "/history", Icons.Material.Outlined.History),
+        new("Settings", "/settings", Icons.Material.Outlined.Settings, DividerBefore: true),
+    ];
+}

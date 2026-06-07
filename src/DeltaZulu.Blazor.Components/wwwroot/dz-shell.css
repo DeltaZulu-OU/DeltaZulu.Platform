@@ -1,0 +1,305 @@
+/* ============================================================
+   DeltaZulu shared application shell and baseline UI layer
+   ============================================================ */
+
+html,
+body {
+    height: 100%;
+    font-family: var(--font-family-sans);
+    background: var(--color-surface-canvas);
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+code,
+pre,
+kbd,
+samp,
+.mud-code,
+.text-mono {
+    font-family: var(--font-family-mono);
+    font-size: 0.88em;
+    font-weight: 400;
+}
+
+code {
+    background: var(--color-surface-secondary);
+    color: var(--brand-navy);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+pre {
+    background: var(--brand-ink);
+    color: var(--color-text-inverse);
+    padding: 18px 20px;
+    border-radius: var(--radius-sm);
+    overflow-x: auto;
+    font-size: 0.875rem;
+    line-height: 1.55;
+}
+
+.eyebrow {
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-label);
+    line-height: var(--line-height-label);
+    letter-spacing: var(--letter-spacing-label);
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--brand-slate);
+}
+
+.mud-button-root.mud-button-filled,
+.mud-button-root.mud-button-outlined {
+    border-radius: var(--radius-pill) !important;
+}
+
+.mud-chip {
+    border-radius: var(--radius-pill) !important;
+}
+
+*:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--color-focus-ring);
+}
+
+/* --- Shared shell --- */
+
+.dz-app-bar.mud-appbar {
+    background: var(--brand-ink) !important;
+}
+
+.dz-app-bar__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-right: var(--space-2);
+}
+
+.dz-shell-logo {
+    opacity: 0.92;
+}
+
+.dz-shell-title {
+    color: var(--color-text-inverse-muted) !important;
+    font-weight: 500 !important;
+}
+
+.dz-shell-badge {
+    color: var(--color-text-inverse-muted) !important;
+    opacity: 0.58;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
+}
+
+.dz-side-nav.mud-drawer {
+    border-right: 1px solid var(--color-border-default) !important;
+}
+
+.dz-shell-nav-heading {
+    padding: var(--space-4) var(--space-3) var(--space-2) var(--space-3);
+}
+
+.dz-shell-nav-heading .eyebrow {
+    font-size: 0.6875rem;
+}
+
+.dz-side-nav__header,
+.dz-side-nav__footer {
+    padding: var(--space-3);
+}
+
+.dz-side-nav .mud-nav-link {
+    border-radius: var(--radius-sm) !important;
+    margin: 2px 8px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--color-text-primary);
+    transition: background var(--duration-fast) var(--easing-standard);
+}
+
+.dz-side-nav .mud-nav-link:hover {
+    background: rgba(39, 86, 104, 0.06);
+}
+
+.dz-side-nav .mud-nav-link.active {
+    background: rgba(39, 86, 104, 0.10);
+    color: var(--brand-slate);
+    font-weight: 600;
+}
+
+.dz-nav-divider {
+    border-color: var(--color-divider) !important;
+}
+
+.dz-shell-main {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-5);
+}
+
+/* --- Shared utility components --- */
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.text-secondary {
+    color: var(--color-text-secondary) !important;
+}
+
+.text-muted {
+    color: var(--color-text-muted) !important;
+}
+
+
+.dz-loading-state {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.dz-loading-state__text {
+    color: var(--color-text-secondary) !important;
+}
+
+.dz-table-shell .mud-table .mud-table-head th {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--brand-slate);
+    border-bottom: 1px solid var(--color-border-strong);
+}
+
+.dz-link-button {
+    font-weight: 600 !important;
+    text-transform: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+.dz-mono-input input,
+.dz-mono-input textarea {
+    font-family: var(--font-family-mono) !important;
+}
+
+.dz-dialog-title {
+    font-weight: 700 !important;
+}
+
+.mud-expand-panel .mud-expand-panel-content {
+    padding: var(--space-5);
+}
+
+/* --- Markdown viewer --- */
+
+.dz-markdown-viewer,
+.markdown-viewer {
+    font-family: var(--font-family-sans);
+    line-height: 1.6;
+    color: var(--color-text-primary);
+}
+
+.dz-markdown-viewer h1,
+.dz-markdown-viewer h2,
+.dz-markdown-viewer h3,
+.markdown-viewer h1,
+.markdown-viewer h2,
+.markdown-viewer h3 {
+    font-family: var(--font-family-sans);
+    margin-top: 1.2em;
+    margin-bottom: 0.5em;
+    letter-spacing: -0.01em;
+    font-weight: 700;
+    color: var(--brand-ink);
+}
+
+.dz-markdown-viewer h1,
+.markdown-viewer h1 {
+    font-size: 1.75rem;
+}
+
+.dz-markdown-viewer h2,
+.markdown-viewer h2 {
+    font-size: 1.25rem;
+}
+
+.dz-markdown-viewer h3,
+.markdown-viewer h3 {
+    font-size: 1.1rem;
+}
+
+.dz-markdown-viewer code,
+.markdown-viewer code {
+    font-family: var(--font-family-mono);
+    background: var(--color-surface-secondary);
+    color: var(--brand-navy);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.88em;
+    font-weight: 500;
+}
+
+.dz-markdown-viewer pre,
+.markdown-viewer pre {
+    background: var(--brand-ink);
+    color: var(--color-text-inverse);
+    padding: 18px 20px;
+    border-radius: var(--radius-sm);
+    overflow-x: auto;
+    font-size: 0.875rem;
+    line-height: 1.55;
+}
+
+.dz-markdown-viewer pre code,
+.markdown-viewer pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    border-radius: 0;
+    font-weight: 400;
+}
+
+.dz-markdown-viewer img,
+.markdown-viewer img {
+    max-width: 100%;
+    border-radius: var(--radius-sm);
+}
+
+.dz-markdown-viewer blockquote,
+.markdown-viewer blockquote {
+    border-left: 3px solid var(--brand-slate);
+    padding-left: 1em;
+    margin-left: 0;
+    color: var(--color-text-secondary);
+}
+
+.dz-markdown-viewer a,
+.markdown-viewer a {
+    color: var(--brand-slate);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.dz-markdown-viewer a:hover,
+.markdown-viewer a:hover {
+    color: var(--brand-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0ms !important;
+        animation-duration: 0ms !important;
+    }
+}
