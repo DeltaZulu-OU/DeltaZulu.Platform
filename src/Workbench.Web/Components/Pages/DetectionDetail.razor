@@ -28,146 +28,170 @@ else
 
     <MudGrid Spacing="3">
         <MudItem xs="12" md="8">
-            <span class="eyebrow">Detection</span>
-            <MudText Typo="Typo.h5" Class="mt-1" Style="font-weight: 700;">@_detection.Title</MudText>
-            <MudText Typo="Typo.body2" Style="color: var(--color-text-muted);" Class="mb-3">
-                <code>@_detection.Slug</code>
-            </MudText>
-            <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);" Class="mb-4">@_detection.Summary</MudText>
-            <div class="d-flex gap-2">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                           StartIcon="@Icons.Material.Outlined.Add" OnClick="OpenChangeDialog">
-                    Open change
-                </MudButton>
-                @if (_detection.Lifecycle == DetectionLifecycle.Accepted)
-                {
-                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
-                               StartIcon="@Icons.Material.Outlined.Archive" OnClick="DeprecateDetection">
-                        Deprecate
+            <DzPageHeader Eyebrow="Detection"
+                          Title="@_detection.Title"
+                          Description="@_detection.Summary">
+                <Metadata>
+                    <DzMetaChip Kind="file">@_detection.Slug</DzMetaChip>
+                    <StatusChip Lifecycle="_detection.Lifecycle" />
+                </Metadata>
+                <Actions>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               StartIcon="@Icons.Material.Outlined.Add" OnClick="OpenChangeDialog">
+                        Open change
                     </MudButton>
-                }
-            </div>
+                    @if (_detection.Lifecycle == DetectionLifecycle.Accepted)
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Outlined.Archive" OnClick="DeprecateDetection">
+                            Deprecate
+                        </MudButton>
+                    }
+                </Actions>
+            </DzPageHeader>
         </MudItem>
         <MudItem xs="12" md="4">
-            <MudPaper Class="pa-4" Elevation="1">
-                <span class="eyebrow" style="font-size: 0.625rem;">Details</span>
-                <div class="mt-3">
-                    <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Lifecycle</MudText>
-                    <div class="mt-1"><StatusChip Lifecycle="_detection.Lifecycle" /></div>
+            <DzPanel Eyebrow="Details" Class="dz-panel--full-height">
+                <div class="dz-detail-list">
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="text-muted">Lifecycle</MudText>
+                        <div class="mt-1"><StatusChip Lifecycle="_detection.Lifecycle" /></div>
+                    </div>
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="text-muted">Latest version</MudText>
+                        @if (_latestVersion is not null)
+                        {
+                            <div class="dz-detail-list__row">
+                                <DzMetaChip Kind="version">@_latestVersion.DisplayVersion</DzMetaChip>
+                                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                           OnClick="@(() => Nav.NavigateTo($"/history/{_latestVersion.Id}"))"
+                                           Class="dz-link-button">
+                                    Compare
+                                </MudButton>
+                            </div>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Class="text-secondary mt-1">None</MudText>
+                        }
+                    </div>
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="text-muted">Active changes</MudText>
+                        <MudText Typo="Typo.body2" Class="mt-1">@_activeChangeCount</MudText>
+                    </div>
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="text-muted">Updated</MudText>
+                        <MudText Typo="Typo.body2" Class="dz-config-value dz-config-value--mono mt-1">
+                            @_detection.UpdatedAt.ToString("yyyy-MM-dd HH:mm:ss")
+                        </MudText>
+                    </div>
                 </div>
-                <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
-                <div>
-                    <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Latest version</MudText>
-                    @if (_latestVersion is not null)
-                    {
-                        <div class="d-flex align-center gap-2 mt-1">
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success">@_latestVersion.DisplayVersion</MudChip>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                       OnClick="@(() => Nav.NavigateTo($"/history/{_latestVersion.Id}"))"
-                                       Class="px-0" Style="font-weight: 600; text-transform: none;">
-                                Compare
-                            </MudButton>
-                        </div>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2" Class="mt-1" Style="color: var(--color-text-secondary);">None</MudText>
-                    }
-                </div>
-                    <MudDivider Class="my-3" Style="border-color: var(--color-divider);" />
-                <div>
-                    <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Active changes</MudText>
-                    <MudText Typo="Typo.body2" Class="mt-1">@_activeChangeCount</MudText>
-                </div>
-                    <MudDivider Class="my-3" Style="border-color: var(--color-divider);" />
-                <div>
-                    <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Updated</MudText>
-                    <MudText Typo="Typo.body2" Class="mt-1" Style="font-family: var(--font-family-mono); font-size: 0.8125rem;">
-                        @_detection.UpdatedAt.ToString("yyyy-MM-dd HH:mm:ss")
-                    </MudText>
-                </div>
-            </MudPaper>
+            </DzPanel>
         </MudItem>
     </MudGrid>
 
     <MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true" Class="mt-4">
         <MudTabPanel Text="Versions" BadgeData="@_versions.Count" BadgeColor="Color.Secondary">
-            @if (_versions.Count == 0)
-            {
-                <MudAlert Severity="Severity.Info" Dense="true" Class="ma-4">No accepted versions yet. Accept a change to create the first.</MudAlert>
-            }
-            else
-            {
-                <MudTable Items="_versions" Dense="true" Class="ma-3" T="DetectionVersion">
-                    <HeaderContent>
-                        <MudTh>Version</MudTh>
-                        <MudTh>Summary</MudTh>
-                        <MudTh>Profile</MudTh>
-                        <MudTh>Accepted</MudTh>
-                        <MudTh>Actions</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="Version"><MudText Typo="Typo.body2"><strong>@context.DisplayVersion</strong></MudText></MudTd>
-                        <MudTd DataLabel="Summary">@context.ChangeSummary</MudTd>
-                        <MudTd DataLabel="Profile"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.WorkflowProfile</MudChip></MudTd>
-                        <MudTd DataLabel="Accepted"><MudText Typo="Typo.caption">@context.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
-                        <MudTd DataLabel="Actions">
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                            OnClick="@(() => Nav.NavigateTo($"/history/{context.Id}"))">
-                                Compare / restore
-                            </MudButton>
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
-            }
+            <div class="dz-tab-body">
+                @if (_versions.Count == 0)
+                {
+                    <DzEmptyState Title="No accepted versions yet."
+                                  Description="Accept a change to create the first version."
+                                  Icon="@Icons.Material.Outlined.History" />
+                }
+                else
+                {
+                    <div class="dz-table-shell">
+                        <MudTable Items="_versions" Dense="true" T="DetectionVersion" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Version</MudTh>
+                                <MudTh>Summary</MudTh>
+                                <MudTh>Profile</MudTh>
+                                <MudTh>Accepted</MudTh>
+                                <MudTh>Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Version">
+                                    <DzMetaChip Kind="version">@context.DisplayVersion</DzMetaChip>
+                                </MudTd>
+                                <MudTd DataLabel="Summary">@context.ChangeSummary</MudTd>
+                                <MudTd DataLabel="Profile">
+                                    <DzMetaChip Kind="workflow">@context.WorkflowProfile</DzMetaChip>
+                                </MudTd>
+                                <MudTd DataLabel="Accepted"><MudText Typo="Typo.caption">@context.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
+                                <MudTd DataLabel="Actions">
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                               OnClick="@(() => Nav.NavigateTo($"/history/{context.Id}"))">
+                                        Compare / restore
+                                    </MudButton>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </div>
+                }
+            </div>
         </MudTabPanel>
 
         <MudTabPanel Text="Work history" BadgeData="@_changes.Count" BadgeColor="Color.Secondary">
-            @if (_changes.Count == 0)
-            {
-                <MudAlert Severity="Severity.Info" Class="ma-3">No changes linked to this detection.</MudAlert>
-            }
-            else
-            {
-                <MudTable Items="_changes" Dense="true" Hover="true" Class="ma-3"
-                          OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
-                          T="ChangeRequest" RowClass="cursor-pointer">
-                    <HeaderContent>
-                        <MudTh>Key</MudTh>
-                        <MudTh>Title</MudTh>
-                        <MudTh>Status</MudTh>
-                        <MudTh>Updated</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
-                        <MudTd DataLabel="Title">@context.Title</MudTd>
-                        <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
-                        <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
-                    </RowTemplate>
-                </MudTable>
-            }
+            <div class="dz-tab-body">
+                @if (_changes.Count == 0)
+                {
+                    <DzEmptyState Title="No changes linked to this detection."
+                                  Description="Open a change to start editing this detection."
+                                  Icon="@Icons.Material.Outlined.WorkHistory" />
+                }
+                else
+                {
+                    <div class="dz-table-shell">
+                        <MudTable Items="_changes" Dense="true" Hover="true"
+                                  OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
+                                  T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Key</MudTh>
+                                <MudTh>Title</MudTh>
+                                <MudTh>Status</MudTh>
+                                <MudTh>Updated</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
+                                <MudTd DataLabel="Title">@context.Title</MudTd>
+                                <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
+                                <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </div>
+                }
+            </div>
         </MudTabPanel>
 
         <MudTabPanel Text="Related issues" BadgeColor="Color.Info">
-            <MudAlert Severity="Severity.Info" Class="ma-3">Issues are linked through changes. Open a change to see its linked issue.</MudAlert>
+            <div class="dz-tab-body">
+                <DzEmptyState Title="Issues are linked through changes."
+                              Description="Open a change to see its linked issue."
+                              Icon="@Icons.Material.Outlined.Link" />
+            </div>
         </MudTabPanel>
 
         <MudTabPanel Text="Files">
-            @if (_acceptedFiles.Count == 0)
-            {
-                <MudAlert Severity="Severity.Info" Class="ma-3">No accepted content yet.</MudAlert>
-            }
-            else
-            {
-                <MudList T="string" Dense="true" Class="ma-3">
-                    @foreach (var file in _acceptedFiles)
-                    {
-                        <MudListItem T="string" Icon="@Icons.Material.Filled.InsertDriveFile">
-                            <code>@file.RepositoryPath</code>
-                        </MudListItem>
-                    }
-                </MudList>
-            }
+            <div class="dz-tab-body">
+                @if (_acceptedFiles.Count == 0)
+                {
+                    <DzEmptyState Title="No accepted content yet."
+                                  Description="Accepted files will appear after the first approved change is accepted."
+                                  Icon="@Icons.Material.Outlined.FolderOff" />
+                }
+                else
+                {
+                    <MudList T="string" Dense="true" Class="dz-card-list">
+                        @foreach (var file in _acceptedFiles)
+                        {
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.InsertDriveFile">
+                                <code>@file.RepositoryPath</code>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </div>
         </MudTabPanel>
     </MudTabs>
 }

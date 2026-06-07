@@ -595,3 +595,32 @@
     gap: var(--space-2);
     flex-wrap: wrap;
 }
+
+/* --- Detection detail surfaces --- */
+
+.dz-detail-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.dz-detail-list__item {
+    padding-block: var(--space-3);
+    border-bottom: 1px solid var(--color-divider);
+}
+
+.dz-detail-list__item:first-child {
+    padding-top: 0;
+}
+
+.dz-detail-list__item:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.dz-detail-list__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin-top: var(--space-1);
+}
