@@ -61,13 +61,13 @@ else
                 <MudText Typo="Typo.caption" Class="mud-text-secondary"><code>@context.Detection.Slug</code></MudText>
             </MudTd>
             <MudTd DataLabel="Version">
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary">
+                <DzMetaChip Kind="version">
                     @context.Version.DisplayVersion
-                </MudChip>
+                </DzMetaChip>
             </MudTd>
             <MudTd DataLabel="Summary">@context.Version.ChangeSummary</MudTd>
             <MudTd DataLabel="Profile">
-                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.Version.WorkflowProfile</MudChip>
+                <DzMetaChip Kind="workflow">@context.Version.WorkflowProfile</DzMetaChip>
             </MudTd>
             <MudTd DataLabel="Changed sections">
                 @if (context.Version.ChangedSections.Count == 0)

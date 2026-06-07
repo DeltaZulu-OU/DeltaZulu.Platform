@@ -24,13 +24,20 @@
 
 <MudPaper Class="pa-3 mb-3" Elevation="1">
     <div class="d-flex align-center gap-3 flex-wrap">
-        <MudChipSet T="string" SelectionMode="SelectionMode.SingleSelection" SelectedValue="_changeFilter"
-                    SelectedValueChanged="OnChangeFilterChanged">
-            <MudChip T="string" Value="@("all")" Variant="Variant.Outlined" SelectedColor="Color.Primary">All (@_allChanges.Count)</MudChip>
-            <MudChip T="string" Value="@("mine")" Variant="Variant.Outlined" SelectedColor="Color.Primary">My changes</MudChip>
-            <MudChip T="string" Value="@("review")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Awaiting review</MudChip>
-            <MudChip T="string" Value="@("stale")" Variant="Variant.Outlined" SelectedColor="Color.Warning">Stale</MudChip>
-        </MudChipSet>
+        <div class="d-flex align-center gap-2 flex-wrap">
+            <DzFilterChip Value="all" Selected="@(_changeFilter == "all")" OnClick="@(() => OnChangeFilterChanged("all"))">
+                All (@_allChanges.Count)
+            </DzFilterChip>
+            <DzFilterChip Value="mine" Selected="@(_changeFilter == "mine")" OnClick="@(() => OnChangeFilterChanged("mine"))">
+                My changes
+            </DzFilterChip>
+            <DzFilterChip Value="review" Selected="@(_changeFilter == "review")" OnClick="@(() => OnChangeFilterChanged("review"))">
+                Awaiting review
+            </DzFilterChip>
+            <DzFilterChip Value="stale" Selected="@(_changeFilter == "stale")" OnClick="@(() => OnChangeFilterChanged("stale"))">
+                Stale
+            </DzFilterChip>
+        </div>
         <MudSpacer />
         <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Add"

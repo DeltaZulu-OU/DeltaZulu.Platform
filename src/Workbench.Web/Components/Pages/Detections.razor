@@ -30,13 +30,20 @@
                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
                   Immediate="true" DebounceInterval="200" Class="flex-grow-1" Style="max-width: 360px;"
                   T="string" />
-    <MudChipSet T="string" SelectionMode="SelectionMode.SingleSelection" SelectedValue="_lifecycleFilter"
-                SelectedValueChanged="OnLifecycleFilterChanged">
-        <MudChip T="string" Value="@("all")" Variant="Variant.Outlined" SelectedColor="Color.Primary">All (@_detections.Count)</MudChip>
-        <MudChip T="string" Value="@("Conceived")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Conceived (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Conceived))</MudChip>
-        <MudChip T="string" Value="@("Accepted")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Accepted (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Accepted))</MudChip>
-        <MudChip T="string" Value="@("Deprecated")" Variant="Variant.Outlined" SelectedColor="Color.Primary">Deprecated (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Deprecated))</MudChip>
-    </MudChipSet>
+    <div class="d-flex align-center gap-2 flex-wrap">
+        <DzFilterChip Value="all" Selected="@(_lifecycleFilter == "all")" OnClick="@(() => OnLifecycleFilterChanged("all"))">
+            All (@_detections.Count)
+        </DzFilterChip>
+        <DzFilterChip Value="Conceived" Selected="@(_lifecycleFilter == "Conceived")" OnClick="@(() => OnLifecycleFilterChanged("Conceived"))">
+            Conceived (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Conceived))
+        </DzFilterChip>
+        <DzFilterChip Value="Accepted" Selected="@(_lifecycleFilter == "Accepted")" OnClick="@(() => OnLifecycleFilterChanged("Accepted"))">
+            Accepted (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Accepted))
+        </DzFilterChip>
+        <DzFilterChip Value="Deprecated" Selected="@(_lifecycleFilter == "Deprecated")" OnClick="@(() => OnLifecycleFilterChanged("Deprecated"))">
+            Deprecated (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Deprecated))
+        </DzFilterChip>
+    </div>
 </div>
 
 @if (_loading)
