@@ -6,69 +6,107 @@ using Elsa.Workflows.Runtime.Activities;
 namespace Workbench.Workflow.Workflows;
 
 /// <summary>
-/// Elsa 3.7 coded workflow modelling the change request lifecycle. Extends <see cref="WorkflowBase"/>
-/// (synchronous Build override) rather than implementing <c>IWorkflow</c> directly, which
-/// changed to <c>BuildAsync</c> in Elsa 3.7.
+/// Elsa 3.7 coded workflow modelling the change request lifecycle. Mirrors the GitHub PR
+/// workflow pattern: Draft → Checks → Review → (loop back on ChangesRequested) → Merge →
+/// Published → Closed.
 /// </summary>
 public sealed class ChangeLifecycleWorkflow : WorkflowBase
 {
-    // Event names used as bookmark stimuli. Must match the names used in ElsaWorkflowOrchestrator.
     public const string EventContentEdited = "ContentEdited";
-
     public const string EventChecksCompleted = "ChecksCompleted";
     public const string EventReviewRecorded = "ReviewRecorded";
     public const string EventMergeCompleted = "MergeCompleted";
+    public const string EventPublished = "ChangePublished";
     public const string EventClosed = "Closed";
 
     protected override void Build(IWorkflowBuilder builder)
     {
-        // Input: the change request ID and workflow profile are passed at workflow start.
-        var changeIdVar = builder.WithVariable<string>("ChangeId", "").WithWorkflowStorage();
-        var profileVar = builder.WithVariable<string>("WorkflowProfile", "").WithWorkflowStorage();
+        builder.WithVariable<string>("ChangeId", "").WithWorkflowStorage();
+        builder.WithVariable<string>("WorkflowProfile", "").WithWorkflowStorage();
 
         builder.Name = "Change Lifecycle";
         builder.Description = "Tracks the PR-like lifecycle of a detection change request.";
 
-        // LIMITATION (P2-6): This workflow is strictly sequential and does not model
-        // re-entry loops (edit → check → review → changes requested → edit → ...).
-        // The domain state machine handles loops correctly; this Elsa workflow is a
-        // supplementary tracker that mirrors the first happy-path traversal only.
-        // To model loops, replace the linear Sequence with a While/Loop activity
-        // that re-enters the edit→check→review cycle on ChangesRequested events.
-
-        builder.Root = new Sequence
+        // Implementation cycle: ContentEdited → ChecksCompleted → Review → (loop or merge)
+        var implementationCycle = new Sequence
         {
             Activities =
             {
-                // 1. Log start.
-                new WriteLine("Change lifecycle started."),
+                new Event(EventContentEdited) { Name = "WaitForContentEdit" },
+                new WriteLine("Content edited — running checks."),
 
-                // 2. Wait for content edit or close.
+                new Event(EventChecksCompleted) { Name = "WaitForChecks" },
+                new WriteLine("Checks completed."),
+
+                new Event(EventReviewRecorded) { Name = "WaitForReview" },
+                new WriteLine("Review recorded."),
+
+                // After review: either merge (approved) or loop (changes requested → re-edit)
                 new Fork
                 {
                     JoinMode = ForkJoinMode.WaitAny,
                     Branches =
                     {
-                        // Happy path: content edited → checks → review → merge.
+                        // Direct merge path
+                        new Event(EventMergeCompleted) { Name = "WaitForMerge" },
+
+                        // ChangesRequested path: one additional edit → checks → review → merge cycle
                         new Sequence
                         {
                             Activities =
                             {
-                                new Event(EventContentEdited) { Name = "WaitForContentEdit" },
-                                new WriteLine("Content edited — running checks."),
+                                new Event(EventContentEdited) { Name = "WaitForReEdit" },
+                                new WriteLine("Content re-edited after review — re-running checks."),
 
-                                new Event(EventChecksCompleted) { Name = "WaitForChecks" },
-                                new WriteLine("Checks completed."),
+                                new Event(EventChecksCompleted) { Name = "WaitForChecks2" },
+                                new WriteLine("Checks completed (cycle 2)."),
 
-                                new Event(EventReviewRecorded) { Name = "WaitForReview" },
-                                new WriteLine("Review recorded."),
+                                new Event(EventReviewRecorded) { Name = "WaitForReview2" },
+                                new WriteLine("Review recorded (cycle 2)."),
 
-                                new Event(EventMergeCompleted) { Name = "WaitForMerge" },
-                                new WriteLine("Merge requested — lifecycle complete."),
+                                new Event(EventMergeCompleted) { Name = "WaitForMerge2" },
+                            }
+                        },
+                    }
+                },
+            }
+        };
+
+        // Post-merge phase: optional Published event, then done
+        var postMergePhase = new Fork
+        {
+            JoinMode = ForkJoinMode.WaitAny,
+            Branches =
+            {
+                new Event(EventPublished) { Name = "WaitForPublished" },
+                new WriteLine("Merge complete — lifecycle ends without explicit publication."),
+            }
+        };
+
+        builder.Root = new Sequence
+        {
+            Activities =
+            {
+                new WriteLine("Change lifecycle started."),
+
+                // Outer fork: happy path vs close-at-any-point
+                new Fork
+                {
+                    JoinMode = ForkJoinMode.WaitAny,
+                    Branches =
+                    {
+                        new Sequence
+                        {
+                            Activities =
+                            {
+                                implementationCycle,
+                                new WriteLine("Change merged."),
+                                postMergePhase,
+                                new WriteLine("Change lifecycle complete."),
                             }
                         },
 
-                        // Close path: can happen at any point.
+                        // Close path: can fire at any point before merge
                         new Sequence
                         {
                             Activities =

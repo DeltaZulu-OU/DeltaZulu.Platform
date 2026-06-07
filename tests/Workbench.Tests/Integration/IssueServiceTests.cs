@@ -23,7 +23,7 @@ public sealed class IssueServiceTests : IDisposable
             var svc = _host.Resolve<IssueService>(scope);
             var issue = await svc.CreateIssueAsync("REQ-001", "Tune sign-in detection", IssueType.Request, ct: TestContext.CancellationToken);
             id = issue.Id;
-            Assert.AreEqual(IssueStatus.Open, issue.Status);
+            Assert.AreEqual(IssueStatus.New, issue.Status);
         }
 
         using (var scope = _host.CreateScope())
@@ -104,7 +104,7 @@ public sealed class IssueServiceTests : IDisposable
         using (var scope = _host.CreateScope())
         {
             var svc = _host.Resolve<IssueService>(scope);
-            await svc.LinkExternalCaseAsync(id, "flowintel", "FI-99", "https://flowintel.local/case/99", TestContext.CancellationToken);
+            await svc.LinkExternalCaseAsync(id, "flowintel", "FI-99", "https://flowintel.local/case/99", ct: TestContext.CancellationToken);
         }
 
         using (var scope = _host.CreateScope())

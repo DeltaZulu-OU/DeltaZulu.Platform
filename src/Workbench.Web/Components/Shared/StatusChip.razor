@@ -28,6 +28,7 @@
                 Domain.Enums.ChangeStatus.ChangesRequested => "error",
                 Domain.Enums.ChangeStatus.ReadyToAccept => "success",
                 Domain.Enums.ChangeStatus.Merged => "dark",
+                Domain.Enums.ChangeStatus.Published => "success",
                 Domain.Enums.ChangeStatus.Closed => "muted",
                 _ => "neutral",
             };
@@ -37,10 +38,18 @@
             _text = IssueStatus.Value.ToString();
             _tone = IssueStatus.Value switch
             {
-                Domain.Enums.IssueStatus.Open => "info",
-                Domain.Enums.IssueStatus.InProgress => "warning",
+                Domain.Enums.IssueStatus.New => "neutral",
+                Domain.Enums.IssueStatus.NeedsInfo => "warning",
+                Domain.Enums.IssueStatus.Triaged => "info",
+                Domain.Enums.IssueStatus.SanitizationRequired => "error",
+                Domain.Enums.IssueStatus.Rejected => "muted",
+                Domain.Enums.IssueStatus.Backlog => "neutral",
+                Domain.Enums.IssueStatus.Ready => "info",
                 Domain.Enums.IssueStatus.Blocked => "error",
-                Domain.Enums.IssueStatus.Resolved => "success",
+                Domain.Enums.IssueStatus.InProgress => "warning",
+                Domain.Enums.IssueStatus.InReview => "warning",
+                Domain.Enums.IssueStatus.Merged => "success",
+                Domain.Enums.IssueStatus.Published => "dark",
                 Domain.Enums.IssueStatus.Closed => "muted",
                 _ => "neutral",
             };

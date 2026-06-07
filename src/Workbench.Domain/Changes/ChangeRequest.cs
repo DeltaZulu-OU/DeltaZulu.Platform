@@ -355,9 +355,18 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
         UpdatedAt = now;
     }
 
+    public void MarkPublished(DateTimeOffset now)
+    {
+        if (Status != ChangeStatus.Merged)
+            throw new DomainException("change.publish_requires_merged",
+                "Only a merged change can be marked as published.");
+        Status = ChangeStatus.Published;
+        UpdatedAt = now;
+    }
+
     public void Close(string reason, DateTimeOffset now)
     {
-        if (Status == ChangeStatus.Merged)
+        if (Status is ChangeStatus.Merged or ChangeStatus.Published)
             throw new DomainException("change.close_after_merge", "A merged change cannot be closed.");
         if (Status == ChangeStatus.Closed) return;
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
@@ -368,7 +377,7 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
 
     private void EnsureMutable()
     {
-        if (Status is ChangeStatus.Merged or ChangeStatus.Closed)
+        if (Status is ChangeStatus.Merged or ChangeStatus.Published or ChangeStatus.Closed)
             throw new DomainException("change.immutable",
                 $"Change is in terminal state {Status} and cannot be modified.");
     }

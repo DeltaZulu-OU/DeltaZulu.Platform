@@ -26,4 +26,7 @@ public enum ChangeStatus
 
     /// <summary>Closed without merge.</summary>
     Closed = 6,
+
+    /// <summary>Detection library synchronised with accepted content after merge.</summary>
+    Published = 7,
 }

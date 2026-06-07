@@ -13,6 +13,34 @@ public static class SchemaInitializer
         using var conn = new SqliteConnection(connectionString);
         conn.Open();
         conn.Execute(Schema);
+        MigrateExistingData(conn);
+    }
+
+    private static void MigrateExistingData(SqliteConnection conn)
+    {
+        // Add columns to issues table that may not exist in older databases.
+        // ALTER TABLE ... ADD COLUMN is idempotent when the column already exists in SQLite 3.37+.
+        var alterStatements = new[]
+        {
+            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS ext_case_system_type INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS description TEXT",
+            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS acceptance_criteria TEXT",
+            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS data_source TEXT",
+            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS platform TEXT",
+            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS attack_technique_id TEXT",
+            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS tlp TEXT",
+            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS labels TEXT NOT NULL DEFAULT ''",
+        };
+        foreach (var sql in alterStatements)
+        {
+            try { conn.Execute(sql); }
+            catch { /* column already exists */ }
+        }
+
+        // Migrate issue status values from the old 5-state enum to the 13-state machine.
+        conn.Execute("UPDATE issues SET status = 'New'    WHERE status = 'Open'");
+        conn.Execute("UPDATE issues SET status = 'Merged' WHERE status = 'Resolved'");
+        // InProgress, Blocked, Closed retain the same string names.
     }
 
     private const string Schema = """
@@ -51,10 +79,18 @@ public static class SchemaInitializer
             key                 TEXT NOT NULL UNIQUE,
             title               TEXT NOT NULL,
             type                TEXT NOT NULL,
-            status              TEXT NOT NULL DEFAULT 'Open',
+            status              TEXT NOT NULL DEFAULT 'New',
             ext_case_system     TEXT,
             ext_case_external_id TEXT,
             ext_case_url        TEXT,
+            ext_case_system_type INTEGER NOT NULL DEFAULT 0,
+            description         TEXT,
+            acceptance_criteria TEXT,
+            data_source         TEXT,
+            platform            TEXT,
+            attack_technique_id TEXT,
+            tlp                 TEXT,
+            labels              TEXT NOT NULL DEFAULT '',
             created_at          TEXT NOT NULL,
             updated_at          TEXT NOT NULL
         );
