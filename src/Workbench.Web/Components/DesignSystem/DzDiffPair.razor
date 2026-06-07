@@ -1,0 +1,18 @@
+<div class="dz-diff-pair @Class" @attributes="AdditionalAttributes">
+    <DzPanel Class="dz-diff-pair__side" Compact="true" Outlined="true" Elevation="0" Title="@LeftTitle" TitleTypo="Typo.subtitle2">
+        <DzCodeBlock Content="@LeftContent" Light="true" />
+    </DzPanel>
+
+    <DzPanel Class="dz-diff-pair__side" Compact="true" Outlined="true" Elevation="0" Title="@RightTitle" TitleTypo="Typo.subtitle2">
+        <DzCodeBlock Content="@RightContent" Light="true" />
+    </DzPanel>
+</div>
+
+@code {
+    [Parameter] public string LeftTitle { get; set; } = "Accepted";
+    [Parameter] public string RightTitle { get; set; } = "Draft";
+    [Parameter] public string? LeftContent { get; set; }
+    [Parameter] public string? RightContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+}

@@ -1,0 +1,34 @@
+<MudChip T="string"
+         Size="@Size"
+         Variant="Variant.Filled"
+         Class="@ChipClass"
+         Icon="@Icon"
+         @attributes="AdditionalAttributes">
+    @Label
+</MudChip>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Tone { get; set; } = "neutral";
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public Size Size { get; set; } = Size.Small;
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string ChipClass => string.Join(" ", new[]
+    {
+        "dz-chip",
+        "dz-status-chip",
+        Tone switch
+        {
+            "success" => "dz-status-chip--success",
+            "warning" => "dz-status-chip--warning",
+            "error" => "dz-status-chip--error",
+            "info" => "dz-status-chip--info",
+            "dark" => "dz-status-chip--dark",
+            "muted" => "dz-status-chip--muted",
+            _ => "dz-status-chip--neutral"
+        },
+        Class
+    }.Where(static value => !string.IsNullOrWhiteSpace(value)));
+}

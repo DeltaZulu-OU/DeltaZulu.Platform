@@ -1,0 +1,189 @@
+From 2060d74c4ce112ba921770aa023e4a386e11c05c Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 7 Jun 2026 07:34:07 +0000
+Subject: [PATCH] Move operational stats cards from Settings to Home page
+
+The four summary cards (Detections, Open changes, Accepted versions,
+Failed checks) provide a common operational picture and belong on the
+Home dashboard, not the Settings page.
+
+https://claude.ai/code/session_011CDcviTHr8nDCP1LV9qLXX
+---
+ src/Workbench.Web/Components/Pages/Home.razor | 47 ++++++++++++++++-
+ .../Components/Pages/Settings.razor           | 52 -------------------
+ 2 files changed, 46 insertions(+), 53 deletions(-)
+
+diff --git a/src/Workbench.Web/Components/Pages/Home.razor b/src/Workbench.Web/Components/Pages/Home.razor
+index 99a04f3..f611244 100644
+--- a/src/Workbench.Web/Components/Pages/Home.razor
++++ b/src/Workbench.Web/Components/Pages/Home.razor
+@@ -4,6 +4,7 @@
+ @using Workbench.Domain.Changes
+ @using Workbench.Domain.Detections
+ @using Workbench.Domain.Enums
++@inject DetectionContentService DetectionService
+ @inject ChangeService ChangeService
+ @inject VersionService VersionService
+ @inject PocUserContext UserContext
+@@ -22,6 +23,37 @@
+     return;
+ }
+ 
++<MudGrid Spacing="3" Class="mb-4">
++    <MudItem xs="6" md="3">
++        <MudPaper Class="pa-4 text-center" Elevation="1">
++            <MudIcon Icon="@Icons.Material.Outlined.Shield" Size="Size.Large" Style="color: var(--brand-slate);" />
++            <MudText Typo="Typo.h4" Class="mt-2" Style="font-weight: 700;">@_totalDetections</MudText>
++            <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Detections</MudText>
++        </MudPaper>
++    </MudItem>
++    <MudItem xs="6" md="3">
++        <MudPaper Class="pa-4 text-center" Elevation="1">
++            <MudIcon Icon="@Icons.Material.Outlined.EditNote" Size="Size.Large" Style="color: var(--color-info);" />
++            <MudText Typo="Typo.h4" Class="mt-2" Style="font-weight: 700;">@_openChanges</MudText>
++            <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Open changes</MudText>
++        </MudPaper>
++    </MudItem>
++    <MudItem xs="6" md="3">
++        <MudPaper Class="pa-4 text-center" Elevation="1">
++            <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Large" Style="color: var(--color-success);" />
++            <MudText Typo="Typo.h4" Class="mt-2" Style="font-weight: 700;">@_acceptedVersions</MudText>
++            <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Accepted versions</MudText>
++        </MudPaper>
++    </MudItem>
++    <MudItem xs="6" md="3">
++        <MudPaper Class="pa-4 text-center" Elevation="1">
++            <MudIcon Icon="@Icons.Material.Outlined.Error" Size="Size.Large" Style="color: var(--color-error);" />
++            <MudText Typo="Typo.h4" Class="mt-2" Style="font-weight: 700;">@_failedCheckChanges</MudText>
++            <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Changes with failed checks</MudText>
++        </MudPaper>
++    </MudItem>
++</MudGrid>
++
+ <MudGrid Spacing="3">
+     @* ── Needs my action ── *@
+     <MudItem xs="12" md="6">
+@@ -154,6 +186,10 @@
+     private IReadOnlyList<ChangeRequest> _awaitingReview = [];
+     private IReadOnlyList<ChangeRequest> _failedChecks = [];
+     private IReadOnlyList<DetectionVersion> _recentVersions = [];
++    private int _totalDetections;
++    private int _openChanges;
++    private int _acceptedVersions;
++    private int _failedCheckChanges;
+     private bool _loading = true;
+ 
+     protected override async Task OnInitializedAsync()
+@@ -165,13 +201,22 @@
+         var awaitingReviewTask = ChangeService.ListAwaitingMyReviewAsync(userId);
+         var failedChecksTask = ChangeService.ListWithFailedChecksAsync();
+         var recentVersionsTask = VersionService.ListRecentAsync(5);
++        var detectionsTask = DetectionService.ListAsync();
++        var allChangesTask = ChangeService.ListAsync();
++        var allVersionsTask = VersionService.ListRecentAsync(int.MaxValue);
+ 
+-        await Task.WhenAll(myChangesTask, awaitingReviewTask, failedChecksTask, recentVersionsTask);
++        await Task.WhenAll(myChangesTask, awaitingReviewTask, failedChecksTask, recentVersionsTask,
++            detectionsTask, allChangesTask, allVersionsTask);
+ 
+         _myChanges = myChangesTask.Result;
+         _awaitingReview = awaitingReviewTask.Result;
+         _failedChecks = failedChecksTask.Result;
+         _recentVersions = recentVersionsTask.Result;
++
++        _totalDetections = detectionsTask.Result.Count;
++        _openChanges = allChangesTask.Result.Count(c => c.Status is not ChangeStatus.Merged and not ChangeStatus.Closed);
++        _acceptedVersions = allVersionsTask.Result.Count;
++        _failedCheckChanges = _failedChecks.Count;
+         _loading = false;
+     }
+ }
+diff --git a/src/Workbench.Web/Components/Pages/Settings.razor b/src/Workbench.Web/Components/Pages/Settings.razor
+index 6e59430..de974e7 100644
+--- a/src/Workbench.Web/Components/Pages/Settings.razor
++++ b/src/Workbench.Web/Components/Pages/Settings.razor
+@@ -4,14 +4,10 @@
+ @using Workbench.Application.Abstractions
+ @using Workbench.Application.Services
+ @using Workbench.Domain.Common
+-@using Workbench.Domain.Enums
+ @using Workbench.Domain.Identifiers
+ @inject IConfiguration Configuration
+ @inject PocUserContext UserContext
+ @inject MergeReconciliationService MergeReconciliation
+-@inject DetectionContentService DetectionService
+-@inject ChangeService ChangeService
+-@inject VersionService VersionService
+ @inject ISnackbar Snackbar
+ 
+ <PageTitle>Settings</PageTitle>
+@@ -21,37 +17,6 @@
+     Current POC runtime configuration. Workflow engine and accepted content storage stay behind application abstractions.
+ </MudText>
+ 
+-<MudGrid Spacing="3" Class="mb-4">
+-    <MudItem xs="6" md="3">
+-        <MudPaper Class="pa-4 text-center" Elevation="1">
+-            <MudIcon Icon="@Icons.Material.Outlined.Shield" Size="Size.Large" Style="color: var(--brand-slate);" />
+-            <MudText Typo="Typo.h4" Class="mt-2" Style="font-weight: 700;">@_totalDetections</MudText>
+-            <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Detections</MudText>
+-        </MudPaper>
+-    </MudItem>
+-    <MudItem xs="6" md="3">
+-        <MudPaper Class="pa-4 text-center" Elevation="1">
+-            <MudIcon Icon="@Icons.Material.Outlined.EditNote" Size="Size.Large" Style="color: var(--color-info);" />
+-            <MudText Typo="Typo.h4" Class="mt-2" Style="font-weight: 700;">@_openChanges</MudText>
+-            <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Open changes</MudText>
+-        </MudPaper>
+-    </MudItem>
+-    <MudItem xs="6" md="3">
+-        <MudPaper Class="pa-4 text-center" Elevation="1">
+-            <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Large" Style="color: var(--color-success);" />
+-            <MudText Typo="Typo.h4" Class="mt-2" Style="font-weight: 700;">@_acceptedVersions</MudText>
+-            <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Accepted versions</MudText>
+-        </MudPaper>
+-    </MudItem>
+-    <MudItem xs="6" md="3">
+-        <MudPaper Class="pa-4 text-center" Elevation="1">
+-            <MudIcon Icon="@Icons.Material.Outlined.Error" Size="Size.Large" Style="color: var(--color-error);" />
+-            <MudText Typo="Typo.h4" Class="mt-2" Style="font-weight: 700;">@_failedCheckChanges</MudText>
+-            <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary);">Changes with failed checks</MudText>
+-        </MudPaper>
+-    </MudItem>
+-</MudGrid>
+-
+ <MudGrid Spacing="3">
+     <MudItem xs="12" md="6">
+         <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+@@ -183,11 +148,6 @@
+     private string? _lastRepairMessage;
+     private Severity _lastRepairSeverity = Severity.Info;
+ 
+-    private int _totalDetections;
+-    private int _openChanges;
+-    private int _acceptedVersions;
+-    private int _failedCheckChanges;
+-
+     private void SwitchUser(PocUserPersona persona)
+     {
+         UserContext.SwitchTo(persona);
+@@ -198,18 +158,6 @@
+         _useElsa = Configuration.GetValue<bool>("Workflow:UseElsa");
+         _repositoryPath = Configuration.GetValue<string>("AcceptedContent:RepositoryPath") ?? "accepted-content";
+ 
+-        var detections = await DetectionService.ListAsync();
+-        _totalDetections = detections.Count;
+-
+-        var allChanges = await ChangeService.ListAsync();
+-        _openChanges = allChanges.Count(c => c.Status is not ChangeStatus.Merged and not ChangeStatus.Closed);
+-
+-        var recentVersions = await VersionService.ListRecentAsync(int.MaxValue);
+-        _acceptedVersions = recentVersions.Count;
+-
+-        var failedChanges = await ChangeService.ListWithFailedChecksAsync();
+-        _failedCheckChanges = failedChanges.Count;
+-
+        await LoadMergeIntentsAsync();
+    }
+
+    private async Task LoadMergeIntentsAsync()

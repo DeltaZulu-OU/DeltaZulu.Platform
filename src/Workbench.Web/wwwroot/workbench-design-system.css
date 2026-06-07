@@ -1,38 +1,6 @@
 /* ============================================================
-   Detection Content Workbench — product UI design-system layer
-
-   Purpose:
-   - Keep Workbench-specific layout and component patterns out of app.css.
-   - Avoid broad MudBlazor overrides where a scoped Workbench class is enough.
-   - Preserve DeltaZulu rules: orange is action-only, slate is structural,
-     Plex Sans is product UI, Plex Mono is technical data.
+   Workbench product UI layer — scoped DeltaZulu components
    ============================================================ */
-
-/* --- Text utilities ------------------------------------------------------ */
-
-.dz-text-secondary {
-    color: var(--color-text-secondary) !important;
-}
-
-.dz-text-muted {
-    color: var(--color-text-muted) !important;
-}
-
-.dz-text-mono {
-    font-family: var(--font-family-mono) !important;
-}
-
-.dz-eyebrow {
-    font-family: var(--font-family-sans);
-    font-size: var(--font-size-label);
-    line-height: var(--line-height-label);
-    letter-spacing: var(--letter-spacing-label);
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--brand-slate);
-}
-
-/* --- Page anatomy ------------------------------------------------------- */
 
 .dz-page-header {
     display: flex;
@@ -42,38 +10,42 @@
     margin-bottom: var(--space-5);
 }
 
-.dz-page-header__main {
+.dz-page-header__content {
     min-width: 0;
 }
 
+.dz-page-header__eyebrow {
+    display: inline-block;
+    margin-bottom: var(--space-1);
+}
+
 .dz-page-header__title {
-    margin: 0;
-    font-family: var(--font-family-sans);
-    font-size: var(--font-size-h3);
-    line-height: var(--line-height-h3);
+    font-weight: 700 !important;
     letter-spacing: var(--letter-spacing-h3);
-    font-weight: 700;
-    color: var(--color-text-primary);
+    margin: 0;
 }
 
 .dz-page-header__description {
-    margin-top: var(--space-1);
     max-width: 720px;
-    color: var(--color-text-secondary);
+    color: var(--color-text-secondary) !important;
+    margin-top: var(--space-1) !important;
 }
 
+.dz-page-header__metadata,
 .dz-page-header__actions {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: var(--space-2);
     flex-wrap: wrap;
+    gap: var(--space-2);
 }
 
-/* --- Layout / surface roles -------------------------------------------- */
+.dz-page-header__metadata {
+    margin-top: var(--space-2);
+}
 
-.dz-page-section {
-    margin-bottom: var(--space-5);
+.dz-page-header__actions {
+    justify-content: flex-end;
+    flex-shrink: 0;
 }
 
 .dz-toolbar {
@@ -85,7 +57,7 @@
     margin-bottom: var(--space-3);
 }
 
-.dz-toolbar__filters,
+.dz-toolbar__content,
 .dz-toolbar__actions {
     display: flex;
     align-items: center;
@@ -93,122 +65,170 @@
     flex-wrap: wrap;
 }
 
-.dz-surface,
-.dz-panel,
+.dz-toolbar__content {
+    flex: 1 1 auto;
+    min-width: 240px;
+}
+
+.dz-toolbar__actions {
+    justify-content: flex-end;
+}
+
 .dz-card,
+.dz-panel,
 .dz-table-shell,
-.dz-dialog-surface {
-    background: var(--color-surface-primary);
+.dz-empty-state {
+    border-radius: var(--radius-lg) !important;
     border: 1px solid var(--color-border-default);
+    background: var(--color-surface-primary);
     box-shadow: var(--shadow-sm);
 }
 
-.dz-card {
-    border-radius: var(--radius-lg);
+.dz-panel {
     padding: var(--space-5);
 }
 
-.dz-panel {
-    border-radius: var(--radius-md);
-    padding: var(--space-4);
+.dz-panel--compact {
+    padding: var(--space-3);
+}
+
+.dz-panel__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+.dz-panel__heading {
+    min-width: 0;
+}
+
+.dz-panel__title {
+    font-weight: 700 !important;
+    margin: 0;
+}
+
+.dz-panel__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.dz-panel__body {
+    min-width: 0;
+}
+
+.dz-chip {
+    border-radius: var(--radius-pill) !important;
+    font-weight: 600 !important;
+    font-size: var(--font-size-label) !important;
+    letter-spacing: 0.02em;
+}
+
+.dz-meta-chip {
+    background: transparent !important;
+    border-color: rgba(39, 86, 104, 0.25) !important;
+    color: var(--brand-slate) !important;
+}
+
+.dz-meta-chip--version {
+    background: var(--color-surface-muted) !important;
+    border-color: transparent !important;
+    color: var(--brand-slate) !important;
+    font-family: var(--font-family-mono) !important;
+}
+
+.dz-meta-chip--actor,
+.dz-meta-chip--workflow,
+.dz-meta-chip--file {
+    background: transparent !important;
+    color: var(--color-text-secondary) !important;
+}
+
+.dz-filter-chip {
+    border-color: var(--color-border-default) !important;
+    color: var(--color-text-secondary) !important;
+    background: transparent !important;
+}
+
+.dz-filter-chip:hover {
+    border-color: var(--color-border-strong) !important;
+    background: rgba(39, 86, 104, 0.06) !important;
+}
+
+.dz-filter-chip--selected {
+    border-color: rgba(39, 86, 104, 0.32) !important;
+    background: rgba(39, 86, 104, 0.10) !important;
+    color: var(--brand-slate) !important;
+}
+
+.dz-status-chip--success {
+    background: var(--color-success-bg) !important;
+    color: var(--color-success) !important;
+}
+
+.dz-status-chip--warning {
+    background: var(--color-warning-bg) !important;
+    color: var(--color-warning) !important;
+}
+
+.dz-status-chip--error {
+    background: var(--color-error-bg) !important;
+    color: var(--color-error) !important;
+}
+
+.dz-status-chip--info {
+    background: var(--color-surface-muted) !important;
+    color: var(--brand-slate) !important;
+}
+
+.dz-status-chip--neutral {
+    background: var(--color-divider) !important;
+    color: var(--color-text-secondary) !important;
+}
+
+.dz-status-chip--dark {
+    background: var(--brand-ink) !important;
+    color: var(--color-text-inverse) !important;
+}
+
+.dz-status-chip--muted {
+    background: var(--color-divider) !important;
+    color: var(--color-text-muted) !important;
 }
 
 .dz-table-shell {
-    border-radius: var(--radius-md);
     overflow: hidden;
 }
 
-.dz-dialog-surface {
-    border-radius: var(--radius-md);
-    padding: var(--space-5);
+.dz-table-shell .mud-table {
+    box-shadow: none;
 }
-
-.dz-compact-panel {
-    border-radius: var(--radius-sm);
-    padding: var(--space-3);
-    background: var(--color-surface-primary);
-    border: 1px solid var(--color-border-default);
-}
-
-/* --- Chips and badges --------------------------------------------------- */
-
-.dz-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    border-radius: var(--radius-pill);
-    font-size: var(--font-size-label);
-    line-height: var(--line-height-label);
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-}
-
-.dz-chip--meta {
-    background: var(--color-surface-muted);
-    color: var(--brand-slate);
-    border: 1px solid rgba(39, 86, 104, 0.18);
-}
-
-.dz-chip--neutral {
-    background: var(--color-divider);
-    color: var(--color-text-secondary);
-    border: 1px solid transparent;
-}
-
-.dz-chip--filter {
-    background: transparent;
-    color: var(--color-text-primary);
-    border: 1px solid var(--color-border-default);
-}
-
-.dz-chip--filter-selected {
-    background: rgba(39, 86, 104, 0.10);
-    color: var(--brand-slate);
-    border: 1px solid rgba(39, 86, 104, 0.24);
-}
-
-.dz-chip--version {
-    background: var(--brand-ink);
-    color: var(--color-text-inverse);
-    border: 1px solid var(--brand-ink);
-}
-
-/* --- Operational data tables ------------------------------------------- */
-
-.dz-data-table {
-    width: 100%;
-}
-
-.dz-data-table .mud-table-head th {
-    color: var(--brand-slate);
-}
-
-.dz-row-action {
-    color: var(--brand-slate) !important;
-    font-weight: 600 !important;
-    text-transform: none !important;
-}
-
-/* --- Code, file, and comparison surfaces -------------------------------- */
 
 .dz-code-block {
     font-family: var(--font-family-mono);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     line-height: 1.55;
-    white-space: pre-wrap;
-    overflow: auto;
-    max-height: 420px;
-    padding: var(--space-3);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--color-border-default);
     background: var(--brand-ink);
     color: var(--color-text-inverse);
+    border-radius: var(--radius-sm);
+    padding: 18px 20px;
+    overflow: auto;
+    max-height: 480px;
+}
+
+.dz-code-block--wrap {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 
 .dz-code-block--light {
     background: var(--color-surface-secondary);
     color: var(--color-text-primary);
+    border: 1px solid var(--color-border-default);
 }
 
 .dz-diff-pair {
@@ -217,13 +237,43 @@
     gap: var(--space-3);
 }
 
-.dz-diff-pair__label {
-    margin-bottom: var(--space-1);
-    color: var(--color-text-secondary);
-    font-weight: 600;
+.dz-diff-pair__side {
+    min-width: 0;
 }
 
-/* --- Gate and recovery patterns ---------------------------------------- */
+.dz-empty-state {
+    text-align: center;
+}
+
+.dz-empty-state__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+}
+
+.dz-empty-state__icon {
+    color: var(--brand-slate) !important;
+    opacity: 0.72;
+}
+
+.dz-empty-state__title {
+    font-weight: 700 !important;
+}
+
+.dz-empty-state__description {
+    max-width: 560px;
+    color: var(--color-text-secondary) !important;
+}
+
+.dz-empty-state__actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin-top: var(--space-2);
+}
 
 .dz-gate-row {
     display: flex;
@@ -234,42 +284,52 @@
     background: var(--color-warning-bg);
 }
 
-.dz-gate-row__message {
-    flex: 1;
+.dz-confirm-dialog__header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
 }
 
-.dz-recovery-guidance {
-    color: var(--color-text-secondary);
-    max-width: 760px;
+.dz-confirm-dialog__title {
+    font-weight: 700 !important;
 }
 
-/* --- Empty / loading states -------------------------------------------- */
-
-.dz-empty-state {
-    text-align: center;
-    padding: var(--space-6);
-    color: var(--color-text-muted);
+.dz-confirm-dialog__message {
+    color: var(--color-text-secondary) !important;
+    margin-top: var(--space-1) !important;
 }
 
-.dz-empty-state__title {
-    color: var(--color-text-primary);
-    font-weight: 600;
-    margin-bottom: var(--space-1);
+.dz-confirm-dialog__body {
+    margin-top: var(--space-3);
 }
 
-.dz-empty-state__description {
-    color: var(--color-text-muted);
+.dz-confirm-dialog__icon {
+    margin-top: 2px;
 }
 
-/* --- Responsive behaviour ---------------------------------------------- */
+.dz-confirm-dialog__icon--warning {
+    color: var(--color-warning) !important;
+}
+
+.dz-confirm-dialog__icon--error {
+    color: var(--color-error) !important;
+}
+
+.dz-confirm-dialog__icon--success {
+    color: var(--color-success) !important;
+}
 
 @media (max-width: 720px) {
-    .dz-page-header {
-        flex-direction: column;
+    .dz-page-header,
+    .dz-panel__header,
+    .dz-toolbar {
         align-items: stretch;
+        flex-direction: column;
     }
 
-    .dz-page-header__actions {
+    .dz-page-header__actions,
+    .dz-panel__actions,
+    .dz-toolbar__actions {
         justify-content: flex-start;
     }
 
