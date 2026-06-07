@@ -30,55 +30,23 @@
 <MudBreadcrumbs Items="_breadcrumbs" Class="mb-2" />
 
 @* ── Header ── *@
-<MudGrid Spacing="3" Class="mb-4">
-    <MudItem xs="12" md="8">
-        <span class="eyebrow">Change</span>
-        <MudText Typo="Typo.h5" Class="mt-1" Style="font-weight: 700;">
-            <code style="font-size: 0.85em;">@_change.Key</code> @_change.Title
-        </MudText>
-        <div class="d-flex gap-2 mt-2 align-center flex-wrap">
-            <StatusChip ChangeStatus="_change.Status" />
-            <DzMetaChip Kind="workflow" Title="@ProfileDescription(_change.WorkflowProfileId)">
-                @GovernanceLabel(_change.WorkflowProfileId)
-            </DzMetaChip>
-            <DzMetaChip Kind="actor">
-                Acting as @UserContext.CurrentUser.DisplayName
-            </DzMetaChip>
-            @if (_change.IsStale)
-            {
-                <DzStatusChip Label="Stale" Tone="warning" />
-            }
-        </div>
-        @if (_linkedIssue is not null)
+<DzPageHeader Eyebrow="Change"
+              Title="@($"{_change.Key} {_change.Title}")"
+              Description="@ChangeReadinessSummary()">
+    <Metadata>
+        <StatusChip ChangeStatus="_change.Status" />
+        <DzMetaChip Kind="workflow" Title="@ProfileDescription(_change.WorkflowProfileId)">
+            @GovernanceLabel(_change.WorkflowProfileId)
+        </DzMetaChip>
+        <DzMetaChip Kind="actor">
+            Acting as @UserContext.CurrentUser.DisplayName
+        </DzMetaChip>
+        @if (_change.IsStale)
         {
-            <div class="d-flex align-center gap-2 mt-2">
-                <MudIcon Icon="@Icons.Material.Outlined.Link" Size="Size.Small" Class="dz-inline-icon" />
-                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                           OnClick="@(() => Nav.NavigateTo($"/issues/{_linkedIssue.Id}"))"
-                           Class="dz-link-button">
-                    Issue: <code>@_linkedIssue.Key</code> @_linkedIssue.Title
-                </MudButton>
-            </div>
+            <DzStatusChip Label="Stale" Tone="warning" />
         }
-        @if (!IsTerminal && _readiness is not null)
-        {
-            <MudText Typo="Typo.body2" Class="mt-2 text-secondary">
-                @if (_readiness.IsReady)
-                {
-                    <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small"
-                             Class="dz-inline-icon dz-gate-ready__icon" />
-                    <span>Ready to accept</span>
-                }
-                else
-                {
-                    <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small"
-                             Class="dz-inline-icon dz-gate-row__icon--warning" />
-                    <span>@_readiness.UnmetGates.First().Message</span>
-                }
-            </MudText>
-        }
-    </MudItem>
-    <MudItem xs="12" md="4" Class="d-flex justify-end align-start gap-2">
+    </Metadata>
+    <Actions>
         @if (!IsTerminal)
         {
             <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="RunChecks"
@@ -90,8 +58,20 @@
                 Close
             </MudButton>
         }
-    </MudItem>
-</MudGrid>
+    </Actions>
+</DzPageHeader>
+
+@if (_linkedIssue is not null)
+{
+    <div class="dz-linked-issue mb-4">
+        <MudIcon Icon="@Icons.Material.Outlined.Link" Size="Size.Small" Class="dz-inline-icon" />
+        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                   OnClick="@(() => Nav.NavigateTo($"/issues/{_linkedIssue.Id}"))"
+                   Class="dz-link-button">
+            Issue: <code>@_linkedIssue.Key</code> @_linkedIssue.Title
+        </MudButton>
+    </div>
+}
 
 @* ── Stale base warning ── *@
 @if (_change.IsStale && !IsTerminal)
@@ -689,6 +669,23 @@
     {
         _newPath = path;
         _newContentType = InferContentType(path);
+    }
+
+    private string ChangeReadinessSummary()
+    {
+        if (IsTerminal)
+        {
+            return "This change is completed and retained for review.";
+        }
+
+        if (_readiness is null)
+        {
+            return "Readiness has not been evaluated yet.";
+        }
+
+        return _readiness.IsReady
+            ? "Ready to accept."
+            : _readiness.UnmetGates.FirstOrDefault()?.Message ?? "Acceptance gates are not yet satisfied.";
     }
 
     private static string ProfileDescription(WorkflowProfileId id) => id switch
