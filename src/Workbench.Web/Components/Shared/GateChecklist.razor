@@ -6,31 +6,35 @@
     return;
 }
 
-<MudPaper Class="pa-4 mb-4" Elevation="1">
-    <span class="eyebrow">Acceptance readiness</span>
+<DzPanel Eyebrow="Acceptance readiness" Class="dz-gate-panel mb-4">
     @if (Readiness.IsReady)
     {
-        <MudAlert Severity="Severity.Success" Dense="true" Class="mt-3 mb-3">All gates satisfied. Ready to accept.</MudAlert>
+        <div class="dz-gate-ready">
+            <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small" Class="dz-gate-ready__icon" />
+            <MudText Typo="Typo.body2" Class="dz-gate-ready__text">
+                All gates satisfied. Ready to accept.
+            </MudText>
+        </div>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnAccept"
-                   Disabled="IsRunning" StartIcon="@Icons.Material.Outlined.CheckCircle">
+                   Disabled="IsRunning" StartIcon="@Icons.Material.Outlined.CheckCircle"
+                   Class="mt-3">
             Accept
         </MudButton>
     }
     else
     {
-        <div class="mt-3">
+        <div class="dz-gate-list">
             @foreach (var gate in Readiness.UnmetGates)
             {
-                <div class="d-flex align-center gap-3 mb-2 pa-2" style="border-radius: var(--radius-sm); background: var(--color-warning-bg);">
-                    <MudIcon Icon="@Icons.Material.Outlined.Cancel" Size="Size.Small"
-                             Style="color: var(--color-error);" />
-                    <MudText Typo="Typo.body2" Style="flex: 1;">@GateDisplayText(gate.Code, gate.Message)</MudText>
+                <div class="dz-gate-row">
+                    <MudIcon Icon="@GateIcon(gate.Code)" Size="Size.Small" Class="@GateIconClass(gate.Code)" />
+                    <MudText Typo="Typo.body2" Class="dz-gate-row__message">@GateDisplayText(gate.Code, gate.Message)</MudText>
                     @{ var action = GateAction(gate.Code); }
                     @if (action is not null)
                     {
                         <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
                                    OnClick="action.Value.Callback" Disabled="IsRunning"
-                                   Style="font-weight: 600; text-transform: none;">
+                                   Class="dz-link-button">
                             @action.Value.Label
                         </MudButton>
                     }
@@ -38,7 +42,7 @@
             }
         </div>
     }
-</MudPaper>
+</DzPanel>
 
 @code {
     [Parameter] public MergeReadiness? Readiness { get; set; }
@@ -58,6 +62,22 @@
         "gate.stale" => "A newer version was accepted since this change was opened.",
         "gate.terminal_state" => "This change has been completed.",
         _ => fallback,
+    };
+
+    private static string GateIcon(string code) => code switch
+    {
+        "gate.stale" => Icons.Material.Outlined.Update,
+        "gate.approval_missing" => Icons.Material.Outlined.HowToReg,
+        "gate.non_author_approval_missing" => Icons.Material.Outlined.SupervisorAccount,
+        "gate.no_checks" or "gate.checks_missing" => Icons.Material.Outlined.PlaylistAddCheck,
+        "gate.checks_not_passed" => Icons.Material.Outlined.ErrorOutline,
+        _ => Icons.Material.Outlined.Cancel,
+    };
+
+    private static string GateIconClass(string code) => code switch
+    {
+        "gate.checks_not_passed" => "dz-gate-row__icon dz-gate-row__icon--error",
+        _ => "dz-gate-row__icon dz-gate-row__icon--warning",
     };
 
     private (string Label, EventCallback Callback)? GateAction(string code) => code switch

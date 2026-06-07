@@ -450,3 +450,50 @@
 .dz-recovery-state {
     white-space: nowrap;
 }
+
+/* --- Change workspace gate checklist --- */
+
+.dz-gate-panel .dz-panel__body {
+    display: flex;
+    flex-direction: column;
+}
+
+.dz-gate-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.dz-gate-row__icon {
+    flex: 0 0 auto;
+}
+
+.dz-gate-row__icon--warning {
+    color: var(--color-warning) !important;
+}
+
+.dz-gate-row__icon--error {
+    color: var(--color-error) !important;
+}
+
+.dz-gate-row__message {
+    flex: 1 1 auto;
+    min-width: 180px;
+}
+
+.dz-gate-ready {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--color-success-bg);
+}
+
+.dz-gate-ready__icon {
+    color: var(--color-success) !important;
+}
+
+.dz-gate-ready__text {
+    color: var(--color-success) !important;
+}
