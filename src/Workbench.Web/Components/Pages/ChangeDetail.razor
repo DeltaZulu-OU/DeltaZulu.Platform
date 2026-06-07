@@ -37,45 +37,41 @@
         </MudText>
         <div class="d-flex gap-2 mt-2 align-center flex-wrap">
             <StatusChip ChangeStatus="_change.Status" />
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                     Style="color: var(--brand-slate); border-color: rgba(39,86,104,0.25);"
-                     Title="@ProfileDescription(_change.WorkflowProfileId)">
+            <DzMetaChip Kind="workflow" Title="@ProfileDescription(_change.WorkflowProfileId)">
                 @GovernanceLabel(_change.WorkflowProfileId)
-            </MudChip>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">
+            </DzMetaChip>
+            <DzMetaChip Kind="actor">
                 Acting as @UserContext.CurrentUser.DisplayName
-            </MudChip>
+            </DzMetaChip>
             @if (_change.IsStale)
             {
-                <MudChip T="string" Size="Size.Small" Style="background: var(--color-warning-bg); color: var(--color-warning);">
-                    Stale
-                </MudChip>
+                <DzStatusChip Label="Stale" Tone="warning" />
             }
         </div>
         @if (_linkedIssue is not null)
         {
             <div class="d-flex align-center gap-2 mt-2">
-                <MudIcon Icon="@Icons.Material.Outlined.Link" Size="Size.Small" Style="color: var(--color-text-secondary);" />
+                <MudIcon Icon="@Icons.Material.Outlined.Link" Size="Size.Small" Class="dz-inline-icon" />
                 <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
                            OnClick="@(() => Nav.NavigateTo($"/issues/{_linkedIssue.Id}"))"
-                           Class="px-0" Style="font-weight: 600; text-transform: none;">
+                           Class="dz-link-button">
                     Issue: <code>@_linkedIssue.Key</code> @_linkedIssue.Title
                 </MudButton>
             </div>
         }
         @if (!IsTerminal && _readiness is not null)
         {
-            <MudText Typo="Typo.body2" Class="mt-2" Style="color: var(--color-text-secondary);">
+            <MudText Typo="Typo.body2" Class="mt-2 text-secondary">
                 @if (_readiness.IsReady)
                 {
                     <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small"
-                             Style="color: var(--color-success); vertical-align: middle;" />
+                             Class="dz-inline-icon dz-gate-ready__icon" />
                     <span>Ready to accept</span>
                 }
                 else
                 {
                     <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small"
-                             Style="color: var(--color-warning); vertical-align: middle;" />
+                             Class="dz-inline-icon dz-gate-row__icon--warning" />
                     <span>@_readiness.UnmetGates.First().Message</span>
                 }
             </MudText>
@@ -115,8 +111,8 @@
 <MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true" @ref="_tabs">
 
     @* ── Content tab ── *@
-    <MudTabPanel Text="Content" BadgeData="@_change.DraftFiles.Count" BadgeColor="Color.Primary">
-        <div class="ma-3">
+    <MudTabPanel Text="Content" BadgeData="@_change.DraftFiles.Count" BadgeColor="Color.Secondary">
+        <div class="dz-tab-body">
             @if (ChecksMayBeStale && !IsTerminal)
             {
                 <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
@@ -137,7 +133,7 @@
 
             @if (_showAddFile)
             {
-                <MudPaper Class="pa-3 mb-3" Elevation="0" Outlined="true">
+                <DzPanel Compact="true" Outlined="true" Elevation="0" Class="mb-3">
                     <MudGrid Spacing="2">
                         <MudItem xs="12" md="4">
                             <MudTextField Value="_newPath" ValueChanged="OnNewPathChanged" Label="Logical path" HelperText="e.g. detection.yaml, notes/investigation.md" T="string" />
@@ -158,29 +154,28 @@
                                        OnClick="SaveDraftFile">Save file</MudButton>
                         </MudItem>
                     </MudGrid>
-                </MudPaper>
+                </DzPanel>
             }
 
             @if (_change.DraftFiles.Count == 0)
             {
-                <MudAlert Severity="Severity.Info">No draft files yet. Add content to begin.</MudAlert>
+                <DzEmptyState Title="No draft files yet."
+                              Description="Add content to begin the change."
+                              Icon="@Icons.Material.Outlined.NoteAdd" />
             }
             else
             {
                 @foreach (var group in _change.DraftFiles.GroupBy(f => f.ContentType).OrderBy(g => g.Key))
                 {
-                    <MudText Typo="Typo.subtitle2" Class="mt-3 mb-1" Style="color: var(--color-text-secondary);">@group.Key</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="dz-file-group-title">@group.Key</MudText>
                     @foreach (var file in group)
                     {
                         <MudExpansionPanels Class="mb-2">
                             <MudExpansionPanel>
                                 <TitleContent>
-                                    <div class="d-flex align-center gap-2">
-                                        <MudIcon Icon="@Icons.Material.Outlined.InsertDriveFile" Size="Size.Small" />
-                                        <code>@file.Path.Value</code>
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@file.ContentType</MudChip>
-                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@file.SizeChars chars</MudText>
-                                    </div>
+                                    <DzFileHeader Path="@file.Path.Value"
+                                                  Kind="@file.ContentType.ToString()"
+                                                  Metadata="@($"{file.SizeChars} chars")" />
                                 </TitleContent>
                                 <ChildContent>
                                     @if (file.ContentType == DraftContentType.InvestigationNote)
@@ -193,11 +188,11 @@
                                     }
                                     else
                                     {
-                                        <pre style="white-space: pre-wrap; font-size: 0.85rem; max-height: 400px; overflow-y: auto;">@file.Content</pre>
+                                        <DzCodeBlock Content="@file.Content" Light="true" Compact="true" MaxHeightPx="400" />
                                     }
                                     @if (!IsTerminal)
                                     {
-                                        <div class="d-flex gap-2 mt-3">
+                                        <div class="dz-file-actions">
                                             <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Secondary"
                                                        StartIcon="@Icons.Material.Outlined.Edit"
                                                        OnClick="@(() => BeginEditFile(file))">
@@ -221,14 +216,16 @@
 
     @* ── Draft vs Accepted tab ── *@
     <MudTabPanel Text="Draft vs accepted" BadgeData="@_draftComparisons.Count(c => c.Status != DraftAcceptedComparisonStatus.Unchanged)" BadgeColor="Color.Warning">
-        <div class="ma-3">
+        <div class="dz-tab-body">
             @if (_draftComparisons.Count == 0)
             {
-                <MudAlert Severity="Severity.Info">No draft files to compare.</MudAlert>
+                <DzEmptyState Title="No draft files to compare."
+                              Description="Add or edit draft content before comparing it against accepted content."
+                              Icon="@Icons.Material.Outlined.Difference" />
             }
             else
             {
-                <MudText Typo="Typo.body2" Class="mb-3" Style="color: var(--color-text-secondary);">
+                <MudText Typo="Typo.body2" Class="dz-comparison-description">
                     Compares each draft file against the current accepted content for this detection.
                 </MudText>
                 @foreach (var comp in _draftComparisons)
@@ -236,10 +233,8 @@
                     <MudExpansionPanels Class="mb-2">
                         <MudExpansionPanel>
                             <TitleContent>
-                                <div class="d-flex align-center gap-2">
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@DraftComparisonColor(comp.Status)">
-                                        @comp.Status
-                                    </MudChip>
+                                <div class="d-flex align-center gap-2 flex-wrap">
+                                    <DzComparisonStatusChip Status="@comp.Status" />
                                     <code>@comp.LogicalPath</code>
                                 </div>
                             </TitleContent>
@@ -250,23 +245,11 @@
                                 }
                                 else
                                 {
-                                    <MudGrid Spacing="2">
-                                        <MudItem xs="12" md="6">
-                                            <MudText Typo="Typo.subtitle2" Class="mb-1" Style="color: var(--color-text-secondary);">Accepted</MudText>
-                                            @if (comp.AcceptedContent is null)
-                                            {
-                                                <MudAlert Severity="Severity.Info" Dense="true">No accepted version of this file exists yet.</MudAlert>
-                                            }
-                                            else
-                                            {
-                                                <pre style="white-space: pre-wrap; font-size: 0.8125rem; max-height: 400px; overflow-y: auto; background: var(--color-surface-secondary); padding: 0.75rem; border-radius: 4px;">@comp.AcceptedContent</pre>
-                                            }
-                                        </MudItem>
-                                        <MudItem xs="12" md="6">
-                                            <MudText Typo="Typo.subtitle2" Class="mb-1" Style="color: var(--color-text-secondary);">Draft</MudText>
-                                            <pre style="white-space: pre-wrap; font-size: 0.8125rem; max-height: 400px; overflow-y: auto; background: var(--color-success-bg); padding: 0.75rem; border-radius: 4px;">@comp.DraftContent</pre>
-                                        </MudItem>
-                                    </MudGrid>
+                                    <DzDiffPair LeftTitle="Accepted"
+                                                RightTitle="Draft"
+                                                LeftContent="@comp.AcceptedContent"
+                                                RightContent="@comp.DraftContent"
+                                                MaxHeightPx="400" />
                                 }
                             </ChildContent>
                         </MudExpansionPanel>
@@ -278,7 +261,7 @@
 
     @* ── Validation tab ── *@
     <MudTabPanel Text="Validation" BadgeData="@_change.Checks.Count" BadgeColor="Color.Info">
-        <div class="ma-3">
+        <div class="dz-tab-body">
             @if (ChecksMayBeStale && !IsTerminal)
             {
                 <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
@@ -294,12 +277,12 @@
                 var passed = _change.Checks.Count(c => c.Status == CheckStatus.Passed);
                 var total = _change.Checks.Count;
                 var failed = _change.Checks.Count(c => c.Status == CheckStatus.Failed);
-                <div class="d-flex align-center gap-3 mb-3">
+                <div class="dz-change-summary">
                     <MudText Typo="Typo.body2">
                         @passed of @total check(s) passed
                         @if (failed > 0)
                         {
-                            <span style="color: var(--color-error);"> — @failed failure(s)</span>
+                            <span class="dz-change-summary__failure"> — @failed failure(s)</span>
                         }
                     </MudText>
                     @if (!IsTerminal)
@@ -315,42 +298,50 @@
 
             @if (_change.Checks.Count == 0)
             {
-                <MudAlert Severity="Severity.Info">No checks have been run yet.</MudAlert>
-                @if (!IsTerminal)
-                {
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Secondary"
-                               OnClick="RunChecks" Disabled="_running" Class="mt-2"
-                               StartIcon="@Icons.Material.Outlined.PlaylistAddCheck">
-                        Run checks
-                    </MudButton>
-                }
+                <DzEmptyState Title="No checks have been run yet."
+                              Description="Run checks to validate the draft content before acceptance."
+                              Icon="@Icons.Material.Outlined.PlaylistAddCheck">
+                    <Actions>
+                        @if (!IsTerminal)
+                        {
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Secondary"
+                                       OnClick="RunChecks" Disabled="_running"
+                                       StartIcon="@Icons.Material.Outlined.PlaylistAddCheck">
+                                Run checks
+                            </MudButton>
+                        }
+                    </Actions>
+                </DzEmptyState>
             }
             else
             {
-                <MudTable Items="_change.Checks.OrderByDescending(c => c.IsBlocking).ThenBy(c => c.Status)" Dense="true" T="CheckRun">
-                    <HeaderContent>
-                        <MudTh>Check</MudTh>
-                        <MudTh>Blocking</MudTh>
-                        <MudTh>Status</MudTh>
-                        <MudTh>Summary</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="Check"><code>@context.Name</code></MudTd>
-                        <MudTd DataLabel="Blocking">@(context.IsBlocking ? "Yes" : "No")</MudTd>
-                        <MudTd DataLabel="Status"><StatusChip CheckStatus="context.Status" /></MudTd>
-                        <MudTd DataLabel="Summary">
-                            <MudText Typo="Typo.body2">@context.Summary</MudText>
-                            @if (!string.IsNullOrWhiteSpace(context.LogsExcerpt))
-                            {
-                                <MudExpansionPanels Class="mt-1">
-                                    <MudExpansionPanel Text="Technical details" Dense="true" IsInitiallyExpanded="false">
-                                        <pre style="white-space: pre-wrap; font-size: 0.8rem;">@context.LogsExcerpt</pre>
-                                    </MudExpansionPanel>
-                                </MudExpansionPanels>
-                            }
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
+                <div class="dz-table-shell">
+                    <MudTable Items="_change.Checks.OrderByDescending(c => c.IsBlocking).ThenBy(c => c.Status)"
+                              Dense="true" T="CheckRun" Elevation="0">
+                        <HeaderContent>
+                            <MudTh>Check</MudTh>
+                            <MudTh>Blocking</MudTh>
+                            <MudTh>Status</MudTh>
+                            <MudTh>Summary</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Check"><code>@context.Name</code></MudTd>
+                            <MudTd DataLabel="Blocking">@(context.IsBlocking ? "Yes" : "No")</MudTd>
+                            <MudTd DataLabel="Status"><StatusChip CheckStatus="context.Status" /></MudTd>
+                            <MudTd DataLabel="Summary">
+                                <MudText Typo="Typo.body2">@context.Summary</MudText>
+                                @if (!string.IsNullOrWhiteSpace(context.LogsExcerpt))
+                                {
+                                    <MudExpansionPanels Class="mt-1">
+                                        <MudExpansionPanel Text="Technical details" Dense="true" IsInitiallyExpanded="false">
+                                            <DzCodeBlock Content="@context.LogsExcerpt" Light="true" Compact="true" MaxHeightPx="320" />
+                                        </MudExpansionPanel>
+                                    </MudExpansionPanels>
+                                }
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </div>
             }
         </div>
     </MudTabPanel>
@@ -731,14 +722,4 @@
 
         return DraftContentType.DetectionMetadata;
     }
-
-    // ── Draft vs Accepted comparison ──
-
-    private static Color DraftComparisonColor(DraftAcceptedComparisonStatus status) => status switch
-    {
-        DraftAcceptedComparisonStatus.New => Color.Success,
-        DraftAcceptedComparisonStatus.Modified => Color.Warning,
-        DraftAcceptedComparisonStatus.Unchanged => Color.Default,
-        _ => Color.Default,
-    };
 }
