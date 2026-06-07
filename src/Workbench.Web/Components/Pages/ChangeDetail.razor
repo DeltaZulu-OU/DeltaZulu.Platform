@@ -15,6 +15,7 @@
 @inject CheckPipelineRunner PipelineRunner
 @inject MergeService MergeService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @inject NavigationManager Nav
 @inject PocUserContext UserContext
 
@@ -84,7 +85,7 @@
                        Disabled="_running" StartIcon="@Icons.Material.Outlined.PlaylistAddCheck">
                 Run checks
             </MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => _showCloseConfirm = true)"
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="RequestCloseChange"
                        Disabled="_running" StartIcon="@Icons.Material.Outlined.Close">
                 Close
             </MudButton>
@@ -200,7 +201,7 @@
                                             </MudButton>
                                             <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error"
                                                        StartIcon="@Icons.Material.Outlined.Delete"
-                                                       OnClick="@(() => RequestDeleteFile(file.Path.Value))">
+                                                       OnClick="@(() => RequestDeleteFileAsync(file.Path.Value))">
                                                 Delete
                                             </MudButton>
                                         </div>
@@ -437,39 +438,6 @@
     </MudTabPanel>
 </MudTabs>
 
-@* ── Close confirmation ── *@
-@if (_showCloseConfirm)
-{
-    <MudOverlay Visible="true" DarkBackground="true" ZIndex="1300" OnClick="@(() => _showCloseConfirm = false)" />
-    <MudPaper Class="pa-5" Elevation="8" Style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1400; min-width: 400px; max-width: 500px;">
-        <MudText Typo="Typo.h6" Class="mb-3">Close change?</MudText>
-        <MudText Typo="Typo.body2" Class="mb-3">This will close the change without accepting. Please provide a reason.</MudText>
-        <MudTextField @bind-Value="_closeReason" Label="Reason" Lines="3" Class="mb-3" />
-        <div class="d-flex justify-end gap-2">
-            <MudButton OnClick="@(() => _showCloseConfirm = false)">Cancel</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="CloseChange" Disabled="_running">
-                Confirm close
-            </MudButton>
-        </div>
-    </MudPaper>
-}
-
-@* ── Delete file confirmation ── *@
-@if (_showDeleteConfirm)
-{
-    <MudOverlay Visible="true" DarkBackground="true" ZIndex="1300" OnClick="@(() => _showDeleteConfirm = false)" />
-    <MudPaper Class="pa-5" Elevation="8" Style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1400; min-width: 400px;">
-        <MudText Typo="Typo.h6" Class="mb-3">Delete file?</MudText>
-        <MudText Typo="Typo.body2" Class="mb-3">Are you sure you want to delete <code>@_deletingFilePath</code>?</MudText>
-        <div class="d-flex justify-end gap-2">
-            <MudButton OnClick="@(() => _showDeleteConfirm = false)">Cancel</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="ConfirmDeleteFile" Disabled="_running">
-                Delete
-            </MudButton>
-        </div>
-    </MudPaper>
-}
-
 @code {
     [Parameter] public string Id { get; set; } = null!;
 
@@ -494,11 +462,9 @@
     private string? _editingFile;
 
     // Delete file
-    private bool _showDeleteConfirm;
     private string _deletingFilePath = "";
 
     // Close change
-    private bool _showCloseConfirm;
     private string _closeReason = "";
 
     // Review
@@ -637,17 +603,31 @@
 
     // ── Delete file ──
 
-    private void RequestDeleteFile(string path)
+    private async Task RequestDeleteFileAsync(string path)
     {
         _deletingFilePath = path;
-        _showDeleteConfirm = true;
+
+        var parameters = new DialogParameters<DzConfirmDialog>
+        {
+            { x => x.Title, "Delete file?" },
+            { x => x.Message, $"Are you sure you want to delete {path}?" },
+            { x => x.ConfirmText, "Delete" },
+            { x => x.Severity, Severity.Error },
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<DzConfirmDialog>("Delete file", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled)
+        {
+            await ConfirmDeleteFile();
+        }
     }
 
     private async Task ConfirmDeleteFile()
     {
         if (_change is null || string.IsNullOrWhiteSpace(_deletingFilePath)) return;
         _running = true;
-        _showDeleteConfirm = false;
         try
         {
             await ChangeService.RemoveDraftFileAsync(_change.Id, _deletingFilePath);
@@ -655,16 +635,41 @@
             await LoadAsync();
         }
         catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
-        finally { _running = false; }
+        finally
+        {
+            _running = false;
+            _deletingFilePath = "";
+        }
     }
 
     // ── Close change ──
+
+    private async Task RequestCloseChange()
+    {
+        var parameters = new DialogParameters<DzConfirmDialog>
+        {
+            { x => x.Title, "Close change?" },
+            { x => x.Message, "This will close the change without accepting. Please provide a reason." },
+            { x => x.ConfirmText, "Confirm close" },
+            { x => x.Severity, Severity.Error },
+            { x => x.RequireReason, true },
+            { x => x.ReasonLabel, "Reason" },
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<DzConfirmDialog>("Close change", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled)
+        {
+            _closeReason = result.Data as string ?? "";
+            await CloseChange();
+        }
+    }
 
     private async Task CloseChange()
     {
         if (_change is null) return;
         _running = true;
-        _showCloseConfirm = false;
         try
         {
             await ChangeService.CloseAsync(_change.Id, _closeReason);
