@@ -12,26 +12,23 @@
 
 <PageTitle>Detections</PageTitle>
 
-<div class="d-flex justify-space-between align-center mb-4">
-    <div>
-        <MudText Typo="Typo.h5" Style="font-weight: 700;">Detections</MudText>
-        <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);">
-            Detection content packages versioned in Git.
-        </MudText>
-    </div>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-               StartIcon="@Icons.Material.Outlined.Add"
-               OnClick="OpenConceiveDialog">
-        Conceive detection
-    </MudButton>
-</div>
+<DzPageHeader Title="Detections"
+              Description="Detection content packages versioned in Git.">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Outlined.Add"
+                   OnClick="OpenConceiveDialog">
+            New detection
+        </MudButton>
+    </Actions>
+</DzPageHeader>
 
-<div class="d-flex align-center gap-3 mb-3 flex-wrap">
+<DzToolbar>
     <MudTextField Value="_searchText" ValueChanged="OnSearchChanged" Placeholder="Search by slug or title"
                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
-                  Immediate="true" DebounceInterval="200" Class="flex-grow-1" Style="max-width: 360px;"
+                  Immediate="true" DebounceInterval="200" Class="dz-search-field"
                   T="string" />
-    <div class="d-flex align-center gap-2 flex-wrap">
+    <div class="dz-filter-row">
         <DzFilterChip Value="all" Selected="@(_lifecycleFilter == "all")" OnClick="@(() => OnLifecycleFilterChanged("all"))">
             All (@_detections.Count)
         </DzFilterChip>
@@ -45,7 +42,7 @@
             Deprecated (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Deprecated))
         </DzFilterChip>
     </div>
-</div>
+</DzToolbar>
 
 @if (_loading)
 {
@@ -53,41 +50,48 @@
 }
 else if (_filteredDetections.Count == 0)
 {
-    <MudPaper Class="pa-6" Elevation="1" Style="text-align: center;">
-        <MudText Typo="Typo.body1" Style="color: var(--color-text-muted);">No detections match the current filter.</MudText>
-        <MudText Typo="Typo.body2" Style="color: var(--color-text-muted);" Class="mt-1">
-            Conceive one to begin building detection content.
-        </MudText>
-    </MudPaper>
+    <DzEmptyState Title="No detections match the current filter."
+                  Description="Create a new detection or adjust the current search and lifecycle filters."
+                  Icon="@Icons.Material.Outlined.SearchOff">
+        <Actions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Outlined.Add"
+                       OnClick="OpenConceiveDialog">
+                New detection
+            </MudButton>
+        </Actions>
+    </DzEmptyState>
 }
 else
 {
-    <MudTable Items="_filteredDetections" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="1"
-              OnRowClick="@(args => Nav.NavigateTo($"/detections/{args.Item.Id}"))"
-              T="Detection" RowClass="cursor-pointer">
-        <HeaderContent>
-            <MudTh>Slug</MudTh>
-            <MudTh>Title</MudTh>
-            <MudTh>Lifecycle</MudTh>
-            <MudTh>Updated</MudTh>
-            <MudTh>Actions</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Slug"><code>@context.Slug</code></MudTd>
-            <MudTd DataLabel="Title">@context.Title</MudTd>
-            <MudTd DataLabel="Lifecycle"><StatusChip Lifecycle="context.Lifecycle" /></MudTd>
-            <MudTd DataLabel="Updated">
-                <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
-            </MudTd>
-            <MudTd DataLabel="Actions" @onclick:stopPropagation="true">
-                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                           StartIcon="@Icons.Material.Outlined.Add"
-                           OnClick="@(() => OpenChangeForDetection(context.Id))">
-                    Open change
-                </MudButton>
-            </MudTd>
-        </RowTemplate>
-    </MudTable>
+    <div class="dz-table-shell">
+        <MudTable Items="_filteredDetections" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0"
+                  OnRowClick="@(args => Nav.NavigateTo($"/detections/{args.Item.Id}"))"
+                  T="Detection" RowClass="cursor-pointer">
+            <HeaderContent>
+                <MudTh>Slug</MudTh>
+                <MudTh>Title</MudTh>
+                <MudTh>Lifecycle</MudTh>
+                <MudTh>Updated</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Slug"><code>@context.Slug</code></MudTd>
+                <MudTd DataLabel="Title">@context.Title</MudTd>
+                <MudTd DataLabel="Lifecycle"><StatusChip Lifecycle="context.Lifecycle" /></MudTd>
+                <MudTd DataLabel="Updated">
+                    <MudText Typo="Typo.caption" Class="text-muted">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Actions" @onclick:stopPropagation="true">
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Outlined.Add"
+                               OnClick="@(() => OpenChangeForDetection(context.Id))">
+                        Open change
+                    </MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </div>
 }
 
 @code {
@@ -133,7 +137,7 @@ else
     private async Task OpenConceiveDialog()
     {
         var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<ConceiveDetectionDialog>("Conceive detection", options);
+        var dialog = await DialogService.ShowAsync<ConceiveDetectionDialog>("New detection", options);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled) await LoadAsync();
     }

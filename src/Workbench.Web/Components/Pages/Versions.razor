@@ -10,10 +10,8 @@
 
 <PageTitle>History</PageTitle>
 
-<MudText Typo="Typo.h5" Class="mb-1">History</MudText>
-<MudText Typo="Typo.body2" Class="mb-4" Style="color: var(--color-text-secondary); max-width: 720px;">
-    Accepted detection content versions. Compare changes and restore previous content safely.
-</MudText>
+<DzPageHeader Title="History"
+              Description="Accepted detection content versions. Compare changes and restore previous content safely." />
 
 @if (_loading)
 {
@@ -21,82 +19,84 @@
 }
 else if (_rows.Count == 0)
 {
-    <MudAlert Severity="Severity.Info">
-        No accepted versions yet. Accept an approved change to create the first version.
-    </MudAlert>
+    <DzEmptyState Title="No accepted versions yet."
+                  Description="Accept an approved change to create the first version."
+                  Icon="@Icons.Material.Outlined.History" />
 }
 else
 {
-    <div class="d-flex align-center gap-3 mb-3 flex-wrap">
+    <DzToolbar>
         <MudSelect Value="_selectedDetectionId" ValueChanged="OnDetectionFilterChanged"
                    Label="Filter by detection" T="string" Dense="true" Margin="Margin.Dense"
-                   Style="max-width: 320px;" Clearable="true">
+                   Class="dz-filter-select" Clearable="true">
             @foreach (var det in _detections)
             {
                 <MudSelectItem Value="@det.Id.ToString()">@det.Slug — @det.Title</MudSelectItem>
             }
         </MudSelect>
         <MudText Typo="Typo.caption" Class="mud-text-secondary">@_filteredRows.Count version(s)</MudText>
-    </div>
+    </DzToolbar>
 
-    <MudTable Items="_filteredRows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="VersionRow">
-        <HeaderContent>
-            <MudTh>Detection</MudTh>
-            <MudTh>Version</MudTh>
-            <MudTh>Summary</MudTh>
-            <MudTh>Profile</MudTh>
-            <MudTh>Changed sections</MudTh>
-            <MudTh>Checks</MudTh>
-            <MudTh>Reviews</MudTh>
-            <MudTh>Accepted</MudTh>
-            <MudTh>Actions</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Detection">
-                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                           OnClick="@(() => Nav.NavigateTo($"/detections/{context.Detection.Id}"))"
-                           Class="px-0" Style="font-weight: 600; text-transform: none;">
-                    @context.Detection.Title
-                </MudButton>
-                <MudText Typo="Typo.caption" Class="mud-text-secondary"><code>@context.Detection.Slug</code></MudText>
-            </MudTd>
-            <MudTd DataLabel="Version">
-                <DzMetaChip Kind="version">
-                    @context.Version.DisplayVersion
-                </DzMetaChip>
-            </MudTd>
-            <MudTd DataLabel="Summary">@context.Version.ChangeSummary</MudTd>
-            <MudTd DataLabel="Profile">
-                <DzMetaChip Kind="workflow">@context.Version.WorkflowProfile</DzMetaChip>
-            </MudTd>
-            <MudTd DataLabel="Changed sections">
-                @if (context.Version.ChangedSections.Count == 0)
-                {
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
-                }
-                else
-                {
-                    <div class="d-flex flex-column gap-1">
-                        @foreach (var section in context.Version.ChangedSections)
-                        {
-                            <code>@section.Value</code>
-                        }
-                    </div>
-                }
-            </MudTd>
-            <MudTd DataLabel="Checks">@context.Version.ChecksSummary</MudTd>
-            <MudTd DataLabel="Reviews">@context.Version.ReviewSummary</MudTd>
-            <MudTd DataLabel="Accepted">
-                <MudText Typo="Typo.caption">@context.Version.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
-            </MudTd>
-            <MudTd DataLabel="Actions">
-                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                           OnClick="@(() => Nav.NavigateTo($"/history/{context.Version.Id}"))">
-                    Compare / restore
-                </MudButton>
-            </MudTd>
-        </RowTemplate>
-    </MudTable>
+    <div class="dz-table-shell">
+        <MudTable Items="_filteredRows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="VersionRow" Elevation="0">
+            <HeaderContent>
+                <MudTh>Detection</MudTh>
+                <MudTh>Version</MudTh>
+                <MudTh>Summary</MudTh>
+                <MudTh>Profile</MudTh>
+                <MudTh>Changed sections</MudTh>
+                <MudTh>Checks</MudTh>
+                <MudTh>Reviews</MudTh>
+                <MudTh>Accepted</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Detection">
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                               OnClick="@(() => Nav.NavigateTo($"/detections/{context.Detection.Id}"))"
+                               Class="dz-link-button">
+                        @context.Detection.Title
+                    </MudButton>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary"><code>@context.Detection.Slug</code></MudText>
+                </MudTd>
+                <MudTd DataLabel="Version">
+                    <DzMetaChip Kind="version">
+                        @context.Version.DisplayVersion
+                    </DzMetaChip>
+                </MudTd>
+                <MudTd DataLabel="Summary">@context.Version.ChangeSummary</MudTd>
+                <MudTd DataLabel="Profile">
+                    <DzMetaChip Kind="workflow">@context.Version.WorkflowProfile</DzMetaChip>
+                </MudTd>
+                <MudTd DataLabel="Changed sections">
+                    @if (context.Version.ChangedSections.Count == 0)
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-column gap-1">
+                            @foreach (var section in context.Version.ChangedSections)
+                            {
+                                <code>@section.Value</code>
+                            }
+                        </div>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Checks">@context.Version.ChecksSummary</MudTd>
+                <MudTd DataLabel="Reviews">@context.Version.ReviewSummary</MudTd>
+                <MudTd DataLabel="Accepted">
+                    <MudText Typo="Typo.caption">@context.Version.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                               OnClick="@(() => Nav.NavigateTo($"/history/{context.Version.Id}"))">
+                        Compare / restore
+                    </MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </div>
 }
 
 @code {

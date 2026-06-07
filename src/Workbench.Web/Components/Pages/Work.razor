@@ -12,10 +12,16 @@
 
 <PageTitle>Changes</PageTitle>
 
-<MudText Typo="Typo.h5" Class="mb-1">Changes</MudText>
-<MudText Typo="Typo.body2" Class="mb-4" Style="color: var(--color-text-secondary); max-width: 720px;">
-    Proposed detection content changes. Each change carries its draft content, checks, reviews, and acceptance state.
-</MudText>
+<DzPageHeader Title="Changes"
+              Description="Proposed detection content changes. Each change carries its draft content, checks, reviews, and acceptance state.">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenNewChangeDialog">
+            New change
+        </MudButton>
+    </Actions>
+</DzPageHeader>
 
 @if (_loading)
 {
@@ -23,64 +29,68 @@
     return;
 }
 
-<MudPaper Class="pa-3 mb-3" Elevation="1">
-    <div class="d-flex align-center gap-3 flex-wrap">
-        <div class="d-flex align-center gap-2 flex-wrap">
-            <DzFilterChip Value="all" Selected="@(_changeFilter == "all")" OnClick="@(() => OnChangeFilterChanged("all"))">
-                All (@_allChanges.Count)
-            </DzFilterChip>
-            <DzFilterChip Value="mine" Selected="@(_changeFilter == "mine")" OnClick="@(() => OnChangeFilterChanged("mine"))">
-                My changes
-            </DzFilterChip>
-            <DzFilterChip Value="review" Selected="@(_changeFilter == "review")" OnClick="@(() => OnChangeFilterChanged("review"))">
-                Awaiting review
-            </DzFilterChip>
-            <DzFilterChip Value="stale" Selected="@(_changeFilter == "stale")" OnClick="@(() => OnChangeFilterChanged("stale"))">
-                Stale
-            </DzFilterChip>
-        </div>
-        <MudSpacer />
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.Add"
-                   OnClick="OpenNewChangeDialog">
-            New change
-        </MudButton>
+<DzToolbar>
+    <div class="dz-filter-row">
+        <DzFilterChip Value="all" Selected="@(_changeFilter == "all")" OnClick="@(() => OnChangeFilterChanged("all"))">
+            All (@_allChanges.Count)
+        </DzFilterChip>
+        <DzFilterChip Value="mine" Selected="@(_changeFilter == "mine")" OnClick="@(() => OnChangeFilterChanged("mine"))">
+            My changes
+        </DzFilterChip>
+        <DzFilterChip Value="review" Selected="@(_changeFilter == "review")" OnClick="@(() => OnChangeFilterChanged("review"))">
+            Awaiting review
+        </DzFilterChip>
+        <DzFilterChip Value="stale" Selected="@(_changeFilter == "stale")" OnClick="@(() => OnChangeFilterChanged("stale"))">
+            Stale
+        </DzFilterChip>
     </div>
-</MudPaper>
+</DzToolbar>
 
 @if (_filteredChanges.Count == 0)
 {
-    <MudAlert Severity="Severity.Info">No changes match the current filter.</MudAlert>
+    <DzEmptyState Title="No changes match the current filter."
+                  Description="Create a new change or adjust the current filter."
+                  Icon="@Icons.Material.Outlined.FilterAltOff">
+        <Actions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="OpenNewChangeDialog">
+                New change
+            </MudButton>
+        </Actions>
+    </DzEmptyState>
 }
 else
 {
-    <MudTable Items="_filteredChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
-              OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
-              T="ChangeRequest" RowClass="cursor-pointer" Elevation="1">
-        <HeaderContent>
-            <MudTh>Key</MudTh>
-            <MudTh>Title</MudTh>
-            <MudTh>Status</MudTh>
-            <MudTh>Files</MudTh>
-            <MudTh>Checks</MudTh>
-            <MudTh>Stale</MudTh>
-            <MudTh>Updated</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
-            <MudTd DataLabel="Title">@context.Title</MudTd>
-            <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
-            <MudTd DataLabel="Files">@context.DraftFiles.Count</MudTd>
-            <MudTd DataLabel="Checks">@context.Checks.Count</MudTd>
-            <MudTd DataLabel="Stale">
-                @if (context.IsStale)
-                {
-                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
-                }
-            </MudTd>
-            <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
-        </RowTemplate>
-    </MudTable>
+    <div class="dz-table-shell">
+        <MudTable Items="_filteredChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
+                  OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
+                  T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
+            <HeaderContent>
+                <MudTh>Key</MudTh>
+                <MudTh>Title</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Files</MudTh>
+                <MudTh>Checks</MudTh>
+                <MudTh>Stale</MudTh>
+                <MudTh>Updated</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
+                <MudTd DataLabel="Title">@context.Title</MudTd>
+                <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
+                <MudTd DataLabel="Files">@context.DraftFiles.Count</MudTd>
+                <MudTd DataLabel="Checks">@context.Checks.Count</MudTd>
+                <MudTd DataLabel="Stale">
+                    @if (context.IsStale)
+                    {
+                        <DzStatusChip Label="Stale" Tone="warning" Icon="@Icons.Material.Filled.Warning" />
+                    }
+                </MudTd>
+                <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
+            </RowTemplate>
+        </MudTable>
+    </div>
 }
 
 @code {

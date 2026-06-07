@@ -319,21 +319,89 @@
     color: var(--color-success) !important;
 }
 
-@media (max-width: 720px) {
-    .dz-page-header,
-    .dz-panel__header,
-    .dz-toolbar {
-        align-items: stretch;
-        flex-direction: column;
-    }
+/* --- Workbench page-shell support classes --- */
 
-    .dz-page-header__actions,
-    .dz-panel__actions,
-    .dz-toolbar__actions {
-        justify-content: flex-start;
-    }
+.dz-search-field {
+    flex: 1 1 280px;
+    max-width: 360px;
+}
 
-    .dz-diff-pair {
-        grid-template-columns: 1fr;
-    }
+.dz-filter-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.dz-filter-select {
+    min-width: 260px;
+    max-width: 360px;
+}
+
+.dz-link-button {
+    font-weight: 600 !important;
+    text-transform: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+.dz-panel--full-height {
+    height: 100%;
+}
+
+.dz-card-list {
+    margin-top: var(--space-2);
+}
+
+.dz-card-list__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.dz-card-list__row code {
+    font-size: 0.85em;
+}
+
+.dz-inline-icon {
+    color: var(--brand-slate) !important;
+}
+
+.dz-inline-icon--error {
+    color: var(--color-error) !important;
+}
+
+.dz-metric-tile {
+    height: 100%;
+    text-align: center;
+}
+
+.dz-metric-tile .dz-panel__body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.dz-metric-tile__icon {
+    color: var(--brand-slate) !important;
+}
+
+.dz-metric-tile__icon--success {
+    color: var(--color-success) !important;
+}
+
+.dz-metric-tile__icon--error {
+    color: var(--color-error) !important;
+}
+
+.dz-metric-tile__value {
+    font-weight: 700 !important;
+    margin-top: var(--space-1) !important;
+}
+
+.dz-metric-tile__label {
+    color: var(--color-text-secondary) !important;
 }
