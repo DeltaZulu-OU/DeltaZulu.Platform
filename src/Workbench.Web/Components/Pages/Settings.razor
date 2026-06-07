@@ -13,132 +13,133 @@
 
 <PageTitle>Settings</PageTitle>
 
-<MudText Typo="Typo.h5" Class="mb-1">Settings</MudText>
-<MudText Typo="Typo.body2" Class="mb-4" Style="color: var(--color-text-secondary); max-width: 720px;">
-    Current POC runtime configuration. Workflow engine and accepted content storage stay behind application abstractions.
-</MudText>
+<DzPageHeader Title="Settings"
+              Description="Current POC runtime configuration. Workflow engine and accepted content storage stay behind application abstractions." />
 
-<MudGrid Spacing="3">
+<MudGrid Spacing="3" Class="dz-settings-grid">
     <MudItem xs="12" md="6">
-        <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
-            <span class="eyebrow">POC user</span>
-            <MudText Typo="Typo.h6" Class="mt-2 mb-2">Current actor</MudText>
+        <DzPanel Eyebrow="POC user" Title="Current actor" Class="dz-panel--full-height">
             <MudSelect Value="UserContext.CurrentPersona" ValueChanged="SwitchUser" Label="Acting as" T="PocUserPersona" Class="mb-2">
                 @foreach (var user in UserContext.AvailableUsers)
                 {
                     <MudSelectItem Value="user.Persona">@user.DisplayName</MudSelectItem>
                 }
             </MudSelect>
-            <MudText Typo="Typo.caption" Style="color: var(--color-text-secondary); word-break: break-word;">
+            <MudText Typo="Typo.caption" Class="dz-config-value dz-config-value--mono">
                 User ID: @UserContext.CurrentUser.Id
             </MudText>
-        </MudPaper>
+        </DzPanel>
     </MudItem>
+
     <MudItem xs="12" md="6">
-        <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
-            <span class="eyebrow">Workflow</span>
-            <MudText Typo="Typo.h6" Class="mt-2 mb-2">Orchestration mode</MudText>
-            <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);">
-                @(_useElsa ? "Elsa adapter enabled" : "Domain-driven POC orchestrator enabled")
-            </MudText>
-        </MudPaper>
+        <DzPanel Eyebrow="Workflow" Title="Orchestration mode" Class="dz-panel--full-height">
+            <DzStatusChip Label="@(_useElsa ? "Elsa adapter enabled" : "Domain-driven POC orchestrator enabled")"
+                          Tone="@(_useElsa ? "info" : "neutral")" />
+        </DzPanel>
     </MudItem>
+
     <MudItem xs="12" md="6">
-        <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
-            <span class="eyebrow">Accepted content</span>
-            <MudText Typo="Typo.h6" Class="mt-2 mb-2">Canonical store path</MudText>
-            <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary); word-break: break-word;">
+        <DzPanel Eyebrow="Accepted content" Title="Canonical store path" Class="dz-panel--full-height">
+            <MudText Typo="Typo.body2" Class="dz-config-value dz-config-value--mono">
                 @_repositoryPath
             </MudText>
-        </MudPaper>
+        </DzPanel>
     </MudItem>
-    <MudItem xs="12">
-        <MudPaper Class="pa-4" Elevation="1">
-            <div class="d-flex align-center justify-space-between gap-2 flex-wrap mb-3">
-                <div>
-                    <span class="eyebrow">Operations</span>
-                    <MudText Typo="Typo.h6" Class="mt-2">Merge reconciliation</MudText>
-                    <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary); max-width: 760px;">
-                        Unresolved merge intents are database-owned recovery markers for accepted-content writes that have not completed their version projection.
-                        Accepted writes can be repaired here without exposing storage internals to normal users.
-                    </MudText>
-                </div>
-                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Disabled="_loadingIntents" OnClick="LoadMergeIntentsAsync" StartIcon="@Icons.Material.Outlined.Refresh">
-                    Refresh
-                </MudButton>
-            </div>
+</MudGrid>
 
-            @if (_loadingIntents)
-            {
-                <MudProgressLinear Indeterminate="true" />
-            }
-            else if (_mergeIntents.Count == 0)
-            {
-                <MudAlert Severity="Severity.Success" Dense="true">No unresolved merge intents were found.</MudAlert>
-            }
-            else
-            {
-                @if (!string.IsNullOrWhiteSpace(_lastRepairMessage))
-                {
-                    <MudAlert Severity="@_lastRepairSeverity" Dense="true" Class="mb-3">@_lastRepairMessage</MudAlert>
-                }
-                <MudTable Items="_mergeIntents" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="MergeIntent">
-                    <HeaderContent>
-                        <MudTh>Change</MudTh>
-                        <MudTh>Detection</MudTh>
-                        <MudTh>Recovery state</MudTh>
-                        <MudTh>Requested</MudTh>
-                        <MudTh>Accepted snapshot</MudTh>
-                        <MudTh>Operator guidance</MudTh>
-                        <MudTh>Action</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        @{ var guidance = GuidanceFor(context); }
-                        <MudTd DataLabel="Change"><code>@context.ChangeId.Value</code></MudTd>
-                        <MudTd DataLabel="Detection">
-                            <MudText Typo="Typo.body2">@context.DetectionSlug</MudText>
-                            <MudText Typo="Typo.caption" Class="mud-text-secondary"><code>@context.DetectionId.Value</code></MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Recovery state">
-                            <MudChip T="string" Size="Size.Small" Color="@IntentStateColor(context.State)" Variant="Variant.Filled">@IntentStateLabel(context.State)</MudChip>
-                        </MudTd>
-                        <MudTd DataLabel="Requested">
-                            <MudText Typo="Typo.caption">@context.RequestedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Accepted snapshot">
+<DzPanel Eyebrow="Operations" Title="Merge reconciliation" Class="mb-4">
+    <Actions>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Secondary"
+                   Disabled="_loadingIntents"
+                   OnClick="LoadMergeIntentsAsync"
+                   StartIcon="@Icons.Material.Outlined.Refresh">
+            Refresh
+        </MudButton>
+    </Actions>
+
+    <MudText Typo="Typo.body2" Class="text-secondary mb-3">
+        Unresolved merge intents are database-owned recovery markers for accepted-content writes that have not completed their version projection.
+        Accepted writes can be repaired here without exposing storage internals to normal users.
+    </MudText>
+
+    @if (_loadingIntents)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (_mergeIntents.Count == 0)
+    {
+        <MudAlert Severity="Severity.Success" Dense="true">No unresolved merge intents were found.</MudAlert>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(_lastRepairMessage))
+        {
+            <MudAlert Severity="@_lastRepairSeverity" Dense="true" Class="mb-3">@_lastRepairMessage</MudAlert>
+        }
+
+        <div class="dz-table-shell">
+            <MudTable Items="_mergeIntents" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="MergeIntent" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Change</MudTh>
+                    <MudTh>Detection</MudTh>
+                    <MudTh>Recovery state</MudTh>
+                    <MudTh>Requested</MudTh>
+                    <MudTh>Accepted snapshot</MudTh>
+                    <MudTh>Operator guidance</MudTh>
+                    <MudTh>Action</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    @{ var guidance = GuidanceFor(context); }
+                    <MudTd DataLabel="Change"><code>@context.ChangeId.Value</code></MudTd>
+                    <MudTd DataLabel="Detection">
+                        <MudText Typo="Typo.body2">@context.DetectionSlug</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary"><code>@context.DetectionId.Value</code></MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Recovery state">
+                        <DzStatusChip Label="@IntentStateLabel(context.State)"
+                                      Tone="@IntentStateTone(context.State)"
+                                      Class="dz-recovery-state" />
+                    </MudTd>
+                    <MudTd DataLabel="Requested">
+                        <MudText Typo="Typo.caption">@context.RequestedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Accepted snapshot">
+                        <div class="dz-recovery-snapshot">
                             @if (string.IsNullOrWhiteSpace(context.CommitSha))
                             {
                                 <MudText Typo="Typo.caption" Class="mud-text-secondary">No accepted snapshot recorded.</MudText>
                             }
                             else
                             {
-                                <MudText Typo="Typo.caption"><code>@ShortSha(context.CommitSha)</code></MudText>
+                                <DzMetaChip Kind="version">@ShortSha(context.CommitSha)</DzMetaChip>
                                 <MudText Typo="Typo.caption" Class="mud-text-secondary">@(context.CommittedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Accepted time unavailable")</MudText>
                             }
-                        </MudTd>
-                        <MudTd DataLabel="Operator guidance">
-                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@guidance.Message</MudText>
-                            <MudText Typo="Typo.caption"><strong>Recommended:</strong> @guidance.RecommendedAction</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Action">
-                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
-                                       Disabled="@(!guidance.CanRepair || _repairingChangeId == context.ChangeId)"
-                                       OnClick="@(() => RepairIntentAsync(context.ChangeId))"
-                                       StartIcon="@Icons.Material.Outlined.Healing">
-                                Repair projection
-                            </MudButton>
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
-            }
-        </MudPaper>
-    </MudItem>
-    <MudItem xs="12">
-        <MudAlert Severity="Severity.Info">
-            Predefined workflow profiles are selected on changes. User-authored workflow definitions and low-level accepted-content storage operations are intentionally outside the POC UI.
-        </MudAlert>
-    </MudItem>
-</MudGrid>
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Operator guidance">
+                        <div class="dz-recovery-guidance">
+                            <MudText Typo="Typo.caption" Class="dz-recovery-guidance__message">@guidance.Message</MudText>
+                            <MudText Typo="Typo.caption" Class="dz-recovery-guidance__recommended"><strong>Recommended:</strong> @guidance.RecommendedAction</MudText>
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Action">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                                   Disabled="@(!guidance.CanRepair || _repairingChangeId == context.ChangeId)"
+                                   OnClick="@(() => RepairIntentAsync(context.ChangeId))"
+                                   StartIcon="@Icons.Material.Outlined.Healing">
+                            Repair projection
+                        </MudButton>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </div>
+    }
+</DzPanel>
+
+<MudAlert Severity="Severity.Info" Class="dz-operator-note">
+    Predefined workflow profiles are selected on changes. User-authored workflow definitions and low-level accepted-content storage operations are intentionally outside the POC UI.
+</MudAlert>
 
 @code {
     private bool _useElsa;
@@ -216,10 +217,10 @@
         _ => state.ToString(),
     };
 
-    private static Color IntentStateColor(MergeIntentState state) => state switch
+    private static string IntentStateTone(MergeIntentState state) => state switch
     {
-        MergeIntentState.Committed => Color.Warning,
-        MergeIntentState.Pending => Color.Info,
-        _ => Color.Default,
+        MergeIntentState.Committed => "warning",
+        MergeIntentState.Pending => "info",
+        _ => "neutral",
     };
 }

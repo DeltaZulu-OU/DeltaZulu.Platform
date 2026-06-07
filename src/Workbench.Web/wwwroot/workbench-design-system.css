@@ -405,3 +405,48 @@
 .dz-metric-tile__label {
     color: var(--color-text-secondary) !important;
 }
+
+/* --- Settings / operator surface support classes --- */
+
+.dz-settings-grid {
+    margin-bottom: var(--space-4);
+}
+
+.dz-config-value {
+    color: var(--color-text-secondary) !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.dz-config-value--mono {
+    font-family: var(--font-family-mono) !important;
+    font-size: 0.875rem !important;
+}
+
+.dz-operator-note {
+    margin-top: var(--space-3);
+}
+
+.dz-recovery-guidance {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.dz-recovery-guidance__message {
+    color: var(--color-text-secondary) !important;
+}
+
+.dz-recovery-guidance__recommended {
+    color: var(--color-text-primary) !important;
+}
+
+.dz-recovery-snapshot {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.dz-recovery-state {
+    white-space: nowrap;
+}
