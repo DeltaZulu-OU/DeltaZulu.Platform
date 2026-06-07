@@ -1,0 +1,26 @@
+@using Workbench.Domain.Detections
+
+<DzStatusChip Label="@Label" Tone="@Tone" Icon="@Icon" @attributes="AdditionalAttributes" />
+
+@code {
+    [Parameter] public DraftAcceptedComparisonStatus Status { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string Label => Status.ToString();
+
+    private string Tone => Status switch
+    {
+        DraftAcceptedComparisonStatus.New => "success",
+        DraftAcceptedComparisonStatus.Modified => "warning",
+        DraftAcceptedComparisonStatus.Unchanged => "neutral",
+        _ => "neutral",
+    };
+
+    private string? Icon => Status switch
+    {
+        DraftAcceptedComparisonStatus.New => Icons.Material.Outlined.AddCircleOutline,
+        DraftAcceptedComparisonStatus.Modified => Icons.Material.Outlined.Edit,
+        DraftAcceptedComparisonStatus.Unchanged => Icons.Material.Outlined.CheckCircle,
+        _ => null,
+    };
+}

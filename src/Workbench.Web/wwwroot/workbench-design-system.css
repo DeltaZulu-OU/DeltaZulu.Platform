@@ -497,3 +497,32 @@
 .dz-gate-ready__text {
     color: var(--color-success) !important;
 }
+
+/* --- Change workspace file/code/diff primitives --- */
+
+.dz-code-block--compact {
+    font-size: 0.8125rem;
+    padding: var(--space-3);
+}
+
+.dz-diff-pair--compact {
+    gap: var(--space-2);
+}
+
+.dz-file-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.dz-file-header__icon {
+    color: var(--brand-slate) !important;
+}
+
+@media (max-width: 900px) {
+    .dz-diff-pair {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
