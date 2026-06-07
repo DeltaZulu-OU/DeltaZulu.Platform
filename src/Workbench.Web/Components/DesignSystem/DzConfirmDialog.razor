@@ -69,7 +69,12 @@
 
     private void Confirm()
     {
-        var result = RequireReason ? _reason.Trim() : true;
-        MudDialog.Close(DialogResult.Ok(result));
+        if (RequireReason)
+        {
+            MudDialog.Close(DialogResult.Ok(_reason.Trim()));
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(true));
     }
 }
