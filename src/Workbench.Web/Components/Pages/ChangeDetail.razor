@@ -349,7 +349,7 @@
 
     @* ── Review tab ── *@
     <MudTabPanel Text="Review" BadgeData="@_change.Reviews.Count" BadgeColor="Color.Secondary">
-        <div class="ma-3">
+        <div class="dz-tab-body">
             @if (!IsTerminal)
             {
                 var profile = WorkflowProfile.For(_change.WorkflowProfileId);
@@ -367,8 +367,7 @@
                     </MudAlert>
                 }
 
-                <MudPaper Class="pa-3 mb-3" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.subtitle2" Class="mb-2">Record review</MudText>
+                <DzPanel Title="Record review" Compact="true" Outlined="true" Elevation="0" Class="mb-3">
                     <MudExpansionPanels Class="mb-3">
                         <MudExpansionPanel Text="Switch user for testing" Dense="true" IsInitiallyExpanded="false">
                             <MudAlert Severity="@(IsCurrentUserAuthor ? Severity.Warning : Severity.Info)" Dense="true" Class="mb-2">
@@ -399,36 +398,37 @@
                                        OnClick="RecordReview">Submit review</MudButton>
                         </MudItem>
                     </MudGrid>
-                </MudPaper>
+                </DzPanel>
             }
 
             @if (_change.Reviews.Count == 0)
             {
-                <MudAlert Severity="Severity.Info">No reviews recorded yet.</MudAlert>
+                <DzEmptyState Title="No reviews recorded yet."
+                              Description="Record a review once the draft is ready for approval."
+                              Icon="@Icons.Material.Outlined.RateReview" />
             }
             else
             {
-                <MudTimeline TimelinePosition="TimelinePosition.Start">
+                <MudTimeline TimelinePosition="TimelinePosition.Start" Class="dz-review-timeline">
                     @foreach (var review in _change.Reviews.OrderByDescending(r => r.CreatedAt))
                     {
-                        <MudTimelineItem Color="@(review.Decision == ReviewDecision.Approved ? Color.Success : review.Decision == ReviewDecision.ChangesRequested ? Color.Error : Color.Default)"
+                        <MudTimelineItem Color="@ReviewDecisionColor(review.Decision)"
                                          Size="Size.Small">
                             <ItemContent>
-                                <div class="d-flex gap-2 align-center">
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
-                                             Color="@(review.Decision == ReviewDecision.Approved ? Color.Success : review.Decision == ReviewDecision.ChangesRequested ? Color.Error : Color.Default)">
-                                        @review.Decision
-                                    </MudChip>
-                                    @if (review.IsSuperseded)
+                                <div class="dz-review-item">
+                                    <div class="dz-review-item__header">
+                                        <DzReviewDecisionChip Decision="@review.Decision" />
+                                        @if (review.IsSuperseded)
+                                        {
+                                            <DzStatusChip Label="Superseded" Tone="muted" />
+                                        }
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@review.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(review.Comment))
                                     {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Dark" Variant="Variant.Outlined">Superseded</MudChip>
+                                        <MudText Typo="Typo.body2" Class="dz-review-item__comment">@review.Comment</MudText>
                                     }
-                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@review.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
                                 </div>
-                                @if (!string.IsNullOrWhiteSpace(review.Comment))
-                                {
-                                    <MudText Typo="Typo.body2" Class="mt-1">@review.Comment</MudText>
-                                }
                             </ItemContent>
                         </MudTimelineItem>
                     }
@@ -612,7 +612,8 @@
             { x => x.Title, "Delete file?" },
             { x => x.Message, $"Are you sure you want to delete {path}?" },
             { x => x.ConfirmText, "Delete" },
-            { x => x.Severity, Severity.Error },
+            { x => x.ConfirmColor, Color.Error },
+            { x => x.Tone, "error" },
         };
         var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
         var dialog = await DialogService.ShowAsync<DzConfirmDialog>("Delete file", parameters, options);
@@ -651,7 +652,8 @@
             { x => x.Title, "Close change?" },
             { x => x.Message, "This will close the change without accepting. Please provide a reason." },
             { x => x.ConfirmText, "Confirm close" },
-            { x => x.Severity, Severity.Error },
+            { x => x.ConfirmColor, Color.Error },
+            { x => x.Tone, "error" },
             { x => x.RequireReason, true },
             { x => x.ReasonLabel, "Reason" },
         };
@@ -727,4 +729,11 @@
 
         return DraftContentType.DetectionMetadata;
     }
+
+    private static Color ReviewDecisionColor(ReviewDecision decision) => decision switch
+    {
+        ReviewDecision.Approved => Color.Success,
+        ReviewDecision.ChangesRequested => Color.Error,
+        _ => Color.Default,
+    };
 }

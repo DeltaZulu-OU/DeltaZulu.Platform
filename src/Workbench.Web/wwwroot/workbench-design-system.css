@@ -563,3 +563,26 @@
     color: var(--color-text-secondary) !important;
     margin-bottom: var(--space-3) !important;
 }
+
+/* --- Change workspace review surfaces --- */
+
+.dz-review-timeline {
+    margin-top: var(--space-2);
+}
+
+.dz-review-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.dz-review-item__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.dz-review-item__comment {
+    margin-top: var(--space-1) !important;
+}

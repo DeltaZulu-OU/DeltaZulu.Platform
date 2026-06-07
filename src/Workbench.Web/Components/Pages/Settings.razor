@@ -57,84 +57,85 @@
             Refresh
         </MudButton>
     </Actions>
+    <ChildContent>
+        <MudText Typo="Typo.body2" Class="text-secondary mb-3">
+            Unresolved merge intents are database-owned recovery markers for accepted-content writes that have not completed their version projection.
+            Accepted writes can be repaired here without exposing storage internals to normal users.
+        </MudText>
 
-    <MudText Typo="Typo.body2" Class="text-secondary mb-3">
-        Unresolved merge intents are database-owned recovery markers for accepted-content writes that have not completed their version projection.
-        Accepted writes can be repaired here without exposing storage internals to normal users.
-    </MudText>
-
-    @if (_loadingIntents)
-    {
-        <MudProgressLinear Indeterminate="true" />
-    }
-    else if (_mergeIntents.Count == 0)
-    {
-        <MudAlert Severity="Severity.Success" Dense="true">No unresolved merge intents were found.</MudAlert>
-    }
-    else
-    {
-        @if (!string.IsNullOrWhiteSpace(_lastRepairMessage))
+        @if (_loadingIntents)
         {
-            <MudAlert Severity="@_lastRepairSeverity" Dense="true" Class="mb-3">@_lastRepairMessage</MudAlert>
+            <MudProgressLinear Indeterminate="true" />
         }
+        else if (_mergeIntents.Count == 0)
+        {
+            <MudAlert Severity="Severity.Success" Dense="true">No unresolved merge intents were found.</MudAlert>
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(_lastRepairMessage))
+            {
+                <MudAlert Severity="@_lastRepairSeverity" Dense="true" Class="mb-3">@_lastRepairMessage</MudAlert>
+            }
 
-        <div class="dz-table-shell">
-            <MudTable Items="_mergeIntents" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="MergeIntent" Elevation="0">
-                <HeaderContent>
-                    <MudTh>Change</MudTh>
-                    <MudTh>Detection</MudTh>
-                    <MudTh>Recovery state</MudTh>
-                    <MudTh>Requested</MudTh>
-                    <MudTh>Accepted snapshot</MudTh>
-                    <MudTh>Operator guidance</MudTh>
-                    <MudTh>Action</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    @{ var guidance = GuidanceFor(context); }
-                    <MudTd DataLabel="Change"><code>@context.ChangeId.Value</code></MudTd>
-                    <MudTd DataLabel="Detection">
-                        <MudText Typo="Typo.body2">@context.DetectionSlug</MudText>
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary"><code>@context.DetectionId.Value</code></MudText>
-                    </MudTd>
-                    <MudTd DataLabel="Recovery state">
-                        <DzStatusChip Label="@IntentStateLabel(context.State)"
-                                      Tone="@IntentStateTone(context.State)"
-                                      Class="dz-recovery-state" />
-                    </MudTd>
-                    <MudTd DataLabel="Requested">
-                        <MudText Typo="Typo.caption">@context.RequestedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
-                    </MudTd>
-                    <MudTd DataLabel="Accepted snapshot">
-                        <div class="dz-recovery-snapshot">
-                            @if (string.IsNullOrWhiteSpace(context.CommitSha))
-                            {
-                                <MudText Typo="Typo.caption" Class="mud-text-secondary">No accepted snapshot recorded.</MudText>
-                            }
-                            else
-                            {
-                                <DzMetaChip Kind="version">@ShortSha(context.CommitSha)</DzMetaChip>
-                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@(context.CommittedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Accepted time unavailable")</MudText>
-                            }
-                        </div>
-                    </MudTd>
-                    <MudTd DataLabel="Operator guidance">
-                        <div class="dz-recovery-guidance">
-                            <MudText Typo="Typo.caption" Class="dz-recovery-guidance__message">@guidance.Message</MudText>
-                            <MudText Typo="Typo.caption" Class="dz-recovery-guidance__recommended"><strong>Recommended:</strong> @guidance.RecommendedAction</MudText>
-                        </div>
-                    </MudTd>
-                    <MudTd DataLabel="Action">
-                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
-                                   Disabled="@(!guidance.CanRepair || _repairingChangeId == context.ChangeId)"
-                                   OnClick="@(() => RepairIntentAsync(context.ChangeId))"
-                                   StartIcon="@Icons.Material.Outlined.Healing">
-                            Repair projection
-                        </MudButton>
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
-        </div>
-    }
+            <div class="dz-table-shell">
+                <MudTable Items="_mergeIntents" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="MergeIntent" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Change</MudTh>
+                        <MudTh>Detection</MudTh>
+                        <MudTh>Recovery state</MudTh>
+                        <MudTh>Requested</MudTh>
+                        <MudTh>Accepted snapshot</MudTh>
+                        <MudTh>Operator guidance</MudTh>
+                        <MudTh>Action</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        @{ var guidance = GuidanceFor(context); }
+                        <MudTd DataLabel="Change"><code>@context.ChangeId.Value</code></MudTd>
+                        <MudTd DataLabel="Detection">
+                            <MudText Typo="Typo.body2">@context.DetectionSlug</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary"><code>@context.DetectionId.Value</code></MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Recovery state">
+                            <DzStatusChip Label="@IntentStateLabel(context.State)"
+                                          Tone="@IntentStateTone(context.State)"
+                                          Class="dz-recovery-state" />
+                        </MudTd>
+                        <MudTd DataLabel="Requested">
+                            <MudText Typo="Typo.caption">@context.RequestedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Accepted snapshot">
+                            <div class="dz-recovery-snapshot">
+                                @if (string.IsNullOrWhiteSpace(context.CommitSha))
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">No accepted snapshot recorded.</MudText>
+                                }
+                                else
+                                {
+                                    <DzMetaChip Kind="version">@ShortSha(context.CommitSha)</DzMetaChip>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@(context.CommittedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Accepted time unavailable")</MudText>
+                                }
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="Operator guidance">
+                            <div class="dz-recovery-guidance">
+                                <MudText Typo="Typo.caption" Class="dz-recovery-guidance__message">@guidance.Message</MudText>
+                                <MudText Typo="Typo.caption" Class="dz-recovery-guidance__recommended"><strong>Recommended:</strong> @guidance.RecommendedAction</MudText>
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="Action">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                                       Disabled="@(!guidance.CanRepair || _repairingChangeId == context.ChangeId)"
+                                       OnClick="@(() => RepairIntentAsync(context.ChangeId))"
+                                       StartIcon="@Icons.Material.Outlined.Healing">
+                                Repair projection
+                            </MudButton>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </div>
+        }
+    </ChildContent>
 </DzPanel>
 
 <MudAlert Severity="Severity.Info" Class="dz-operator-note">

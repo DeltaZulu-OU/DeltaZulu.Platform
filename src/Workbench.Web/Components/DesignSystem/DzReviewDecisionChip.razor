@@ -1,0 +1,24 @@
+@using Workbench.Domain.Enums
+
+<DzStatusChip Label="@Label" Tone="@Tone" Icon="@Icon" @attributes="AdditionalAttributes" />
+
+@code {
+    [Parameter] public ReviewDecision Decision { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string Label => Decision.ToString();
+
+    private string Tone => Decision switch
+    {
+        ReviewDecision.Approved => "success",
+        ReviewDecision.ChangesRequested => "error",
+        _ => "neutral",
+    };
+
+    private string? Icon => Decision switch
+    {
+        ReviewDecision.Approved => Icons.Material.Outlined.CheckCircle,
+        ReviewDecision.ChangesRequested => Icons.Material.Outlined.ErrorOutline,
+        _ => Icons.Material.Outlined.RateReview,
+    };
+}
