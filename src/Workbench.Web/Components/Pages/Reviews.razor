@@ -53,7 +53,7 @@ else
             <MudText Typo="Typo.subtitle2" Class="dz-section-title">Awaiting your decision</MudText>
             <div class="dz-table-shell mb-4">
                 <MudTable Items="_awaitingChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
-                          OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
+                          OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item!.Id}"))"
                           T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
                     <HeaderContent>
                         <MudTh>Key</MudTh>

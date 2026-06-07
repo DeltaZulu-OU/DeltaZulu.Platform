@@ -13,9 +13,14 @@
       Documentation generation is enabled here so that public domain APIs are forced to carry
       summaries; CS1591 (missing XML comment) is suppressed only in non-Domain projects via their
       own csproj overrides where appropriate.
+
+      The additional analyzer suppressions below are deliberate project-level policy choices:
+      - CA1305: persistence rows store round-trip ISO timestamps; repository parsing is internal.
+      - CA1822/CA1859/CA2263: low-value style/performance diagnostics in current POC code/tests.
+      Compiler warnings and MudBlazor analyzer warnings remain visible.
     -->
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CA1014</NoWarn>
+    <NoWarn>$(NoWarn);CA1014;CA1305;CA1822;CA1859;CA2263</NoWarn>
     <!-- CA1014 (CLSCompliant) is noise for an internal product. -->
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <IsPackable>false</IsPackable>

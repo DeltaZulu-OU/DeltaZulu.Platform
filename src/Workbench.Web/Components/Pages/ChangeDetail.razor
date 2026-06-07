@@ -316,7 +316,7 @@
                                 @if (!string.IsNullOrWhiteSpace(check.LogsExcerpt))
                                 {
                                     <MudExpansionPanels Class="mt-1">
-                                        <MudExpansionPanel Text="Technical details" Dense="true" IsInitiallyExpanded="false">
+                                        <MudExpansionPanel Text="Technical details" Dense="true">
                                             <DzCodeBlock Content="@check.LogsExcerpt" Light="true" Compact="true" MaxHeightPx="320" />
                                         </MudExpansionPanel>
                                     </MudExpansionPanels>
@@ -351,7 +351,7 @@
 
                 <DzPanel Title="Record review" Compact="true" Outlined="true" Elevation="0" Class="mb-3">
                     <MudExpansionPanels Class="mb-3">
-                        <MudExpansionPanel Text="Switch user for testing" Dense="true" IsInitiallyExpanded="false">
+                        <MudExpansionPanel Text="Switch user for testing" Dense="true">
                             <MudAlert Severity="@(IsCurrentUserAuthor ? Severity.Warning : Severity.Info)" Dense="true" Class="mb-2">
                                 Acting as @UserContext.CurrentUser.DisplayName. Controlled review blocks approval by the change author.
                             </MudAlert>

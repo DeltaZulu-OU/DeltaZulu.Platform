@@ -111,7 +111,7 @@ else
                         @if (!string.IsNullOrWhiteSpace(context.Check.LogsExcerpt))
                         {
                             <MudExpansionPanels Class="mt-1">
-                                <MudExpansionPanel Text="Logs" Dense="true" IsInitiallyExpanded="false">
+                                <MudExpansionPanel Text="Logs" Dense="true">
                                     <DzCodeBlock Content="@context.Check.LogsExcerpt" Light="true" Compact="true" MaxHeightPx="320" />
                                 </MudExpansionPanel>
                             </MudExpansionPanels>

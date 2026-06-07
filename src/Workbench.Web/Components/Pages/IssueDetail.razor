@@ -91,9 +91,9 @@
                         else
                         {
                             <div class="mt-1">
-                                <MudTextField @bind-Value="_extSystem" Label="System" Dense="true" Margin="Margin.Dense" Class="mb-2" />
-                                <MudTextField @bind-Value="_extCaseId" Label="Case ID" Dense="true" Margin="Margin.Dense" Class="mb-2" />
-                                <MudTextField @bind-Value="_extCaseUrl" Label="URL (optional)" Dense="true" Margin="Margin.Dense" Class="mb-2" />
+                                <MudTextField @bind-Value="_extSystem" Label="System" Margin="Margin.Dense" Class="mb-2" />
+                                <MudTextField @bind-Value="_extCaseId" Label="Case ID" Margin="Margin.Dense" Class="mb-2" />
+                                <MudTextField @bind-Value="_extCaseUrl" Label="URL (optional)" Margin="Margin.Dense" Class="mb-2" />
                                 <div class="d-flex gap-2">
                                     <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Secondary"
                                                OnClick="LinkExternalCase">Link</MudButton>
@@ -131,7 +131,7 @@
         {
             <div class="dz-table-shell">
                 <MudTable Items="_relatedChanges" Dense="true" Hover="true"
-                          OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
+                          OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item!.Id}"))"
                           T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
                     <HeaderContent>
                         <MudTh>Key</MudTh>
