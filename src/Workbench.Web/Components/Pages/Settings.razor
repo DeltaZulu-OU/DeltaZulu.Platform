@@ -80,7 +80,7 @@
                 <MudAlert Severity="@_lastRepairSeverity" Dense="true" Class="mb-3">@_lastRepairMessage</MudAlert>
             }
 
-            <div class="dz-table-shell">
+            <DzTableShell>
                 <MudTable Items="_mergeIntents" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="MergeIntent" Elevation="0">
                     <HeaderContent>
                         <MudTh>Change</MudTh>
@@ -135,7 +135,7 @@
                         </MudTd>
                     </RowTemplate>
                 </MudTable>
-            </div>
+            </DzTableShell>
         }
     </ChildContent>
 </DzPanel>

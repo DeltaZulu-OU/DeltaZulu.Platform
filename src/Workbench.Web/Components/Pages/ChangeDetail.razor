@@ -67,11 +67,9 @@
 {
     <div class="dz-linked-issue mb-4">
         <MudIcon Icon="@Icons.Material.Outlined.Link" Size="Size.Small" Class="dz-inline-icon" />
-        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                   OnClick="@(() => Nav.NavigateTo($"/issues/{_linkedIssue.Id}"))"
-                   Class="dz-link-button">
+        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/issues/{_linkedIssue.Id}"))">
             Issue: <code>@_linkedIssue.Key</code> @_linkedIssue.Title
-        </MudButton>
+        </DzActionLink>
     </div>
 }
 
@@ -95,7 +93,7 @@
 
     @* ── Content tab ── *@
     <MudTabPanel Text="Content" BadgeData="@_change.DraftFiles.Count" BadgeColor="Color.Secondary">
-        <div class="dz-tab-body">
+        <DzTabBody>
             @if (ChecksMayBeStale && !IsTerminal)
             {
                 <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
@@ -194,12 +192,12 @@
                     }
                 }
             }
-        </div>
+        </DzTabBody>
     </MudTabPanel>
 
     @* ── Draft vs Accepted tab ── *@
     <MudTabPanel Text="Draft vs accepted" BadgeData="@_draftComparisons.Count(c => c.Status != DraftAcceptedComparisonStatus.Unchanged)" BadgeColor="Color.Warning">
-        <div class="dz-tab-body">
+        <DzTabBody>
             @if (_draftComparisons.Count == 0)
             {
                 <DzEmptyState Title="No draft files to compare."
@@ -239,12 +237,12 @@
                     </MudExpansionPanels>
                 }
             }
-        </div>
+        </DzTabBody>
     </MudTabPanel>
 
     @* ── Validation tab ── *@
     <MudTabPanel Text="Validation" BadgeData="@_change.Checks.Count" BadgeColor="Color.Info">
-        <div class="dz-tab-body">
+        <DzTabBody>
             @if (ChecksMayBeStale && !IsTerminal)
             {
                 <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
@@ -298,7 +296,7 @@
             }
             else
             {
-                <div class="dz-table-shell">
+                <DzTableShell>
                     <MudTable Items="_change.Checks.OrderByDescending(c => c.IsBlocking).ThenBy(c => c.Status)"
                               Dense="true" T="CheckRun" Elevation="0">
                         <HeaderContent>
@@ -324,14 +322,14 @@
                             </MudTd>
                         </RowTemplate>
                     </MudTable>
-                </div>
+                </DzTableShell>
             }
-        </div>
+        </DzTabBody>
     </MudTabPanel>
 
     @* ── Review tab ── *@
     <MudTabPanel Text="Review" BadgeData="@_change.Reviews.Count" BadgeColor="Color.Secondary">
-        <div class="dz-tab-body">
+        <DzTabBody>
             @if (!IsTerminal)
             {
                 var profile = WorkflowProfile.For(_change.WorkflowProfileId);
@@ -416,7 +414,7 @@
                     }
                 </MudTimeline>
             }
-        </div>
+        </DzTabBody>
     </MudTabPanel>
 </MudTabs>
 

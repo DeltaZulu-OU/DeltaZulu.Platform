@@ -30,7 +30,7 @@
                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
                   Immediate="true" DebounceInterval="200" Class="dz-search-field"
                   T="string" />
-    <div class="dz-filter-row">
+    <DzFilterRow>
         <DzFilterChip Value="all" Selected="@(_lifecycleFilter == "all")" OnClick="@(() => OnLifecycleFilterChanged("all"))">
             All (@_detections.Count)
         </DzFilterChip>
@@ -43,7 +43,7 @@
         <DzFilterChip Value="Deprecated" Selected="@(_lifecycleFilter == "Deprecated")" OnClick="@(() => OnLifecycleFilterChanged("Deprecated"))">
             Deprecated (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Deprecated))
         </DzFilterChip>
-    </div>
+    </DzFilterRow>
 </DzToolbar>
 
 @if (_loading)
@@ -66,7 +66,7 @@ else if (_filteredDetections.Count == 0)
 }
 else
 {
-    <div class="dz-table-shell">
+    <DzTableShell>
         <MudTable Items="_filteredDetections" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0"
                   OnRowClick="@(args => Nav.NavigateTo($"/detections/{args.Item!.Id}"))"
                   T="Detection" RowClass="cursor-pointer">
@@ -93,7 +93,7 @@ else
                 </MudTd>
             </RowTemplate>
         </MudTable>
-    </div>
+    </DzTableShell>
 }
 
 @code {

@@ -48,18 +48,11 @@ else
         </MudItem>
         <MudItem xs="12" md="4">
             <DzPanel Eyebrow="Comparison">
-                <div class="dz-detail-list">
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Compare from</MudText>
-                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">
-                            @(_comparison.BeforeVersion?.DisplayVersion ?? "No earlier version")
-                        </MudText>
-                    </div>
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Compare to</MudText>
-                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">@_comparison.AfterVersion.DisplayVersion</MudText>
-                    </div>
-                    <div class="dz-detail-list__item">
+                <DzDetailList>
+                    <DzDetailItem Label="Compare from" Value="@(_comparison.BeforeVersion?.DisplayVersion ?? "No earlier version")" />
+                    <DzDetailItem Label="Compare to" Value="@_comparison.AfterVersion.DisplayVersion" />
+
+                    <DzDetailItem>
                         <MudSelect Value="_selectedBeforeVersionValue" ValueChanged="OnBeforeVersionChanged"
                                    Label="Choose comparison baseline" T="string" Dense="true">
                             <MudSelectItem Value="@PreviousVersionValue">Previous accepted version</MudSelectItem>
@@ -68,51 +61,37 @@ else
                                 <MudSelectItem Value="@version.Id.ToString()">@version.DisplayVersion — @version.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudSelectItem>
                             }
                         </MudSelect>
-                    </div>
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Changed files</MudText>
-                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">@_comparison.ChangedFiles.Count</MudText>
-                    </div>
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Source change</MudText>
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                   OnClick="@(() => Nav.NavigateTo($"/changes/{_comparison.AfterVersion.SourceChangeRequestId}"))"
-                                   Class="dz-link-button mt-1">
+                    </DzDetailItem>
+
+                    <DzDetailItem Label="Changed files" Value="@_comparison.ChangedFiles.Count.ToString()" />
+
+                    <DzDetailItem Label="Source change">
+                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/changes/{_comparison.AfterVersion.SourceChangeRequestId}"))" Class="mt-1">
                             View change
-                        </MudButton>
-                    </div>
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Linked issue</MudText>
+                        </DzActionLink>
+                    </DzDetailItem>
+
+                    <DzDetailItem Label="Linked issue">
                         @if (_comparison.AfterVersion.LinkedIssueId is not null)
                         {
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                       OnClick="@(() => Nav.NavigateTo($"/issues/{_comparison.AfterVersion.LinkedIssueId}"))"
-                                       Class="dz-link-button mt-1">
+                            <DzActionLink OnClick="@(() => Nav.NavigateTo($"/issues/{_comparison.AfterVersion.LinkedIssueId}"))" Class="mt-1">
                                 View issue
-                            </MudButton>
+                            </DzActionLink>
                         }
                         else
                         {
-                            <MudText Typo="Typo.body2" Class="text-secondary mt-1">None</MudText>
+                            <MudText Typo="Typo.body2" Class="text-secondary">None</MudText>
                         }
-                    </div>
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Workflow profile</MudText>
-                        <div class="mt-1"><DzMetaChip Kind="workflow">@_comparison.AfterVersion.WorkflowProfile</DzMetaChip></div>
-                    </div>
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Checks</MudText>
-                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">@_comparison.AfterVersion.ChecksSummary</MudText>
-                    </div>
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Reviews</MudText>
-                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">@_comparison.AfterVersion.ReviewSummary</MudText>
-                    </div>
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Accepted</MudText>
-                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">@_comparison.AfterVersion.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
-                    </div>
-                </div>
+                    </DzDetailItem>
+
+                    <DzDetailItem Label="Workflow profile">
+                        <DzMetaChip Kind="workflow">@_comparison.AfterVersion.WorkflowProfile</DzMetaChip>
+                    </DzDetailItem>
+
+                    <DzDetailItem Label="Checks" Value="@_comparison.AfterVersion.ChecksSummary" />
+                    <DzDetailItem Label="Reviews" Value="@_comparison.AfterVersion.ReviewSummary" />
+                    <DzDetailItem Label="Accepted" Value="@_comparison.AfterVersion.AcceptedAt.ToString("yyyy-MM-dd HH:mm")" />
+                </DzDetailList>
             </DzPanel>
         </MudItem>
     </MudGrid>
@@ -126,7 +105,7 @@ else
         }
         else
         {
-            <div class="dz-table-shell">
+            <DzTableShell>
                 <MudTable Items="_comparison.Files" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="VersionFileDiff" Elevation="0">
                     <HeaderContent>
                         <MudTh>File</MudTh>
@@ -158,7 +137,7 @@ else
                         </MudTd>
                     </RowTemplate>
                 </MudTable>
-            </div>
+            </DzTableShell>
 
             @if (_comparison.ChangedFiles.Any(file => file.Hunks.Count > 0))
             {

@@ -54,47 +54,42 @@ else
         </MudItem>
         <MudItem xs="12" md="4">
             <DzPanel Eyebrow="Details" Class="dz-panel--full-height">
-                <div class="dz-detail-list">
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="text-muted">Lifecycle</MudText>
-                        <div class="mt-1"><StatusChip Lifecycle="_detection.Lifecycle" /></div>
-                    </div>
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="text-muted">Latest version</MudText>
+                <DzDetailList>
+                    <DzDetailItem Label="Lifecycle">
+                        <StatusChip Lifecycle="_detection.Lifecycle" />
+                    </DzDetailItem>
+
+                    <DzDetailItem Label="Latest version">
                         @if (_latestVersion is not null)
                         {
-                            <div class="dz-detail-list__row">
+                            <div class="d-flex align-center gap-2 flex-wrap">
                                 <DzMetaChip Kind="version">@_latestVersion.DisplayVersion</DzMetaChip>
-                                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                           OnClick="@(() => Nav.NavigateTo($"/history/{_latestVersion.Id}"))"
-                                           Class="dz-link-button">
+                                <DzActionLink OnClick="@(() => Nav.NavigateTo($"/history/{_latestVersion.Id}"))">
                                     Compare
-                                </MudButton>
+                                </DzActionLink>
                             </div>
                         }
                         else
                         {
-                            <MudText Typo="Typo.body2" Class="text-secondary mt-1">None</MudText>
+                            <MudText Typo="Typo.body2" Class="text-secondary">None</MudText>
                         }
-                    </div>
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="text-muted">Active changes</MudText>
-                        <MudText Typo="Typo.body2" Class="mt-1">@_activeChangeCount</MudText>
-                    </div>
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="text-muted">Updated</MudText>
-                        <MudText Typo="Typo.body2" Class="dz-config-value dz-config-value--mono mt-1">
+                    </DzDetailItem>
+
+                    <DzDetailItem Label="Active changes" Value="@_activeChangeCount.ToString()" />
+
+                    <DzDetailItem Label="Updated">
+                        <MudText Typo="Typo.body2" Class="dz-config-value dz-config-value--mono">
                             @_detection.UpdatedAt.ToString("yyyy-MM-dd HH:mm:ss")
                         </MudText>
-                    </div>
-                </div>
+                    </DzDetailItem>
+                </DzDetailList>
             </DzPanel>
         </MudItem>
     </MudGrid>
 
     <MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true" Class="mt-4">
         <MudTabPanel Text="Versions" BadgeData="@_versions.Count" BadgeColor="Color.Secondary">
-            <div class="dz-tab-body">
+            <DzTabBody>
                 @if (_versions.Count == 0)
                 {
                     <DzEmptyState Title="No accepted versions yet."
@@ -103,7 +98,7 @@ else
                 }
                 else
                 {
-                    <div class="dz-table-shell">
+                    <DzTableShell>
                         <MudTable Items="_versions" Dense="true" T="DetectionVersion" Elevation="0">
                             <HeaderContent>
                                 <MudTh>Version</MudTh>
@@ -129,13 +124,13 @@ else
                                 </MudTd>
                             </RowTemplate>
                         </MudTable>
-                    </div>
+                    </DzTableShell>
                 }
-            </div>
+            </DzTabBody>
         </MudTabPanel>
 
         <MudTabPanel Text="Work history" BadgeData="@_changes.Count" BadgeColor="Color.Secondary">
-            <div class="dz-tab-body">
+            <DzTabBody>
                 @if (_changes.Count == 0)
                 {
                     <DzEmptyState Title="No changes linked to this detection."
@@ -144,7 +139,7 @@ else
                 }
                 else
                 {
-                    <div class="dz-table-shell">
+                    <DzTableShell>
                         <MudTable Items="_changes" Dense="true" Hover="true"
                                   OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item!.Id}"))"
                                   T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
@@ -161,21 +156,21 @@ else
                                 <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
                             </RowTemplate>
                         </MudTable>
-                    </div>
+                    </DzTableShell>
                 }
-            </div>
+            </DzTabBody>
         </MudTabPanel>
 
         <MudTabPanel Text="Related issues" BadgeColor="Color.Info">
-            <div class="dz-tab-body">
+            <DzTabBody>
                 <DzEmptyState Title="Issues are linked through changes."
                               Description="Open a change to see its linked issue."
                               Icon="@Icons.Material.Outlined.Link" />
-            </div>
+            </DzTabBody>
         </MudTabPanel>
 
         <MudTabPanel Text="Files">
-            <div class="dz-tab-body">
+            <DzTabBody>
                 @if (_acceptedFiles.Count == 0)
                 {
                     <DzEmptyState Title="No accepted content yet."
@@ -193,7 +188,7 @@ else
                         }
                     </MudList>
                 }
-            </div>
+            </DzTabBody>
         </MudTabPanel>
     </MudTabs>
 }

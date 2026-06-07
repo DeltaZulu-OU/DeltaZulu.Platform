@@ -170,52 +170,35 @@
 <MudGrid Spacing="3">
     <MudItem xs="12" md="4">
         <DzPanel Eyebrow="Details">
-            <div class="dz-detail-list">
+            <DzDetailList>
                 @if (!string.IsNullOrWhiteSpace(_issue.Description))
                 {
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="text-muted">Description</MudText>
-                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">@_issue.Description</MudText>
-                    </div>
+                    <DzDetailItem Label="Description" Value="@_issue.Description" />
                 }
                 @if (!string.IsNullOrWhiteSpace(_issue.AcceptanceCriteria))
                 {
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="text-muted">Acceptance criteria</MudText>
-                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">@_issue.AcceptanceCriteria</MudText>
-                    </div>
+                    <DzDetailItem Label="Acceptance criteria" Value="@_issue.AcceptanceCriteria" />
                 }
                 @if (!string.IsNullOrWhiteSpace(_issue.DataSource))
                 {
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="text-muted">Data source</MudText>
-                        <MudText Typo="Typo.body2" Class="dz-detail-list__value dz-detail-list__value--mono">@_issue.DataSource</MudText>
-                    </div>
+                    <DzDetailItem Label="Data source" Value="@_issue.DataSource" Mono="true" />
                 }
                 @if (!string.IsNullOrWhiteSpace(_issue.Platform))
                 {
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="text-muted">Platform</MudText>
-                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">@_issue.Platform</MudText>
-                    </div>
+                    <DzDetailItem Label="Platform" Value="@_issue.Platform" />
                 }
                 @if (!string.IsNullOrWhiteSpace(_issue.AttackTechniqueId))
                 {
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="text-muted">ATT&amp;CK technique</MudText>
-                        <MudText Typo="Typo.body2" Class="dz-detail-list__value dz-detail-list__value--mono">@_issue.AttackTechniqueId</MudText>
-                    </div>
+                    <DzDetailItem Label="ATT&amp;CK technique" Value="@_issue.AttackTechniqueId" Mono="true" />
                 }
                 @if (_issue.ExternalCase is null && _issue.Type == IssueType.Case)
                 {
-                    <div class="dz-detail-list__item">
-                        <MudText Typo="Typo.caption" Class="text-muted">External case</MudText>
+                    <DzDetailItem Label="External case">
                         @if (!_showExternalCaseForm)
                         {
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                       OnClick="@(() => _showExternalCaseForm = true)" Class="dz-link-button mt-1">
+                            <DzActionLink OnClick="@(() => _showExternalCaseForm = true)" Class="mt-1">
                                 Link external case
-                            </MudButton>
+                            </DzActionLink>
                         }
                         else
                         {
@@ -230,10 +213,9 @@
                                 </div>
                             </div>
                         }
-                    </div>
+                    </DzDetailItem>
                 }
-                <div class="dz-detail-list__item">
-                    <MudText Typo="Typo.caption" Class="text-muted">Classification</MudText>
+                <DzDetailItem Label="Classification">
                     @if (!_showClassifyForm)
                     {
                         <div class="d-flex flex-wrap align-center gap-1 mt-1">
@@ -250,10 +232,9 @@
                             {
                                 <MudText Typo="Typo.caption" Class="text-muted">None</MudText>
                             }
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                       OnClick="@(() => OpenClassifyForm())" Class="dz-link-button">
+                            <DzActionLink OnClick="@(() => OpenClassifyForm())">
                                 Edit
-                            </MudButton>
+                            </DzActionLink>
                         </div>
                     }
                     else
@@ -279,20 +260,10 @@
                             </div>
                         </div>
                     }
-                </div>
-                <div class="dz-detail-list__item">
-                    <MudText Typo="Typo.caption" Class="text-muted">Created</MudText>
-                    <MudText Typo="Typo.body2" Class="dz-detail-list__value dz-detail-list__value--mono">
-                        @_issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")
-                    </MudText>
-                </div>
-                <div class="dz-detail-list__item">
-                    <MudText Typo="Typo.caption" Class="text-muted">Updated</MudText>
-                    <MudText Typo="Typo.body2" Class="dz-detail-list__value dz-detail-list__value--mono">
-                        @_issue.UpdatedAt.ToString("yyyy-MM-dd HH:mm")
-                    </MudText>
-                </div>
-            </div>
+                </DzDetailItem>
+                <DzDetailItem Label="Created" Value="@_issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")" Mono="true" />
+                <DzDetailItem Label="Updated" Value="@_issue.UpdatedAt.ToString("yyyy-MM-dd HH:mm")" Mono="true" />
+            </DzDetailList>
         </DzPanel>
     </MudItem>
 
@@ -306,7 +277,7 @@
         }
         else
         {
-            <div class="dz-table-shell">
+            <DzTableShell>
                 <MudTable Items="_relatedChanges" Dense="true" Hover="true"
                           OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item!.Id}"))"
                           T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
@@ -323,7 +294,7 @@
                         <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
                     </RowTemplate>
                 </MudTable>
-            </div>
+            </DzTableShell>
         }
     </MudItem>
 </MudGrid>

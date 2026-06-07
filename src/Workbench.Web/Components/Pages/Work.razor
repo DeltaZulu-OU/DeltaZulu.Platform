@@ -32,7 +32,7 @@
 }
 
 <DzToolbar>
-    <div class="dz-filter-row">
+    <DzFilterRow>
         <DzFilterChip Value="all" Selected="@(_changeFilter == "all")" OnClick="@(() => OnChangeFilterChanged("all"))">
             All (@_allChanges.Count)
         </DzFilterChip>
@@ -45,7 +45,7 @@
         <DzFilterChip Value="stale" Selected="@(_changeFilter == "stale")" OnClick="@(() => OnChangeFilterChanged("stale"))">
             Stale
         </DzFilterChip>
-    </div>
+    </DzFilterRow>
 </DzToolbar>
 
 @if (_filteredChanges.Count == 0)
@@ -64,7 +64,7 @@
 }
 else
 {
-    <div class="dz-table-shell">
+    <DzTableShell>
         <MudTable Items="_filteredChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
                   OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item!.Id}"))"
                   T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
@@ -92,7 +92,7 @@ else
                 <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
             </RowTemplate>
         </MudTable>
-    </div>
+    </DzTableShell>
 }
 
 @code {

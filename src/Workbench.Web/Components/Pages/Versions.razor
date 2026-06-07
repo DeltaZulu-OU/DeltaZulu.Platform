@@ -38,7 +38,7 @@ else
         <MudText Typo="Typo.caption" Class="mud-text-secondary">@_filteredRows.Count version(s)</MudText>
     </DzToolbar>
 
-    <div class="dz-table-shell">
+    <DzTableShell>
         <MudTable Items="_filteredRows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="VersionRow" Elevation="0">
             <HeaderContent>
                 <MudTh>Detection</MudTh>
@@ -53,11 +53,9 @@ else
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Detection">
-                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                               OnClick="@(() => Nav.NavigateTo($"/detections/{context.Detection.Id}"))"
-                               Class="dz-link-button">
+                    <DzActionLink OnClick="@(() => Nav.NavigateTo($"/detections/{context.Detection.Id}"))">
                         @context.Detection.Title
-                    </MudButton>
+                    </DzActionLink>
                     <MudText Typo="Typo.caption" Class="mud-text-secondary"><code>@context.Detection.Slug</code></MudText>
                 </MudTd>
                 <MudTd DataLabel="Version">
@@ -90,14 +88,13 @@ else
                     <MudText Typo="Typo.caption">@context.Version.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
                 </MudTd>
                 <MudTd DataLabel="Actions">
-                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                               OnClick="@(() => Nav.NavigateTo($"/history/{context.Version.Id}"))">
+                    <DzActionLink OnClick="@(() => Nav.NavigateTo($"/history/{context.Version.Id}"))">
                         Compare / restore
-                    </MudButton>
+                    </DzActionLink>
                 </MudTd>
             </RowTemplate>
         </MudTable>
-    </div>
+    </DzTableShell>
 }
 
 @code {

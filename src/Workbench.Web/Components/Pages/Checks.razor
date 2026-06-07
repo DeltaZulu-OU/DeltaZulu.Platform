@@ -27,37 +27,31 @@ else
 {
     <MudGrid Spacing="3" Class="mb-4">
         <MudItem xs="12" sm="6" md="3">
-            <DzPanel Class="dz-metric-tile">
-                <span class="eyebrow">Total checks</span>
-                <MudText Typo="Typo.h4" Class="dz-metric-tile__value">@_rows.Count</MudText>
-                <MudText Typo="Typo.caption" Class="dz-metric-tile__label">Across @_changeCount change(s)</MudText>
-            </DzPanel>
+            <DzMetricTile Eyebrow="Total checks"
+                          Value="@_rows.Count.ToString()"
+                          Label="@($"Across {_changeCount} change(s)")" />
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
-            <DzPanel Class="dz-metric-tile">
-                <span class="eyebrow">Blocking attention</span>
-                <MudText Typo="Typo.h4" Class="dz-metric-tile__value">@BlockingAttentionCount</MudText>
-                <MudText Typo="Typo.caption" Class="dz-metric-tile__label">Blocking checks not currently passed</MudText>
-            </DzPanel>
+            <DzMetricTile Eyebrow="Blocking attention"
+                          Value="@BlockingAttentionCount.ToString()"
+                          Label="Blocking checks not currently passed" />
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
-            <DzPanel Class="dz-metric-tile">
-                <span class="eyebrow">Failed checks</span>
-                <MudText Typo="Typo.h4" Class="dz-metric-tile__value">@FailedCount</MudText>
-                <MudText Typo="Typo.caption" Class="dz-metric-tile__label">Latest failures stay linked to changes</MudText>
-            </DzPanel>
+            <DzMetricTile Eyebrow="Failed checks"
+                          Value="@FailedCount.ToString()"
+                          Label="Latest failures stay linked to changes"
+                          Tone="error" />
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
-            <DzPanel Class="dz-metric-tile">
-                <span class="eyebrow">Waiting/running</span>
-                <MudText Typo="Typo.h4" Class="dz-metric-tile__value">@InFlightCount</MudText>
-                <MudText Typo="Typo.caption" Class="dz-metric-tile__label">Queued or running validations</MudText>
-            </DzPanel>
+            <DzMetricTile Eyebrow="Waiting/running"
+                          Value="@InFlightCount.ToString()"
+                          Label="Queued or running validations"
+                          Tone="info" />
         </MudItem>
     </MudGrid>
 
     <DzToolbar>
-        <div class="dz-filter-row">
+        <DzFilterRow>
             <DzFilterChip Value="all" Selected="@(_checkFilter == "all")" OnClick="@(() => OnCheckFilterChanged("all"))">
                 All
             </DzFilterChip>
@@ -73,7 +67,7 @@ else
             <DzFilterChip Value="blocking" Selected="@(_checkFilter == "blocking")" OnClick="@(() => OnCheckFilterChanged("blocking"))">
                 Blocking attention
             </DzFilterChip>
-        </div>
+        </DzFilterRow>
     </DzToolbar>
 
     @if (_filteredRows.Count == 0)
@@ -84,7 +78,7 @@ else
     }
     else
     {
-        <div class="dz-table-shell">
+        <DzTableShell>
             <MudTable Items="_filteredRows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="CheckRow" Elevation="0">
                 <HeaderContent>
                     <MudTh>Change</MudTh>
@@ -96,11 +90,9 @@ else
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Change">
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                   OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))"
-                                   Class="dz-link-button">
+                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))">
                             <code>@context.Change.Key</code>
-                        </MudButton>
+                        </DzActionLink>
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>
                     </MudTd>
                     <MudTd DataLabel="Check"><code>@context.Check.Name</code></MudTd>
@@ -122,7 +114,7 @@ else
                     </MudTd>
                 </RowTemplate>
             </MudTable>
-        </div>
+        </DzTableShell>
     }
 }
 

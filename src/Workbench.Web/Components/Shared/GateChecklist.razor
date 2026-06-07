@@ -33,11 +33,9 @@
                     @{ var action = GateAction(gate.Code); }
                     @if (action is not null)
                     {
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                   OnClick="action.Value.Callback" Disabled="IsRunning"
-                                   Class="dz-link-button">
+                        <DzActionLink OnClick="action.Value.Callback" Disabled="IsRunning">
                             @action.Value.Label
-                        </MudButton>
+                        </DzActionLink>
                     }
                 </div>
             }

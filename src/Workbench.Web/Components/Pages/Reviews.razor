@@ -24,18 +24,14 @@ else
 {
     <MudGrid Spacing="3" Class="mb-4">
         <MudItem xs="12" sm="6" md="4">
-            <DzPanel Class="dz-metric-tile">
-                <span class="eyebrow">Awaiting your decision</span>
-                <MudText Typo="Typo.h4" Class="dz-metric-tile__value">@_awaitingCount</MudText>
-                <MudText Typo="Typo.caption" Class="dz-metric-tile__label">Changes needing your review</MudText>
-            </DzPanel>
+            <DzMetricTile Eyebrow="Awaiting your decision"
+                          Value="@_awaitingCount.ToString()"
+                          Label="Changes needing your review" />
         </MudItem>
         <MudItem xs="12" sm="6" md="4">
-            <DzPanel Class="dz-metric-tile">
-                <span class="eyebrow">Reviewed by you</span>
-                <MudText Typo="Typo.h4" Class="dz-metric-tile__value">@_reviewedByYouCount</MudText>
-                <MudText Typo="Typo.caption" Class="dz-metric-tile__label">Changes you have reviewed</MudText>
-            </DzPanel>
+            <DzMetricTile Eyebrow="Reviewed by you"
+                          Value="@_reviewedByYouCount.ToString()"
+                          Label="Changes you have reviewed" />
         </MudItem>
     </MudGrid>
 
@@ -51,7 +47,7 @@ else
         @if (_awaitingChanges.Count > 0)
         {
             <MudText Typo="Typo.subtitle2" Class="dz-section-title">Awaiting your decision</MudText>
-            <div class="dz-table-shell mb-4">
+            <DzTableShell Class="mb-4">
                 <MudTable Items="_awaitingChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
                           OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item!.Id}"))"
                           T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
@@ -70,13 +66,13 @@ else
                         <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
                     </RowTemplate>
                 </MudTable>
-            </div>
+            </DzTableShell>
         }
 
         @if (_reviewedByYou.Count > 0)
         {
             <MudText Typo="Typo.subtitle2" Class="dz-section-title">Your review history</MudText>
-            <div class="dz-table-shell">
+            <DzTableShell>
                 <MudTable Items="_reviewedByYou" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="ReviewRow" Elevation="0">
                     <HeaderContent>
                         <MudTh>Change</MudTh>
@@ -86,11 +82,9 @@ else
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="Change">
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                       OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))"
-                                       Class="dz-link-button">
+                            <DzActionLink OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))">
                                 <code>@context.Change.Key</code>
-                            </MudButton>
+                            </DzActionLink>
                             <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>
                         </MudTd>
                         <MudTd DataLabel="Decision">
@@ -104,12 +98,12 @@ else
                         </MudTd>
                     </RowTemplate>
                 </MudTable>
-            </div>
+            </DzTableShell>
         }
     }
     else
     {
-        <div class="dz-table-shell">
+        <DzTableShell>
             <MudTable Items="_allRows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="ReviewRow" Elevation="0">
                 <HeaderContent>
                     <MudTh>Change</MudTh>
@@ -120,11 +114,9 @@ else
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Change">
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                   OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))"
-                                   Class="dz-link-button">
+                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))">
                             <code>@context.Change.Key</code>
-                        </MudButton>
+                        </DzActionLink>
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>
                     </MudTd>
                     <MudTd DataLabel="Decision">
@@ -148,14 +140,12 @@ else
                     </MudTd>
                 </RowTemplate>
             </MudTable>
-        </div>
+        </DzTableShell>
     }
 
-    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-               OnClick="@(() => _showAuditView = !_showAuditView)"
-               Class="mt-3 dz-link-button">
+    <DzActionLink OnClick="@(() => _showAuditView = !_showAuditView)" Class="mt-3">
         @(_showAuditView ? "Show my reviews" : "Show all reviews (audit view)")
-    </MudButton>
+    </DzActionLink>
 }
 
 @code {
