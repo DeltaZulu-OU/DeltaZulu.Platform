@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Routing;
 using MudBlazor.Services;
 using Workbench.Application;
 using Workbench.Infrastructure;
@@ -50,8 +51,27 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseRouting();
 app.UseAntiforgery();
 
-app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/__health", () => Results.Text("Workbench.Web is running.", "text/plain"));
+
+    app.MapGet("/__endpoints", (IEnumerable<EndpointDataSource> sources) =>
+        Results.Json(sources
+            .SelectMany(source => source.Endpoints)
+            .Select(endpoint => new
+            {
+                endpoint.DisplayName,
+                RoutePattern = (endpoint as RouteEndpoint)?.RoutePattern.RawText,
+            })
+            .OrderBy(endpoint => endpoint.RoutePattern)
+            .ThenBy(endpoint => endpoint.DisplayName)
+            .ToArray()));
+}
+
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
 
 app.Run();

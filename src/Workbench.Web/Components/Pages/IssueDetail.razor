@@ -1,0 +1,214 @@
+@namespace Workbench.Web.Components.Pages
+@page "/issues/{Id}"
+@using MudBlazor
+@rendermode InteractiveServer
+@using Workbench.Application.Services
+@using Workbench.Domain.Changes
+@using Workbench.Domain.Common
+@using Workbench.Domain.Enums
+@using Workbench.Domain.Identifiers
+@using Workbench.Domain.Issues
+@inject IssueService IssueService
+@inject ChangeService ChangeService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Issue — @(_issue?.Key ?? "Loading")</PageTitle>
+
+@if (_issue is null)
+{
+    <MudProgressLinear Indeterminate="true" />
+    return;
+}
+
+<MudBreadcrumbs Items="_breadcrumbs" Class="mb-2" />
+
+<DzPageHeader Eyebrow="@(_issue.Type == IssueType.Case ? "Case" : "Request")"
+              Title="@($"{_issue.Key} {_issue.Title}")">
+    <Metadata>
+        <StatusChip IssueStatus="_issue.Status" />
+        <DzMetaChip Kind="file">@_issue.Type</DzMetaChip>
+    </Metadata>
+    <Actions>
+        @if (_issue.Status == IssueStatus.Open)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       OnClick="@(() => TransitionAsync(IssueStatus.InProgress))">
+                Start work
+            </MudButton>
+        }
+        @if (_issue.Status == IssueStatus.InProgress)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                       OnClick="@(() => TransitionAsync(IssueStatus.Closed))">
+                Close
+            </MudButton>
+        }
+        @if (_issue.Status is IssueStatus.Open or IssueStatus.InProgress)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Dark" Size="Size.Small"
+                       OnClick="@(() => TransitionAsync(IssueStatus.Closed))">
+                Close
+            </MudButton>
+        }
+    </Actions>
+</DzPageHeader>
+
+@if (_issue.ExternalCase is not null)
+{
+    <div class="dz-external-reference mb-4">
+        <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Size="Size.Small" Class="dz-inline-icon" />
+        @if (_issue.ExternalCase.Url is not null)
+        {
+            <MudLink Href="@_issue.ExternalCase.Url" Target="_blank" Typo="Typo.body2">
+                @_issue.ExternalCase.System: @_issue.ExternalCase.ExternalId
+            </MudLink>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                @_issue.ExternalCase.System: @_issue.ExternalCase.ExternalId
+            </MudText>
+        }
+    </div>
+}
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="Details">
+            <div class="dz-detail-list">
+                @if (_issue.ExternalCase is null && _issue.Type == IssueType.Case)
+                {
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="text-muted">External case</MudText>
+                        @if (!_showExternalCaseForm)
+                        {
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                       OnClick="@(() => _showExternalCaseForm = true)" Class="dz-link-button mt-1">
+                                Link external case
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <div class="mt-1">
+                                <MudTextField @bind-Value="_extSystem" Label="System" Dense="true" Margin="Margin.Dense" Class="mb-2" />
+                                <MudTextField @bind-Value="_extCaseId" Label="Case ID" Dense="true" Margin="Margin.Dense" Class="mb-2" />
+                                <MudTextField @bind-Value="_extCaseUrl" Label="URL (optional)" Dense="true" Margin="Margin.Dense" Class="mb-2" />
+                                <div class="d-flex gap-2">
+                                    <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Secondary"
+                                               OnClick="LinkExternalCase">Link</MudButton>
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => _showExternalCaseForm = false)">Cancel</MudButton>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                <div class="dz-detail-list__item">
+                    <MudText Typo="Typo.caption" Class="text-muted">Created</MudText>
+                    <MudText Typo="Typo.body2" Class="dz-detail-list__value dz-detail-list__value--mono">
+                        @_issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                    </MudText>
+                </div>
+                <div class="dz-detail-list__item">
+                    <MudText Typo="Typo.caption" Class="text-muted">Updated</MudText>
+                    <MudText Typo="Typo.body2" Class="dz-detail-list__value dz-detail-list__value--mono">
+                        @_issue.UpdatedAt.ToString("yyyy-MM-dd HH:mm")
+                    </MudText>
+                </div>
+            </div>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="8">
+        <MudText Typo="Typo.subtitle2" Class="dz-section-title">Related changes</MudText>
+        @if (_relatedChanges.Count == 0)
+        {
+            <DzEmptyState Title="No changes linked to this issue."
+                          Description="Linked changes will appear here once work starts from this issue."
+                          Icon="@Icons.Material.Outlined.Assignment" />
+        }
+        else
+        {
+            <div class="dz-table-shell">
+                <MudTable Items="_relatedChanges" Dense="true" Hover="true"
+                          OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
+                          T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Key</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Updated</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
+                        <MudTd DataLabel="Title">@context.Title</MudTd>
+                        <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
+                        <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </div>
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public string Id { get; set; } = null!;
+
+    private Issue? _issue;
+    private List<ChangeRequest> _relatedChanges = [];
+    private List<BreadcrumbItem> _breadcrumbs = [];
+
+    private bool _showExternalCaseForm;
+    private string _extSystem = "";
+    private string _extCaseId = "";
+    private string _extCaseUrl = "";
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        if (!Guid.TryParse(Id, out var guid)) return;
+        var issueId = new IssueId(guid);
+
+        _issue = await IssueService.GetByIdAsync(issueId);
+        if (_issue is null) return;
+
+        _breadcrumbs =
+        [
+            new("Changes", "/changes"),
+            new(_issue.Key, null, disabled: true),
+        ];
+
+        var allChanges = await ChangeService.ListAsync();
+        _relatedChanges = allChanges.Where(c => c.LinkedIssueId == _issue.Id).ToList();
+    }
+
+    private async Task TransitionAsync(IssueStatus newStatus)
+    {
+        if (_issue is null) return;
+        try
+        {
+            await IssueService.TransitionStatusAsync(_issue.Id, newStatus);
+            Snackbar.Add($"Issue transitioned to {newStatus}.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+
+    private async Task LinkExternalCase()
+    {
+        if (_issue is null || string.IsNullOrWhiteSpace(_extSystem) || string.IsNullOrWhiteSpace(_extCaseId)) return;
+        try
+        {
+            var url = string.IsNullOrWhiteSpace(_extCaseUrl) ? null : _extCaseUrl.Trim();
+            await IssueService.LinkExternalCaseAsync(_issue.Id, _extSystem.Trim(), _extCaseId.Trim(), url);
+            _showExternalCaseForm = false;
+            _extSystem = "";
+            _extCaseId = "";
+            _extCaseUrl = "";
+            Snackbar.Add("External case linked.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+}

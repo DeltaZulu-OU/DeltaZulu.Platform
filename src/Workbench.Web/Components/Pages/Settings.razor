@@ -1,0 +1,229 @@
+@namespace Workbench.Web.Components.Pages
+@page "/settings"
+@using MudBlazor
+@rendermode InteractiveServer
+@using Microsoft.Extensions.Configuration
+@using Workbench.Application.Abstractions
+@using Workbench.Application.Services
+@using Workbench.Domain.Common
+@using Workbench.Domain.Identifiers
+@using Workbench.Web.Services
+@inject IConfiguration Configuration
+@inject PocUserContext UserContext
+@inject MergeReconciliationService MergeReconciliation
+@inject ISnackbar Snackbar
+
+<PageTitle>Settings</PageTitle>
+
+<DzPageHeader Title="Settings"
+              Description="Current POC runtime configuration. Workflow engine and accepted content storage stay behind application abstractions." />
+
+<MudGrid Spacing="3" Class="dz-settings-grid">
+    <MudItem xs="12" md="6">
+        <DzPanel Eyebrow="POC user" Title="Current actor" Class="dz-panel--full-height">
+            <MudSelect Value="UserContext.CurrentPersona" ValueChanged="SwitchUser" Label="Acting as" T="PocUserPersona" Class="mb-2">
+                @foreach (var user in UserContext.AvailableUsers)
+                {
+                    <MudSelectItem Value="user.Persona">@user.DisplayName</MudSelectItem>
+                }
+            </MudSelect>
+            <MudText Typo="Typo.caption" Class="dz-config-value dz-config-value--mono">
+                User ID: @UserContext.CurrentUser.Id
+            </MudText>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <DzPanel Eyebrow="Workflow" Title="Orchestration mode" Class="dz-panel--full-height">
+            <DzStatusChip Label="@(_useElsa ? "Elsa adapter enabled" : "Domain-driven POC orchestrator enabled")"
+                          Tone="@(_useElsa ? "info" : "neutral")" />
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <DzPanel Eyebrow="Accepted content" Title="Canonical store path" Class="dz-panel--full-height">
+            <MudText Typo="Typo.body2" Class="dz-config-value dz-config-value--mono">
+                @_repositoryPath
+            </MudText>
+        </DzPanel>
+    </MudItem>
+</MudGrid>
+
+<DzPanel Eyebrow="Operations" Title="Merge reconciliation" Class="mb-4">
+    <Actions>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Secondary"
+                   Disabled="_loadingIntents"
+                   OnClick="LoadMergeIntentsAsync"
+                   StartIcon="@Icons.Material.Outlined.Refresh">
+            Refresh
+        </MudButton>
+    </Actions>
+    <ChildContent>
+        <MudText Typo="Typo.body2" Class="text-secondary mb-3">
+            Unresolved merge intents are database-owned recovery markers for accepted-content writes that have not completed their version projection.
+            Accepted writes can be repaired here without exposing storage internals to normal users.
+        </MudText>
+
+        @if (_loadingIntents)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (_mergeIntents.Count == 0)
+        {
+            <MudAlert Severity="Severity.Success" Dense="true">No unresolved merge intents were found.</MudAlert>
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(_lastRepairMessage))
+            {
+                <MudAlert Severity="@_lastRepairSeverity" Dense="true" Class="mb-3">@_lastRepairMessage</MudAlert>
+            }
+
+            <div class="dz-table-shell">
+                <MudTable Items="_mergeIntents" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="MergeIntent" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Change</MudTh>
+                        <MudTh>Detection</MudTh>
+                        <MudTh>Recovery state</MudTh>
+                        <MudTh>Requested</MudTh>
+                        <MudTh>Accepted snapshot</MudTh>
+                        <MudTh>Operator guidance</MudTh>
+                        <MudTh>Action</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        @{ var guidance = GuidanceFor(context); }
+                        <MudTd DataLabel="Change"><code>@context.ChangeId.Value</code></MudTd>
+                        <MudTd DataLabel="Detection">
+                            <MudText Typo="Typo.body2">@context.DetectionSlug</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary"><code>@context.DetectionId.Value</code></MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Recovery state">
+                            <DzStatusChip Label="@IntentStateLabel(context.State)"
+                                          Tone="@IntentStateTone(context.State)"
+                                          Class="dz-recovery-state" />
+                        </MudTd>
+                        <MudTd DataLabel="Requested">
+                            <MudText Typo="Typo.caption">@context.RequestedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Accepted snapshot">
+                            <div class="dz-recovery-snapshot">
+                                @if (string.IsNullOrWhiteSpace(context.CommitSha))
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">No accepted snapshot recorded.</MudText>
+                                }
+                                else
+                                {
+                                    <DzMetaChip Kind="version">@ShortSha(context.CommitSha)</DzMetaChip>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@(context.CommittedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Accepted time unavailable")</MudText>
+                                }
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="Operator guidance">
+                            <div class="dz-recovery-guidance">
+                                <MudText Typo="Typo.caption" Class="dz-recovery-guidance__message">@guidance.Message</MudText>
+                                <MudText Typo="Typo.caption" Class="dz-recovery-guidance__recommended"><strong>Recommended:</strong> @guidance.RecommendedAction</MudText>
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="Action">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                                       Disabled="@(!guidance.CanRepair || _repairingChangeId == context.ChangeId)"
+                                       OnClick="@(() => RepairIntentAsync(context.ChangeId))"
+                                       StartIcon="@Icons.Material.Outlined.Healing">
+                                Repair projection
+                            </MudButton>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </div>
+        }
+    </ChildContent>
+</DzPanel>
+
+<MudAlert Severity="Severity.Info" Class="dz-operator-note">
+    Predefined workflow profiles are selected on changes. User-authored workflow definitions and low-level accepted-content storage operations are intentionally outside the POC UI.
+</MudAlert>
+
+@code {
+    private bool _useElsa;
+    private string _repositoryPath = "accepted-content";
+    private readonly List<MergeIntent> _mergeIntents = [];
+    private bool _loadingIntents = true;
+    private ChangeRequestId? _repairingChangeId;
+    private string? _lastRepairMessage;
+    private Severity _lastRepairSeverity = Severity.Info;
+
+    private void SwitchUser(PocUserPersona persona)
+    {
+        UserContext.SwitchTo(persona);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _useElsa = Configuration.GetValue<bool>("Workflow:UseElsa");
+        _repositoryPath = Configuration.GetValue<string>("AcceptedContent:RepositoryPath") ?? "accepted-content";
+
+        await LoadMergeIntentsAsync();
+    }
+
+    private async Task LoadMergeIntentsAsync()
+    {
+        _loadingIntents = true;
+        try
+        {
+            _mergeIntents.Clear();
+            _mergeIntents.AddRange(await MergeReconciliation.ListUnresolvedAsync());
+            if (_mergeIntents.Count == 0)
+            {
+                _lastRepairMessage = null;
+            }
+        }
+        finally
+        {
+            _loadingIntents = false;
+        }
+    }
+
+    private async Task RepairIntentAsync(ChangeRequestId changeId)
+    {
+        _repairingChangeId = changeId;
+        try
+        {
+            var result = await MergeReconciliation.RepairCommittedAsync(changeId);
+            _lastRepairSeverity = result.IsSuccess ? Severity.Success : Severity.Warning;
+            _lastRepairMessage = result.Message;
+            Snackbar.Add(result.Message, _lastRepairSeverity);
+            await LoadMergeIntentsAsync();
+        }
+        catch (DomainException ex)
+        {
+            _lastRepairSeverity = Severity.Error;
+            _lastRepairMessage = ex.Message;
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _repairingChangeId = null;
+        }
+    }
+
+    private static MergeIntentRecoveryGuidance GuidanceFor(MergeIntent intent)
+        => MergeReconciliationService.BuildRecoveryGuidance(intent);
+
+    private static string ShortSha(string commitSha)
+        => commitSha.Length <= 12 ? commitSha : commitSha[..12];
+
+    private static string IntentStateLabel(MergeIntentState state) => state switch
+    {
+        MergeIntentState.Committed => "Accepted write recorded",
+        MergeIntentState.Pending => "Waiting for accepted write",
+        _ => state.ToString(),
+    };
+
+    private static string IntentStateTone(MergeIntentState state) => state switch
+    {
+        MergeIntentState.Committed => "warning",
+        MergeIntentState.Pending => "info",
+        _ => "neutral",
+    };
+}
