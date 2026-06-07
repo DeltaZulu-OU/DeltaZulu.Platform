@@ -1,0 +1,279 @@
+/* ============================================================
+   Detection Content Workbench — product UI design-system layer
+
+   Purpose:
+   - Keep Workbench-specific layout and component patterns out of app.css.
+   - Avoid broad MudBlazor overrides where a scoped Workbench class is enough.
+   - Preserve DeltaZulu rules: orange is action-only, slate is structural,
+     Plex Sans is product UI, Plex Mono is technical data.
+   ============================================================ */
+
+/* --- Text utilities ------------------------------------------------------ */
+
+.dz-text-secondary {
+    color: var(--color-text-secondary) !important;
+}
+
+.dz-text-muted {
+    color: var(--color-text-muted) !important;
+}
+
+.dz-text-mono {
+    font-family: var(--font-family-mono) !important;
+}
+
+.dz-eyebrow {
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-label);
+    line-height: var(--line-height-label);
+    letter-spacing: var(--letter-spacing-label);
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--brand-slate);
+}
+
+/* --- Page anatomy ------------------------------------------------------- */
+
+.dz-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+}
+
+.dz-page-header__main {
+    min-width: 0;
+}
+
+.dz-page-header__title {
+    margin: 0;
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-h3);
+    line-height: var(--line-height-h3);
+    letter-spacing: var(--letter-spacing-h3);
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.dz-page-header__description {
+    margin-top: var(--space-1);
+    max-width: 720px;
+    color: var(--color-text-secondary);
+}
+
+.dz-page-header__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+/* --- Layout / surface roles -------------------------------------------- */
+
+.dz-page-section {
+    margin-bottom: var(--space-5);
+}
+
+.dz-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-3);
+}
+
+.dz-toolbar__filters,
+.dz-toolbar__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.dz-surface,
+.dz-panel,
+.dz-card,
+.dz-table-shell,
+.dz-dialog-surface {
+    background: var(--color-surface-primary);
+    border: 1px solid var(--color-border-default);
+    box-shadow: var(--shadow-sm);
+}
+
+.dz-card {
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+}
+
+.dz-panel {
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+}
+
+.dz-table-shell {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.dz-dialog-surface {
+    border-radius: var(--radius-md);
+    padding: var(--space-5);
+}
+
+.dz-compact-panel {
+    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+    background: var(--color-surface-primary);
+    border: 1px solid var(--color-border-default);
+}
+
+/* --- Chips and badges --------------------------------------------------- */
+
+.dz-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    border-radius: var(--radius-pill);
+    font-size: var(--font-size-label);
+    line-height: var(--line-height-label);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.dz-chip--meta {
+    background: var(--color-surface-muted);
+    color: var(--brand-slate);
+    border: 1px solid rgba(39, 86, 104, 0.18);
+}
+
+.dz-chip--neutral {
+    background: var(--color-divider);
+    color: var(--color-text-secondary);
+    border: 1px solid transparent;
+}
+
+.dz-chip--filter {
+    background: transparent;
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-default);
+}
+
+.dz-chip--filter-selected {
+    background: rgba(39, 86, 104, 0.10);
+    color: var(--brand-slate);
+    border: 1px solid rgba(39, 86, 104, 0.24);
+}
+
+.dz-chip--version {
+    background: var(--brand-ink);
+    color: var(--color-text-inverse);
+    border: 1px solid var(--brand-ink);
+}
+
+/* --- Operational data tables ------------------------------------------- */
+
+.dz-data-table {
+    width: 100%;
+}
+
+.dz-data-table .mud-table-head th {
+    color: var(--brand-slate);
+}
+
+.dz-row-action {
+    color: var(--brand-slate) !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+}
+
+/* --- Code, file, and comparison surfaces -------------------------------- */
+
+.dz-code-block {
+    font-family: var(--font-family-mono);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow: auto;
+    max-height: 420px;
+    padding: var(--space-3);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border-default);
+    background: var(--brand-ink);
+    color: var(--color-text-inverse);
+}
+
+.dz-code-block--light {
+    background: var(--color-surface-secondary);
+    color: var(--color-text-primary);
+}
+
+.dz-diff-pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-3);
+}
+
+.dz-diff-pair__label {
+    margin-bottom: var(--space-1);
+    color: var(--color-text-secondary);
+    font-weight: 600;
+}
+
+/* --- Gate and recovery patterns ---------------------------------------- */
+
+.dz-gate-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--color-warning-bg);
+}
+
+.dz-gate-row__message {
+    flex: 1;
+}
+
+.dz-recovery-guidance {
+    color: var(--color-text-secondary);
+    max-width: 760px;
+}
+
+/* --- Empty / loading states -------------------------------------------- */
+
+.dz-empty-state {
+    text-align: center;
+    padding: var(--space-6);
+    color: var(--color-text-muted);
+}
+
+.dz-empty-state__title {
+    color: var(--color-text-primary);
+    font-weight: 600;
+    margin-bottom: var(--space-1);
+}
+
+.dz-empty-state__description {
+    color: var(--color-text-muted);
+}
+
+/* --- Responsive behaviour ---------------------------------------------- */
+
+@media (max-width: 720px) {
+    .dz-page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .dz-page-header__actions {
+        justify-content: flex-start;
+    }
+
+    .dz-diff-pair {
+        grid-template-columns: 1fr;
+    }
+}

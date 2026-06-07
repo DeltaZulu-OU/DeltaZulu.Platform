@@ -2,6 +2,9 @@
    Detection Content Workbench — DeltaZulu Design System overrides
    MudBlazor handles most component styling via the theme;
    this file carries DZ-specific overrides and utility classes.
+
+   Keep this file for base/global behaviour only.
+   Workbench product UI patterns live in workbench-design-system.css.
    ============================================================ */
 
 html, body {
@@ -32,7 +35,7 @@ pre {
     background: var(--brand-ink);
     color: #FFFFFF;
     padding: 18px 20px;
-    border-radius: 12px;
+    border-radius: var(--radius-sm);
     overflow-x: auto;
     font-size: 0.875rem;
     line-height: 1.55;
@@ -49,17 +52,17 @@ pre {
     color: var(--brand-slate);
 }
 
-/* --- Card radius override: 18px per DZ --- */
-.mud-paper {
-    border-radius: var(--radius-lg) !important;
-}
+/* --- Surface radii are now scoped.
+   Use .dz-card / .dz-panel / .dz-dialog-surface from workbench-design-system.css.
+   Avoid global .mud-paper radius overrides because MudPaper backs cards, dialogs,
+   table shells, popovers, and nested utility panels. */
 
 /* --- Table row clickable --- */
 .cursor-pointer {
     cursor: pointer;
 }
 
-/* --- Pill buttons: DZ buttons are pill-shaped --- */
+/* --- Pill buttons: DZ buttons are pill-shaped. Keep global until button wrappers exist. --- */
 .mud-button-root.mud-button-filled,
 .mud-button-root.mud-button-outlined {
     border-radius: var(--radius-pill) !important;
@@ -149,7 +152,7 @@ pre {
         background: var(--brand-ink);
         color: #FFFFFF;
         padding: 18px 20px;
-        border-radius: 12px;
+        border-radius: var(--radius-sm);
         overflow-x: auto;
         font-size: 0.875rem;
         line-height: 1.55;
