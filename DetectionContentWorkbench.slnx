@@ -2,6 +2,7 @@
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
   </Folder>
+  <Project Path="src/DeltaZulu.Blazor.Components/DeltaZulu.Blazor.Components.csproj" />
   <Project Path="src/Workbench.Application/Workbench.Application.csproj" />
   <Project Path="src/Workbench.Domain/Workbench.Domain.csproj" />
   <Project Path="src/Workbench.Infrastructure/Workbench.Infrastructure.csproj" />

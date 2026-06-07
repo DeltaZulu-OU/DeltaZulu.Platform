@@ -528,6 +528,12 @@
         "resolved": "0.8.6",
         "contentHash": "iP4jVLQoQmUjMU88g1WObiNr6YKZGvh4aOXn3yOJsHqZsflwRsxZPcIBvNXgjXO3vQKSLctXGLTpcBPLnWPS8A=="
       },
+      "deltazulu.blazor.components": {
+        "type": "Project",
+        "dependencies": {
+          "MudBlazor": "[9.4.0, )"
+        }
+      },
       "workbench.application": {
         "type": "Project",
         "dependencies": {

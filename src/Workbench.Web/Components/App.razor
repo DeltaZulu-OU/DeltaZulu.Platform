@@ -1,3 +1,5 @@
+@namespace Workbench.Web.Components
+@using Workbench.Web.Components
 @* Root component. DeltaZulu design system: IBM Plex Sans/Mono fonts, brand tokens, MudBlazor. *@
 <!DOCTYPE html>
 <html lang="en">
@@ -9,9 +11,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="_content/MudBlazor/MudBlazor.min.css" />
-    <link rel="stylesheet" href="deltazulu-tokens.css" />
+    <link rel="stylesheet" href="_content/DeltaZulu.Blazor.Components/deltazulu-tokens.css" />
     <link rel="stylesheet" href="app.css" />
-    <link rel="stylesheet" href="workbench-design-system.css" />
+    <link rel="stylesheet" href="_content/DeltaZulu.Blazor.Components/dz-components.css" />
     <HeadOutlet @rendermode="InteractiveServer" />
     <title>Detection Content Workbench</title>
 </head>

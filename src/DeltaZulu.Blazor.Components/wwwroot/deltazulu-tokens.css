@@ -13,7 +13,7 @@
  * data/code surfaces. All loaded from Google Fonts.
  *
  * Usage:
- *   <link rel="stylesheet" href="colors_and_type.css">
+ *   <link rel="stylesheet" href="_content/DeltaZulu.Blazor.Components/deltazulu-tokens.css">
  *   All tokens are available as CSS custom properties.
  */
 
@@ -23,58 +23,57 @@
    1. BRAND PALETTE — raw primitive values
    ============================================================ */
 :root {
-    --brand-ink: #131F2A; /* Primary dark. Surfaces, dark cards, headings */
-    --brand-paper: #F6F5F3; /* Canvas. Page background, warm off-white */
-    --brand-navy: #122F42; /* Secondary dark. Dark surface variation */
-    --brand-slate: #275668; /* Muted blue. Labels, chips, structural accent */
-    --brand-accent: #CF733A; /* CTA orange. ACTION ONLY — not decorative */
+    --brand-ink: #131F2A;
+    --brand-paper: #F6F5F3;
+    --brand-navy: #122F42;
+    --brand-slate: #275668;
+    --brand-accent: #CF733A;
 }
 
 /* ============================================================
    2. SEMANTIC SURFACE TOKENS
    ============================================================ */
 :root {
-    --color-surface-canvas: var(--brand-paper); /* Page background */
-    --color-surface-primary: #FFFFFF; /* Default card / field bg */
-    --color-surface-secondary: #EEF2F4; /* Optional grouped section surface */
-    --color-surface-dark: var(--brand-ink); /* Featured/flagship DZNS surface */
-    --color-surface-dark-alt: var(--brand-navy); /* Secondary dark emphasis */
-    --color-surface-muted: rgba(39, 86, 104, 0.08); /* Chips, eyebrows, note backgrounds */
+    --color-surface-canvas: var(--brand-paper);
+    --color-surface-primary: #FFFFFF;
+    --color-surface-secondary: #EEF2F4;
+    --color-surface-dark: var(--brand-ink);
+    --color-surface-dark-alt: var(--brand-navy);
+    --color-surface-muted: rgba(39, 86, 104, 0.08);
 }
 
 /* ============================================================
    3. SEMANTIC TEXT TOKENS
    ============================================================ */
 :root {
-    --color-text-primary: var(--brand-ink); /* Standard body + headings */
-    --color-text-secondary: #44515B; /* Lead copy, subheadings */
-    --color-text-muted: #5C6770; /* Metadata, helper text */
-    --color-text-inverse: #FFFFFF; /* Text on dark surfaces */
-    --color-text-inverse-muted: rgba(255, 255, 255, 0.78); /* Secondary text on dark surfaces */
+    --color-text-primary: var(--brand-ink);
+    --color-text-secondary: #44515B;
+    --color-text-muted: #5C6770;
+    --color-text-inverse: #FFFFFF;
+    --color-text-inverse-muted: rgba(255, 255, 255, 0.78);
 }
 
 /* ============================================================
    4. SEMANTIC BORDER TOKENS
    ============================================================ */
 :root {
-    --color-border-default: rgba(19, 31, 42, 0.10); /* Standard card / field borders */
-    --color-border-strong: rgba(19, 31, 42, 0.18); /* Hover border */
-    --color-border-inverse: rgba(255, 255, 255, 0.10); /* Border on dark surfaces */
-    --color-divider: rgba(19, 31, 42, 0.08); /* Section separators */
+    --color-border-default: rgba(19, 31, 42, 0.10);
+    --color-border-strong: rgba(19, 31, 42, 0.18);
+    --color-border-inverse: rgba(255, 255, 255, 0.10);
+    --color-divider: rgba(19, 31, 42, 0.08);
 }
 
 /* ============================================================
    5. CTA / ACTION TOKENS
    ============================================================ */
 :root {
-    --color-cta-bg: var(--brand-accent); /* #CF733A */
+    --color-cta-bg: var(--brand-accent);
     --color-cta-bg-hover: #BB6733;
     --color-cta-bg-active: #A75D2E;
     --color-cta-text: #FFFFFF;
-    --color-focus-ring: rgba(207, 115, 58, 0.35); /* Accent-derived focus ring */
+    --color-focus-ring: rgba(207, 115, 58, 0.35);
 }
 
-/* Button semantic aliases */
 :root {
     --button-primary-bg: var(--color-cta-bg);
     --button-primary-bg-hover: var(--color-cta-bg-hover);
@@ -100,35 +99,16 @@
 
 /* ============================================================
    6B. DATA-VIZ PALETTE — Spectra
-   ============================================================
-   A SECOND, SCOPED palette for product-UI dashboards (Telescope-
-   style log explorers, metrics views, charts). Visually distinct
-   from the brand palette so 'orange = action' and 'slate =
-   structure' remain unambiguous.
-
-   SCOPING RULES — non-negotiable:
-   • Use ONLY inside chart surfaces, severity badges, series
-     legends, and timeline glyphs.
-   • NEVER on marketing surfaces, CTAs, links, body text,
-     borders, dividers, focus rings, or icons outside a chart.
-   • NEVER substituted for --brand-accent or --brand-slate.
-   • Pair colour with a non-colour signal (label, icon, density)
-     wherever the data is actionable — colour is not the sole
-     carrier of meaning (WCAG 1.4.1).
-
-   All chips: AA Normal on --brand-paper (≥4.5 : 1).
    ============================================================ */
 :root {
-    /* Severity-named tokens (primary use) */
-    --viz-fatal: #A24545; /* 5.42 : 1 — deep red, highest severity */
-    --viz-error: #8E4F8E; /* 5.71 : 1 — magenta */
-    --viz-warn: #8C6A2A; /* 5.34 : 1 — antique gold (NOT brand orange) */
-    --viz-info: #3D5DA3; /* 5.92 : 1 — cerulean (clearly distinct from slate) */
-    --viz-debug: #4F7E48; /* 4.71 : 1 — sage green */
-    --viz-trace: #2F7A87; /* 4.65 : 1 — teal */
-    --viz-series-extra: #5C5BAE; /* 5.18 : 1 — periwinkle, for 7th series */
-    --viz-unknown: #7E8487; /* 4.61 : 1 — neutral grey */
-    /* Categorical aliases — use when severity-naming doesn't apply */
+    --viz-fatal: #A24545;
+    --viz-error: #8E4F8E;
+    --viz-warn: #8C6A2A;
+    --viz-info: #3D5DA3;
+    --viz-debug: #4F7E48;
+    --viz-trace: #2F7A87;
+    --viz-series-extra: #5C5BAE;
+    --viz-unknown: #7E8487;
     --viz-series-1: var(--viz-fatal);
     --viz-series-2: var(--viz-error);
     --viz-series-3: var(--viz-warn);
@@ -140,16 +120,16 @@
 }
 
 /* ============================================================
-   7. SURFACE ROLE ALIASES (component-level)
+   7. SURFACE ROLE ALIASES
    ============================================================ */
 :root {
-    --surface-featured: var(--color-surface-dark); /* DZNS flagship panels */
-    --surface-card: var(--color-surface-primary); /* Standard cards */
-    --surface-note: var(--color-surface-muted); /* Note/callout backgrounds */
+    --surface-featured: var(--color-surface-dark);
+    --surface-card: var(--color-surface-primary);
+    --surface-note: var(--color-surface-muted);
 }
 
 /* ============================================================
-   8. SPACING SCALE — 4px base grid
+   8. SPACING SCALE
    ============================================================ */
 :root {
     --space-0: 0;
@@ -157,12 +137,12 @@
     --space-2: 8px;
     --space-3: 12px;
     --space-4: 16px;
-    --space-5: 24px; /* Card padding baseline */
+    --space-5: 24px;
     --space-6: 32px;
     --space-7: 40px;
-    --space-8: 48px; /* Mobile section spacing */
+    --space-8: 48px;
     --space-9: 64px;
-    --space-10: 80px; /* Desktop section spacing */
+    --space-10: 80px;
     --space-11: 96px;
 }
 
@@ -171,21 +151,21 @@
    ============================================================ */
 :root {
     --radius-xs: 10px;
-    --radius-sm: 12px; /* Fields, brand mark */
-    --radius-md: 16px; /* Notes, FAQ, compact cards */
-    --radius-lg: 18px; /* Standard cards */
-    --radius-xl: 24px; /* Pricing cards */
-    --radius-2xl: 28px; /* Hero panels */
-    --radius-pill: 999px; /* Buttons, chips, circles */
+    --radius-sm: 12px;
+    --radius-md: 16px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+    --radius-2xl: 28px;
+    --radius-pill: 999px;
 }
 
 /* ============================================================
-   10. SHADOW SYSTEM — ink-tinted (rgba(19,31,42,...))
+   10. SHADOW SYSTEM
    ============================================================ */
 :root {
-    --shadow-sm: 0 8px 20px rgba(19, 31, 42, 0.04); /* Default card shadow */
-    --shadow-md: 0 14px 36px rgba(19, 31, 42, 0.08); /* Featured/dark panels */
-    --shadow-lg: 0 18px 44px rgba(19, 31, 42, 0.12); /* Rare — element rising above layout */
+    --shadow-sm: 0 8px 20px rgba(19, 31, 42, 0.04);
+    --shadow-md: 0 14px 36px rgba(19, 31, 42, 0.08);
+    --shadow-lg: 0 18px 44px rgba(19, 31, 42, 0.12);
 }
 
 /* ============================================================
@@ -195,7 +175,7 @@
     --duration-fast: 120ms;
     --duration-base: 180ms;
     --duration-slow: 260ms;
-    --easing-standard: ease; /* No spring or bounce */
+    --easing-standard: ease;
 }
 
 /* ============================================================
@@ -215,26 +195,20 @@
 }
 
 /* ============================================================
-   13. TYPOGRAPHY — BASE TOKENS
+   13. TYPOGRAPHY
    ============================================================ */
 :root {
-    /* Font families */
     --font-family-display: 'Newsreader', ui-serif, Georgia, 'Times New Roman', serif;
     --font-family-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-family-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-    /* Newsreader: marketing display only. Never in product UI.
-     Plex Sans: all UI/body/labels (max weight 700).
-     Plex Mono: code/telemetry/IDs only. */
-    /* Font sizes */
-    --font-size-display: 3.5rem; /* 56px — hero headline */
-    --font-size-h1: 2.5rem; /* 40px — section headlines */
-    --font-size-h2: 1.75rem; /* 28px — card/subsection headings */
-    --font-size-h3: 1.25rem; /* 20px — compact headings */
-    --font-size-body-lg: 1.125rem; /* 18px — lead copy */
-    --font-size-body: 1rem; /* 16px — standard paragraphs */
-    --font-size-body-sm: 0.875rem; /* 14px — metadata, helper text */
-    --font-size-label: 0.8125rem; /* 13px — eyebrows, chips, tags */
-    /* Line heights */
+    --font-size-display: 3.5rem;
+    --font-size-h1: 2.5rem;
+    --font-size-h2: 1.75rem;
+    --font-size-h3: 1.25rem;
+    --font-size-body-lg: 1.125rem;
+    --font-size-body: 1rem;
+    --font-size-body-sm: 0.875rem;
+    --font-size-label: 0.8125rem;
     --line-height-display: 1.02;
     --line-height-h1: 1.08;
     --line-height-h2: 1.12;
@@ -243,19 +217,13 @@
     --line-height-body: 1.50;
     --line-height-body-sm: 1.45;
     --line-height-label: 1.30;
-    /* Letter spacing */
     --letter-spacing-display: -0.035em;
     --letter-spacing-h1: -0.030em;
     --letter-spacing-h2: -0.020em;
     --letter-spacing-h3: -0.010em;
-    --letter-spacing-label: 0.080em; /* Positive tracking for uppercase labels */
+    --letter-spacing-label: 0.080em;
 }
 
-/* ============================================================
-   14. SEMANTIC TYPE ROLES — applied via class or element
-   ============================================================ */
-
-/* Reset */
 *, *::before, *::after {
     box-sizing: border-box;
 }
@@ -272,7 +240,6 @@ body {
     font-weight: 400;
 }
 
-/* Display headline — hero only. Marketing surfaces use Newsreader. */
 .text-display {
     font-family: var(--font-family-display);
     font-size: clamp(2.625rem, 7vw, var(--font-size-display));
@@ -283,7 +250,6 @@ body {
     font-optical-sizing: auto;
 }
 
-/* Section headline — Newsreader on marketing, Plex Sans in product UI. */
 .text-h1,
 h1 {
     font-family: var(--font-family-display);
@@ -296,7 +262,6 @@ h1 {
     font-optical-sizing: auto;
 }
 
-/* Card / subsection heading — Plex Sans for in-product clarity. */
 .text-h2,
 h2 {
     font-family: var(--font-family-sans);
@@ -308,7 +273,6 @@ h2 {
     margin-top: 0;
 }
 
-/* Compact heading — Plex Sans. */
 .text-h3,
 h3 {
     font-family: var(--font-family-sans);
@@ -320,7 +284,6 @@ h3 {
     margin-top: 0;
 }
 
-/* Lead / intro copy */
 .text-lead {
     font-size: var(--font-size-body-lg);
     line-height: var(--line-height-body-lg);
@@ -328,7 +291,6 @@ h3 {
     font-weight: 400;
 }
 
-/* Standard body */
 .text-body,
 p {
     font-size: var(--font-size-body);
@@ -336,14 +298,12 @@ p {
     color: var(--color-text-primary);
 }
 
-/* Small / metadata */
 .text-sm {
     font-size: var(--font-size-body-sm);
     line-height: var(--line-height-body-sm);
     color: var(--color-text-muted);
 }
 
-/* Section label / eyebrow — uppercase + tracked */
 .text-label,
 .eyebrow-label {
     font-family: var(--font-family-sans);
@@ -355,7 +315,6 @@ p {
     color: var(--brand-slate);
 }
 
-/* Monospace — code, telemetry, IDs, IPs, config */
 .text-mono,
 code,
 pre,
@@ -366,7 +325,6 @@ samp {
     font-weight: 400;
 }
 
-/* Inline code chip */
 .code-inline {
     font-family: var(--font-family-mono);
     font-size: 0.875em;
@@ -377,7 +335,6 @@ samp {
     font-weight: 500;
 }
 
-/* Code block */
 .code-block {
     font-family: var(--font-family-mono);
     font-size: 0.875rem;
@@ -389,7 +346,6 @@ samp {
     overflow-x: auto;
 }
 
-/* Muted variants */
 .text-muted {
     color: var(--color-text-muted);
 }
@@ -406,9 +362,6 @@ samp {
     color: var(--color-text-secondary);
 }
 
-/* ============================================================
-   15. REDUCED MOTION
-   ============================================================ */
 @media (prefers-reduced-motion: reduce) {
     html {
         scroll-behavior: auto;

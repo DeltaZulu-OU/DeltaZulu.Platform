@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>DeltaZulu.Blazor.Components</RootNamespace>
+    <AssemblyName>DeltaZulu.Blazor.Components</AssemblyName>
+    <PackageId>DeltaZulu.Blazor.Components</PackageId>
+    <Description>Reusable DeltaZulu design-system components for Blazor and MudBlazor.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MudBlazor" />
+  </ItemGroup>
+
+</Project>
