@@ -28,6 +28,9 @@ src/
 
 tests/
   Workbench.Tests            MSTest domain + integration tests
+
+scripts/
+  design-audit.ps1           Local guardrail for Workbench design-system drift
 ```
 
 ## Build
@@ -40,6 +43,22 @@ dotnet test DetectionContentWorkbench.slnx
 
 Target framework: `net10.0`. Package versions are centrally pinned in
 `Directory.Packages.props` with lock files enabled by `Directory.Build.props`.
+
+## Design-system audit
+
+```powershell
+pwsh ./scripts/design-audit.ps1
+```
+
+Use strict mode when you want any finding to fail the run:
+
+```powershell
+pwsh ./scripts/design-audit.ps1 -Strict
+```
+
+The audit flags common UI drift such as manual overlays, non-action primary colour usage,
+raw chips, inline styles, and page-local panel surfaces. See
+[`docs/design-system/WORKBENCH_DESIGN_AUDIT.md`](docs/design-system/WORKBENCH_DESIGN_AUDIT.md).
 
 ## Architecture
 
@@ -60,6 +79,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for module boundaries and dat
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Product definition, user stories, navigation model. |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Module boundaries, data ownership, technical model. |
 | [`docs/AGENTS.md`](docs/AGENTS.md) | Constraints for contributors and AI agents. |
+| [`docs/design-system/WORKBENCH_DESIGN_AUDIT.md`](docs/design-system/WORKBENCH_DESIGN_AUDIT.md) | Local design-system drift audit. |
 | [`docs/adr/`](docs/adr/) | Architecture Decision Records. Binding unless superseded. |
 
 ## Conventions

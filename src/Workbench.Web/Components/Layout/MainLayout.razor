@@ -11,25 +11,25 @@
                        Color="Color.Inherit"
                        Edge="Edge.Start"
                        OnClick="@ToggleDrawer" />
-        <img src="logo-light.png" alt="DeltaZulu" height="28" class="ml-2 mr-3" style="opacity:0.92;" />
-        <MudText Typo="Typo.subtitle1" Style="color: var(--color-text-inverse-muted); font-weight: 500;">
+        <img src="logo-light.png" alt="DeltaZulu" height="28" class="ml-2 mr-3 dz-shell-logo" />
+        <MudText Typo="Typo.subtitle1" Class="dz-shell-title">
             Detection Content Workbench
         </MudText>
         <MudSpacer />
-        <MudText Typo="Typo.caption" Style="color: var(--color-text-inverse-muted); opacity: 0.58; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; font-size: 0.75rem;">
+        <MudText Typo="Typo.caption" Class="dz-shell-badge">
             POC
         </MudText>
     </MudAppBar>
 
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="0">
-        <div style="padding: var(--space-4) var(--space-3) var(--space-2) var(--space-3);">
-            <span class="eyebrow" style="font-size: 0.6875rem;">Navigation</span>
+        <div class="dz-shell-nav-heading">
+            <span class="eyebrow">Navigation</span>
         </div>
         <NavMenu />
     </MudDrawer>
 
     <MudMainContent>
-        <div style="max-width: var(--container-max); margin: 0 auto; padding: var(--space-6) var(--space-5);">
+        <div class="dz-shell-main">
             @Body
         </div>
     </MudMainContent>

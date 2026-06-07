@@ -21,37 +21,13 @@
 
 <MudBreadcrumbs Items="_breadcrumbs" Class="mb-2" />
 
-@* ── Header ── *@
-<MudGrid Spacing="3" Class="mb-4">
-    <MudItem xs="12" md="8">
-        <span class="eyebrow">@(_issue.Type == IssueType.Case ? "Case" : "Request")</span>
-        <MudText Typo="Typo.h5" Class="mt-1" Style="font-weight: 700;">
-            <code style="font-size: 0.85em;">@_issue.Key</code> @_issue.Title
-        </MudText>
-        <div class="d-flex gap-2 mt-2 align-center flex-wrap">
-            <StatusChip IssueStatus="_issue.Status" />
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_issue.Type</MudChip>
-        </div>
-        @if (_issue.ExternalCase is not null)
-        {
-            <div class="d-flex align-center gap-2 mt-2">
-                <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Size="Size.Small" Style="color: var(--color-text-secondary);" />
-                @if (_issue.ExternalCase.Url is not null)
-                {
-                    <MudLink Href="@_issue.ExternalCase.Url" Target="_blank" Typo="Typo.body2">
-                        @_issue.ExternalCase.System: @_issue.ExternalCase.ExternalId
-                    </MudLink>
-                }
-                else
-                {
-                    <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);">
-                        @_issue.ExternalCase.System: @_issue.ExternalCase.ExternalId
-                    </MudText>
-                }
-            </div>
-        }
-    </MudItem>
-    <MudItem xs="12" md="4" Class="d-flex justify-end align-start gap-2 flex-wrap">
+<DzPageHeader Eyebrow="@(_issue.Type == IssueType.Case ? "Case" : "Request")"
+              Title="@($"{_issue.Key} {_issue.Title}")">
+    <Metadata>
+        <StatusChip IssueStatus="_issue.Status" />
+        <DzMetaChip Kind="file">@_issue.Type</DzMetaChip>
+    </Metadata>
+    <Actions>
         @if (_issue.Status == IssueStatus.Open)
         {
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
@@ -73,82 +49,102 @@
                 Close
             </MudButton>
         }
-    </MudItem>
-</MudGrid>
+    </Actions>
+</DzPageHeader>
 
-@* ── Details and related changes ── *@
-<MudGrid Spacing="3">
-    <MudItem xs="12" md="4">
-        <MudPaper Class="pa-4" Elevation="1">
-            <span class="eyebrow" style="font-size: 0.625rem;">Details</span>
-            @if (_issue.ExternalCase is null && _issue.Type == IssueType.Case)
-            {
-                <div class="mt-3">
-                    <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">External case</MudText>
-                    @if (!_showExternalCaseForm)
-                    {
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                   OnClick="@(() => _showExternalCaseForm = true)" Class="px-0 mt-1"
-                                   Style="font-weight: 600; text-transform: none;">
-                            Link external case
-                        </MudButton>
-                    }
-                    else
-                    {
-                        <div class="mt-1">
-                            <MudTextField @bind-Value="_extSystem" Label="System" Dense="true" Margin="Margin.Dense" Class="mb-2" />
-                            <MudTextField @bind-Value="_extCaseId" Label="Case ID" Dense="true" Margin="Margin.Dense" Class="mb-2" />
-                            <MudTextField @bind-Value="_extCaseUrl" Label="URL (optional)" Dense="true" Margin="Margin.Dense" Class="mb-2" />
-                            <div class="d-flex gap-2">
-                                <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Secondary"
-                                           OnClick="LinkExternalCase">Link</MudButton>
-                                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => _showExternalCaseForm = false)">Cancel</MudButton>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-            <MudDivider Class="my-3" Style="border-color: var(--color-divider);" />
-            <div>
-                <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Created</MudText>
-                <MudText Typo="Typo.body2" Class="mt-1" Style="font-family: var(--font-family-mono); font-size: 0.8125rem;">
-                    @_issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")
-                </MudText>
-            </div>
-            <MudDivider Class="my-3" Style="border-color: var(--color-divider);" />
-            <div>
-                <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Updated</MudText>
-                <MudText Typo="Typo.body2" Class="mt-1" Style="font-family: var(--font-family-mono); font-size: 0.8125rem;">
-                    @_issue.UpdatedAt.ToString("yyyy-MM-dd HH:mm")
-                </MudText>
-            </div>
-        </MudPaper>
-    </MudItem>
-
-    <MudItem xs="12" md="8">
-        <span class="eyebrow">Related changes</span>
-        @if (_relatedChanges.Count == 0)
+@if (_issue.ExternalCase is not null)
+{
+    <div class="dz-external-reference mb-4">
+        <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Size="Size.Small" Class="dz-inline-icon" />
+        @if (_issue.ExternalCase.Url is not null)
         {
-            <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">No changes linked to this issue.</MudAlert>
+            <MudLink Href="@_issue.ExternalCase.Url" Target="_blank" Typo="Typo.body2">
+                @_issue.ExternalCase.System: @_issue.ExternalCase.ExternalId
+            </MudLink>
         }
         else
         {
-            <MudTable Items="_relatedChanges" Dense="true" Hover="true" Class="mt-2"
-                      OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
-                      T="ChangeRequest" RowClass="cursor-pointer">
-                <HeaderContent>
-                    <MudTh>Key</MudTh>
-                    <MudTh>Title</MudTh>
-                    <MudTh>Status</MudTh>
-                    <MudTh>Updated</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
-                    <MudTd DataLabel="Title">@context.Title</MudTd>
-                    <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
-                    <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
-                </RowTemplate>
-            </MudTable>
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                @_issue.ExternalCase.System: @_issue.ExternalCase.ExternalId
+            </MudText>
+        }
+    </div>
+}
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="Details">
+            <div class="dz-detail-list">
+                @if (_issue.ExternalCase is null && _issue.Type == IssueType.Case)
+                {
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="text-muted">External case</MudText>
+                        @if (!_showExternalCaseForm)
+                        {
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                       OnClick="@(() => _showExternalCaseForm = true)" Class="dz-link-button mt-1">
+                                Link external case
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <div class="mt-1">
+                                <MudTextField @bind-Value="_extSystem" Label="System" Dense="true" Margin="Margin.Dense" Class="mb-2" />
+                                <MudTextField @bind-Value="_extCaseId" Label="Case ID" Dense="true" Margin="Margin.Dense" Class="mb-2" />
+                                <MudTextField @bind-Value="_extCaseUrl" Label="URL (optional)" Dense="true" Margin="Margin.Dense" Class="mb-2" />
+                                <div class="d-flex gap-2">
+                                    <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Secondary"
+                                               OnClick="LinkExternalCase">Link</MudButton>
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => _showExternalCaseForm = false)">Cancel</MudButton>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                <div class="dz-detail-list__item">
+                    <MudText Typo="Typo.caption" Class="text-muted">Created</MudText>
+                    <MudText Typo="Typo.body2" Class="dz-detail-list__value dz-detail-list__value--mono">
+                        @_issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                    </MudText>
+                </div>
+                <div class="dz-detail-list__item">
+                    <MudText Typo="Typo.caption" Class="text-muted">Updated</MudText>
+                    <MudText Typo="Typo.body2" Class="dz-detail-list__value dz-detail-list__value--mono">
+                        @_issue.UpdatedAt.ToString("yyyy-MM-dd HH:mm")
+                    </MudText>
+                </div>
+            </div>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="8">
+        <MudText Typo="Typo.subtitle2" Class="dz-section-title">Related changes</MudText>
+        @if (_relatedChanges.Count == 0)
+        {
+            <DzEmptyState Title="No changes linked to this issue."
+                          Description="Linked changes will appear here once work starts from this issue."
+                          Icon="@Icons.Material.Outlined.Assignment" />
+        }
+        else
+        {
+            <div class="dz-table-shell">
+                <MudTable Items="_relatedChanges" Dense="true" Hover="true"
+                          OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
+                          T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Key</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Updated</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
+                        <MudTd DataLabel="Title">@context.Title</MudTd>
+                        <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
+                        <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </div>
         }
     </MudItem>
 </MudGrid>

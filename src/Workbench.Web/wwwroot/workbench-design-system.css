@@ -624,3 +624,170 @@
     flex-wrap: wrap;
     margin-top: var(--space-1);
 }
+
+/* --- Layout shell cleanup --- */
+
+.dz-shell-logo {
+    opacity: 0.92;
+}
+
+.dz-shell-title {
+    color: var(--color-text-inverse-muted) !important;
+    font-weight: 500 !important;
+}
+
+.dz-shell-badge {
+    color: var(--color-text-inverse-muted) !important;
+    opacity: 0.58;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
+}
+
+.dz-shell-nav-heading {
+    padding: var(--space-4) var(--space-3) var(--space-2) var(--space-3);
+}
+
+.dz-shell-nav-heading .eyebrow {
+    font-size: 0.6875rem;
+}
+
+.dz-shell-main {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-5);
+}
+
+.dz-nav-divider {
+    border-color: var(--color-divider) !important;
+}
+
+/* --- Dialog cleanup --- */
+
+.dz-dialog-title {
+    font-weight: 700 !important;
+}
+
+.dz-mono-input input,
+.dz-mono-input textarea {
+    font-family: var(--font-family-mono) !important;
+}
+
+/* --- Detail surfaces shared by issue/version pages --- */
+
+.dz-external-reference {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin-top: var(--space-2);
+}
+
+.dz-detail-section-title {
+    color: var(--color-text-secondary) !important;
+    margin-bottom: var(--space-2) !important;
+}
+
+.dz-detail-list__value {
+    margin-top: var(--space-1) !important;
+}
+
+.dz-detail-list__value--mono {
+    font-family: var(--font-family-mono) !important;
+    font-size: 0.8125rem !important;
+}
+
+/* --- Reviews page cleanup --- */
+
+.dz-section-title {
+    color: var(--color-text-secondary) !important;
+    margin-bottom: var(--space-2) !important;
+}
+
+.dz-review-state {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+/* --- Version diff cleanup --- */
+
+.dz-version-comparison-panel {
+    margin-top: var(--space-4);
+}
+
+.dz-diff-file {
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--color-surface-primary);
+}
+
+.dz-diff-file__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-surface-muted);
+}
+
+.dz-diff-hunk__header {
+    padding: var(--space-2) var(--space-3);
+    color: var(--color-text-secondary);
+    font-family: var(--font-family-mono);
+    font-size: 0.75rem;
+    border-top: 1px solid var(--color-divider);
+}
+
+.dz-diff-hunk__body {
+    font-family: var(--font-family-mono);
+    font-size: 0.8125rem;
+    overflow-x: auto;
+}
+
+.dz-diff-line {
+    display: flex;
+    padding: var(--space-1) var(--space-3);
+}
+
+.dz-diff-line--added {
+    background: var(--color-success-bg);
+}
+
+.dz-diff-line--removed {
+    background: var(--color-error-bg);
+}
+
+.dz-diff-line__number {
+    width: 3rem;
+    color: var(--color-text-secondary);
+    flex: 0 0 auto;
+}
+
+.dz-diff-line__marker {
+    width: 1.5rem;
+    font-weight: 700;
+    flex: 0 0 auto;
+}
+
+.dz-diff-line__text {
+    white-space: pre;
+}
+
+/* --- DzCodeBlock fixed max-height variants --- */
+
+.dz-code-block--max-320 {
+    max-height: 320px;
+}
+
+.dz-code-block--max-400 {
+    max-height: 400px;
+}
+
+.dz-code-block--max-480 {
+    max-height: 480px;
+}

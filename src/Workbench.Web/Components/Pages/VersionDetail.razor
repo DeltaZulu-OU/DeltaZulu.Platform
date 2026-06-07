@@ -29,142 +29,134 @@ else
 
     <MudGrid Spacing="3">
         <MudItem xs="12" md="8">
-            <span class="eyebrow">Accepted version</span>
-            <MudText Typo="Typo.h5" Class="mt-1" Style="font-weight: 700;">
-                @_comparison.AfterVersion.DisplayVersion — @_comparison.Detection.Title
-            </MudText>
-            <MudText Typo="Typo.body2" Style="color: var(--color-text-secondary);" Class="mt-2 mb-4">
-                @_comparison.AfterVersion.ChangeSummary
-            </MudText>
-            <MudStack Row="true" Spacing="2" Class="mb-4" AlignItems="AlignItems.Center">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                           StartIcon="@Icons.Material.Outlined.Restore" Disabled="_restoring" OnClick="RestoreVersion">
-                    Restore as new change
-                </MudButton>
-                <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small"
-                           OnClick="@(() => Nav.NavigateTo($"/detections/{_comparison.Detection.Id}"))">
-                    Back to detection
-                </MudButton>
-            </MudStack>
+            <DzPageHeader Eyebrow="Accepted version"
+                          Title="@($"{_comparison.AfterVersion.DisplayVersion} — {_comparison.Detection.Title}")"
+                          Description="@_comparison.AfterVersion.ChangeSummary">
+                <Actions>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               StartIcon="@Icons.Material.Outlined.Restore" Disabled="_restoring" OnClick="RestoreVersion">
+                        Restore as new change
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small"
+                               OnClick="@(() => Nav.NavigateTo($"/detections/{_comparison.Detection.Id}"))">
+                        Back to detection
+                    </MudButton>
+                </Actions>
+            </DzPageHeader>
         </MudItem>
         <MudItem xs="12" md="4">
-            <MudPaper Class="pa-4" Elevation="1">
-                <span class="eyebrow" style="font-size: 0.625rem;">Comparison</span>
-                <div class="mt-3">
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Compare from</MudText>
-                    <MudText Typo="Typo.body2" Class="mt-1">
-                        @(_comparison.BeforeVersion?.DisplayVersion ?? "No earlier version")
-                    </MudText>
-                </div>
-                <MudDivider Class="my-3" />
-                <div>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Compare to</MudText>
-                    <MudText Typo="Typo.body2" Class="mt-1">@_comparison.AfterVersion.DisplayVersion</MudText>
-                </div>
-                <MudDivider Class="my-3" />
-                <MudSelect Value="_selectedBeforeVersionValue" ValueChanged="OnBeforeVersionChanged"
-                           Label="Choose comparison baseline" T="string" Dense="true" Class="mt-2">
-                    <MudSelectItem Value="@PreviousVersionValue">Previous accepted version</MudSelectItem>
-                    @foreach (var version in _availableBeforeVersions)
-                    {
-                        <MudSelectItem Value="@version.Id.ToString()">@version.DisplayVersion — @version.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudSelectItem>
-                    }
-                </MudSelect>
-                <MudDivider Class="my-3" />
-                <div>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Changed files</MudText>
-                    <MudText Typo="Typo.body2" Class="mt-1">@_comparison.ChangedFiles.Count</MudText>
-                </div>
-                <MudDivider Class="my-3" />
-                <div>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Source change</MudText>
-                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                               OnClick="@(() => Nav.NavigateTo($"/changes/{_comparison.AfterVersion.SourceChangeRequestId}"))"
-                               Class="px-0 mt-1" Style="font-weight: 600; text-transform: none;">
-                        View change
-                    </MudButton>
-                </div>
-                <MudDivider Class="my-3" />
-                <div>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Linked issue</MudText>
-                    @if (_comparison.AfterVersion.LinkedIssueId is not null)
-                    {
+            <DzPanel Eyebrow="Comparison">
+                <div class="dz-detail-list">
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Compare from</MudText>
+                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">
+                            @(_comparison.BeforeVersion?.DisplayVersion ?? "No earlier version")
+                        </MudText>
+                    </div>
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Compare to</MudText>
+                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">@_comparison.AfterVersion.DisplayVersion</MudText>
+                    </div>
+                    <div class="dz-detail-list__item">
+                        <MudSelect Value="_selectedBeforeVersionValue" ValueChanged="OnBeforeVersionChanged"
+                                   Label="Choose comparison baseline" T="string" Dense="true">
+                            <MudSelectItem Value="@PreviousVersionValue">Previous accepted version</MudSelectItem>
+                            @foreach (var version in _availableBeforeVersions)
+                            {
+                                <MudSelectItem Value="@version.Id.ToString()">@version.DisplayVersion — @version.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </div>
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Changed files</MudText>
+                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">@_comparison.ChangedFiles.Count</MudText>
+                    </div>
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Source change</MudText>
                         <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                   OnClick="@(() => Nav.NavigateTo($"/issues/{_comparison.AfterVersion.LinkedIssueId}"))"
-                                   Class="px-0 mt-1" Style="font-weight: 600; text-transform: none;">
-                            View issue
+                                   OnClick="@(() => Nav.NavigateTo($"/changes/{_comparison.AfterVersion.SourceChangeRequestId}"))"
+                                   Class="dz-link-button mt-1">
+                            View change
                         </MudButton>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2" Class="mt-1" Style="color: var(--color-text-secondary);">None</MudText>
-                    }
-                </div>
-                <MudDivider Class="my-3" />
-                <div>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Workflow profile</MudText>
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="mt-1">@_comparison.AfterVersion.WorkflowProfile</MudChip>
-                </div>
-                <MudDivider Class="my-3" />
-                <div>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Checks</MudText>
-                    <MudText Typo="Typo.body2" Class="mt-1">@_comparison.AfterVersion.ChecksSummary</MudText>
-                </div>
-                <MudDivider Class="my-3" />
-                <div>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Reviews</MudText>
-                    <MudText Typo="Typo.body2" Class="mt-1">@_comparison.AfterVersion.ReviewSummary</MudText>
-                </div>
-                <MudDivider Class="my-3" />
-                <div>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Accepted</MudText>
-                    <MudText Typo="Typo.body2" Class="mt-1">@_comparison.AfterVersion.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
-                </div>
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
-
-    <MudPaper Class="pa-4 mt-4" Elevation="1">
-        <MudText Typo="Typo.h6" Class="mb-3">File comparison</MudText>
-        @if (_comparison.Files.Count == 0)
-        {
-            <MudAlert Severity="Severity.Info">This accepted version has no files to compare.</MudAlert>
-        }
-        else
-        {
-            <MudTable Items="_comparison.Files" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="VersionFileDiff">
-                <HeaderContent>
-                    <MudTh>File</MudTh>
-                    <MudTh>Status</MudTh>
-                    <MudTh>Before</MudTh>
-                    <MudTh>After</MudTh>
-                    <MudTh>Inline hunks</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="File"><code>@context.LogicalPath</code></MudTd>
-                    <MudTd DataLabel="Status">
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@StatusColor(context.Status)">
-                            @context.Status
-                        </MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="Before">@Preview(context.BeforeContent, context.BeforeIsBinary)</MudTd>
-                    <MudTd DataLabel="After">@Preview(context.AfterContent, context.AfterIsBinary)</MudTd>
-                    <MudTd DataLabel="Inline hunks">
-                        @if (context.IsBinary)
+                    </div>
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Linked issue</MudText>
+                        @if (_comparison.AfterVersion.LinkedIssueId is not null)
                         {
-                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Binary file</MudText>
-                        }
-                        else if (context.Hunks.Count == 0)
-                        {
-                            <MudText Typo="Typo.caption" Class="mud-text-secondary">No line changes</MudText>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                       OnClick="@(() => Nav.NavigateTo($"/issues/{_comparison.AfterVersion.LinkedIssueId}"))"
+                                       Class="dz-link-button mt-1">
+                                View issue
+                            </MudButton>
                         }
                         else
                         {
-                            <MudText Typo="Typo.caption">@context.Hunks.Sum(hunk => hunk.Lines.Count(line => line.Type is not VersionDiffLineType.Context)) changed lines</MudText>
+                            <MudText Typo="Typo.body2" Class="text-secondary mt-1">None</MudText>
                         }
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
+                    </div>
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Workflow profile</MudText>
+                        <div class="mt-1"><DzMetaChip Kind="workflow">@_comparison.AfterVersion.WorkflowProfile</DzMetaChip></div>
+                    </div>
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Checks</MudText>
+                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">@_comparison.AfterVersion.ChecksSummary</MudText>
+                    </div>
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Reviews</MudText>
+                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">@_comparison.AfterVersion.ReviewSummary</MudText>
+                    </div>
+                    <div class="dz-detail-list__item">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Accepted</MudText>
+                        <MudText Typo="Typo.body2" Class="dz-detail-list__value">@_comparison.AfterVersion.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                    </div>
+                </div>
+            </DzPanel>
+        </MudItem>
+    </MudGrid>
+
+    <DzPanel Title="File comparison" Class="dz-version-comparison-panel">
+        @if (_comparison.Files.Count == 0)
+        {
+            <DzEmptyState Title="This accepted version has no files to compare."
+                          Description="File comparison data will appear when accepted content contains files."
+                          Icon="@Icons.Material.Outlined.Difference" />
+        }
+        else
+        {
+            <div class="dz-table-shell">
+                <MudTable Items="_comparison.Files" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="VersionFileDiff" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>File</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Before</MudTh>
+                        <MudTh>After</MudTh>
+                        <MudTh>Inline hunks</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="File"><code>@context.LogicalPath</code></MudTd>
+                        <MudTd DataLabel="Status">
+                            <DzStatusChip Label="@context.Status.ToString()" Tone="@StatusTone(context.Status)" />
+                        </MudTd>
+                        <MudTd DataLabel="Before">@Preview(context.BeforeContent, context.BeforeIsBinary)</MudTd>
+                        <MudTd DataLabel="After">@Preview(context.AfterContent, context.AfterIsBinary)</MudTd>
+                        <MudTd DataLabel="Inline hunks">
+                            @if (context.IsBinary)
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Binary file</MudText>
+                            }
+                            else if (context.Hunks.Count == 0)
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">No line changes</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption">@context.Hunks.Sum(hunk => hunk.Lines.Count(line => line.Type is not VersionDiffLineType.Context)) changed lines</MudText>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </div>
 
             @if (_comparison.ChangedFiles.Any(file => file.Hunks.Count > 0))
             {
@@ -173,34 +165,34 @@ else
                 <MudStack Spacing="3">
                     @foreach (var file in _comparison.ChangedFiles.Where(file => file.Hunks.Count > 0))
                     {
-                        <MudPaper Class="pa-0" Elevation="0" Outlined="true">
-                            <div class="d-flex align-center justify-space-between px-3 py-2" style="background: var(--color-surface-muted);">
+                        <div class="dz-diff-file">
+                            <div class="dz-diff-file__header">
                                 <code>@file.LogicalPath</code>
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@StatusColor(file.Status)">@file.Status</MudChip>
+                                <DzStatusChip Label="@file.Status.ToString()" Tone="@StatusTone(file.Status)" />
                             </div>
                             @foreach (var hunk in file.Hunks)
                             {
-                                <div class="px-3 py-2 mud-text-secondary" style="font-family: var(--font-family-mono); font-size: 0.75rem; border-top: 1px solid var(--mud-palette-divider);">
+                                <div class="dz-diff-hunk__header">
                                     @@ -@hunk.BeforeStartLine,@hunk.BeforeLineCount +@hunk.AfterStartLine,@hunk.AfterLineCount
                                 </div>
-                                <div style="font-family: var(--font-family-mono); font-size: 0.8125rem; overflow-x: auto;">
+                                <div class="dz-diff-hunk__body">
                                     @foreach (var line in hunk.Lines)
                                     {
-                                        <div class="d-flex px-3 py-1" style="background: @LineBackground(line.Type);">
-                                            <span style="width: 3rem; color: var(--color-text-secondary);">@LineNumber(line.BeforeLineNumber)</span>
-                                            <span style="width: 3rem; color: var(--color-text-secondary);">@LineNumber(line.AfterLineNumber)</span>
-                                            <span style="width: 1.5rem; font-weight: 700;">@LineMarker(line.Type)</span>
-                                            <span style="white-space: pre;">@line.Text</span>
+                                        <div class="@DiffLineClass(line.Type)">
+                                            <span class="dz-diff-line__number">@LineNumber(line.BeforeLineNumber)</span>
+                                            <span class="dz-diff-line__number">@LineNumber(line.AfterLineNumber)</span>
+                                            <span class="dz-diff-line__marker">@LineMarker(line.Type)</span>
+                                            <span class="dz-diff-line__text">@line.Text</span>
                                         </div>
                                     }
                                 </div>
                             }
-                        </MudPaper>
+                        </div>
                     }
                 </MudStack>
             }
         }
-    </MudPaper>
+    </DzPanel>
 }
 
 @code {
@@ -307,12 +299,12 @@ else
         }
     }
 
-    private static Color StatusColor(VersionFileDiffStatus status) => status switch
+    private static string StatusTone(VersionFileDiffStatus status) => status switch
     {
-        VersionFileDiffStatus.Added => Color.Success,
-        VersionFileDiffStatus.Modified => Color.Warning,
-        VersionFileDiffStatus.Removed => Color.Error,
-        _ => Color.Default,
+        VersionFileDiffStatus.Added => "success",
+        VersionFileDiffStatus.Modified => "warning",
+        VersionFileDiffStatus.Removed => "error",
+        _ => "neutral",
     };
 
     private static string Preview(string? content, bool isBinary)
@@ -333,10 +325,10 @@ else
         _ => " "
     };
 
-    private static string LineBackground(VersionDiffLineType type) => type switch
+    private static string DiffLineClass(VersionDiffLineType type) => type switch
     {
-        VersionDiffLineType.Added => "var(--color-success-bg)",
-        VersionDiffLineType.Removed => "var(--color-error-bg)",
-        _ => "transparent"
+        VersionDiffLineType.Added => "dz-diff-line dz-diff-line--added",
+        VersionDiffLineType.Removed => "dz-diff-line dz-diff-line--removed",
+        _ => "dz-diff-line",
     };
 }

@@ -1,4 +1,4 @@
-<pre class="@BlockClass" style="@MaxHeightStyle" @attributes="AdditionalAttributes"><code>@Content</code></pre>
+<pre class="@BlockClass" @attributes="AdditionalAttributes"><code>@Content</code></pre>
 
 @code {
     [Parameter] public string? Content { get; set; }
@@ -9,7 +9,13 @@
     [Parameter] public string? Class { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
-    private string? MaxHeightStyle => MaxHeightPx is null ? null : $"max-height: {MaxHeightPx}px;";
+    private string? MaxHeightClass => MaxHeightPx switch
+    {
+        null => null,
+        <= 320 => "dz-code-block--max-320",
+        <= 400 => "dz-code-block--max-400",
+        _ => "dz-code-block--max-480",
+    };
 
     private string BlockClass => string.Join(" ", new[]
     {
@@ -17,6 +23,7 @@
         Wrap ? "dz-code-block--wrap" : null,
         Light ? "dz-code-block--light" : null,
         Compact ? "dz-code-block--compact" : null,
+        MaxHeightClass,
         Class
     }.Where(static value => !string.IsNullOrWhiteSpace(value)));
 }

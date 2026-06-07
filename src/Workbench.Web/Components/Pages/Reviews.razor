@@ -11,10 +11,8 @@
 
 <PageTitle>Reviews</PageTitle>
 
-<MudText Typo="Typo.h5" Class="mb-1">Your reviews</MudText>
-<MudText Typo="Typo.body2" Class="mb-4" Style="color: var(--color-text-secondary); max-width: 720px;">
-    Changes awaiting your review decision and your review history.
-</MudText>
+<DzPageHeader Title="Your reviews"
+              Description="Changes awaiting your review decision and your review history." />
 
 @if (_loading)
 {
@@ -24,18 +22,18 @@ else
 {
     <MudGrid Spacing="3" Class="mb-4">
         <MudItem xs="12" sm="6" md="4">
-            <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+            <DzPanel Class="dz-metric-tile">
                 <span class="eyebrow">Awaiting your decision</span>
-                <MudText Typo="Typo.h4" Class="mt-1">@_awaitingCount</MudText>
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">Changes needing your review</MudText>
-            </MudPaper>
+                <MudText Typo="Typo.h4" Class="dz-metric-tile__value">@_awaitingCount</MudText>
+                <MudText Typo="Typo.caption" Class="dz-metric-tile__label">Changes needing your review</MudText>
+            </DzPanel>
         </MudItem>
         <MudItem xs="12" sm="6" md="4">
-            <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+            <DzPanel Class="dz-metric-tile">
                 <span class="eyebrow">Reviewed by you</span>
-                <MudText Typo="Typo.h4" Class="mt-1">@_reviewedByYouCount</MudText>
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">Changes you have reviewed</MudText>
-            </MudPaper>
+                <MudText Typo="Typo.h4" Class="dz-metric-tile__value">@_reviewedByYouCount</MudText>
+                <MudText Typo="Typo.caption" Class="dz-metric-tile__label">Changes you have reviewed</MudText>
+            </DzPanel>
         </MudItem>
     </MudGrid>
 
@@ -43,64 +41,104 @@ else
     {
         @if (_awaitingChanges.Count == 0 && _reviewedByYou.Count == 0)
         {
-            <MudAlert Severity="Severity.Info">No review activity for your account yet.</MudAlert>
+            <DzEmptyState Title="No review activity for your account yet."
+                          Description="Changes awaiting your review and your review history will appear here."
+                          Icon="@Icons.Material.Outlined.RateReview" />
         }
 
         @if (_awaitingChanges.Count > 0)
         {
-            <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color: var(--color-text-secondary);">Awaiting your decision</MudText>
-            <MudTable Items="_awaitingChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
-                      OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
-                      T="ChangeRequest" RowClass="cursor-pointer" Class="mb-4">
-                <HeaderContent>
-                    <MudTh>Key</MudTh>
-                    <MudTh>Title</MudTh>
-                    <MudTh>Profile</MudTh>
-                    <MudTh>Status</MudTh>
-                    <MudTh>Updated</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
-                    <MudTd DataLabel="Title">@context.Title</MudTd>
-                    <MudTd DataLabel="Profile"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.WorkflowProfileId</MudChip></MudTd>
-                    <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
-                    <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
-                </RowTemplate>
-            </MudTable>
+            <MudText Typo="Typo.subtitle2" Class="dz-section-title">Awaiting your decision</MudText>
+            <div class="dz-table-shell mb-4">
+                <MudTable Items="_awaitingChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
+                          OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item.Id}"))"
+                          T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Key</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Profile</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Updated</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
+                        <MudTd DataLabel="Title">@context.Title</MudTd>
+                        <MudTd DataLabel="Profile"><DzMetaChip Kind="workflow">@context.WorkflowProfileId</DzMetaChip></MudTd>
+                        <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
+                        <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </div>
         }
 
         @if (_reviewedByYou.Count > 0)
         {
-            <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color: var(--color-text-secondary);">Your review history</MudText>
-            <MudTable Items="_reviewedByYou" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="ReviewRow">
+            <MudText Typo="Typo.subtitle2" Class="dz-section-title">Your review history</MudText>
+            <div class="dz-table-shell">
+                <MudTable Items="_reviewedByYou" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="ReviewRow" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Change</MudTh>
+                        <MudTh>Decision</MudTh>
+                        <MudTh>State</MudTh>
+                        <MudTh>Recorded</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Change">
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                       OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))"
+                                       Class="dz-link-button">
+                                <code>@context.Change.Key</code>
+                            </MudButton>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Decision">
+                            <DzReviewDecisionChip Decision="@context.Review.Decision" />
+                        </MudTd>
+                        <MudTd DataLabel="State">
+                            @ReviewState(context.Review)
+                        </MudTd>
+                        <MudTd DataLabel="Recorded">
+                            <MudText Typo="Typo.caption">@context.Review.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="dz-table-shell">
+            <MudTable Items="_allRows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="ReviewRow" Elevation="0">
                 <HeaderContent>
                     <MudTh>Change</MudTh>
                     <MudTh>Decision</MudTh>
                     <MudTh>State</MudTh>
+                    <MudTh>Comment</MudTh>
                     <MudTh>Recorded</MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Change">
                         <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
                                    OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))"
-                                   Class="px-0" Style="font-weight: 600; text-transform: none;">
+                                   Class="dz-link-button">
                             <code>@context.Change.Key</code>
                         </MudButton>
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>
                     </MudTd>
                     <MudTd DataLabel="Decision">
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@DecisionColor(context.Review.Decision)">
-                            @context.Review.Decision
-                        </MudChip>
+                        <DzReviewDecisionChip Decision="@context.Review.Decision" />
                     </MudTd>
                     <MudTd DataLabel="State">
-                        @if (context.Review.IsSuperseded)
+                        @ReviewState(context.Review)
+                    </MudTd>
+                    <MudTd DataLabel="Comment">
+                        @if (string.IsNullOrWhiteSpace(context.Review.Comment))
                         {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Dark" Variant="Variant.Outlined">Superseded</MudChip>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
                         }
                         else
                         {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Effective</MudChip>
+                            <MudText Typo="Typo.body2">@context.Review.Comment</MudText>
                         }
                     </MudTd>
                     <MudTd DataLabel="Recorded">
@@ -108,63 +146,12 @@ else
                     </MudTd>
                 </RowTemplate>
             </MudTable>
-        }
-    }
-    else
-    {
-        @* ── Audit view: all reviews across all changes ── *@
-        <MudTable Items="_allRows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="ReviewRow">
-            <HeaderContent>
-                <MudTh>Change</MudTh>
-                <MudTh>Decision</MudTh>
-                <MudTh>State</MudTh>
-                <MudTh>Comment</MudTh>
-                <MudTh>Recorded</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Change">
-                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                               OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))"
-                               Class="px-0" Style="font-weight: 600; text-transform: none;">
-                        <code>@context.Change.Key</code>
-                    </MudButton>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>
-                </MudTd>
-                <MudTd DataLabel="Decision">
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@DecisionColor(context.Review.Decision)">
-                        @context.Review.Decision
-                    </MudChip>
-                </MudTd>
-                <MudTd DataLabel="State">
-                    @if (context.Review.IsSuperseded)
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Dark" Variant="Variant.Outlined">Superseded</MudChip>
-                    }
-                    else
-                    {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Effective</MudChip>
-                    }
-                </MudTd>
-                <MudTd DataLabel="Comment">
-                    @if (string.IsNullOrWhiteSpace(context.Review.Comment))
-                    {
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2">@context.Review.Comment</MudText>
-                    }
-                </MudTd>
-                <MudTd DataLabel="Recorded">
-                    <MudText Typo="Typo.caption">@context.Review.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
+        </div>
     }
 
     <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
                OnClick="@(() => _showAuditView = !_showAuditView)"
-               Class="mt-3" Style="font-weight: 600; text-transform: none;">
+               Class="mt-3 dz-link-button">
         @(_showAuditView ? "Show my reviews" : "Show all reviews (audit view)")
     </MudButton>
 }
@@ -203,11 +190,12 @@ else
         _loading = false;
     }
 
-    private static Color DecisionColor(ReviewDecision decision) => decision switch
+    private static RenderFragment ReviewState(Review review) => builder =>
     {
-        ReviewDecision.Approved => Color.Success,
-        ReviewDecision.ChangesRequested => Color.Error,
-        _ => Color.Default,
+        builder.OpenComponent<DzStatusChip>(0);
+        builder.AddAttribute(1, "Label", review.IsSuperseded ? "Superseded" : "Effective");
+        builder.AddAttribute(2, "Tone", review.IsSuperseded ? "muted" : "success");
+        builder.CloseComponent();
     };
 
     private sealed record ReviewRow(ChangeRequest Change, Review Review);
