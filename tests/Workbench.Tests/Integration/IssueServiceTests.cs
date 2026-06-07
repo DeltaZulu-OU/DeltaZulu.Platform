@@ -21,7 +21,7 @@ public sealed class IssueServiceTests : IDisposable
         using (var scope = _host.CreateScope())
         {
             var svc = _host.Resolve<IssueService>(scope);
-            var issue = await svc.CreateIssueAsync("ISS-001", "Tune sign-in detection", IssueType.Tuning, Priority.Normal, ct: TestContext.CancellationToken);
+            var issue = await svc.CreateIssueAsync("REQ-001", "Tune sign-in detection", IssueType.Request, ct: TestContext.CancellationToken);
             id = issue.Id;
             Assert.AreEqual(IssueStatus.Open, issue.Status);
         }
@@ -31,8 +31,8 @@ public sealed class IssueServiceTests : IDisposable
             var svc = _host.Resolve<IssueService>(scope);
             var loaded = await svc.GetByIdAsync(id, TestContext.CancellationToken);
             Assert.IsNotNull(loaded);
-            Assert.AreEqual("ISS-001", loaded.Key);
-            Assert.AreEqual(IssueType.Tuning, loaded.Type);
+            Assert.AreEqual("REQ-001", loaded.Key);
+            Assert.AreEqual(IssueType.Request, loaded.Type);
         }
     }
 
@@ -45,7 +45,7 @@ public sealed class IssueServiceTests : IDisposable
         {
             var svc = _host.Resolve<IssueService>(scope);
             var issue = await svc.CreateFromExternalCaseAsync(
-                "CAS-001", "Investigate suspicious login", Priority.High,
+                "CASE-001", "Investigate suspicious login",
                 "flowintel", "FI-42", "https://flowintel.local/case/42", ct: TestContext.CancellationToken);
             id = issue.Id;
             Assert.AreEqual(IssueType.Case, issue.Type);
@@ -73,7 +73,7 @@ public sealed class IssueServiceTests : IDisposable
         {
             var svc = _host.Resolve<IssueService>(scope);
             var issue = await svc.CreateFromExternalCaseAsync(
-                "CAS-002", "TheHive case", Priority.Critical,
+                "CASE-002", "TheHive case",
                 "thehive", "~987654", "https://thehive.local/cases/~987654/details", ct: TestContext.CancellationToken);
             id = issue.Id;
         }
@@ -97,7 +97,7 @@ public sealed class IssueServiceTests : IDisposable
         using (var scope = _host.CreateScope())
         {
             var svc = _host.Resolve<IssueService>(scope);
-            var issue = await svc.CreateIssueAsync("ISS-010", "Bug issue", IssueType.Bug, Priority.Normal, ct: TestContext.CancellationToken);
+            var issue = await svc.CreateIssueAsync("REQ-010", "Request issue", IssueType.Request, ct: TestContext.CancellationToken);
             id = issue.Id;
         }
 
@@ -118,13 +118,13 @@ public sealed class IssueServiceTests : IDisposable
     }
 
     [TestMethod]
-    public async Task ListAsync_ReturnsBothIssueTypesIncludingCase()
+    public async Task ListAsync_ReturnsBothIssueTypes()
     {
         using (var scope = _host.CreateScope())
         {
             var svc = _host.Resolve<IssueService>(scope);
-            await svc.CreateIssueAsync("ISS-020", "Bug issue", IssueType.Bug, Priority.Normal, ct: TestContext.CancellationToken);
-            await svc.CreateFromExternalCaseAsync("CAS-020", "A case", Priority.Normal, "flowintel", "FI-1", ct: TestContext.CancellationToken);
+            await svc.CreateIssueAsync("REQ-020", "A request", IssueType.Request, ct: TestContext.CancellationToken);
+            await svc.CreateFromExternalCaseAsync("CASE-020", "A case", "flowintel", "FI-1", ct: TestContext.CancellationToken);
         }
 
         using (var scope = _host.CreateScope())
@@ -132,7 +132,7 @@ public sealed class IssueServiceTests : IDisposable
             var svc = _host.Resolve<IssueService>(scope);
             var list = await svc.ListAsync(TestContext.CancellationToken);
             Assert.HasCount(2, list);
-            Assert.Contains(i => i.Type == IssueType.Bug, list);
+            Assert.Contains(i => i.Type == IssueType.Request, list);
             Assert.Contains(i => i.Type == IssueType.Case, list);
         }
     }

@@ -4,11 +4,9 @@
 @using Workbench.Domain.Detections
 @using Workbench.Domain.Changes
 @using Workbench.Domain.Identifiers
-@using Workbench.Domain.Issues
 @using Workbench.Domain.Common
 @using Workbench.Domain.Enums
 @inject DetectionContentService DetectionService
-@inject IssueService IssueService
 @inject ChangeService ChangeService
 @inject VersionService VersionService
 @inject AcceptedContentReadService AcceptedContentReadService
@@ -149,32 +147,8 @@ else
             }
         </MudTabPanel>
 
-        <MudTabPanel Text="Related issues" BadgeData="@_relatedIssues.Count" BadgeColor="Color.Info">
-            @if (_relatedIssues.Count == 0)
-            {
-                <MudAlert Severity="Severity.Info" Class="ma-3">No issues linked to this detection.</MudAlert>
-            }
-            else
-            {
-                <MudTable Items="_relatedIssues" Dense="true" Hover="true" Class="ma-3"
-                          OnRowClick="@(args => Nav.NavigateTo($"/issues/{args.Item.Id}"))"
-                          T="Issue" RowClass="cursor-pointer">
-                    <HeaderContent>
-                        <MudTh>Key</MudTh>
-                        <MudTh>Title</MudTh>
-                        <MudTh>Type</MudTh>
-                        <MudTh>Status</MudTh>
-                        <MudTh>Updated</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
-                        <MudTd DataLabel="Title">@context.Title</MudTd>
-                        <MudTd DataLabel="Type"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.Type</MudChip></MudTd>
-                        <MudTd DataLabel="Status"><StatusChip IssueStatus="context.Status" /></MudTd>
-                        <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
-                    </RowTemplate>
-                </MudTable>
-            }
+        <MudTabPanel Text="Related issues" BadgeColor="Color.Info">
+            <MudAlert Severity="Severity.Info" Class="ma-3">Issues are linked through changes. Open a change to see its linked issue.</MudAlert>
         </MudTabPanel>
 
         <MudTabPanel Text="Files">
@@ -206,7 +180,6 @@ else
     private List<DetectionVersion> _versions = [];
     private List<ChangeRequest> _changes = [];
     private List<AcceptedContentFileSummary> _acceptedFiles = [];
-    private List<Issue> _relatedIssues = [];
     private List<BreadcrumbItem> _breadcrumbs = [];
 
     protected override async Task OnParametersSetAsync()
@@ -230,8 +203,6 @@ else
 
         _acceptedFiles = (await AcceptedContentReadService.ListAcceptedFilesForDetectionAsync(_detection.Id)).ToList();
 
-        var allIssues = await IssueService.ListAsync();
-        _relatedIssues = allIssues.Where(i => i.LinkedDetectionId == detId).ToList();
     }
 
     private async Task DeprecateDetection()

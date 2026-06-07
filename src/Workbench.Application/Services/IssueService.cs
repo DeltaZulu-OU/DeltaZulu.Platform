@@ -9,21 +9,20 @@ namespace Workbench.Application.Services;
 public sealed class IssueService(IIssueRepository issues, TimeProvider time)
 {
     public Task<Issue> CreateIssueAsync(
-        string key, string title, IssueType type, Priority priority,
-        UserId? assigneeId = null, CancellationToken ct = default)
+        string key, string title, IssueType type, CancellationToken ct = default)
     {
-        var issue = Issue.Create(IssueId.New(), key, title, type, priority, time.GetUtcNow(), assigneeId);
+        var issue = Issue.Create(IssueId.New(), key, title, type, time.GetUtcNow());
         issues.Add(issue);
         return Task.FromResult(issue);
     }
 
     public Task<Issue> CreateFromExternalCaseAsync(
-        string key, string title, Priority priority,
+        string key, string title,
         string externalSystem, string externalCaseId, string? externalCaseUrl = null,
-        UserId? assigneeId = null, CancellationToken ct = default)
+        CancellationToken ct = default)
     {
         var now = time.GetUtcNow();
-        var issue = Issue.Create(IssueId.New(), key, title, IssueType.Case, priority, now, assigneeId);
+        var issue = Issue.Create(IssueId.New(), key, title, IssueType.Case, now);
         issue.LinkExternalCase(new ExternalCaseRef(externalSystem, externalCaseId, externalCaseUrl), now);
         issues.Add(issue);
         return Task.FromResult(issue);
@@ -35,14 +34,6 @@ public sealed class IssueService(IIssueRepository issues, TimeProvider time)
     {
         var issue = await GetOrThrowAsync(issueId, ct);
         issue.LinkExternalCase(new ExternalCaseRef(externalSystem, externalCaseId, externalCaseUrl), time.GetUtcNow());
-        issues.Save(issue);
-    }
-
-    public async Task LinkDetectionAsync(
-        IssueId issueId, DetectionId detectionId, CancellationToken ct = default)
-    {
-        var issue = await GetOrThrowAsync(issueId, ct);
-        issue.LinkDetection(detectionId, time.GetUtcNow());
         issues.Save(issue);
     }
 

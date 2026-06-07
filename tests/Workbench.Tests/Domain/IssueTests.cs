@@ -7,23 +7,22 @@ public sealed class IssueTests
 {
     private static readonly DateTimeOffset Now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
 
-    private static Issue CreateRegular() =>
-        Issue.Create(IssueId.New(), "ISS-001", "Tune anomalous sign-in detection",
-            IssueType.Tuning, Priority.Normal, Now);
+    private static Issue CreateRequest() =>
+        Issue.Create(IssueId.New(), "REQ-001", "Tune anomalous sign-in detection",
+            IssueType.Request, Now);
 
     [TestMethod]
     public void Create_DefaultsToOpen()
     {
-        var issue = CreateRegular();
+        var issue = CreateRequest();
         Assert.AreEqual(IssueStatus.Open, issue.Status);
-        Assert.IsNull(issue.AssigneeId);
         Assert.IsNull(issue.ExternalCase);
     }
 
     [TestMethod]
     public void TransitionStatus_Closed_CannotReopen()
     {
-        var issue = CreateRegular();
+        var issue = CreateRequest();
         issue.TransitionStatus(IssueStatus.Closed, Now);
 
         var ex = Assert.ThrowsExactly<DomainException>(
@@ -34,8 +33,8 @@ public sealed class IssueTests
     [TestMethod]
     public void LinkExternalCase_SetsReference()
     {
-        var issue = Issue.Create(IssueId.New(), "ISS-002", "Investigate via FlowIntel",
-            IssueType.Case, Priority.High, Now);
+        var issue = Issue.Create(IssueId.New(), "CASE-001", "Investigate via FlowIntel",
+            IssueType.Case, Now);
 
         var caseRef = new ExternalCaseRef("flowintel", "FI-42", "https://flowintel.local/case/42");
         issue.LinkExternalCase(caseRef, Now);
@@ -49,8 +48,8 @@ public sealed class IssueTests
     [TestMethod]
     public void LinkExternalCase_TheHive_SetsReference()
     {
-        var issue = Issue.Create(IssueId.New(), "ISS-003", "Investigate via TheHive",
-            IssueType.Case, Priority.Critical, Now);
+        var issue = Issue.Create(IssueId.New(), "CASE-002", "Investigate via TheHive",
+            IssueType.Case, Now);
 
         var caseRef = new ExternalCaseRef("thehive", "~123456", "https://thehive.local/cases/~123456/details");
         issue.LinkExternalCase(caseRef, Now);
@@ -63,7 +62,7 @@ public sealed class IssueTests
     [TestMethod]
     public void UnlinkExternalCase_ClearsReference()
     {
-        var issue = CreateRegular();
+        var issue = CreateRequest();
         issue.LinkExternalCase(new ExternalCaseRef("flowintel", "FI-1"), Now);
         Assert.IsNotNull(issue.ExternalCase);
 
@@ -90,12 +89,11 @@ public sealed class IssueTests
     [TestMethod]
     public void AnyIssueType_CanCarryExternalCaseRef()
     {
-        // External case refs are not gated by issue type — a tuning issue can link to an external case.
-        var tuning = Issue.Create(IssueId.New(), "ISS-004", "Tuning from case",
-            IssueType.Tuning, Priority.Normal, Now);
+        var request = Issue.Create(IssueId.New(), "REQ-002", "Request from case",
+            IssueType.Request, Now);
 
-        tuning.LinkExternalCase(new ExternalCaseRef("flowintel", "FI-99"), Now);
-        Assert.IsNotNull(tuning.ExternalCase);
-        Assert.AreEqual(IssueType.Tuning, tuning.Type);
+        request.LinkExternalCase(new ExternalCaseRef("flowintel", "FI-99"), Now);
+        Assert.IsNotNull(request.ExternalCase);
+        Assert.AreEqual(IssueType.Request, request.Type);
     }
 }

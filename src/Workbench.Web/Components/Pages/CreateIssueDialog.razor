@@ -6,30 +6,21 @@
 
 <MudDialog>
     <DialogContent>
-        <MudTextField @bind-Value="_key" Label="Key" HelperText="E.g. ISS-042" Required="true" Class="mb-3" />
+        <MudTextField @bind-Value="_key" Label="Key" HelperText="E.g. CASE-001 or REQ-001" Required="true" Class="mb-3" />
         <MudTextField @bind-Value="_title" Label="Title" Required="true" Class="mb-3" />
 
         @if (!WithExternalCase)
         {
             <MudSelect @bind-Value="_type" Label="Type" Class="mb-3" T="IssueType">
-                @foreach (var t in Enum.GetValues<IssueType>())
-                {
-                    <MudSelectItem Value="t">@t</MudSelectItem>
-                }
+                <MudSelectItem Value="IssueType.Case">Case</MudSelectItem>
+                <MudSelectItem Value="IssueType.Request">Request</MudSelectItem>
             </MudSelect>
         }
 
-        <MudSelect @bind-Value="_priority" Label="Priority" Class="mb-3" T="Priority">
-            @foreach (var p in Enum.GetValues<Priority>())
-            {
-                <MudSelectItem Value="p">@p</MudSelectItem>
-            }
-        </MudSelect>
-
-        @if (WithExternalCase)
+        @if (WithExternalCase || _type == IssueType.Case)
         {
             <MudDivider Class="my-3" />
-            <MudText Typo="Typo.subtitle2" Class="mb-2">External Case Reference</MudText>
+            <MudText Typo="Typo.subtitle2" Class="mb-2">External case reference</MudText>
             <MudSelect @bind-Value="_extSystem" Label="System" Class="mb-3" T="string">
                 <MudSelectItem Value="@("flowintel")">FlowIntel</MudSelectItem>
                 <MudSelectItem Value="@("thehive")">TheHive</MudSelectItem>
@@ -56,8 +47,7 @@
 
     private string _key = "";
     private string _title = "";
-    private IssueType _type = IssueType.NewDetection;
-    private Priority _priority = Priority.Normal;
+    private IssueType _type = IssueType.Request;
     private string _extSystem = "flowintel";
     private string _extId = "";
     private string _extUrl = "";
@@ -72,16 +62,16 @@
         _submitting = true;
         try
         {
-            if (WithExternalCase)
+            if (WithExternalCase || _type == IssueType.Case)
             {
                 await IssueService.CreateFromExternalCaseAsync(
-                    _key.Trim(), _title.Trim(), _priority,
+                    _key.Trim(), _title.Trim(),
                     _extSystem.Trim(), _extId.Trim(),
                     string.IsNullOrWhiteSpace(_extUrl) ? null : _extUrl.Trim());
             }
             else
             {
-                await IssueService.CreateIssueAsync(_key.Trim(), _title.Trim(), _type, _priority);
+                await IssueService.CreateIssueAsync(_key.Trim(), _title.Trim(), _type);
             }
 
             Snackbar.Add($"Issue '{_key}' created.", Severity.Success);

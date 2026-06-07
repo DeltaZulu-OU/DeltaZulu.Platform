@@ -120,7 +120,7 @@ public sealed class ChangeServiceTests : IDisposable
         using (var scope = _host.CreateScope())
         {
             var issueSvc = _host.Resolve<IssueService>(scope);
-            var issue = await issueSvc.CreateIssueAsync("ISS-100", "Linked bug", IssueType.Bug, Priority.Normal, ct: TestContext.CancellationToken);
+            var issue = await issueSvc.CreateIssueAsync("REQ-100", "Linked request", IssueType.Request, ct: TestContext.CancellationToken);
             issueId = issue.Id;
         }
 

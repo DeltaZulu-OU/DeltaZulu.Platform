@@ -3,16 +3,13 @@
 @using Workbench.Application.Services
 @using Workbench.Domain.Changes
 @using Workbench.Domain.Common
-@using Workbench.Domain.Detections
 @using Workbench.Domain.Enums
 @using Workbench.Domain.Identifiers
 @using Workbench.Domain.Issues
 @inject IssueService IssueService
 @inject ChangeService ChangeService
-@inject DetectionContentService DetectionService
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
-@inject PocUserContext UserContext
 
 <PageTitle>Issue — @(_issue?.Key ?? "Loading")</PageTitle>
 
@@ -27,14 +24,13 @@
 @* ── Header ── *@
 <MudGrid Spacing="3" Class="mb-4">
     <MudItem xs="12" md="8">
-        <span class="eyebrow">Issue</span>
+        <span class="eyebrow">@(_issue.Type == IssueType.Case ? "Case" : "Request")</span>
         <MudText Typo="Typo.h5" Class="mt-1" Style="font-weight: 700;">
             <code style="font-size: 0.85em;">@_issue.Key</code> @_issue.Title
         </MudText>
         <div class="d-flex gap-2 mt-2 align-center flex-wrap">
             <StatusChip IssueStatus="_issue.Status" />
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_issue.Type</MudChip>
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@PriorityColor(_issue.Priority)">@_issue.Priority</MudChip>
         </div>
         @if (_issue.ExternalCase is not null)
         {
@@ -66,22 +62,11 @@
         @if (_issue.Status == IssueStatus.InProgress)
         {
             <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
-                       OnClick="@(() => TransitionAsync(IssueStatus.Resolved))">
-                Resolve
-            </MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
-                       OnClick="@(() => TransitionAsync(IssueStatus.Blocked))">
-                Block
+                       OnClick="@(() => TransitionAsync(IssueStatus.Closed))">
+                Close
             </MudButton>
         }
-        @if (_issue.Status == IssueStatus.Blocked)
-        {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                       OnClick="@(() => TransitionAsync(IssueStatus.InProgress))">
-                Unblock
-            </MudButton>
-        }
-        @if (_issue.Status is IssueStatus.Resolved or IssueStatus.InProgress or IssueStatus.Blocked)
+        @if (_issue.Status is IssueStatus.Open or IssueStatus.InProgress)
         {
             <MudButton Variant="Variant.Outlined" Color="Color.Dark" Size="Size.Small"
                        OnClick="@(() => TransitionAsync(IssueStatus.Closed))">
@@ -91,71 +76,15 @@
     </MudItem>
 </MudGrid>
 
-@* ── Details panel ── *@
+@* ── Details and related changes ── *@
 <MudGrid Spacing="3">
     <MudItem xs="12" md="4">
         <MudPaper Class="pa-4" Elevation="1">
             <span class="eyebrow" style="font-size: 0.625rem;">Details</span>
-            <div class="mt-3">
-                <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Linked detection</MudText>
-                @if (_linkedDetection is not null)
-                {
-                    <div class="d-flex align-center gap-2 mt-1">
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                   OnClick="@(() => Nav.NavigateTo($"/detections/{_linkedDetection.Id}"))"
-                                   Class="px-0" Style="font-weight: 600; text-transform: none;">
-                            @_linkedDetection.Slug — @_linkedDetection.Title
-                        </MudButton>
-                    </div>
-                }
-                else
-                {
-                    <MudText Typo="Typo.body2" Class="mt-1" Style="color: var(--color-text-secondary);">None</MudText>
-                }
-            </div>
-                <MudDivider Class="my-3" Style="border-color: var(--color-divider);" />
-            <div>
-                <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Assignee</MudText>
-                @{
-                    var assigneeName = ResolveAssignee(_issue.AssigneeId);
-                }
-                @if (assigneeName is not null)
-                {
-                    <div class="d-flex align-center gap-2 mt-1">
-                        <MudIcon Icon="@Icons.Material.Outlined.Person" Size="Size.Small" Color="Color.Primary" />
-                        <MudText Typo="Typo.body2" Style="font-weight: 600;">@assigneeName</MudText>
-                    </div>
-                }
-                else
-                {
-                    <MudText Typo="Typo.body2" Class="mt-1" Style="color: var(--color-text-secondary);">Unassigned</MudText>
-                }
-            </div>
-            <MudDivider Class="my-3" Style="border-color: var(--color-divider);" />
-            <div>
-                <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Link detection</MudText>
-                <div class="mt-1">
-                    <MudSelect T="DetectionId?" Value="_selectedDetectionId" ValueChanged="OnDetectionSelected"
-                               Label="Select detection" Dense="true" Margin="Margin.Dense">
-                        @foreach (var det in _availableDetections)
-                        {
-                            <MudSelectItem T="DetectionId?" Value="@det.Id">@det.Slug — @det.Title</MudSelectItem>
-                        }
-                    </MudSelect>
-                </div>
-            </div>
-            <MudDivider Class="my-3" Style="border-color: rgba(19,31,42,0.06);" />
-            <div>
-                <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">External case</MudText>
-                @if (_issue.ExternalCase is not null)
-                {
-                    <div class="d-flex align-center gap-2 mt-1">
-                        <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Size="Size.Small" Style="color: var(--color-text-secondary);" />
-                        <MudText Typo="Typo.body2">@_issue.ExternalCase.System: @_issue.ExternalCase.ExternalId</MudText>
-                    </div>
-                }
-                else
-                {
+            @if (_issue.ExternalCase is null && _issue.Type == IssueType.Case)
+            {
+                <div class="mt-3">
+                    <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">External case</MudText>
                     @if (!_showExternalCaseForm)
                     {
                         <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
@@ -172,13 +101,13 @@
                             <MudTextField @bind-Value="_extCaseUrl" Label="URL (optional)" Dense="true" Margin="Margin.Dense" Class="mb-2" />
                             <div class="d-flex gap-2">
                                 <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Secondary"
-                                            OnClick="LinkExternalCase">Link</MudButton>
+                                           OnClick="LinkExternalCase">Link</MudButton>
                                 <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => _showExternalCaseForm = false)">Cancel</MudButton>
                             </div>
                         </div>
                     }
-                }
-            </div>
+                </div>
+            }
             <MudDivider Class="my-3" Style="border-color: var(--color-divider);" />
             <div>
                 <MudText Typo="Typo.caption" Style="color: var(--color-text-muted);">Created</MudText>
@@ -196,7 +125,6 @@
         </MudPaper>
     </MudItem>
 
-    @* ── Related changes ── *@
     <MudItem xs="12" md="8">
         <span class="eyebrow">Related changes</span>
         @if (_relatedChanges.Count == 0)
@@ -229,13 +157,9 @@
     [Parameter] public string Id { get; set; } = null!;
 
     private Issue? _issue;
-    private Detection? _linkedDetection;
     private List<ChangeRequest> _relatedChanges = [];
-    private List<Detection> _availableDetections = [];
-    private DetectionId? _selectedDetectionId;
     private List<BreadcrumbItem> _breadcrumbs = [];
 
-    // External case linking
     private bool _showExternalCaseForm;
     private string _extSystem = "";
     private string _extCaseId = "";
@@ -257,24 +181,8 @@
             new(_issue.Key, null, disabled: true),
         ];
 
-        // Load linked detection
-        if (_issue.LinkedDetectionId is not null)
-        {
-            _linkedDetection = await DetectionService.GetByIdAsync(_issue.LinkedDetectionId.Value);
-        }
-        else
-        {
-            _linkedDetection = null;
-        }
-
-        // Load related changes (those linked to this issue)
         var allChanges = await ChangeService.ListAsync();
         _relatedChanges = allChanges.Where(c => c.LinkedIssueId == _issue.Id).ToList();
-
-        // Load available detections for linking
-        var allDetections = await DetectionService.ListAsync();
-        _availableDetections = allDetections.ToList();
-        _selectedDetectionId = null;
     }
 
     private async Task TransitionAsync(IssueStatus newStatus)
@@ -305,33 +213,4 @@
         }
         catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
     }
-
-    private async Task OnDetectionSelected(DetectionId? detectionId)
-    {
-        if (_issue is null || detectionId is null) return;
-        _selectedDetectionId = detectionId;
-        try
-        {
-            await IssueService.LinkDetectionAsync(_issue.Id, detectionId.Value);
-            Snackbar.Add("Detection linked.", Severity.Success);
-            await LoadAsync();
-        }
-        catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
-    }
-
-    private string? ResolveAssignee(UserId? assigneeId)
-    {
-        if (assigneeId is null) return null;
-        var user = UserContext.AvailableUsers.FirstOrDefault(u => u.Id == assigneeId);
-        return user?.DisplayName;
-    }
-
-    private static Color PriorityColor(Priority priority) => priority switch
-    {
-        Priority.Critical => Color.Error,
-        Priority.High => Color.Warning,
-        Priority.Normal => Color.Info,
-        Priority.Low => Color.Default,
-        _ => Color.Default,
-    };
 }

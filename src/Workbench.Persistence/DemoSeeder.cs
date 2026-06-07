@@ -147,62 +147,38 @@ public static class DemoSeeder
             new
             {
                 Id = Guid.NewGuid().ToString("D"),
-                Key = "ISS-001",
-                Title = "High false-positive rate on PsExec detection",
-                Type = "Tuning",
+                Key = "REQ-001",
+                Title = "Tune PsExec detection – high false-positive rate",
+                Type = "Request",
                 Status = "Open",
-                Priority = "High",
-                AssigneeId = AnalystId,
-                LinkedDetectionId = detections[0].Id,
                 CreatedAt = now.AddDays(-10),
+                ExtSystem = (string?)null,
+                ExtId = (string?)null,
+                ExtUrl = (string?)null,
             },
             new
             {
                 Id = Guid.NewGuid().ToString("D"),
-                Key = "ISS-002",
-                Title = "Add LSASS detection test coverage for Mimikatz variants",
-                Type = "TestGap",
+                Key = "REQ-002",
+                Title = "Add Mimikatz test coverage for LSASS detection",
+                Type = "Request",
                 Status = "Open",
-                Priority = "Normal",
-                AssigneeId = AnalystId,
-                LinkedDetectionId = detections[1].Id,
                 CreatedAt = now.AddDays(-8),
+                ExtSystem = (string?)null,
+                ExtId = (string?)null,
+                ExtUrl = (string?)null,
             },
             new
             {
                 Id = Guid.NewGuid().ToString("D"),
-                Key = "ISS-003",
-                Title = "Research DNS tunneling tools for fixture data",
-                Type = "Research",
-                Status = "Open",
-                Priority = "Normal",
-                AssigneeId = (string?)null,
-                LinkedDetectionId = detections[3].Id,
-                CreatedAt = now.AddDays(-3),
-            },
-            new
-            {
-                Id = Guid.NewGuid().ToString("D"),
-                Key = "ISS-004",
-                Title = "Scheduled task detection missing schtasks /change variant",
-                Type = "Bug",
+                Key = "REQ-003",
+                Title = "Fix schtasks /change variant coverage",
+                Type = "Request",
                 Status = "InProgress",
-                Priority = "Critical",
-                AssigneeId = ReviewerId,
-                LinkedDetectionId = detections[2].Id,
                 CreatedAt = now.AddDays(-6),
-            },
-            new
-            {
-                Id = Guid.NewGuid().ToString("D"),
-                Key = "ISS-005",
-                Title = "Document C2 beacon detection methodology",
-                Type = "Documentation",
-                Status = "Open",
-                Priority = "Low",
-                AssigneeId = (string?)null,
-                LinkedDetectionId = detections[4].Id,
-                CreatedAt = now.AddDays(-1),
+                ExtSystem = (string?)null,
+                ExtId = (string?)null,
+                ExtUrl = (string?)null,
             },
             new
             {
@@ -211,34 +187,37 @@ public static class DemoSeeder
                 Title = "SOC escalation – suspicious lateral movement in ACME Corp",
                 Type = "Case",
                 Status = "InProgress",
-                Priority = "Critical",
-                AssigneeId = AnalystId,
-                LinkedDetectionId = detections[0].Id,
                 CreatedAt = now.AddDays(-2),
+                ExtSystem = (string?)"TheHive",
+                ExtId = (string?)"HIVE-4821",
+                ExtUrl = (string?)"https://thehive.local/cases/HIVE-4821",
+            },
+            new
+            {
+                Id = Guid.NewGuid().ToString("D"),
+                Key = "CASE-002",
+                Title = "FlowIntel – credential theft campaign targeting finance sector",
+                Type = "Case",
+                Status = "Open",
+                CreatedAt = now.AddDays(-1),
+                ExtSystem = (string?)"FlowIntel",
+                ExtId = (string?)"FI-2847",
+                ExtUrl = (string?)"https://flowintel.local/case/2847",
             },
         };
 
         const string sql = """
             INSERT INTO issues
-                (id, key, title, type, status, priority, assignee_id,
-                 linked_detection_id, ext_case_system, ext_case_external_id, ext_case_url,
+                (id, key, title, type, status,
+                 ext_case_system, ext_case_external_id, ext_case_url,
                  created_at, updated_at)
             VALUES
-                (@Id, @Key, @Title, @Type, @Status, @Priority, @AssigneeId,
-                 @LinkedDetectionId, @ExtSystem, @ExtId, @ExtUrl,
+                (@Id, @Key, @Title, @Type, @Status,
+                 @ExtSystem, @ExtId, @ExtUrl,
                  @CreatedAt, @CreatedAt)
             """;
 
         foreach (var i in issues)
-        {
-            string? extSystem = null, extId = null, extUrl = null;
-            if (i.Type == "Case")
-            {
-                extSystem = "TheHive";
-                extId = "HIVE-4821";
-                extUrl = "https://thehive.local/cases/HIVE-4821";
-            }
-
             conn.Execute(sql, new
             {
                 i.Id,
@@ -246,15 +225,11 @@ public static class DemoSeeder
                 i.Title,
                 i.Type,
                 i.Status,
-                i.Priority,
-                i.AssigneeId,
-                i.LinkedDetectionId,
-                ExtSystem = extSystem,
-                ExtId = extId,
-                ExtUrl = extUrl,
+                i.ExtSystem,
+                i.ExtId,
+                i.ExtUrl,
                 CreatedAt = Iso(i.CreatedAt),
             }, tx);
-        }
 
         return issues.Select(i => (i.Id, i.Key)).ToList();
     }

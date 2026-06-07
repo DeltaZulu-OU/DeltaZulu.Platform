@@ -36,11 +36,11 @@ internal sealed class IssueRepository(DapperSession session) : IIssueRepository
     public void Add(Issue issue)
     {
         session.Connection.Execute("""
-            INSERT INTO issues (id, key, title, type, status, priority, assignee_id,
-                linked_detection_id, ext_case_system, ext_case_external_id, ext_case_url,
+            INSERT INTO issues (id, key, title, type, status,
+                ext_case_system, ext_case_external_id, ext_case_url,
                 created_at, updated_at)
-            VALUES (@Id, @Key, @Title, @Type, @Status, @Priority, @AssigneeId,
-                @LinkedDetectionId, @ExtCaseSystem, @ExtCaseExternalId, @ExtCaseUrl,
+            VALUES (@Id, @Key, @Title, @Type, @Status,
+                @ExtCaseSystem, @ExtCaseExternalId, @ExtCaseUrl,
                 @CreatedAt, @UpdatedAt)
             """,
             ToParams(issue),
@@ -51,7 +51,6 @@ internal sealed class IssueRepository(DapperSession session) : IIssueRepository
     {
         session.Connection.Execute("""
             UPDATE issues SET title = @Title, status = @Status,
-                linked_detection_id = @LinkedDetectionId,
                 ext_case_system = @ExtCaseSystem, ext_case_external_id = @ExtCaseExternalId,
                 ext_case_url = @ExtCaseUrl, updated_at = @UpdatedAt
             WHERE id = @Id
@@ -67,9 +66,6 @@ internal sealed class IssueRepository(DapperSession session) : IIssueRepository
         i.Title,
         Type = i.Type.ToString(),
         Status = i.Status.ToString(),
-        Priority = i.Priority.ToString(),
-        AssigneeId = i.AssigneeId?.Value.ToString(),
-        LinkedDetectionId = i.LinkedDetectionId?.Value.ToString(),
         ExtCaseSystem = i.ExternalCase?.System,
         ExtCaseExternalId = i.ExternalCase?.ExternalId,
         ExtCaseUrl = i.ExternalCase?.Url,
@@ -84,9 +80,6 @@ internal sealed class IssueRepository(DapperSession session) : IIssueRepository
         public string title { get; set; } = "";
         public string type { get; set; } = "";
         public string status { get; set; } = "";
-        public string priority { get; set; } = "";
-        public string? assignee_id { get; set; }
-        public string? linked_detection_id { get; set; }
         public string? ext_case_system { get; set; }
         public string? ext_case_external_id { get; set; }
         public string? ext_case_url { get; set; }
@@ -103,9 +96,6 @@ internal sealed class IssueRepository(DapperSession session) : IIssueRepository
                 new IssueId(Guid.Parse(id)), key, title,
                 Enum.Parse<IssueType>(type),
                 Enum.Parse<IssueStatus>(status),
-                Enum.Parse<Priority>(priority),
-                assignee_id is not null ? new UserId(Guid.Parse(assignee_id)) : null,
-                linked_detection_id is not null ? new DetectionId(Guid.Parse(linked_detection_id)) : null,
                 extCase,
                 DateTimeOffset.Parse(created_at),
                 DateTimeOffset.Parse(updated_at));
