@@ -46,8 +46,8 @@ public sealed class SchemaBrowserSampleQueryGuardTests
     {
         var source = ReadSchemaBrowserSource();
 
-        Assert.Contains("Title="Saved queries"", source);
-        Assert.DoesNotContain("Title="Sample queries"", source);
+        Assert.Contains("Title=\"Saved queries\"", source);
+        Assert.DoesNotContain("Title=\"Sample queries\"", source);
         Assert.DoesNotContain("SampleQueryCatalog.All", source);
     }
 
@@ -57,8 +57,8 @@ public sealed class SchemaBrowserSampleQueryGuardTests
         var source = ReadSchemaBrowserSource();
 
         Assert.Contains("<MudNavMenu", source);
-        Assert.Contains("Title="Schema"", source);
-        Assert.Contains("Title="Saved queries"", source);
+        Assert.Contains("Title=\"Schema\"", source);
+        Assert.Contains("Title=\"Saved queries\"", source);
     }
 
     private static string ReadSchemaBrowserSource()

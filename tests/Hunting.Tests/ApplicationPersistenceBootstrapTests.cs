@@ -37,7 +37,7 @@ public sealed class ApplicationPersistenceBootstrapTests
             Assert.IsNull(settings.DefaultResultLimit);
 
             var savedQueries = await savedQueryRepository.ListAsync(TestContext.CancellationToken);
-            Assert.IsEmpty(savedQueries);
+            Assert.HasCount(24, savedQueries);
 
             var history = await queryHistoryRepository.ListRecentAsync(cancellationToken: TestContext.CancellationToken);
             Assert.IsEmpty(history);
@@ -117,7 +117,7 @@ public sealed class ApplicationPersistenceBootstrapTests
 
             Assert.AreEqual("last24h", loadedSettings.DefaultTimeFilter);
             Assert.AreEqual(500, loadedSettings.DefaultResultLimit);
-            Assert.HasCount(1, loadedSavedQueries);
+            Assert.HasCount(25, loadedSavedQueries);
             Assert.AreEqual("saved-1", loadedSavedQueries[0].Id);
             Assert.HasCount(1, loadedHistory);
             Assert.AreEqual("history-1", loadedHistory[0].Id);
