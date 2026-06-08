@@ -44,6 +44,24 @@ public sealed class LanguageService : IAsyncDisposable
 
     public async ValueTask SetEditorValueAsync(string value) => await TryInvokeVoidAsync("huntingMonaco.setValue", "setValue", _containerId, value);
 
+    public async ValueTask<bool> InsertTextAtCursorAsync(string value)
+    {
+        if (string.IsNullOrWhiteSpace(_containerId))
+        {
+            return false;
+        }
+
+        try
+        {
+            return await _jsRuntime.InvokeAsync<bool>("huntingKqlEditor.insertTextAtCursor", _containerId, value);
+        }
+        catch (JSDisconnectedException)
+        {
+            _logger.LogDebug("Skipping Monaco insert because JS runtime is disconnected.");
+            return false;
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (!string.IsNullOrWhiteSpace(_containerId))

@@ -4,6 +4,7 @@ using Hunting.Application.QueryHistory;
 using Hunting.Application.SavedQueries;
 using Hunting.Application.Settings;
 using Hunting.Application.Visualizations;
+using Hunting.Core.Samples;
 using Hunting.Data.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +38,8 @@ public sealed class ApplicationPersistenceBootstrapTests
             Assert.IsNull(settings.DefaultResultLimit);
 
             var savedQueries = await savedQueryRepository.ListAsync(TestContext.CancellationToken);
+            Assert.HasCount(SampleQueryCatalog.All.Count, savedQueries);
+            Assert.IsTrue(savedQueries.All(static query => query.Id.StartsWith("sample-", StringComparison.Ordinal)));
             Assert.HasCount(24, savedQueries);
 
             var history = await queryHistoryRepository.ListRecentAsync(cancellationToken: TestContext.CancellationToken);

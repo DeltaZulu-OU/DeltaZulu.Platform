@@ -1,0 +1,54 @@
+*** Begin Patch
+*** Update File: src/Hunting.Web/Pages/Index.razor
+@@
+                          <div class="hunt-toolbar-actions">
++                            <KqlHelperDrawer InsertRequested="InsertHelperQueryAsync" AppendRequested="AppendHelperQueryAsync" />
++
+                              <button class="hunt-btn hunt-btn-run"
+                                      disabled="@_running"
+                                      @onclick="RunQuery">
+@@
+-    private async Task LoadQueryIntoEditor(string queryText)
++    private async Task InsertHelperQueryAsync(string queryText)
++    {
++        if (string.IsNullOrWhiteSpace(queryText))
++        {
++            return;
++        }
++
++        if (_editorInitialized)
++        {
++            var inserted = await LanguageService.InsertTextAtCursorAsync(queryText);
++            if (inserted)
++            {
++                _cachedEditorText = await GetCurrentEditorTextAsync();
++                _kql = _cachedEditorText;
++                return;
++            }
++        }
++
++        await AppendHelperQueryAsync(queryText);
++    }
++
++    private async Task AppendHelperQueryAsync(string queryText)
++    {
++        if (string.IsNullOrWhiteSpace(queryText))
++        {
++            return;
++        }
++
++        var current = await GetCurrentEditorTextAsync();
++        var updated = string.IsNullOrWhiteSpace(current)
++            ? queryText.Trim()
++            : $"{current.TrimEnd()}{Environment.NewLine}{Environment.NewLine}{queryText.Trim()}";
++
++        _kql = updated;
++        _cachedEditorText = updated;
++        await LanguageService.SetEditorValueAsync(updated);
++    }
++
++    private async Task LoadQueryIntoEditor(string queryText)
+     {
+         _kql = queryText;
+         _cachedEditorText = queryText;
+*** End Patch
