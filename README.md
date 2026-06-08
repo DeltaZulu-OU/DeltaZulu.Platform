@@ -8,6 +8,8 @@ Analysts write a controlled KQL subset against logical security tables such as `
 
 Runtime SQL is generated and discarded. It is not a durable project artifact.
 
+<img src="docs/animation.gif" width="956" height="504" />
+
 ## Purpose
 
 Hunting is intended to provide a familiar threat-hunting experience over local or embedded security data without becoming a generic SQL explorer. The current implementation focuses on:
