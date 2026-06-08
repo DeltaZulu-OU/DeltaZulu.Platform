@@ -48,13 +48,10 @@ public sealed class FixtureParseCheck : ICheck
             // Other fixture formats: pass without further validation in POC.
         }
 
-        if (errors.Count == 0)
-        {
-            return Task.FromResult(CheckOutcome.Pass(
-                $"Fixture parse check passed ({fixtures.Count} file(s))."));
-        }
-
-        return Task.FromResult(CheckOutcome.Fail(
+        return errors.Count == 0
+            ? Task.FromResult(CheckOutcome.Pass(
+                $"Fixture parse check passed ({fixtures.Count} file(s))."))
+            : Task.FromResult(CheckOutcome.Fail(
             $"{errors.Count} fixture parse error(s).",
             "{}",
             string.Join('\n', errors)));

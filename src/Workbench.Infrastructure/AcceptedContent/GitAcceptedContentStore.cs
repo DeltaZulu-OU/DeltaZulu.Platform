@@ -181,12 +181,9 @@ public sealed class GitAcceptedContentStore : IAcceptedContentStore
             if (!repository.RetrieveStatus().IsDirty)
             {
                 var existingHead = repository.Head.Tip?.Sha;
-                if (!string.IsNullOrWhiteSpace(existingHead))
-                {
-                    return Task.FromResult(new CommitResult(existingHead, DateTimeOffset.UtcNow));
-                }
-
-                throw new InvalidOperationException("Cannot create an accepted-content commit with no file changes.");
+                return !string.IsNullOrWhiteSpace(existingHead)
+                    ? Task.FromResult(new CommitResult(existingHead, DateTimeOffset.UtcNow))
+                    : throw new InvalidOperationException("Cannot create an accepted-content commit with no file changes.");
             }
 
             var committedAt = DateTimeOffset.UtcNow;
@@ -222,13 +219,10 @@ public sealed class GitAcceptedContentStore : IAcceptedContentStore
     private string ToAbsolutePath(string normalizedRepositoryPath)
     {
         var absolutePath = Path.GetFullPath(Path.Combine(_repositoryPath, normalizedRepositoryPath.Replace('/', Path.DirectorySeparatorChar)));
-        if (!absolutePath.StartsWith(_repositoryPath + Path.DirectorySeparatorChar, StringComparison.Ordinal)
-            && !string.Equals(absolutePath, _repositoryPath, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException("Resolved repository path escaped the accepted content repository.");
-        }
-
-        return absolutePath;
+        return !absolutePath.StartsWith(_repositoryPath + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            && !string.Equals(absolutePath, _repositoryPath, StringComparison.Ordinal)
+            ? throw new InvalidOperationException("Resolved repository path escaped the accepted content repository.")
+            : absolutePath;
     }
 
     private static ContentFile? ReadFile(Tree tree, string normalizedPath)
@@ -287,13 +281,10 @@ public sealed class GitAcceptedContentStore : IAcceptedContentStore
 
         var normalized = repositoryPath.Replace('\\', '/').Trim('/');
         var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (segments.Length == 0
+        return segments.Length == 0
             || Path.IsPathRooted(repositoryPath)
-            || segments.Any(segment => segment is "." or ".."))
-        {
-            throw new ArgumentException("Repository paths must be relative paths within the accepted content repository.", nameof(repositoryPath));
-        }
-
-        return string.Join('/', segments);
+            || segments.Any(segment => segment is "." or "..")
+            ? throw new ArgumentException("Repository paths must be relative paths within the accepted content repository.", nameof(repositoryPath))
+            : string.Join('/', segments);
     }
 }

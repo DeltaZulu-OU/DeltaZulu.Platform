@@ -43,12 +43,9 @@ public sealed record QuerySyntaxValidationResult
     {
         ArgumentNullException.ThrowIfNull(diagnostics);
 
-        if (diagnostics.Length == 0)
-        {
-            throw new ArgumentException("At least one diagnostic is required for a failing query validation result.", nameof(diagnostics));
-        }
-
-        return new QuerySyntaxValidationResult(false, diagnostics);
+        return diagnostics.Length == 0
+            ? throw new ArgumentException("At least one diagnostic is required for a failing query validation result.", nameof(diagnostics))
+            : new QuerySyntaxValidationResult(false, diagnostics);
     }
 }
 

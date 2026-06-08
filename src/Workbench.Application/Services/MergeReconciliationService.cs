@@ -52,15 +52,12 @@ public sealed class MergeReconciliationService(
                 "Repair projection");
         }
 
-        if (intent.State == MergeIntentState.Committed)
-        {
-            return MergeIntentRecoveryGuidance.NeedsInvestigation(
+        return intent.State == MergeIntentState.Committed
+            ? MergeIntentRecoveryGuidance.NeedsInvestigation(
                 intent.ChangeId,
                 "The recovery marker says accepted content was written, but no accepted snapshot is recorded. Verify the accepted-content store before retrying the merge or closing the marker.",
-                "Verify accepted snapshot");
-        }
-
-        return MergeIntentRecoveryGuidance.WaitingForAcceptedWrite(
+                "Verify accepted snapshot")
+            : MergeIntentRecoveryGuidance.WaitingForAcceptedWrite(
             intent.ChangeId,
             "The accepted-content write has not completed. If this remains after the merge attempt stops running, retry the merge from the change page or investigate the accepted-content store health.",
             "Wait or retry merge");
@@ -81,12 +78,16 @@ public sealed class MergeReconciliationService(
             return MergeRepairResult.NotFound(changeId);
 
         if (intent.State != MergeIntentState.Committed || string.IsNullOrWhiteSpace(intent.CommitSha))
+        {
             return MergeRepairResult.NotRepairable(changeId, intent.State,
                 "Merge intent has not recorded an accepted-content commit yet.");
+        }
 
         if (!await contentStore.CommitExistsAsync(intent.CommitSha, ct))
+        {
             return MergeRepairResult.NotRepairable(changeId, intent.State,
                 "Accepted-content commit was not found in the content store.");
+        }
 
         var change = await changes.GetByIdAsync(changeId, ct)
             ?? throw new DomainException("change.not_found", $"Change '{changeId}' not found for merge repair.");

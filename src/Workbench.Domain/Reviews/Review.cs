@@ -40,10 +40,11 @@ public sealed class Review : Entity<ReviewId>
         ReviewDecision decision, string comment, DateTimeOffset createdAt,
         bool isSuperseded, DateTimeOffset? supersededAt)
     {
-        var r = new Review(id, changeRequestId, reviewerId, decision, comment, createdAt, skip: true);
-        r.IsSuperseded = isSuperseded;
-        r.SupersededAt = supersededAt;
-        return r;
+        return new Review(id, changeRequestId, reviewerId, decision, comment, createdAt, skip: true)
+        {
+            IsSuperseded = isSuperseded,
+            SupersededAt = supersededAt
+        };
     }
 
     // Validation-free path for Reconstitute only.

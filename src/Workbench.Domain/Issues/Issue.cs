@@ -54,10 +54,9 @@ public sealed class Issue : Entity<IssueId>
             throw new DomainException("issue.key_too_long", "Issue key exceeds 32 characters.");
         if (string.IsNullOrWhiteSpace(title))
             throw new DomainException("issue.title_empty", "Issue title must not be empty.");
-        if (title.Length > 200)
-            throw new DomainException("issue.title_too_long", "Issue title exceeds 200 characters.");
-
-        return new Issue(id, key, title, type, now);
+        return title.Length > 200
+            ? throw new DomainException("issue.title_too_long", "Issue title exceeds 200 characters.")
+            : new Issue(id, key, title, type, now);
     }
 
     internal static Issue Reconstitute(
@@ -67,18 +66,19 @@ public sealed class Issue : Entity<IssueId>
         string? dataSource = null, string? platform = null, string? attackTechniqueId = null,
         TlpLevel? tlp = null, IReadOnlyList<string>? labels = null)
     {
-        var i = new Issue(id, key, title, type, createdAt);
-        i.Status = status;
-        i.ExternalCase = externalCase;
-        i.Description = description;
-        i.AcceptanceCriteria = acceptanceCriteria;
-        i.DataSource = dataSource;
-        i.Platform = platform;
-        i.AttackTechniqueId = attackTechniqueId;
-        i.Tlp = tlp;
-        i.Labels = labels ?? [];
-        i.UpdatedAt = updatedAt;
-        return i;
+        return new Issue(id, key, title, type, createdAt)
+        {
+            Status = status,
+            ExternalCase = externalCase,
+            Description = description,
+            AcceptanceCriteria = acceptanceCriteria,
+            DataSource = dataSource,
+            Platform = platform,
+            AttackTechniqueId = attackTechniqueId,
+            Tlp = tlp,
+            Labels = labels ?? [],
+            UpdatedAt = updatedAt
+        };
     }
 
     // --- classification ---------------------------------------------------------------------
@@ -119,15 +119,15 @@ public sealed class Issue : Entity<IssueId>
         string? dataSource, string? platform, string? attackTechniqueId,
         DateTimeOffset now)
     {
-        if (description is not null && description.Length > 2000)
+        if (description?.Length > 2000)
             throw new DomainException("issue.description_too_long", "Description exceeds 2000 characters.");
-        if (acceptanceCriteria is not null && acceptanceCriteria.Length > 2000)
+        if (acceptanceCriteria?.Length > 2000)
             throw new DomainException("issue.criteria_too_long", "Acceptance criteria exceeds 2000 characters.");
-        if (dataSource is not null && dataSource.Length > 128)
+        if (dataSource?.Length > 128)
             throw new DomainException("issue.data_source_too_long", "Data source exceeds 128 characters.");
-        if (platform is not null && platform.Length > 64)
+        if (platform?.Length > 64)
             throw new DomainException("issue.platform_too_long", "Platform exceeds 64 characters.");
-        if (attackTechniqueId is not null && attackTechniqueId.Length > 32)
+        if (attackTechniqueId?.Length > 32)
             throw new DomainException("issue.attack_technique_too_long", "ATT&CK technique ID exceeds 32 characters.");
 
         Description = description;
@@ -287,7 +287,9 @@ public sealed class Issue : Entity<IssueId>
     private void EnsureNotTerminal()
     {
         if (TerminalStatuses.Contains(Status))
+        {
             throw new DomainException("issue.terminal",
                 $"Issue is in terminal state '{Status}' and cannot be modified.");
+        }
     }
 }

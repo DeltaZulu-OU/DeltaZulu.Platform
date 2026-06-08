@@ -91,23 +91,17 @@ public sealed class RestoreService(
     private static string ToLogicalPath(string detectionPrefix, string repositoryPath)
     {
         var prefix = detectionPrefix.TrimEnd('/') + "/";
-        if (!repositoryPath.StartsWith(prefix, StringComparison.Ordinal))
-        {
-            throw new DomainException("restore.path_outside_detection",
-                $"Accepted content path '{repositoryPath}' is outside the detection package.");
-        }
-
-        return repositoryPath[prefix.Length..];
+        return !repositoryPath.StartsWith(prefix, StringComparison.Ordinal)
+            ? throw new DomainException("restore.path_outside_detection",
+                $"Accepted content path '{repositoryPath}' is outside the detection package.")
+            : repositoryPath[prefix.Length..];
     }
 
     private static DraftContentType InferContentType(string logicalPath, ContentFile file)
     {
-        if (file.IsBinary)
-        {
-            return DraftContentType.StaticAsset;
-        }
-
-        return logicalPath switch
+        return file.IsBinary
+            ? DraftContentType.StaticAsset
+            : logicalPath switch
         {
             "detection.yaml" => DraftContentType.DetectionMetadata,
             "rule.kql" => DraftContentType.HuntingQuery,

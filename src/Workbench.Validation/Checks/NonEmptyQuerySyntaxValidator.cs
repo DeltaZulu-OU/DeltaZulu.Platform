@@ -10,12 +10,9 @@ public sealed class NonEmptyQuerySyntaxValidator : IQuerySyntaxValidator
 {
     public QuerySyntaxValidationResult Validate(QuerySyntaxValidationRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Content))
-        {
-            return QuerySyntaxValidationResult.Fail(
-                new QuerySyntaxDiagnostic("query content is empty."));
-        }
-
-        return QuerySyntaxValidationResult.Pass();
+        return string.IsNullOrWhiteSpace(request.Content)
+            ? QuerySyntaxValidationResult.Fail(
+                new QuerySyntaxDiagnostic("query content is empty."))
+            : QuerySyntaxValidationResult.Pass();
     }
 }

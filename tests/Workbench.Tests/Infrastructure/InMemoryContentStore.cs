@@ -46,12 +46,9 @@ internal sealed class InMemoryContentStore : IAcceptedContentStore
     {
         lock (_lock)
         {
-            if (!_commits.TryGetValue(commitSha, out var snapshot))
-            {
-                return Task.FromResult<ContentFile?>(null);
-            }
-
-            return Task.FromResult(
+            return !_commits.TryGetValue(commitSha, out var snapshot)
+                ? Task.FromResult<ContentFile?>(null)
+                : Task.FromResult(
                 snapshot.TryGetValue(repositoryPath, out var file) ? file : null);
         }
     }

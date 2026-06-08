@@ -75,9 +75,7 @@ public sealed partial class LogicalPath : IEquatable<LogicalPath>
                 "Logical paths must not start or end with '/'.");
         }
 
-        var segments = raw.Split(Separator, StringSplitOptions.None);
-
-        foreach (var segment in segments)
+        foreach (var segment in raw.Split(Separator, StringSplitOptions.None))
         {
             if (segment.Length == 0)
             {

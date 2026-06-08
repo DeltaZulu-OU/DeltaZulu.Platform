@@ -148,23 +148,17 @@ public sealed class VersionService(
 
     private static bool IsBefore(DetectionVersion candidate, DetectionVersion afterVersion)
     {
-        if (candidate.Id == afterVersion.Id)
-        {
-            return false;
-        }
-
-        return candidate.AcceptedAt < afterVersion.AcceptedAt
+        return candidate.Id == afterVersion.Id
+            ? false
+            : candidate.AcceptedAt < afterVersion.AcceptedAt
             || (candidate.AcceptedAt == afterVersion.AcceptedAt && candidate.SequenceNumber < afterVersion.SequenceNumber);
     }
 
     private static string ToLogicalPath(string prefix, string repositoryPath)
     {
-        if (!repositoryPath.StartsWith(prefix, StringComparison.Ordinal))
-        {
-            throw new DomainException("version.path_outside_detection", $"Accepted content path '{repositoryPath}' is outside the detection package.");
-        }
-
-        return repositoryPath[prefix.Length..];
+        return !repositoryPath.StartsWith(prefix, StringComparison.Ordinal)
+            ? throw new DomainException("version.path_outside_detection", $"Accepted content path '{repositoryPath}' is outside the detection package.")
+            : repositoryPath[prefix.Length..];
     }
 
     private static VersionFileDiff CreateDiff(string logicalPath, ContentFile? before, ContentFile? after)
@@ -259,12 +253,9 @@ public sealed class VersionService(
 
     private static string[] SplitLines(string? content)
     {
-        if (string.IsNullOrEmpty(content))
-        {
-            return [];
-        }
-
-        return content
+        return string.IsNullOrEmpty(content)
+            ? []
+            : content
             .Replace("\r\n", "\n", StringComparison.Ordinal)
             .Replace('\r', '\n')
             .Split('\n');

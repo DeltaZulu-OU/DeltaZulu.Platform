@@ -27,8 +27,10 @@ public sealed class ChangeDraftFile
         ArgumentNullException.ThrowIfNull(path);
         ArgumentNullException.ThrowIfNull(content);
         if (content.Length > MaxContentChars)
+        {
             throw new DomainException("draft_file.too_large",
                 $"Draft file '{path}' exceeds the per-file limit of {MaxContentChars} characters.");
+        }
 
         ChangeRequestId = changeRequestId;
         Path = path;
@@ -42,8 +44,11 @@ public sealed class ChangeDraftFile
     {
         ArgumentNullException.ThrowIfNull(newContent);
         if (newContent.Length > MaxContentChars)
+        {
             throw new DomainException("draft_file.too_large",
                 $"Draft file '{Path}' exceeds the per-file limit of {MaxContentChars} characters.");
+        }
+
         Content = newContent;
         ContentType = newContentType;
         UpdatedBy = updatedBy;

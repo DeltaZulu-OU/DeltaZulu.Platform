@@ -15,8 +15,7 @@ internal sealed class ChangeRequestRepository(DapperSession session) : IChangeRe
         var row = await session.Connection.QuerySingleOrDefaultAsync<ChangeRow>(
             "SELECT * FROM change_requests WHERE id = @Id",
             new { Id = idStr }, session.Transaction);
-        if (row is null) return null;
-        return await HydrateAsync(row);
+        return row is null ? null : await HydrateAsync(row);
     }
 
     public Task<IReadOnlyList<ChangeRequest>> ListByDetectionAsync(DetectionId detectionId, CancellationToken ct = default)

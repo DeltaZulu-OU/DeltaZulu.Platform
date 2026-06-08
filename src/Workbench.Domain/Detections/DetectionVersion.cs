@@ -58,11 +58,16 @@ public sealed class DetectionVersion : Entity<VersionId>
         string checksSummary, string reviewSummary)
     {
         if (sequenceNumber < 1)
+        {
             throw new DomainException("version.sequence_invalid",
                 "Detection version sequence number must be 1 or greater.");
+        }
+
         if (string.IsNullOrWhiteSpace(gitCommitSha))
+        {
             throw new DomainException("version.commit_empty",
                 "Git commit SHA must accompany an accepted version projection.");
+        }
 
         ArgumentNullException.ThrowIfNull(title);
         ArgumentNullException.ThrowIfNull(changeSummary);

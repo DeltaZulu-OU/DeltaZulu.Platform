@@ -91,14 +91,16 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
         IEnumerable<Review> reviews)
     {
         var c = new ChangeRequest(id, key, title, detectionId, authorId, workflowProfileId,
-            baseVersionId, linkedIssueId, createdAt);
-        c.Status = status;
-        c.IsStale = isStale;
-        c.StaleReason = staleReason;
-        c.UpdatedAt = updatedAt;
-        c.MergedAt = mergedAt;
-        c.ResultVersionId = resultVersionId;
-        c.CloseReason = closeReason;
+            baseVersionId, linkedIssueId, createdAt)
+        {
+            Status = status,
+            IsStale = isStale,
+            StaleReason = staleReason,
+            UpdatedAt = updatedAt,
+            MergedAt = mergedAt,
+            ResultVersionId = resultVersionId,
+            CloseReason = closeReason
+        };
         c._draftFiles.AddRange(draftFiles);
         c._checks.AddRange(checks);
         c._reviews.AddRange(reviews);
@@ -109,8 +111,11 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
     {
         EnsureMutable();
         if (_reviews.Count > 0)
+        {
             throw new DomainException("change.profile_locked",
                 "Workflow profile cannot be changed after a review has been recorded.");
+        }
+
         _ = WorkflowProfile.For(next);
         WorkflowProfileId = next;
         UpdatedAt = now;
@@ -276,12 +281,16 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
         var unmet = new List<UnmetGate>();
 
         if (Status is ChangeStatus.Merged or ChangeStatus.Closed)
+        {
             unmet.Add(new UnmetGate("gate.terminal_state",
                 $"Change is in terminal state {Status} and cannot be re-merged."));
+        }
 
         if (profile.BlocksStaleMerge && IsStale)
+        {
             unmet.Add(new UnmetGate("gate.stale",
                 "Detection changed after this change was opened. Review the latest version before accepting."));
+        }
 
         if (profile.RequiresPassingChecks)
         {
@@ -358,8 +367,11 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
     public void MarkPublished(DateTimeOffset now)
     {
         if (Status != ChangeStatus.Merged)
+        {
             throw new DomainException("change.publish_requires_merged",
                 "Only a merged change can be marked as published.");
+        }
+
         Status = ChangeStatus.Published;
         UpdatedAt = now;
     }
@@ -378,7 +390,9 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
     private void EnsureMutable()
     {
         if (Status is ChangeStatus.Merged or ChangeStatus.Published or ChangeStatus.Closed)
+        {
             throw new DomainException("change.immutable",
                 $"Change is in terminal state {Status} and cannot be modified.");
+        }
     }
 }

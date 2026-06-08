@@ -45,14 +45,15 @@ public sealed class CheckRun : Entity<CheckRunId>
         CheckStatus status, DateTimeOffset? startedAt, DateTimeOffset? completedAt,
         string summary, string detailsJson, string logsExcerpt)
     {
-        var c = new CheckRun(id, changeRequestId, name, isBlocking, skip: true);
-        c.Status = status;
-        c.StartedAt = startedAt;
-        c.CompletedAt = completedAt;
-        c.Summary = summary;
-        c.DetailsJson = detailsJson;
-        c.LogsExcerpt = logsExcerpt;
-        return c;
+        return new CheckRun(id, changeRequestId, name, isBlocking, skip: true)
+        {
+            Status = status,
+            StartedAt = startedAt,
+            CompletedAt = completedAt,
+            Summary = summary,
+            DetailsJson = detailsJson,
+            LogsExcerpt = logsExcerpt
+        };
     }
 
     // Validation-free path for Reconstitute only.
@@ -71,8 +72,11 @@ public sealed class CheckRun : Entity<CheckRunId>
     public void MarkRunning(DateTimeOffset now)
     {
         if (Status != CheckStatus.Queued)
+        {
             throw new DomainException("check.start_invalid",
                 $"Check '{Name}' cannot transition from {Status} to Running.");
+        }
+
         Status = CheckStatus.Running;
         StartedAt = now;
     }
@@ -82,8 +86,10 @@ public sealed class CheckRun : Entity<CheckRunId>
         if (terminal is not (CheckStatus.Passed or CheckStatus.Failed or CheckStatus.Cancelled or CheckStatus.Skipped))
             throw new DomainException("check.terminal_invalid", $"Status {terminal} is not a terminal status.");
         if (IsTerminal)
+        {
             throw new DomainException("check.already_complete",
                 $"Check '{Name}' is already in terminal status {Status}.");
+        }
 
         ArgumentNullException.ThrowIfNull(summary);
         ArgumentNullException.ThrowIfNull(detailsJson);

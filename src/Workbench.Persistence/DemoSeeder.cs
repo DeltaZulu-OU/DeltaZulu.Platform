@@ -218,6 +218,7 @@ public static class DemoSeeder
             """;
 
         foreach (var i in issues)
+        {
             conn.Execute(sql, new
             {
                 i.Id,
@@ -230,6 +231,7 @@ public static class DemoSeeder
                 i.ExtUrl,
                 CreatedAt = Iso(i.CreatedAt),
             }, tx);
+        }
 
         return issues.Select(i => (i.Id, i.Key)).ToList();
     }
@@ -303,6 +305,7 @@ public static class DemoSeeder
             """;
 
         foreach (var c in changes)
+        {
             conn.Execute(crSql, new
             {
                 c.Id,
@@ -315,6 +318,7 @@ public static class DemoSeeder
                 c.LinkedIssueId,
                 CreatedAt = Iso(c.CreatedAt),
             }, tx);
+        }
 
         SeedDraftFiles(conn, tx, now, changes[0].Id, changes[1].Id, changes[2].Id, changes[3].Id);
         SeedCheckRuns(conn, tx, now, changes[0].Id, changes[2].Id);
@@ -363,6 +367,7 @@ public static class DemoSeeder
             """;
 
         foreach (var c in checks)
+        {
             conn.Execute(sql, new
             {
                 c.Id,
@@ -375,6 +380,7 @@ public static class DemoSeeder
                 StartedAt = Iso(now.AddMinutes(-5)),
                 CompletedAt = Iso(now.AddMinutes(-4)),
             }, tx);
+        }
     }
 
     private static void SeedReviews(

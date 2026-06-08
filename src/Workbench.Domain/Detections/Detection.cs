@@ -56,10 +56,9 @@ public sealed partial class Detection : Entity<DetectionId>
         if (title.Length > 200)
             throw new DomainException("detection.title_too_long", "Detection title exceeds 200 characters.");
 
-        if (summary.Length > 2000)
-            throw new DomainException("detection.summary_too_long", "Detection summary exceeds 2000 characters.");
-
-        return new Detection(id, slug, title, summary, now);
+        return summary.Length > 2000
+            ? throw new DomainException("detection.summary_too_long", "Detection summary exceeds 2000 characters.")
+            : new Detection(id, slug, title, summary, now);
     }
 
     /// <summary>Reconstitutes from persistence. No validation — data is trusted.</summary>
@@ -68,11 +67,12 @@ public sealed partial class Detection : Entity<DetectionId>
         DetectionLifecycle lifecycle, VersionId? currentVersionId,
         DateTimeOffset createdAt, DateTimeOffset updatedAt)
     {
-        var d = new Detection(id, slug, title, summary, createdAt);
-        d.Lifecycle = lifecycle;
-        d.CurrentVersionId = currentVersionId;
-        d.UpdatedAt = updatedAt;
-        return d;
+        return new Detection(id, slug, title, summary, createdAt)
+        {
+            Lifecycle = lifecycle,
+            CurrentVersionId = currentVersionId,
+            UpdatedAt = updatedAt
+        };
     }
 
     public void Rename(string newTitle, DateTimeOffset now)
@@ -88,8 +88,11 @@ public sealed partial class Detection : Entity<DetectionId>
     public void MarkAccepted(VersionId newVersionId, DateTimeOffset now)
     {
         if (Lifecycle == DetectionLifecycle.Deprecated)
+        {
             throw new DomainException("detection.deprecated_no_accept",
                 "A deprecated detection cannot accept new versions.");
+        }
+
         Lifecycle = DetectionLifecycle.Accepted;
         CurrentVersionId = newVersionId;
         UpdatedAt = now;

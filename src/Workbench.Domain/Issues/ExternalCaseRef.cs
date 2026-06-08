@@ -35,7 +35,7 @@ public sealed class ExternalCaseRef
             throw new DomainException("external_case.id_empty", "External case ID must not be empty.");
         if (externalId.Length > 200)
             throw new DomainException("external_case.id_too_long", "External case ID exceeds 200 characters.");
-        if (url is not null && url.Length > 2000)
+        if (url?.Length > 2000)
             throw new DomainException("external_case.url_too_long", "External case URL exceeds 2000 characters.");
 
         SystemType = systemType;

@@ -40,12 +40,9 @@ public sealed record HuntingCoreQueryParseResult
     {
         ArgumentNullException.ThrowIfNull(diagnostics);
 
-        if (diagnostics.Length == 0)
-        {
-            throw new ArgumentException("At least one diagnostic is required for a failing Hunting.Core parser result.", nameof(diagnostics));
-        }
-
-        return new HuntingCoreQueryParseResult(false, diagnostics);
+        return diagnostics.Length == 0
+            ? throw new ArgumentException("At least one diagnostic is required for a failing Hunting.Core parser result.", nameof(diagnostics))
+            : new HuntingCoreQueryParseResult(false, diagnostics);
     }
 }
 

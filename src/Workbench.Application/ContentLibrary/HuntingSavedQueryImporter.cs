@@ -71,12 +71,7 @@ public sealed class HuntingSavedQueryImporter
 
     private static string Require(string value, string parameterName)
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new ArgumentException($"{parameterName} is required.", parameterName);
-        }
-
-        return value.Trim();
+        return string.IsNullOrWhiteSpace(value) ? throw new ArgumentException($"{parameterName} is required.", parameterName) : value.Trim();
     }
 
     private static string MakeUniquePath(string prefix, string segment, string extension, ISet<string> usedPaths)
