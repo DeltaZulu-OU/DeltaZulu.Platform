@@ -1,0 +1,252 @@
+namespace Hunting.Tests;
+
+using Hunting.Application.Alerts;
+using Hunting.Data.Alerts;
+using Hunting.Data.Persistence;
+using Microsoft.Data.Sqlite;
+
+[TestClass]
+public sealed class AlertRepositoryTests
+{
+    [TestMethod]
+    public async Task ListByRunAsync_ReturnsEmptyList_WhenStoreIsEmpty()
+    {
+        var repository = CreateRepository(out var dbPath);
+        try
+        {
+            var alerts = await repository.ListByRunAsync("run-001", TestContext.CancellationToken);
+
+            Assert.IsEmpty(alerts);
+        }
+        finally
+        {
+            DeleteDatabaseFiles(dbPath);
+        }
+    }
+
+    [TestMethod]
+    public async Task SaveAsync_PersistsAlertAcrossRepositoryInstances()
+    {
+        var repository = CreateRepository(out var dbPath);
+        try
+        {
+            var alertTime = new DateTime(2026, 6, 8, 9, 3, 0, DateTimeKind.Utc);
+            var now = new DateTime(2026, 6, 8, 9, 5, 0, DateTimeKind.Utc);
+
+            await repository.SaveAsync(CreateAlert(
+                id: "alert-001",
+                alertTimeUtc: alertTime,
+                createdAtUtc: now,
+                updatedAtUtc: now), TestContext.CancellationToken);
+
+            var secondRepository = new DapperAlertRepository(
+                new SqliteAppDbConnectionFactory(BuildConnectionString(dbPath)));
+
+            var saved = await secondRepository.GetAsync("alert-001", TestContext.CancellationToken);
+
+            Assert.IsNotNull(saved);
+            Assert.AreEqual("det-001", saved.DetectionId);
+            Assert.AreEqual(2, saved.DetectionVersion);
+            Assert.AreEqual("run-001", saved.DetectionRunId);
+            Assert.AreEqual(alertTime, saved.AlertTimeUtc);
+            Assert.AreEqual("ProcessEvent", saved.SourceView);
+            Assert.AreEqual("High", saved.Severity);
+            Assert.AreEqual("Medium", saved.Confidence);
+            Assert.AreEqual(75, saved.RiskScore);
+            Assert.AreEqual("New", saved.Status);
+            Assert.AreEqual(now, saved.CreatedAtUtc);
+        }
+        finally
+        {
+            DeleteDatabaseFiles(dbPath);
+        }
+    }
+
+    [TestMethod]
+    public async Task SaveBatchAsync_PersistsMultipleAlerts()
+    {
+        var repository = CreateRepository(out var dbPath);
+        try
+        {
+            var now = new DateTime(2026, 6, 8, 9, 5, 0, DateTimeKind.Utc);
+
+            var alerts = new[]
+            {
+                CreateAlert(id: "alert-001", alertTimeUtc: now.AddMinutes(-2), createdAtUtc: now, updatedAtUtc: now),
+                CreateAlert(id: "alert-002", alertTimeUtc: now.AddMinutes(-1), createdAtUtc: now, updatedAtUtc: now),
+                CreateAlert(id: "alert-003", alertTimeUtc: now, createdAtUtc: now, updatedAtUtc: now)
+            };
+
+            await repository.SaveBatchAsync(alerts, TestContext.CancellationToken);
+
+            var saved = await repository.ListByRunAsync("run-001", TestContext.CancellationToken);
+
+            Assert.AreEqual(3, saved.Count);
+        }
+        finally
+        {
+            DeleteDatabaseFiles(dbPath);
+        }
+    }
+
+    [TestMethod]
+    public async Task UpdateStatusAsync_ChangesAlertStatus()
+    {
+        var repository = CreateRepository(out var dbPath);
+        try
+        {
+            var now = new DateTime(2026, 6, 8, 9, 5, 0, DateTimeKind.Utc);
+            var later = new DateTime(2026, 6, 8, 10, 0, 0, DateTimeKind.Utc);
+
+            await repository.SaveAsync(CreateAlert(
+                id: "alert-001",
+                alertTimeUtc: now,
+                createdAtUtc: now,
+                updatedAtUtc: now), TestContext.CancellationToken);
+
+            await repository.UpdateStatusAsync("alert-001", "Resolved", later, TestContext.CancellationToken);
+
+            var saved = await repository.GetAsync("alert-001", TestContext.CancellationToken);
+
+            Assert.IsNotNull(saved);
+            Assert.AreEqual("Resolved", saved.Status);
+            Assert.AreEqual(later, saved.UpdatedAtUtc);
+        }
+        finally
+        {
+            DeleteDatabaseFiles(dbPath);
+        }
+    }
+
+    [TestMethod]
+    public async Task ListByDetectionAsync_ReturnsAlertsDescendingByAlertTime()
+    {
+        var repository = CreateRepository(out var dbPath);
+        try
+        {
+            var baseTime = new DateTime(2026, 6, 8, 9, 0, 0, DateTimeKind.Utc);
+            var now = new DateTime(2026, 6, 8, 9, 5, 0, DateTimeKind.Utc);
+
+            await repository.SaveAsync(CreateAlert(
+                id: "alert-001", alertTimeUtc: baseTime.AddMinutes(1),
+                createdAtUtc: now, updatedAtUtc: now), TestContext.CancellationToken);
+
+            await repository.SaveAsync(CreateAlert(
+                id: "alert-002", alertTimeUtc: baseTime.AddMinutes(3),
+                createdAtUtc: now, updatedAtUtc: now), TestContext.CancellationToken);
+
+            await repository.SaveAsync(CreateAlert(
+                id: "alert-003", alertTimeUtc: baseTime.AddMinutes(2),
+                createdAtUtc: now, updatedAtUtc: now), TestContext.CancellationToken);
+
+            var alerts = await repository.ListByDetectionAsync("det-001", TestContext.CancellationToken);
+
+            Assert.AreEqual(3, alerts.Count);
+            Assert.AreEqual("alert-002", alerts[0].Id);
+            Assert.AreEqual("alert-003", alerts[1].Id);
+            Assert.AreEqual("alert-001", alerts[2].Id);
+        }
+        finally
+        {
+            DeleteDatabaseFiles(dbPath);
+        }
+    }
+
+    [TestMethod]
+    public async Task SaveAsync_DuplicateIdPreservesOriginalData()
+    {
+        var repository = CreateRepository(out var dbPath);
+        try
+        {
+            var alertTime = new DateTime(2026, 6, 8, 9, 3, 0, DateTimeKind.Utc);
+            var now = new DateTime(2026, 6, 8, 9, 5, 0, DateTimeKind.Utc);
+
+            await repository.SaveAsync(CreateAlert(
+                id: "alert-001", alertTimeUtc: alertTime,
+                createdAtUtc: now, updatedAtUtc: now), TestContext.CancellationToken);
+
+            await repository.SaveAsync(new AlertRecord(
+                Id: "alert-001",
+                DetectionId: "det-002",
+                DetectionVersion: 99,
+                DetectionRunId: "run-999",
+                AlertTimeUtc: alertTime.AddHours(1),
+                SourceView: "NetworkSession",
+                SourceEventId: "different",
+                Severity: "Low",
+                Confidence: "Low",
+                RiskScore: 10,
+                EvidenceJson: "{}",
+                Status: "Suppressed",
+                CreatedAtUtc: now,
+                UpdatedAtUtc: now.AddMinutes(30)), TestContext.CancellationToken);
+
+            var saved = await repository.GetAsync("alert-001", TestContext.CancellationToken);
+
+            Assert.IsNotNull(saved);
+            Assert.AreEqual("det-001", saved.DetectionId);
+            Assert.AreEqual("run-001", saved.DetectionRunId);
+            Assert.AreEqual(alertTime, saved.AlertTimeUtc);
+            Assert.AreEqual("Suppressed", saved.Status);
+            Assert.AreEqual(now.AddMinutes(30), saved.UpdatedAtUtc);
+        }
+        finally
+        {
+            DeleteDatabaseFiles(dbPath);
+        }
+    }
+
+    private static AlertRecord CreateAlert(
+        string id = "alert-001",
+        DateTime alertTimeUtc = default,
+        DateTime createdAtUtc = default,
+        DateTime updatedAtUtc = default)
+    {
+        return new AlertRecord(
+            Id: id,
+            DetectionId: "det-001",
+            DetectionVersion: 2,
+            DetectionRunId: "run-001",
+            AlertTimeUtc: alertTimeUtc,
+            SourceView: "ProcessEvent",
+            SourceEventId: "evt-abc123",
+            Severity: "High",
+            Confidence: "Medium",
+            RiskScore: 75,
+            EvidenceJson: "{\"FileName\":\"powershell.exe\",\"CommandLine\":\"powershell -enc base64...\"}",
+            Status: "New",
+            CreatedAtUtc: createdAtUtc,
+            UpdatedAtUtc: updatedAtUtc);
+    }
+
+    private static DapperAlertRepository CreateRepository(out string dbPath)
+    {
+        dbPath = Path.Combine(
+            Path.GetTempPath(),
+            $"hunting-alerts-{Guid.NewGuid():N}.db");
+
+        var connectionFactory = new SqliteAppDbConnectionFactory(BuildConnectionString(dbPath));
+        return new DapperAlertRepository(connectionFactory);
+    }
+
+    private static string BuildConnectionString(string dbPath) => $"Data Source={dbPath};Pooling=False";
+
+    private static void DeleteDatabaseFiles(string path)
+    {
+        SqliteConnection.ClearAllPools();
+
+        DeleteIfExists(path);
+        DeleteIfExists($"{path}-wal");
+        DeleteIfExists($"{path}-shm");
+    }
+
+    private static void DeleteIfExists(string path)
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+    }
+
+    public TestContext TestContext { get; set; }
+}

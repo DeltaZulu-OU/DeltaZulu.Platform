@@ -1,8 +1,14 @@
 namespace Hunting.Data.Persistence;
 
+using Hunting.Application.Alerts;
+using Hunting.Application.DetectionRuns;
+using Hunting.Application.Detections;
 using Hunting.Application.QueryHistory;
 using Hunting.Application.SavedQueries;
 using Hunting.Application.Visualizations;
+using Hunting.Data.Alerts;
+using Hunting.Data.DetectionRuns;
+using Hunting.Data.Detections;
 using Hunting.Data.QueryHistory;
 using Hunting.Data.SavedQueries;
 using Hunting.Data.Settings;
@@ -25,6 +31,9 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         services.AddSingleton<ISavedQueryRepository, DapperSavedQueryRepository>();
         services.AddSingleton<IQueryHistoryRepository, DapperQueryHistoryRepository>();
         services.AddSingleton<IVisualizationRepository, DapperVisualizationRepository>();
+        services.AddSingleton<IDetectionRepository, DapperDetectionRepository>();
+        services.AddSingleton<IDetectionRunRepository, DapperDetectionRunRepository>();
+        services.AddSingleton<IAlertRepository, DapperAlertRepository>();
 
         return services;
     }
@@ -47,5 +56,14 @@ public static class ApplicationPersistenceServiceCollectionExtensions
 
         var visualizations = services.GetRequiredService<IVisualizationRepository>();
         await visualizations.EnsureInitializedAsync(cancellationToken);
+
+        var detections = services.GetRequiredService<IDetectionRepository>();
+        await detections.EnsureInitializedAsync(cancellationToken);
+
+        var detectionRuns = services.GetRequiredService<IDetectionRunRepository>();
+        await detectionRuns.EnsureInitializedAsync(cancellationToken);
+
+        var alerts = services.GetRequiredService<IAlertRepository>();
+        await alerts.EnsureInitializedAsync(cancellationToken);
     }
 }
