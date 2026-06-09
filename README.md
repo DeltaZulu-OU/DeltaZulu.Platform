@@ -81,6 +81,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the product definition, u
 | [`docs/AGENTS.md`](docs/AGENTS.md) | Constraints for contributors and AI agents. |
 | [`docs/design-system/WORKBENCH_DESIGN_AUDIT.md`](docs/design-system/WORKBENCH_DESIGN_AUDIT.md) | Local design-system drift audit. |
 | [`docs/PLATFORM_MERGE_PREP.md`](docs/PLATFORM_MERGE_PREP.md) | Reusable UI, shared detection-content, and central-host merge-preparation inventory. |
+| [`docs/analysis/platform-module-contract-gap.md`](docs/analysis/platform-module-contract-gap.md) | Workbench-side module naming, route manifest, and shared security-operations contract gap before platform import. |
 | [`docs/adr/`](docs/adr/) | Architecture Decision Records. Binding unless superseded. |
 
 ## Conventions

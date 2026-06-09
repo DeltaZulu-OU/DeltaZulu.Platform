@@ -4,6 +4,7 @@ using DeltaZulu.DetectionContent.Identity;
 using DeltaZulu.DetectionContent.Paths;
 using DeltaZulu.DetectionContent.References;
 using Workbench.Application.ContentPipeline;
+using Workbench.Domain.Identifiers;
 
 namespace Workbench.Tests.DetectionContent;
 
@@ -31,6 +32,16 @@ public sealed class SharedDetectionContentContractTests
 
         Assert.IsFalse(extracted);
         Assert.IsNull(slug);
+    }
+
+    [TestMethod]
+    public void WorkbenchDetectionId_MapsToSharedDetectionContentIdByValue()
+    {
+        var workbenchId = DetectionId.New();
+
+        var sharedId = DetectionContentId.From(workbenchId.Value);
+
+        Assert.AreEqual(workbenchId.Value, sharedId.Value);
     }
 
     [TestMethod]

@@ -51,9 +51,15 @@ libraries separate.
 
 ## Remaining blockers before full `DeltaZulu.Platform.Web` integration
 
+See [`analysis/platform-module-contract-gap.md`](analysis/platform-module-contract-gap.md) for the
+Workbench-side route/module-manifest contract gap and cross-repository naming/contract alignment
+plan.
+
 1. Workbench pages are still routable Blazor pages rather than a hostless module route manifest.
-2. Mud providers and theme are still created by Workbench's standalone `MainLayout`; a platform host must own a single provider/theme stack.
-3. Workbench static assets (`logo-*.png`, `app.css`) are still standalone-host assets and need platform branding/scoped product CSS treatment.
-4. Workbench domain IDs and version projections are not yet migrated to the shared `DeltaZulu.DetectionContent` IDs; mapping is required before Hunting can consume the same contracts directly.
-5. Accepted-content store ports still live in Workbench.Application and expose Workbench-oriented request/result names; only stable file/path/reference shapes have been extracted.
-6. Workbench governance state remains intentionally local. Platform integration must compose it as Workbench module behavior, not as generic platform issue/workflow contracts.
+2. `WorkbenchShell` is transitional standalone metadata, not the final platform module contract.
+3. Mud providers and theme are still created by Workbench's standalone `MainLayout`; a platform host must own a single provider/theme stack.
+4. Workbench static assets (`logo-*.png`, `app.css`) are still standalone-host assets and need platform branding/scoped product CSS treatment.
+5. Workbench domain IDs and version projections are not yet migrated to the shared `DeltaZulu.DetectionContent` IDs; mapping is required before Hunting can consume the same contracts directly.
+6. Accepted-content store ports still live in Workbench.Application and expose Workbench-oriented request/result names; only stable file/path/reference shapes have been extracted.
+7. Candidate, incident, hunt, and executable detection-content read models need shared contract placement before broad feature work continues.
+8. Workbench governance state remains intentionally local. Platform integration must compose it as Workbench module behavior, not as generic platform issue/workflow contracts.

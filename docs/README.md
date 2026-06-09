@@ -81,6 +81,8 @@ See [`adr/`](adr/) for the full set. Key decisions:
 | File | Purpose |
 |---|---|
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Product definition, five user stories, module boundaries, data ownership, technical model. |
+| [`PLATFORM_MERGE_PREP.md`](PLATFORM_MERGE_PREP.md) | Reusable UI, shared detection-content, and central-host merge-preparation inventory. |
+| [`analysis/platform-module-contract-gap.md`](analysis/platform-module-contract-gap.md) | Workbench-side module naming, route manifest, and shared security-operations contract gap before platform import. |
 | [`AGENTS.md`](AGENTS.md) | Constraints for contributors and AI agents. |
 | [`adr/`](adr/) | Architecture Decision Records. |
 | [`archive/`](archive/) | Superseded analysis documents preserved for reference. |
