@@ -134,7 +134,7 @@
 
 @if (_showCriteriaForm)
 {
-    <MudPaper Class="pa-4 mb-4" Elevation="1">
+    <DzPanel Title="Acceptance criteria" Class="mb-4">
         <MudText Typo="Typo.subtitle2" Class="mb-2">Acceptance criteria</MudText>
         <MudTextField @bind-Value="_criteriaText" Multiline="true" Lines="4"
                       Placeholder="Describe what the completed work must demonstrate."
@@ -145,7 +145,7 @@
             <MudButton Variant="Variant.Text" Size="Size.Small"
                        OnClick="@(() => _showCriteriaForm = false)">Cancel</MudButton>
         </div>
-    </MudPaper>
+    </DzPanel>
 }
 
 @if (_issue.ExternalCase is not null)
@@ -225,8 +225,7 @@
                             }
                             @foreach (var label in _issue.Labels)
                             {
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                         Color="Color.Default" Class="my-0">@label</MudChip>
+                                <DzMetaChip Kind="label">@label</DzMetaChip>
                             }
                             @if (!_issue.Tlp.HasValue && _issue.Labels.Count == 0)
                             {
