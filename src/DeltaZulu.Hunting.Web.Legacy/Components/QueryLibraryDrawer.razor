@@ -1,6 +1,10 @@
-@namespace Hunting.Web.Components
-@inject Hunting.Web.Services.QueryLibraryService QueryLibrary
-@inject Hunting.Web.Services.VisualizationLibraryService VisualizationLibrary
+@namespace DeltaZulu.Hunting.Web.Components
+@using DeltaZulu.Hunting.Application.SavedQueries
+@using DeltaZulu.Hunting.Application.Visualizations
+@using DeltaZulu.Hunting.Application.QueryHistory
+
+@inject DeltaZulu.Hunting.Web.Services.QueryLibraryService QueryLibrary
+@inject DeltaZulu.Hunting.Web.Services.VisualizationLibraryService VisualizationLibrary
 
 <button class="hunt-btn hunt-btn-history"
         @onclick="OpenAsync"
@@ -192,10 +196,10 @@
     private string _saveName = "";
     private string? _saveDescription;
     private string? _message;
-    private IReadOnlyList<Hunting.Application.SavedQueries.SavedQueryRecord> _savedQueries = [];
+    private IReadOnlyList<SavedQueryRecord> _savedQueries = [];
     private IReadOnlyDictionary<string, string> _savedQueryNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-    private IReadOnlyList<Hunting.Application.Visualizations.VisualizationRecord> _savedVisualizations = [];
-    private IReadOnlyList<Hunting.Application.QueryHistory.QueryHistoryRecord> _recentHistory = [];
+    private IReadOnlyList<VisualizationRecord> _savedVisualizations = [];
+    private IReadOnlyList<QueryHistoryRecord> _recentHistory = [];
 
     [Parameter]
     public string CurrentQueryText { get; set; } = string.Empty;

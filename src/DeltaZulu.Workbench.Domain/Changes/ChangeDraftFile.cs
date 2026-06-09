@@ -20,7 +20,7 @@ public sealed class ChangeDraftFile
     public UserId UpdatedBy { get; private set; }
     public int SizeChars => Content.Length;
 
-    internal ChangeDraftFile(
+    public ChangeDraftFile(
         ChangeRequestId changeRequestId, LogicalPath path, DraftContentType contentType,
         string content, UserId updatedBy, DateTimeOffset updatedAt)
     {

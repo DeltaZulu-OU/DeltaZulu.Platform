@@ -40,7 +40,7 @@ public sealed class CheckRun : Entity<CheckRunId>
     }
 
     /// <summary>Reconstitutes from persistence. No validation — data is trusted.</summary>
-    internal static CheckRun Reconstitute(
+    public static CheckRun Reconstitute(
         CheckRunId id, ChangeRequestId changeRequestId, string name, bool isBlocking,
         CheckStatus status, DateTimeOffset? startedAt, DateTimeOffset? completedAt,
         string summary, string detailsJson, string logsExcerpt)

@@ -62,7 +62,7 @@ public sealed partial class Detection : Entity<DetectionId>
     }
 
     /// <summary>Reconstitutes from persistence. No validation — data is trusted.</summary>
-    internal static Detection Reconstitute(
+    public static Detection Reconstitute(
         DetectionId id, string slug, string title, string summary,
         DetectionLifecycle lifecycle, VersionId? currentVersionId,
         DateTimeOffset createdAt, DateTimeOffset updatedAt)

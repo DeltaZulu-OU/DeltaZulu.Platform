@@ -1,9 +1,4 @@
-@namespace Hunting.Web.Components.Hosting
-@*
-    Temporary compatibility seam for standalone/module hosting. The final platform host should prefer a
-    shared DeltaZulu.Platform.Web.Abstractions module/route manifest rather than standardizing on
-    per-module router components.
-*@
+@namespace DeltaZulu.Hunting.Web.Components.Hosting
 @using Microsoft.AspNetCore.Components.Routing
 
 <Router AppAssembly="@typeof(HuntingModuleRouter).Assembly">
@@ -19,7 +14,7 @@
 
 @code {
     [Parameter]
-    public Type DefaultLayout { get; set; } = typeof(Hunting.Web.Shared.HuntingModuleLayout);
+    public Type DefaultLayout { get; set; } = typeof(DeltaZulu.Hunting.Web.Components.Hosting.HuntingModuleRouter);
 
     [Parameter]
     public RenderFragment NotFound { get; set; } = builder => builder.AddContent(0, "Hunting page not found.");

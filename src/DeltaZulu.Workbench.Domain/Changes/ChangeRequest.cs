@@ -81,7 +81,7 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
     }
 
     /// <summary>Reconstitutes from persistence with pre-loaded sub-entities.</summary>
-    internal static ChangeRequest Reconstitute(
+    public static ChangeRequest Reconstitute(
         ChangeRequestId id, string key, string title, DetectionId detectionId,
         UserId authorId, WorkflowProfileId workflowProfileId, VersionId? baseVersionId,
         ChangeStatus status, bool isStale, string? staleReason, IssueId? linkedIssueId,

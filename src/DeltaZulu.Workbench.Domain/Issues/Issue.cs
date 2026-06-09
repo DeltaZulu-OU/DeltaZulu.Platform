@@ -59,7 +59,7 @@ public sealed class Issue : Entity<IssueId>
             : new Issue(id, key, title, type, now);
     }
 
-    internal static Issue Reconstitute(
+    public static Issue Reconstitute(
         IssueId id, string key, string title, IssueType type, IssueStatus status,
         ExternalCaseRef? externalCase, DateTimeOffset createdAt, DateTimeOffset updatedAt,
         string? description = null, string? acceptanceCriteria = null,

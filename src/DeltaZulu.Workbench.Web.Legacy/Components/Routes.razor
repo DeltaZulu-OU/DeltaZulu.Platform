@@ -1,7 +1,5 @@
-@namespace Workbench.Web.Components
-@using DeltaZulu.Workbench.Web.Components.Layout
-@using DeltaZulu.Workbench.Web.Components.Pages
-@* Top-level router. Discovers routable components in the Workbench page assembly. *@
+@namespace DeltaZulu.Workbench.Web.Components
+
 <Router AppAssembly="@typeof(Home).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />

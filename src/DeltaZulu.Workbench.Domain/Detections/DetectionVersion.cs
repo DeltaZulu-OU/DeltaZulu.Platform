@@ -81,7 +81,7 @@ public sealed class DetectionVersion : Entity<VersionId>
     }
 
     /// <summary>Reconstitutes from persistence. No validation.</summary>
-    internal static DetectionVersion Reconstitute(
+    public static DetectionVersion Reconstitute(
         VersionId id, DetectionId detectionId, int sequenceNumber,
         string title, string changeSummary, UserId authorId,
         WorkflowProfileId workflowProfile, ChangeRequestId sourceChangeRequestId,

@@ -35,7 +35,7 @@ public sealed class Review : Entity<ReviewId>
     }
 
     /// <summary>Reconstitutes from persistence. No validation — data is trusted.</summary>
-    internal static Review Reconstitute(
+    public static Review Reconstitute(
         ReviewId id, ChangeRequestId changeRequestId, UserId reviewerId,
         ReviewDecision decision, string comment, DateTimeOffset createdAt,
         bool isSuperseded, DateTimeOffset? supersededAt)

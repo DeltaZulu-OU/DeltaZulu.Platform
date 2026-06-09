@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Routing;
-using MudBlazor.Services;
 using DeltaZulu.Workbench.Application;
 using DeltaZulu.Workbench.Infrastructure;
 using DeltaZulu.Workbench.Persistence;
@@ -7,6 +5,7 @@ using DeltaZulu.Workbench.Validation;
 using DeltaZulu.Workbench.Web.Components;
 using DeltaZulu.Workbench.Web.Services;
 using DeltaZulu.Workbench.Workflow;
+using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,7 +22,7 @@ var connectionString = builder.Configuration.GetConnectionString("Workbench")
 builder.Services.AddWorkbenchPersistence(connectionString);
 
 if (builder.Configuration.GetValue<bool>("DemoSeed:Enabled"))
-    Workbench.Persistence.DemoSeeder.Seed(connectionString);
+    DemoSeeder.Seed(connectionString);
 
 builder.Services.AddWorkbenchApplication();
 builder.Services.AddWorkbenchValidation();

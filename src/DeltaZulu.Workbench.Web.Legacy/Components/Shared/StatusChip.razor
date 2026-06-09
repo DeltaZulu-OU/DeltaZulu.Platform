@@ -1,4 +1,4 @@
-@namespace Workbench.Web.Components.Shared
+@namespace DeltaZulu.Workbench.Web.Components.Shared
 @using DeltaZulu.Workbench.Domain.Enums
 
 @if (_text is not null)
@@ -22,14 +22,14 @@
             _text = ChangeStatus.Value.ToString();
             _tone = ChangeStatus.Value switch
             {
-                Domain.Enums.ChangeStatus.Draft => "neutral",
-                Domain.Enums.ChangeStatus.ChecksRunning => "info",
-                Domain.Enums.ChangeStatus.ReviewRequired => "warning",
-                Domain.Enums.ChangeStatus.ChangesRequested => "error",
-                Domain.Enums.ChangeStatus.ReadyToAccept => "success",
-                Domain.Enums.ChangeStatus.Merged => "dark",
-                Domain.Enums.ChangeStatus.Published => "success",
-                Domain.Enums.ChangeStatus.Closed => "muted",
+                ChangeStatus.Draft => "neutral",
+                ChangeStatus.ChecksRunning => "info",
+                ChangeStatus.ReviewRequired => "warning",
+                ChangeStatus.ChangesRequested => "error",
+                ChangeStatus.ReadyToAccept => "success",
+                ChangeStatus.Merged => "dark",
+                ChangeStatus.Published => "success",
+                ChangeStatus.Closed => "muted",
                 _ => "neutral",
             };
         }
@@ -38,19 +38,19 @@
             _text = IssueStatus.Value.ToString();
             _tone = IssueStatus.Value switch
             {
-                Domain.Enums.IssueStatus.New => "neutral",
-                Domain.Enums.IssueStatus.NeedsInfo => "warning",
-                Domain.Enums.IssueStatus.Triaged => "info",
-                Domain.Enums.IssueStatus.SanitizationRequired => "error",
-                Domain.Enums.IssueStatus.Rejected => "muted",
-                Domain.Enums.IssueStatus.Backlog => "neutral",
-                Domain.Enums.IssueStatus.Ready => "info",
-                Domain.Enums.IssueStatus.Blocked => "error",
-                Domain.Enums.IssueStatus.InProgress => "warning",
-                Domain.Enums.IssueStatus.InReview => "warning",
-                Domain.Enums.IssueStatus.Merged => "success",
-                Domain.Enums.IssueStatus.Published => "dark",
-                Domain.Enums.IssueStatus.Closed => "muted",
+                IssueStatus.New => "neutral",
+                IssueStatus.NeedsInfo => "warning",
+                IssueStatus.Triaged => "info",
+                IssueStatus.SanitizationRequired => "error",
+                IssueStatus.Rejected => "muted",
+                IssueStatus.Backlog => "neutral",
+                IssueStatus.Ready => "info",
+                IssueStatus.Blocked => "error",
+                IssueStatus.InProgress => "warning",
+                IssueStatus.InReview => "warning",
+                IssueStatus.Merged => "success",
+                IssueStatus.Published => "dark",
+                IssueStatus.Closed => "muted",
                 _ => "neutral",
             };
         }
@@ -76,12 +76,12 @@
             _text = CheckStatus.Value.ToString();
             _tone = CheckStatus.Value switch
             {
-                Domain.Enums.CheckStatus.Passed => "success",
-                Domain.Enums.CheckStatus.Failed => "error",
-                Domain.Enums.CheckStatus.Running => "info",
-                Domain.Enums.CheckStatus.Queued => "neutral",
-                Domain.Enums.CheckStatus.Skipped => "muted",
-                Domain.Enums.CheckStatus.Cancelled => "muted",
+                CheckStatus.Passed => "success",
+                CheckStatus.Failed => "error",
+                CheckStatus.Running => "info",
+                CheckStatus.Queued => "neutral",
+                CheckStatus.Skipped => "muted",
+                CheckStatus.Cancelled => "muted",
                 _ => "neutral",
             };
         }

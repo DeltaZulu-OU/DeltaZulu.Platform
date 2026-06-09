@@ -1,4 +1,4 @@
-@namespace Workbench.Web.Components.Pages
+@namespace DeltaZulu.Workbench.Web.Components.Pages
 @page "/detections/{Id}"
 @using MudBlazor
 @rendermode InteractiveServer
@@ -216,12 +216,12 @@ else
         [
             new("Detections", "/detections"),
             new(_detection.Slug, null, disabled: true),
-        ];
+    ];
 
         _versions = (await VersionService.ListByDetectionAsync(detId)).ToList();
         _latestVersion = _versions.FirstOrDefault();
         _changes = (await ChangeService.ListByDetectionAsync(detId)).ToList();
-        _activeChangeCount = _changes.Count(c => c.Status is not Domain.Enums.ChangeStatus.Merged and not Domain.Enums.ChangeStatus.Closed);
+        _activeChangeCount = _changes.Count(c => c.Status is not DeltaZulu.Workbench.Domain.Enums.ChangeStatus.Merged and not DeltaZulu.Workbench.Domain.Enums.ChangeStatus.Closed);
 
         _acceptedFiles = (await AcceptedContentReadService.ListAcceptedFilesForDetectionAsync(_detection.Id)).ToList();
 

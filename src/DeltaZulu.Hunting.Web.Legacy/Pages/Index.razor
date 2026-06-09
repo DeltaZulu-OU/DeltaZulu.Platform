@@ -1,15 +1,15 @@
 @page "/threat-hunting"
-@namespace Hunting.Web.Pages
+@namespace DeltaZulu.Hunting.Web.Pages
 @using DeltaZulu.Hunting.Web.Components
-@inject Hunting.Web.Rendering.RenderedQueryRunner RenderedQueryRunner
-@inject Hunting.Core.Catalog.ApprovedViewCatalog Catalog
-@inject Hunting.Web.Services.EditorBus EditorBus
-@inject Hunting.Web.Services.LanguageService LanguageService
+@inject DeltaZulu.Hunting.Web.Rendering.RenderedQueryRunner RenderedQueryRunner
+@inject DeltaZulu.Hunting.Core.Catalog.ApprovedViewCatalog Catalog
+@inject DeltaZulu.Hunting.Web.Services.EditorBus EditorBus
+@inject DeltaZulu.Hunting.Web.Services.LanguageService LanguageService
 @inject IJSRuntime JS
-@inject Hunting.Web.Services.UserSettingsState UserSettings
-@inject Hunting.Web.Services.QueryLibraryService QueryLibrary
-@inject Hunting.Web.Services.VisualizationLibraryService VisualizationLibrary
-@inject Hunting.Web.Rendering.EChartsRenderOptionsBuilder EChartsOptionsBuilder
+@inject DeltaZulu.Hunting.Web.Services.UserSettingsState UserSettings
+@inject DeltaZulu.Hunting.Web.Services.QueryLibraryService QueryLibrary
+@inject DeltaZulu.Hunting.Web.Services.VisualizationLibraryService VisualizationLibrary
+@inject DeltaZulu.Hunting.Web.Rendering.EChartsRenderOptionsBuilder EChartsOptionsBuilder
 @inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
