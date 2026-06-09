@@ -398,7 +398,47 @@ Candidate order:
 | 3 | Authentication | High analytic value but needs careful source semantics |
 | 4 | Audit events | Useful but broad; should follow parser-spec hardening |
 | 5 | Web/session events | Needs source-specific semantics |
-| 6 | Alerts/incidents | Product workflow layer, not just telemetry schema |
+| 6 | Alerts/candidates | Product workflow layer, not telemetry schema; design boundary separates atomic alerts from explainable incident candidates |
+
+
+
+### Phase 1H — Operations alerts and incident-candidate foundation ✅ DESIGN BASELINE
+
+**Objective:** Define the alert/candidate operations boundary before adding runtime schemas, repositories, or Workbench workflow integration.
+
+Documented baseline:
+
+- Atomic alerts are detection outputs, not incidents.
+- Incident candidates are derived, explainable correlation objects that require triage and explicit promotion before incident response ownership.
+- Proposed `content` and `ops` schemas remain non-medallion operational state, separate from Bronze/Silver/Golden telemetry.
+- Proposed entity/window candidate generation is deterministic, SQL-first, and batch-oriented, with high-fanout entity controls and weighted scoring.
+- Runtime schema bootstrap, repositories, UUID remapping, and candidate SQL builders are deferred to follow-up implementation PRs after Workbench workflow entities are reviewed.
+
+Remaining scope:
+
+- Validate Workbench issue/task/workflow entities before creating a dedicated operations project or runtime schemas.
+- Add experimental operations contracts for alerts and incident candidates in a follow-up implementation slice.
+- Add proposed operations schema catalog and schema tests without runtime bootstrap.
+- Put any operations schema bootstrap behind an explicit feature flag.
+- Evaluate Kusto `guid` to DuckDB `UUID` mapping separately with focused compatibility tests.
+
+### Phase 1I — Threat hunting workflow boundary ✅ DESIGN BASELINE
+
+**Objective:** Prepare the future `DeltaZulu.Platform` merge for a dedicated TaHiTI-based threat hunting workflow without implementing lifecycle runtime or UI before consolidation.
+
+Implemented baseline:
+
+- documented `HuntInvestigation` as the future central aggregate rather than alert, incident, case, or generic issue.
+- mapped the TaHiTI Initiate → Hunt → Finalize method to DeltaZulu lifecycle states, outcomes, refinement loops, and typed handovers.
+- recorded Workbench-vs-Hunting responsibilities for lifecycle/workflow ownership versus query execution/evidence lineage.
+- added a pre-merge gap analysis for expected Workbench issue/task/workflow concepts and current Hunting saved-query/query-history/result/visualization concepts.
+
+Remaining scope after merge:
+
+- validate actual Workbench entities and decide which can be reused or extended.
+- add shared platform contracts for hunt identifiers, query-run references, evidence references, outcomes, and handover types.
+- implement Workbench-owned `HuntInvestigation` lifecycle and Hunting-owned durable query-run/result-snapshot artifacts.
+- add UI, persistence, metrics, and handover integrations only after contracts are stable.
 
 ---
 

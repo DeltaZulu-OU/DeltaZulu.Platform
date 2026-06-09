@@ -23,6 +23,10 @@ Emitter optimization maintenance: single computed-column scopes produced by `whe
 
 Emitter decomposition is structural only and is now complete: `DuckDbQueryEmitter` remains the public compatibility façade, retaining immutable options and mutable `LastRunStats` publication only. Each `Emit(RelNode)` call constructs a fresh `DuckDbEmitterContext` plus run-scoped `DuckDbFunctionEmitter`, `DuckDbScalarEmitter`, `DuckDbJoinEmitter`, and `DuckDbRelNodeEmitter` collaborators. `DuckDbStageRegistry` owns stage state, caches, mutation operations, reference counting, and registry statistics; `DuckDbSqlShapeRewriter` owns SQL-shape simplifications; and the internal stateless `DuckDbSqlText` helper owns identifier escaping, qualified-identifier escaping, string escaping, and SQL indentation. `StageFrom` lives with relational orchestration. Statistics assembly remains a trivial context adapter, so no separate stats builder was added. Removing façade context storage does not claim shared-emitter thread safety because `LastRunStats` remains mutable publication state. This does not change construct coverage or emitted SQL semantics.
 
+Threat hunting workflow note: the TaHiTI/HuntInvestigation design baseline is workflow architecture only. It does not expose new KQL tables, does not add translation constructs, and does not change KQL coverage.
+
+Operations boundary note: the alert/candidate operations boundary is design documentation only in this PR. It does not add schemas, expose KQL tables, add translation constructs, or change KQL coverage.
+
 Translator decomposition is also structural only: public `KustoToRelational` remains the compatibility adapter over internal `KustoQueryTranslator`. Document analysis, management-command guarding, approved-table policy, Kusto SDK syntax adaptation, projection naming, function validation, and integer-literal reading are isolated internal services. This refactor does not change construct coverage or translation semantics.
 
 

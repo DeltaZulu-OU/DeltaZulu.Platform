@@ -48,6 +48,192 @@ The database is organized into medallion schemas:
 
 Bronze stores source-shaped records. Silver interprets those records using source/event filters and parser-specific projections. Golden consolidates Silver outputs into operator-facing contracts. Golden may perform thin harmonization but must not hide source-specific payload parsing.
 
+
+
+## Proposed Operations Alert/Candidate Boundary
+
+Alerts and incident candidates are not medallion telemetry layers. The proposed operations model uses `content` for detection content and `ops` for product-core detection/correlation state, but this PR does not create those schemas or bootstrap any runtime tables. In the target model, `ops.Alerts` is append-oriented and represents atomic detection matches. `ops.IncidentCandidates` is a separate derived object created only after deterministic correlation over alerts, weighted entities, detection metadata, enrichment, and evidence pointers. Candidates can be promoted to incidents by creating or linking an incident record; they must not become incidents by merely changing alert severity or alert status.
+
+The proposed first candidate mode is SQL-first and batch-oriented for DuckDB: group open alerts by normalized entities in bounded time windows, exclude high-fanout entities, apply deterministic weighting, and store explanation/metrics JSON for analyst review. The implementation remains deferred until Workbench workflow entities are validated; this architecture section only records the boundary and intended ownership split.
+
+## Threat Hunting Workflow Boundary
+
+DeltaZulu Hunting and DeltaZulu Workbench will later consolidate into `DeltaZulu.Platform`. The merged platform needs a first-class TaHiTI-based threat hunting workflow without forcing hunts into detection engineering, alert triage, incident response, case management, or generic issue tracking. Threat hunting is therefore modeled as a separate future workflow aggregate named `HuntInvestigation`.
+
+This is a pre-merge architecture boundary only. It creates no runtime dependency between Hunting and Workbench, no new database schema, no UI, and no project rename. ADR 0016 records the decision and the alternatives considered.
+
+### Discipline boundary
+
+| Discipline | Primary object | Relationship to a hunt |
+|---|---|---|
+| Threat hunting | `HuntInvestigation` | Central aggregate for hypothesis-driven investigation, refinement, evidence, findings, outcomes, and typed handover. |
+| Detection engineering | detection rule/version/test | A hunt may hand over a `DetectionContentDraft`, but detection creation is not the default purpose of a hunt. |
+| Alert management | alert | Alerts can trigger a hunt, but a hunt is not an alert and can validly close with no positive detection. |
+| Incident response | incident or incident candidate | A hunt hands over to incident response only when findings justify a candidate or incident link. |
+| Case/issue management | issue/task/case | Workbench issue/task mechanics may support backlog, assignment, and comments, but must not replace the `HuntInvestigation` domain model. |
+
+### TaHiTI mapping
+
+The target methodology is TaHiTI: Initiate → Hunt → Finalize. DeltaZulu should preserve the method as a flexible workflow, not a rigid bureaucracy.
+
+| TaHiTI phase | DeltaZulu flow | Target state(s) | Notes |
+|---|---|---|---|
+| Initiate | trigger hunt | `TriggerReceived` | Trigger can come from threat intelligence, alert trends, visibility concerns, new TTPs, leadership questions, or analyst intuition. |
+| Initiate | create investigation abstract | `AbstractCreated` | Abstract captures why the hunt exists, expected value, provisional hypothesis, and initial scope. |
+| Initiate | backlog | `Backlogged` | Workbench should eventually own prioritization, assignment, scheduling, and capacity decisions. |
+| Hunt | define/refine | `SelectedForDefinition`, `Defined`, `DataReadinessChecked`, `Refining` | Hypothesis, scope, data sources, and techniques must be revisable during execution. |
+| Hunt | execute | `Executing` | Hunting owns query execution, evidence capture, result snapshots, visualizations, entity pivots, and analytical lineage. |
+| Finalize | document findings | `HypothesisValidated`, `FindingsDocumented` | Findings can be positive, negative, inconclusive, missing-data, or improvement-oriented. |
+| Finalize | handover | `HandoverReady`, `Closed` | Handover is explicit and typed; it is not implicit status drift into incident or detection models. |
+
+The Hunt phase must support iteration between `Refining` and `Executing`. Refinement is first-class hunting activity, not rework.
+
+### Workbench vs Hunting responsibility split
+
+| Area | Future owner | Boundary |
+|---|---|---|
+| `HuntInvestigation` aggregate and lifecycle | Workbench | Owns workflow state, backlog, assignment, comments, documentation, decisions, metrics, and handover records. |
+| KQL execution and analytical artifacts | Hunting | Owns query execution, query runs, result snapshots, evidence capture, visualizations, entity pivots, and lineage. |
+| Detection engineering promotion | Detection engineering module | Receives typed `DetectionContentDraft` handover from a hunt; does not own hunt lifecycle. |
+| Incident response handover | Incident/candidate module | Receives typed `IncidentCandidate` handover only when findings justify response review. |
+| Shared contracts | Platform contracts | Defines stable identifiers, DTOs, domain events, and artifact-reference shapes after merge. |
+
+Pre-merge work should remain documentation-only or interface-only. It must not merge web hosts, rename projects, move files between repositories, or add a Workbench reference to Hunting.
+
+### Target domain model
+
+| Concept | Role | Ownership after merge |
+|---|---|---|
+| `HuntInvestigation` | Aggregate root for a single hunt, including lifecycle, title, abstract, priority, owner, and current state. | Workbench |
+| `HuntTrigger` | Captures why the hunt exists and the trigger source. | Workbench |
+| `HuntHypothesis` | Versionable statement being tested; supports refinement history. | Workbench |
+| `HuntScope` | Time range, population, environment, entities, exclusions, assumptions, and constraints. | Workbench |
+| `HuntDataSourceRequirement` | Required telemetry and readiness status; missing data becomes a visibility gap. | Workbench with Hunting readiness checks |
+| `HuntTechnique` | Analysis approach, query pattern, pivot method, enrichment, or manual review method. | Workbench with Hunting query templates |
+| `HuntQueryRun` | Execution record linking hypothesis version, scope version, query text/template, parameters, runtime diagnostics, and result snapshot. | Hunting |
+| `HuntEvidenceItem` | Reference to query run, result snapshot, event pointer, visualization, entity pivot, or analyst-selected excerpt. | Hunting artifact reference; Workbench curates meaning |
+| `HuntFinding` | Typed conclusion or observation from the investigation. | Workbench |
+| `HuntDecision` | Accept, reject, refine, pause, close, or handover decision with rationale. | Workbench |
+| `HuntHandover` | Typed downstream transfer to incident response, detection engineering, visibility remediation, threat intelligence, vulnerability/configuration management, monitoring improvement, or follow-up hunt. | Workbench |
+| `HuntMetric` | Value and maturity metric such as coverage improved, visibility gap found, hypothesis cycle time, or downstream action quality. | Workbench |
+
+Hypotheses, scope, data-source requirements, and techniques should be designed as versionable even if the first implementation stores only a current version plus change history.
+
+### Lifecycle and outcomes
+
+Target lifecycle states:
+
+```text
+TriggerReceived
+  -> AbstractCreated
+  -> Backlogged
+  -> SelectedForDefinition
+  -> Defined
+  -> DataReadinessChecked
+  -> Executing
+  -> Refining
+  -> Executing
+  -> HypothesisValidated
+  -> FindingsDocumented
+  -> HandoverReady
+  -> Closed
+```
+
+Allowed transitions should support small hunts that skip formal backlog ceremonies and larger hunts that require prioritization, assignment, and approval. `Refining` can loop back to `Defined`, `DataReadinessChecked`, or `Executing` depending on what changed.
+
+Validation outcomes:
+
+| Outcome | Meaning |
+|---|---|
+| `ProvenMaliciousActivityFound` | Evidence supports malicious or suspicious activity. |
+| `DisprovenNoEvidenceFound` | The hypothesis was tested and no supporting evidence was found within scope. |
+| `Inconclusive` | Available evidence does not prove or disprove the hypothesis. |
+| `FailedMissingData` | Required telemetry was absent, unparseable, incomplete, or inaccessible. |
+| `ConvertedToMonitoringUseCase` | Hunt result is best captured as recurring monitoring. |
+| `ConvertedToThreatIntel` | Hunt generated or refined threat-intelligence context. |
+| `ClosedAsLearning` | Hunt produced procedural or analytical learning without downstream operational action. |
+
+Negative and inconclusive outcomes are valid. Missing telemetry is modeled as a visibility gap, not only as a failed query.
+
+### Handover model
+
+Handover must be explicit and typed. A hunt may create zero or more downstream outputs:
+
+| Handover type | Target |
+|---|---|
+| `IncidentCandidate` | Incident response / operations candidate layer. |
+| `DetectionContentDraft` | Detection engineering. |
+| `VisibilityGap` | Data engineering / telemetry ownership. |
+| `ThreatIntelligenceNote` | Threat intelligence. |
+| `VulnerabilityOrConfigurationFinding` | Vulnerability/configuration management. |
+| `MonitoringUseCaseImprovement` | Detection/content operations. |
+| `PreventiveControlRecommendation` | Security architecture/control owners. |
+| `FollowUpHunt` | Threat hunting backlog. |
+
+Detection engineering promotion and incident response handover are deliberate actions. They are not the default purpose of every hunt.
+
+### Evidence and query-run relationship
+
+Evidence should be linked to analytical artifacts, not copied blindly into workflow notes.
+
+```text
+HuntInvestigation
+  -> HuntHypothesis(version)
+  -> HuntScope(version)
+  -> HuntTechnique
+  -> HuntQueryRun
+      -> query text/template + parameters
+      -> execution timestamp + duration + diagnostics
+      -> result snapshot id/hash
+      -> visualization id/hash, if rendered
+      -> entity pivots and lineage
+  -> HuntEvidenceItem
+      -> references HuntQueryRun/result snapshot/source event pointer
+  -> HuntFinding
+  -> HuntHandover
+```
+
+Hunting should remain responsible for query execution and analytical lineage. Workbench should reference those artifacts when documenting findings, decisions, and handovers.
+
+### Existing concept gap analysis
+
+| Existing concept | Reuse posture | Gap before post-merge implementation |
+|---|---|---|
+| Hunting `SavedQueryRecord` | Can seed `HuntTechnique` or a hunt query template. | Needs ownership/governance, hypothesis linkage, parameter model, versioning, and accepted-content workflow. |
+| Hunting `QueryHistoryRecord` | Natural precursor to `HuntQueryRun`. | Needs hunt id, hypothesis version, scope version, data-source readiness context, result snapshot reference, and lineage hash. |
+| Hunting `QueryResult` / `QueryTabularResult` | Source for durable result snapshots attached to `HuntEvidenceItem`. | Needs snapshot persistence, redaction policy, row/byte limits, event pointers, and stable hash. |
+| Hunting `VisualizationRecord` and dashboards | Can support evidence visualizations, analytical summaries, or hunt workspaces. | Must link to query runs/result snapshots and must not own lifecycle. |
+| Workbench issue or generic work item | Reuse as optional backlog/index shell, not as the hunt aggregate. | Validate actual Workbench entities after consolidation; generic issues do not encode hypothesis versions, evidence lineage, readiness, outcome taxonomy, or typed handover. |
+| Workbench task/checklist item | Reuse under a hunt. | Useful for execution steps, review tasks, data-readiness checks, and handover tasks; tasks should not own hunt state. |
+| Workbench workflow/status engine | Reuse or extend if it supports custom aggregate states and typed transitions. | Must support iterative `Refining` ↔ `Executing` loops and keep `HuntInvestigation` as the domain model. |
+| Workbench comments, notes, attachments, decisions, metrics | Reuse or extend. | Evidence should reference query runs/result snapshots; metrics should focus on value, maturity, coverage, visibility gaps, cycle time, downstream quality, and learning. |
+
+### Target post-merge module boundaries and sequence
+
+Suggested `DeltaZulu.Platform` module boundaries after consolidation:
+
+| Module | Owns |
+|---|---|
+| `DeltaZulu.Platform.ThreatHunting` | `HuntInvestigation`, lifecycle, backlog integration, findings, decisions, metrics, handovers. |
+| `DeltaZulu.Platform.Hunting.Analytics` | KQL execution, query runs, result snapshots, evidence artifact storage, visualizations, pivots, lineage. |
+| `DeltaZulu.Platform.DetectionEngineering` | Detection rules, versions, tests, deployment, promotion queue. |
+| `DeltaZulu.Platform.Operations` | Alerts, incident candidates, triage-ready operational signals. |
+| `DeltaZulu.Platform.Workbench` | Shell, assignment, comments, generic tasks, user workflow UX. |
+| `DeltaZulu.Platform.Contracts` | Shared identifiers, DTOs, domain events, reference types. |
+
+Post-merge sequence: validate actual Workbench entities, define shared contracts, implement `HuntInvestigation`, add Hunting-owned durable `HuntQueryRun` and result snapshots, add data-source readiness checks and visibility-gap findings, implement typed handovers, then add UI and metrics once contracts are stable.
+
+### Non-goals for the pre-merge phase
+
+- No full threat hunting workflow implementation.
+- No Hunting-to-Workbench or Workbench-to-Hunting runtime reference.
+- No project renames, host merge, or file movement between repositories.
+- No database migrations for hunt workflow state.
+- No TaHiTI-specific UI pages.
+- No attempt to model hunts as alerts, incidents, cases, or generic issues.
+- No automatic promotion of every hunt to detection engineering or incident response.
+- No rigid process that prevents lightweight hunts.
+
 ## Runtime Query Pipeline
 
 ```text

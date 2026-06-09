@@ -23,13 +23,14 @@ Hunting is intended to provide a familiar threat-hunting experience over local o
 - Dashboard detail pages default to readonly mode; edit-mode changes are staged locally, including collision-aware title-bar layout drags, and persisted by the top-right Save action.
 - Dashboard widgets prioritize visualization/table content while keeping source and execution metadata for all run outcomes in Debug logs.
 
-Implementation-status snapshot: dependency versions are centrally pinned, package-lock generation is enabled, shared build props now use the future monorepo analyzer/style baseline, reusable validation lives in `Hunting.Core`, and Hunting CSS uses DeltaZulu-scoped aliases rather than a root-level parallel token system. Detailed feature status is tracked in the documentation, not in this README:
+Implementation-status snapshot: dependency versions are centrally pinned, package-lock generation is enabled, shared build props now use the future monorepo analyzer/style baseline, reusable validation lives in `Hunting.Core`, Hunting CSS uses DeltaZulu-scoped aliases rather than a root-level parallel token system. Detailed feature status is tracked in the documentation, not in this README:
 
 - Roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - KQL syntax coverage: [`docs/kql-syntax-coverage-checklist.md`](docs/kql-syntax-coverage-checklist.md)
 - Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - Dashboard architecture: [`docs/DASHBOARD-ARCHITECTURE.md`](docs/DASHBOARD-ARCHITECTURE.md)
 - Dashboard QA checklist: [`docs/DASHBOARD-PR-CHECKLIST.md`](docs/DASHBOARD-PR-CHECKLIST.md)
+- Threat hunting workflow boundary: [`docs/ARCHITECTURE.md#threat-hunting-workflow-boundary`](docs/ARCHITECTURE.md#threat-hunting-workflow-boundary)
 
 ## Usage
 
