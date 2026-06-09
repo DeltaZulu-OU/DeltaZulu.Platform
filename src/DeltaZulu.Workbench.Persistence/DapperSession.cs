@@ -1,7 +1,7 @@
 using Microsoft.Data.Sqlite;
-using Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Application.Abstractions;
 
-namespace Workbench.Persistence;
+namespace DeltaZulu.Workbench.Persistence;
 
 /// <summary>
 /// Scoped database session backed by a single <see cref="SqliteConnection"/>. Repositories

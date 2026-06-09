@@ -1,4 +1,4 @@
-namespace Workbench.Domain.Enums;
+namespace DeltaZulu.Workbench.Domain.Enums;
 
 /// <summary>Decision recorded by a reviewer on a change request.</summary>
 public enum ReviewDecision

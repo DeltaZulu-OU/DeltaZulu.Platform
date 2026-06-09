@@ -1,6 +1,6 @@
-namespace Hunting.Core.Planning;
+namespace DeltaZulu.Hunting.Core.Planning;
 
-using Hunting.Core.QueryModel;
+using DeltaZulu.Hunting.Core.QueryModel;
 
 public sealed record PlannerContext(bool Enabled, int MaxIterations = 3, int MaxRuleApplications = 10_000);
 

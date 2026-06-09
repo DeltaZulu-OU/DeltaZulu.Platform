@@ -1,9 +1,9 @@
 using LibGit2Sharp;
 using Microsoft.Extensions.Options;
-using Workbench.Application.Abstractions;
-using Workbench.Infrastructure.AcceptedContent;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Infrastructure.AcceptedContent;
 
-namespace Workbench.Tests.Infrastructure;
+namespace DeltaZulu.Workbench.Tests.Infrastructure;
 
 [TestClass]
 public sealed class GitAcceptedContentStoreTests

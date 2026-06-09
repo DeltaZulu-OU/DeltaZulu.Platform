@@ -1,4 +1,4 @@
-namespace Workbench.Domain.ContentLibrary;
+namespace DeltaZulu.Workbench.Domain.ContentLibrary;
 
 /// <summary>Separates editor conveniences from Git-backed accepted content and runtime-only state.</summary>
 public enum ContentLibraryArtifactState

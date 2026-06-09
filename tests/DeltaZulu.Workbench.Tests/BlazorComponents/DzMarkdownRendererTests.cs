@@ -1,6 +1,6 @@
 using DeltaZulu.Blazor.Components;
 
-namespace Workbench.Tests.BlazorComponents;
+namespace DeltaZulu.Workbench.Tests.BlazorComponents;
 
 [TestClass]
 public sealed class DzMarkdownRendererTests

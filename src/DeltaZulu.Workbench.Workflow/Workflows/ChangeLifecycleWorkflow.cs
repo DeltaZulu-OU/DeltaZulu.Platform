@@ -3,7 +3,7 @@ using Elsa.Workflows;
 using Elsa.Workflows.Activities;
 using Elsa.Workflows.Runtime.Activities;
 
-namespace Workbench.Workflow.Workflows;
+namespace DeltaZulu.Workbench.Workflow.Workflows;
 
 /// <summary>
 /// Elsa 3.7 coded workflow modelling the change request lifecycle. Mirrors the GitHub PR

@@ -1,4 +1,4 @@
-namespace Workbench.Domain.Enums;
+namespace DeltaZulu.Workbench.Domain.Enums;
 
 /// <summary>
 /// Lifecycle state of a <see cref="Changes.ChangeRequest"/>. Mirrors the state diagram in

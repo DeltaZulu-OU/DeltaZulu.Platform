@@ -1,9 +1,9 @@
-namespace Hunting.Tests.Web;
+namespace DeltaZulu.Hunting.Tests.Web;
 
 using Dapper;
-using Hunting.Data.Persistence;
-using Hunting.Web.Dashboards;
-using Hunting.Web.Dashboards.Persistence;
+using DeltaZulu.Hunting.Data.Persistence;
+using DeltaZulu.Hunting.Web.Dashboards;
+using DeltaZulu.Hunting.Web.Dashboards.Persistence;
 using Microsoft.Data.Sqlite;
 
 [TestClass]

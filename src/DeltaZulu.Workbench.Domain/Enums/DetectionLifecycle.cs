@@ -1,4 +1,4 @@
-namespace Workbench.Domain.Enums;
+namespace DeltaZulu.Workbench.Domain.Enums;
 
 /// <summary>
 /// Lifecycle of a <see cref="Detections.Detection"/> aggregate. A detection can exist in the

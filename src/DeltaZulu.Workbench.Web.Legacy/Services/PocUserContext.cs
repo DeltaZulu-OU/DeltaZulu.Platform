@@ -1,6 +1,6 @@
-using Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Domain.Identifiers;
 
-namespace Workbench.Web.Services;
+namespace DeltaZulu.Workbench.Web.Services;
 
 /// <summary>
 /// Session-scoped POC user switcher used until authentication is introduced.

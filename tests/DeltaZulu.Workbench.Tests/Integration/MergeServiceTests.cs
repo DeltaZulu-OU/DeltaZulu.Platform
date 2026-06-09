@@ -1,9 +1,9 @@
 using Dapper;
-using Workbench.Application.Abstractions;
-using Workbench.Application.Services;
-using Workbench.Persistence;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Application.Services;
+using DeltaZulu.Workbench.Persistence;
 
-namespace Workbench.Tests.Integration;
+namespace DeltaZulu.Workbench.Tests.Integration;
 
 [TestClass]
 public sealed class MergeServiceTests : IDisposable

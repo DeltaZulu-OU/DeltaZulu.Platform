@@ -1,12 +1,12 @@
-namespace Hunting.Web.Dashboards.Runtime;
+namespace DeltaZulu.Hunting.Web.Dashboards.Runtime;
 
 using System.Diagnostics;
 using System.Linq;
-using Hunting.Application.SavedQueries;
-using Hunting.Application.Visualizations;
-using Hunting.Core.Policy;
-using Hunting.Web.Rendering;
-using Hunting.Web.Visualizations;
+using DeltaZulu.Hunting.Application.SavedQueries;
+using DeltaZulu.Hunting.Application.Visualizations;
+using DeltaZulu.Hunting.Core.Policy;
+using DeltaZulu.Hunting.Web.Rendering;
+using DeltaZulu.Hunting.Web.Visualizations;
 
 public sealed class DashboardWidgetRunner
 {

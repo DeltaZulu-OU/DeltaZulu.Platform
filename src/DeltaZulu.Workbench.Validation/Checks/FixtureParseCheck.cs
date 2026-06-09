@@ -1,8 +1,8 @@
 using System.Text.Json;
-using Workbench.Application.Abstractions;
-using Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Domain.Enums;
 
-namespace Workbench.Validation.Checks;
+namespace DeltaZulu.Workbench.Validation.Checks;
 
 /// <summary>
 /// Validates that fixture files (<c>.ndjson</c>, <c>.csv</c>) are parseable. For NDJSON,

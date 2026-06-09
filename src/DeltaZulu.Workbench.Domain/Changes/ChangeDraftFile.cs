@@ -1,8 +1,8 @@
-using Workbench.Domain.Common;
-using Workbench.Domain.Enums;
-using Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Domain.Common;
+using DeltaZulu.Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Domain.Identifiers;
 
-namespace Workbench.Domain.Changes;
+namespace DeltaZulu.Workbench.Domain.Changes;
 
 /// <summary>
 /// A draft file inside a change request. Logical paths are validated at construction;

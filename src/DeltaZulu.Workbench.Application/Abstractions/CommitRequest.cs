@@ -1,4 +1,4 @@
-namespace Workbench.Application.Abstractions;
+namespace DeltaZulu.Workbench.Application.Abstractions;
 
 /// <summary>
 /// A batch of files to commit atomically to the accepted content store. Produced by the

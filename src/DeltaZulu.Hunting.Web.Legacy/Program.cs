@@ -1,4 +1,4 @@
-using Hunting.Web.Hosting;
+using DeltaZulu.Hunting.Web.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddHuntingStandaloneWeb();

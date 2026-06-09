@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Hunting.Data</RootNamespace>
+    <RootNamespace>DeltaZulu.Hunting.Data</RootNamespace>
+    <AssemblyName>DeltaZulu.Hunting.Data</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,8 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Hunting.Application\Hunting.Application.csproj" />
-    <ProjectReference Include="..\Hunting.Core\Hunting.Core.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Hunting.Application\DeltaZulu.Hunting.Application.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Hunting.Core\DeltaZulu.Hunting.Core.csproj" />
   </ItemGroup>
 
 </Project>

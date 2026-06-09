@@ -1,7 +1,7 @@
-using Workbench.Domain.Detections;
-using Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Domain.Detections;
+using DeltaZulu.Workbench.Domain.Identifiers;
 
-namespace Workbench.Application.Abstractions;
+namespace DeltaZulu.Workbench.Application.Abstractions;
 
 public interface IDetectionRepository
 {

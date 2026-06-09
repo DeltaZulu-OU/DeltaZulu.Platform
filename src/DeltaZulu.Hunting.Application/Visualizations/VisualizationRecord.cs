@@ -1,4 +1,4 @@
-namespace Hunting.Application.Visualizations;
+namespace DeltaZulu.Hunting.Application.Visualizations;
 
 public sealed record VisualizationRecord(
     string Id,

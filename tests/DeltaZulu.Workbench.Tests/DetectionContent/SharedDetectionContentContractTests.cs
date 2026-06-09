@@ -3,10 +3,10 @@ using DeltaZulu.DetectionContent.Files;
 using DeltaZulu.DetectionContent.Identity;
 using DeltaZulu.DetectionContent.Paths;
 using DeltaZulu.DetectionContent.References;
-using Workbench.Application.ContentPipeline;
-using Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Application.ContentPipeline;
+using DeltaZulu.Workbench.Domain.Identifiers;
 
-namespace Workbench.Tests.DetectionContent;
+namespace DeltaZulu.Workbench.Tests.DetectionContent;
 
 [TestClass]
 public sealed class SharedDetectionContentContractTests

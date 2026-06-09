@@ -1,10 +1,10 @@
-using Workbench.Application.Abstractions;
-using Workbench.Domain.Common;
-using Workbench.Domain.Enums;
-using Workbench.Domain.Identifiers;
-using Workbench.Domain.Issues;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Domain.Common;
+using DeltaZulu.Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Domain.Issues;
 
-namespace Workbench.Application.Services;
+namespace DeltaZulu.Workbench.Application.Services;
 
 public sealed class IssueService(IIssueRepository issues, TimeProvider time)
 {

@@ -1,4 +1,4 @@
-namespace Hunting.Render.Tabular;
+namespace DeltaZulu.Hunting.Render.Tabular;
 
 public interface IRenderTabularResult
 {

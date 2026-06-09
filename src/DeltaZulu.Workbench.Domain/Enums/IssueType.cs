@@ -1,4 +1,4 @@
-namespace Workbench.Domain.Enums;
+namespace DeltaZulu.Workbench.Domain.Enums;
 
 /// <summary>
 /// Detection-content-specific issue types. Each type carries different required intake

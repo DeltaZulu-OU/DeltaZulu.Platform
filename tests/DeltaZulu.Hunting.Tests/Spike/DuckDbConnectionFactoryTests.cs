@@ -1,7 +1,7 @@
-namespace Hunting.Tests.Spike;
+namespace DeltaZulu.Hunting.Tests.Spike;
 
 using System.Globalization;
-using Hunting.Data;
+using DeltaZulu.Hunting.Data;
 
 [TestClass]
 public sealed class DuckDbConnectionFactoryTests

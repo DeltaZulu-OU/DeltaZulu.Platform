@@ -1,9 +1,9 @@
-namespace Hunting.Tests.Validation;
+namespace DeltaZulu.Hunting.Tests.Validation;
 
-using Hunting.Core.Catalog;
-using Hunting.Core.Policy;
-using Hunting.Core.Validation;
-using Hunting.Schema;
+using DeltaZulu.Hunting.Core.Catalog;
+using DeltaZulu.Hunting.Core.Policy;
+using DeltaZulu.Hunting.Core.Validation;
+using DeltaZulu.Hunting.Schema;
 
 [TestClass]
 public sealed class KqlQuerySyntaxValidatorTests

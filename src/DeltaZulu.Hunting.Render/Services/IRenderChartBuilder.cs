@@ -1,7 +1,7 @@
-namespace Hunting.Render.Services;
+namespace DeltaZulu.Hunting.Render.Services;
 
-using Hunting.Render.Model;
-using Hunting.Render.Tabular;
+using DeltaZulu.Hunting.Render.Model;
+using DeltaZulu.Hunting.Render.Tabular;
 
 public interface IRenderChartBuilder
 {

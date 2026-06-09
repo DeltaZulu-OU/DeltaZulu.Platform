@@ -1,7 +1,7 @@
 using Dapper;
 using Microsoft.Data.Sqlite;
 
-namespace Workbench.Persistence;
+namespace DeltaZulu.Workbench.Persistence;
 
 /// <summary>
 /// Creates the SQLite schema. Called once at application startup. Idempotent (IF NOT EXISTS).

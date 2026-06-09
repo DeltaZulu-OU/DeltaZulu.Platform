@@ -1,8 +1,8 @@
-namespace Hunting.Tests;
+namespace DeltaZulu.Hunting.Tests;
 
-using Hunting.Application.Visualizations;
-using Hunting.Data.Persistence;
-using Hunting.Data.Visualizations;
+using DeltaZulu.Hunting.Application.Visualizations;
+using DeltaZulu.Hunting.Data.Persistence;
+using DeltaZulu.Hunting.Data.Visualizations;
 using Microsoft.Data.Sqlite;
 
 [TestClass]

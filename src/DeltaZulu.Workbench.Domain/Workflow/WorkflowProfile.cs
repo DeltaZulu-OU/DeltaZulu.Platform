@@ -1,6 +1,6 @@
-using Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Domain.Enums;
 
-namespace Workbench.Domain.Workflow;
+namespace DeltaZulu.Workbench.Domain.Workflow;
 
 /// <summary>
 /// Vendor-defined governance policy bound to a <see cref="WorkflowProfileId"/>. Profiles are

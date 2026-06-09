@@ -1,7 +1,7 @@
-namespace Hunting.Tests.Render;
+namespace DeltaZulu.Hunting.Tests.Render;
 
-using Hunting.Data;
-using Hunting.Web.Rendering;
+using DeltaZulu.Hunting.Data;
+using DeltaZulu.Hunting.Web.Rendering;
 
 [TestClass]
 public sealed class QueryResultRenderAdapterTests

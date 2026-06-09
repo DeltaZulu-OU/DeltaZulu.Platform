@@ -1,12 +1,12 @@
-namespace Hunting.Tests.Web;
+namespace DeltaZulu.Hunting.Tests.Web;
 
-using Hunting.Application.QueryHistory;
-using Hunting.Core.Catalog;
-using Hunting.Core.DuckDbSql;
-using Hunting.Data;
-using Hunting.Schema;
-using Hunting.Tests.Fixtures;
-using Hunting.Web.Services;
+using DeltaZulu.Hunting.Application.QueryHistory;
+using DeltaZulu.Hunting.Core.Catalog;
+using DeltaZulu.Hunting.Core.DuckDbSql;
+using DeltaZulu.Hunting.Data;
+using DeltaZulu.Hunting.Schema;
+using DeltaZulu.Hunting.Tests.Fixtures;
+using DeltaZulu.Hunting.Web.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 
 [TestClass]

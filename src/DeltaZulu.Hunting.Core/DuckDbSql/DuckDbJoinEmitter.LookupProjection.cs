@@ -1,4 +1,4 @@
-namespace Hunting.Core.DuckDbSql;
+namespace DeltaZulu.Hunting.Core.DuckDbSql;
 
 using System.Text;
 using System.Text.RegularExpressions;

@@ -1,8 +1,8 @@
-namespace Hunting.Web.Dashboards.Runtime;
+namespace DeltaZulu.Hunting.Web.Dashboards.Runtime;
 
-using Hunting.Core.Policy;
-using Hunting.Data;
-using Hunting.Render.Model;
+using DeltaZulu.Hunting.Core.Policy;
+using DeltaZulu.Hunting.Data;
+using DeltaZulu.Hunting.Render.Model;
 using Vizor.ECharts;
 
 public sealed record DashboardWidgetRunResult

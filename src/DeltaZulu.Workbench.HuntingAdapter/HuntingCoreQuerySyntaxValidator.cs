@@ -1,6 +1,6 @@
-using Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Application.Abstractions;
 
-namespace Workbench.HuntingCoreAdapter;
+namespace DeltaZulu.Workbench.HuntingAdapter;
 
 /// <summary>
 /// Adapts a reusable Hunting.Core parser/translator boundary to Workbench's query validation seam.

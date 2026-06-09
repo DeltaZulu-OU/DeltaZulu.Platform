@@ -1,8 +1,8 @@
-namespace Hunting.Data.Alerts;
+namespace DeltaZulu.Hunting.Data.Alerts;
 
 using Dapper;
-using Hunting.Application.Alerts;
-using Hunting.Data.Persistence;
+using DeltaZulu.Hunting.Application.Alerts;
+using DeltaZulu.Hunting.Data.Persistence;
 
 public sealed class DapperAlertRepository : IAlertRepository, IDisposable
 {

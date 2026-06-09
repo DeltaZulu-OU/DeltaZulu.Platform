@@ -1,12 +1,12 @@
-namespace Hunting.Data;
+namespace DeltaZulu.Hunting.Data;
 
 using System.Collections.Concurrent;
 using System.Globalization;
 using DuckDB.NET.Data;
-using Hunting.Core.Catalog;
-using Hunting.Core.Planning;
-using Hunting.Core.Policy;
-using Hunting.Core.QueryModel;
+using DeltaZulu.Hunting.Core.Catalog;
+using DeltaZulu.Hunting.Core.Planning;
+using DeltaZulu.Hunting.Core.Policy;
+using DeltaZulu.Hunting.Core.QueryModel;
 
 /// <summary>
 /// <para>

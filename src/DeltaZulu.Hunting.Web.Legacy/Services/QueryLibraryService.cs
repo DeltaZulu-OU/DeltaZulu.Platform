@@ -1,8 +1,8 @@
-namespace Hunting.Web.Services;
+namespace DeltaZulu.Hunting.Web.Services;
 
-using Hunting.Application.QueryHistory;
-using Hunting.Application.SavedQueries;
-using Hunting.Application.Visualizations;
+using DeltaZulu.Hunting.Application.QueryHistory;
+using DeltaZulu.Hunting.Application.SavedQueries;
+using DeltaZulu.Hunting.Application.Visualizations;
 
 /// <summary>
 /// Application-facing service for saved queries and recent query history.

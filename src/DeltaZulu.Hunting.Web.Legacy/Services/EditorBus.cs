@@ -1,4 +1,4 @@
-﻿namespace Hunting.Web.Services;
+﻿namespace DeltaZulu.Hunting.Web.Services;
 
 /// <summary>
 /// Per-circuit channel that lets sibling components and pages push KQL text into

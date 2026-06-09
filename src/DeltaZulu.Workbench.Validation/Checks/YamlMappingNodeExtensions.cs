@@ -1,6 +1,6 @@
 using YamlDotNet.RepresentationModel;
 
-namespace Workbench.Validation.Checks;
+namespace DeltaZulu.Workbench.Validation.Checks;
 
 internal static class YamlMappingNodeExtensions
 {

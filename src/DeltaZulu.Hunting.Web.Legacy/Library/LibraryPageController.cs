@@ -1,6 +1,6 @@
-namespace Hunting.Web.Library;
+namespace DeltaZulu.Hunting.Web.Library;
 
-using Hunting.Web.Services;
+using DeltaZulu.Hunting.Web.Services;
 using Microsoft.AspNetCore.Components;
 
 public sealed class LibraryPageController

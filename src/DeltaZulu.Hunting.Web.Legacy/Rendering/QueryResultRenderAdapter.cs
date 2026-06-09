@@ -1,8 +1,8 @@
-namespace Hunting.Web.Rendering;
+namespace DeltaZulu.Hunting.Web.Rendering;
 
-using Hunting.Data;
-using Hunting.Render.Services;
-using Hunting.Render.Tabular;
+using DeltaZulu.Hunting.Data;
+using DeltaZulu.Hunting.Render.Services;
+using DeltaZulu.Hunting.Render.Tabular;
 
 public sealed class QueryResultRenderAdapter : IRenderTabularResult
 {

@@ -1,7 +1,7 @@
-using Workbench.Persistence;
-using Workbench.Application.Services;
+using DeltaZulu.Workbench.Persistence;
+using DeltaZulu.Workbench.Application.Services;
 
-namespace Workbench.Tests.Integration;
+namespace DeltaZulu.Workbench.Tests.Integration;
 
 [TestClass]
 public sealed class IssueServiceTests : IDisposable

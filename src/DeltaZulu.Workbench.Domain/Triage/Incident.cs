@@ -1,9 +1,9 @@
-using Workbench.Domain.Common;
-using Workbench.Domain.Enums;
-using Workbench.Domain.Identifiers;
-using Workbench.Domain.Issues;
+using DeltaZulu.Workbench.Domain.Common;
+using DeltaZulu.Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Domain.Issues;
 
-namespace Workbench.Domain.Triage;
+namespace DeltaZulu.Workbench.Domain.Triage;
 
 /// <summary>
 /// An incident promoted from an approved candidate. Workbench owns the investigation

@@ -1,8 +1,8 @@
-using Workbench.Application.ContentLibrary;
-using Workbench.Domain.ContentLibrary;
-using Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Application.ContentLibrary;
+using DeltaZulu.Workbench.Domain.ContentLibrary;
+using DeltaZulu.Workbench.Domain.Enums;
 
-namespace Workbench.Tests.Application;
+namespace DeltaZulu.Workbench.Tests.Application;
 
 [TestClass]
 public sealed class HuntingSavedQueryImporterTests

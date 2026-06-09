@@ -1,10 +1,10 @@
 using Dapper;
-using Workbench.Application.Abstractions;
-using Workbench.Domain.Detections;
-using Workbench.Domain.Enums;
-using Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Domain.Detections;
+using DeltaZulu.Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Domain.Identifiers;
 
-namespace Workbench.Persistence.Repositories;
+namespace DeltaZulu.Workbench.Persistence.Repositories;
 
 internal sealed class DetectionVersionRepository(DapperSession session) : IDetectionVersionRepository
 {

@@ -1,4 +1,4 @@
-namespace Hunting.Web.Dashboards.Runtime;
+namespace DeltaZulu.Hunting.Web.Dashboards.Runtime;
 
 public enum DashboardWidgetRunStatus
 {

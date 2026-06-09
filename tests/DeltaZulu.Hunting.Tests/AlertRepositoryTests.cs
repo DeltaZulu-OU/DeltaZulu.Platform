@@ -1,8 +1,8 @@
-namespace Hunting.Tests;
+namespace DeltaZulu.Hunting.Tests;
 
-using Hunting.Application.Alerts;
-using Hunting.Data.Alerts;
-using Hunting.Data.Persistence;
+using DeltaZulu.Hunting.Application.Alerts;
+using DeltaZulu.Hunting.Data.Alerts;
+using DeltaZulu.Hunting.Data.Persistence;
 using Microsoft.Data.Sqlite;
 
 [TestClass]

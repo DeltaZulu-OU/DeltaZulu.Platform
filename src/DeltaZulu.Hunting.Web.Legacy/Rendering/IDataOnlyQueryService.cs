@@ -1,6 +1,6 @@
-namespace Hunting.Web.Rendering;
+namespace DeltaZulu.Hunting.Web.Rendering;
 
-using Hunting.Data;
+using DeltaZulu.Hunting.Data;
 
 public interface IDataOnlyQueryService
 {

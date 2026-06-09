@@ -1,4 +1,4 @@
-namespace Hunting.Web.Dashboards.Markdown;
+namespace DeltaZulu.Hunting.Web.Dashboards.Markdown;
 
 using System.Net;
 using System.Text.RegularExpressions;

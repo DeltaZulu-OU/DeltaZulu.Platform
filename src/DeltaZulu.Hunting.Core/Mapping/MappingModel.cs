@@ -1,4 +1,4 @@
-namespace Hunting.Core.Mapping;
+namespace DeltaZulu.Hunting.Core.Mapping;
 
 using Schema;
 

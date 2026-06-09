@@ -1,6 +1,6 @@
-namespace Hunting.Web.Services;
+namespace DeltaZulu.Hunting.Web.Services;
 
-using Hunting.Application.Settings;
+using DeltaZulu.Hunting.Application.Settings;
 
 public sealed class UserSettingsState
 {

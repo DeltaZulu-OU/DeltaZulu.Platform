@@ -1,4 +1,4 @@
-namespace Hunting.Core.Catalog;
+namespace DeltaZulu.Hunting.Core.Catalog;
 
 using Kusto.Language;
 using Kusto.Language.Symbols;

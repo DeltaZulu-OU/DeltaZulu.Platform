@@ -1,7 +1,7 @@
-using Workbench.Domain.Enums;
-using Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Domain.Identifiers;
 
-namespace Workbench.Application.Abstractions;
+namespace DeltaZulu.Workbench.Application.Abstractions;
 
 /// <summary>
 /// Internal workflow orchestration abstraction per ADR-0005 and ADR-0016. Domain and UI

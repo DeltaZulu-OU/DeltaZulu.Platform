@@ -1,4 +1,4 @@
-namespace Hunting.Core.Schema;
+namespace DeltaZulu.Hunting.Core.Schema;
 
 /// <summary>
 /// Kusto scalar types as exposed to KQL users and Monaco editor.

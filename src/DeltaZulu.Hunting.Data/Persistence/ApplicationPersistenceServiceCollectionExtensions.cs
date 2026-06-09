@@ -1,18 +1,18 @@
-namespace Hunting.Data.Persistence;
+namespace DeltaZulu.Hunting.Data.Persistence;
 
-using Hunting.Application.Alerts;
-using Hunting.Application.DetectionRuns;
-using Hunting.Application.Detections;
-using Hunting.Application.QueryHistory;
-using Hunting.Application.SavedQueries;
-using Hunting.Application.Visualizations;
-using Hunting.Data.Alerts;
-using Hunting.Data.DetectionRuns;
-using Hunting.Data.Detections;
-using Hunting.Data.QueryHistory;
-using Hunting.Data.SavedQueries;
-using Hunting.Data.Settings;
-using Hunting.Data.Visualizations;
+using DeltaZulu.Hunting.Application.Alerts;
+using DeltaZulu.Hunting.Application.DetectionRuns;
+using DeltaZulu.Hunting.Application.Detections;
+using DeltaZulu.Hunting.Application.QueryHistory;
+using DeltaZulu.Hunting.Application.SavedQueries;
+using DeltaZulu.Hunting.Application.Visualizations;
+using DeltaZulu.Hunting.Data.Alerts;
+using DeltaZulu.Hunting.Data.DetectionRuns;
+using DeltaZulu.Hunting.Data.Detections;
+using DeltaZulu.Hunting.Data.QueryHistory;
+using DeltaZulu.Hunting.Data.SavedQueries;
+using DeltaZulu.Hunting.Data.Settings;
+using DeltaZulu.Hunting.Data.Visualizations;
 using Microsoft.Extensions.DependencyInjection;
 using IUserSettingsRepository = Application.Settings.IUserSettingsRepository;
 

@@ -1,14 +1,14 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Workbench.Application;
-using Workbench.Application.Abstractions;
-using Workbench.Application.Services;
-using Workbench.Persistence;
-using Workbench.Tests.Infrastructure;
-using Workbench.Validation;
+using DeltaZulu.Workbench.Application;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Application.Services;
+using DeltaZulu.Workbench.Persistence;
+using DeltaZulu.Workbench.Tests.Infrastructure;
+using DeltaZulu.Workbench.Validation;
 
-namespace Workbench.Tests.Integration;
+namespace DeltaZulu.Workbench.Tests.Integration;
 
 /// <summary>
 /// Creates a disposable <see cref="ServiceProvider"/> backed by an in-memory SQLite database

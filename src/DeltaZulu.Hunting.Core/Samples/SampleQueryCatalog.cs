@@ -1,4 +1,4 @@
-namespace Hunting.Core.Samples;
+namespace DeltaZulu.Hunting.Core.Samples;
 
 public static class SampleQueryCatalog
 {

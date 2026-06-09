@@ -1,4 +1,4 @@
-namespace Workbench.HuntingCoreAdapter;
+namespace DeltaZulu.Workbench.HuntingAdapter;
 
 /// <summary>
 /// Minimal parser port implemented by a Hunting.Core integration package.

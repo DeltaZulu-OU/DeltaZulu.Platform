@@ -1,7 +1,7 @@
-using Workbench.Domain.Identifiers;
-using Workbench.Domain.Triage;
+using DeltaZulu.Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Domain.Triage;
 
-namespace Workbench.Application.Abstractions;
+namespace DeltaZulu.Workbench.Application.Abstractions;
 
 public interface IIncidentRepository
 {

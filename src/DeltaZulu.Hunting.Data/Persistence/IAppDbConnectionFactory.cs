@@ -1,4 +1,4 @@
-namespace Hunting.Data.Persistence;
+namespace DeltaZulu.Hunting.Data.Persistence;
 
 using System.Data.Common;
 

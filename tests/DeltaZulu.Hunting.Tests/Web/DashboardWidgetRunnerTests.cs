@@ -1,13 +1,13 @@
-namespace Hunting.Tests.Web;
+namespace DeltaZulu.Hunting.Tests.Web;
 
-using Hunting.Application.SavedQueries;
-using Hunting.Application.Visualizations;
-using Hunting.Core.Policy;
-using Hunting.Data;
-using Hunting.Render.Model;
-using Hunting.Web.Dashboards;
-using Hunting.Web.Dashboards.Runtime;
-using Hunting.Web.Rendering;
+using DeltaZulu.Hunting.Application.SavedQueries;
+using DeltaZulu.Hunting.Application.Visualizations;
+using DeltaZulu.Hunting.Core.Policy;
+using DeltaZulu.Hunting.Data;
+using DeltaZulu.Hunting.Render.Model;
+using DeltaZulu.Hunting.Web.Dashboards;
+using DeltaZulu.Hunting.Web.Dashboards.Runtime;
+using DeltaZulu.Hunting.Web.Rendering;
 using Microsoft.Extensions.Logging;
 
 [TestClass]

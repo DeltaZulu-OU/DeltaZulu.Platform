@@ -1,12 +1,12 @@
-namespace Hunting.Data;
+namespace DeltaZulu.Hunting.Data;
 
 using System.Globalization;
 using System.Text.Json;
 using DuckDB.NET.Data;
-using Hunting.Core.DuckDbSql;
-using Hunting.Core.Planning;
-using Hunting.Core.Policy;
-using Hunting.Core.Translation;
+using DeltaZulu.Hunting.Core.DuckDbSql;
+using DeltaZulu.Hunting.Core.Planning;
+using DeltaZulu.Hunting.Core.Policy;
+using DeltaZulu.Hunting.Core.Translation;
 
 public sealed partial class QueryRuntime
 {

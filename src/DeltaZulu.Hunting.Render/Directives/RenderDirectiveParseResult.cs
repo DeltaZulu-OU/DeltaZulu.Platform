@@ -1,6 +1,6 @@
-namespace Hunting.Render.Directives;
+namespace DeltaZulu.Hunting.Render.Directives;
 
-using Hunting.Render.Model;
+using DeltaZulu.Hunting.Render.Model;
 
 public sealed record RenderDirectiveParseResult
 {

@@ -1,4 +1,4 @@
-namespace Hunting.Web.Dashboards;
+namespace DeltaZulu.Hunting.Web.Dashboards;
 
 public enum DashboardWidgetKind
 {

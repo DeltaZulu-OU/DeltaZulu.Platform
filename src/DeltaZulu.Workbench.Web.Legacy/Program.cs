@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Routing;
 using MudBlazor.Services;
-using Workbench.Application;
-using Workbench.Infrastructure;
-using Workbench.Persistence;
-using Workbench.Validation;
-using Workbench.Web.Components;
-using Workbench.Web.Services;
-using Workbench.Workflow;
+using DeltaZulu.Workbench.Application;
+using DeltaZulu.Workbench.Infrastructure;
+using DeltaZulu.Workbench.Persistence;
+using DeltaZulu.Workbench.Validation;
+using DeltaZulu.Workbench.Web.Components;
+using DeltaZulu.Workbench.Web.Services;
+using DeltaZulu.Workbench.Workflow;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -1,8 +1,8 @@
-namespace Hunting.Core.Validation;
+namespace DeltaZulu.Hunting.Core.Validation;
 
-using Hunting.Core.Catalog;
-using Hunting.Core.Policy;
-using Hunting.Core.Translation;
+using DeltaZulu.Hunting.Core.Catalog;
+using DeltaZulu.Hunting.Core.Policy;
+using DeltaZulu.Hunting.Core.Translation;
 
 /// <summary>
 /// Reusable Hunting.Core-backed KQL validation adapter. It exercises the same

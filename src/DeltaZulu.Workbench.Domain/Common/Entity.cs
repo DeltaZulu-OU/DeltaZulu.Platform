@@ -1,4 +1,4 @@
-namespace Workbench.Domain.Common;
+namespace DeltaZulu.Workbench.Domain.Common;
 
 /// <summary>
 /// Minimal entity base. Equality is by identifier only; subclasses are responsible for

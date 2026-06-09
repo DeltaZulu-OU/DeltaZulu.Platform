@@ -1,7 +1,7 @@
-namespace Hunting.Data.SavedQueries;
+namespace DeltaZulu.Hunting.Data.SavedQueries;
 
-using Hunting.Application.SavedQueries;
-using Hunting.Core.Samples;
+using DeltaZulu.Hunting.Application.SavedQueries;
+using DeltaZulu.Hunting.Core.Samples;
 using System.Text;
 
 internal static class SampleSavedQuerySeeder

@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Workbench.Validation</RootNamespace>
-    <AssemblyName>Workbench.Validation</AssemblyName>
+    <RootNamespace>DeltaZulu.Workbench.Validation</RootNamespace>
+    <AssemblyName>DeltaZulu.Workbench.Validation</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Workbench.Domain\Workbench.Domain.csproj" />
-    <ProjectReference Include="..\Workbench.Application\Workbench.Application.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Workbench.Domain\DeltaZulu.Workbench.Domain.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Workbench.Application\DeltaZulu.Workbench.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

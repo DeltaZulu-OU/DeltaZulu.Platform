@@ -1,6 +1,6 @@
-namespace Hunting.Schema.Definitions.Internal;
+namespace DeltaZulu.Hunting.Schema.Definitions.Internal;
 
-using Hunting.Core.Schema;
+using DeltaZulu.Hunting.Core.Schema;
 
 /// <summary>
 /// Internal metadata schema objects used by the hunting database runtime.

@@ -1,7 +1,7 @@
-namespace Hunting.Tests.Render;
+namespace DeltaZulu.Hunting.Tests.Render;
 
-using Hunting.Render.Model;
-using Hunting.Web.Rendering;
+using DeltaZulu.Hunting.Render.Model;
+using DeltaZulu.Hunting.Web.Rendering;
 
 [TestClass]
 public sealed class EChartsRenderOptionsBuilderTests

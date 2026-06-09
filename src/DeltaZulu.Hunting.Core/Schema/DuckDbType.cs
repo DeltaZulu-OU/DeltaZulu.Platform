@@ -1,4 +1,4 @@
-namespace Hunting.Core.Schema;
+namespace DeltaZulu.Hunting.Core.Schema;
 
 /// <summary>
 /// DuckDB column types used in schema generation and SQL emission.

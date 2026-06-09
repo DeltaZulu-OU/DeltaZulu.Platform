@@ -1,9 +1,9 @@
-namespace Hunting.Tests.Emitter;
+namespace DeltaZulu.Hunting.Tests.Emitter;
 
 using System.Globalization;
 using DuckDB.NET.Data;
-using Hunting.Core.DuckDbSql;
-using Hunting.Core.QueryModel;
+using DeltaZulu.Hunting.Core.DuckDbSql;
+using DeltaZulu.Hunting.Core.QueryModel;
 
 /// <summary>
 /// <para>

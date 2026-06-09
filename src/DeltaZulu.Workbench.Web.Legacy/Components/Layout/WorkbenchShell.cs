@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Components.Routing;
 using DeltaZulu.Blazor.Components;
 using MudBlazor;
 
-namespace Workbench.Web.Components.Layout;
+namespace DeltaZulu.Workbench.Web.Components.Layout;
 
 /// <summary>
 /// Workbench-owned shell metadata for the current standalone host.

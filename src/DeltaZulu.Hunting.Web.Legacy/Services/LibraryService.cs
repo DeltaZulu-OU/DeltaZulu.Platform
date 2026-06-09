@@ -1,8 +1,8 @@
-namespace Hunting.Web.Services;
+namespace DeltaZulu.Hunting.Web.Services;
 
-using Hunting.Application.SavedQueries;
-using Hunting.Application.Visualizations;
-using Hunting.Web.Dashboards.Persistence;
+using DeltaZulu.Hunting.Application.SavedQueries;
+using DeltaZulu.Hunting.Application.Visualizations;
+using DeltaZulu.Hunting.Web.Dashboards.Persistence;
 
 /// <summary>
 /// Web-facing aggregate over saved queries, visualizations, and dashboards.

@@ -1,8 +1,8 @@
 using Dapper;
-using Workbench.Application.Abstractions;
-using Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Domain.Identifiers;
 
-namespace Workbench.Persistence.Repositories;
+namespace DeltaZulu.Workbench.Persistence.Repositories;
 
 internal sealed class MergeIntentRepository(DapperSession session) : IMergeIntentRepository
 {

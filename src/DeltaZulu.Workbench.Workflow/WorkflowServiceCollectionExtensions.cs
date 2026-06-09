@@ -1,10 +1,10 @@
 using Elsa.Extensions;
 using Microsoft.Extensions.DependencyInjection;
-using Workbench.Application.Abstractions;
-using Workbench.Application.Services;
-using Workbench.Workflow.Workflows;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Application.Services;
+using DeltaZulu.Workbench.Workflow.Workflows;
 
-namespace Workbench.Workflow;
+namespace DeltaZulu.Workbench.Workflow;
 
 public static class WorkflowServiceCollectionExtensions
 {

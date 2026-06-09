@@ -1,11 +1,11 @@
-namespace Hunting.Tests.Translation;
+namespace DeltaZulu.Hunting.Tests.Translation;
 
-using Hunting.Core.Catalog;
-using Hunting.Core.DuckDbSql;
-using Hunting.Core.Policy;
-using Hunting.Core.QueryModel;
-using Hunting.Core.Translation;
-using Hunting.Schema;
+using DeltaZulu.Hunting.Core.Catalog;
+using DeltaZulu.Hunting.Core.DuckDbSql;
+using DeltaZulu.Hunting.Core.Policy;
+using DeltaZulu.Hunting.Core.QueryModel;
+using DeltaZulu.Hunting.Core.Translation;
+using DeltaZulu.Hunting.Schema;
 
 /// <summary>
 /// Red-green-refactor harness for KQL → RelNode translation.

@@ -1,12 +1,12 @@
-namespace Hunting.Tests.Translation;
+namespace DeltaZulu.Hunting.Tests.Translation;
 
-using Hunting.Core.Catalog;
-using Hunting.Core.DuckDbSql;
-using Hunting.Core.Planning;
-using Hunting.Core.QueryModel;
-using Hunting.Data;
-using Hunting.Schema;
-using Hunting.Tests.Fixtures;
+using DeltaZulu.Hunting.Core.Catalog;
+using DeltaZulu.Hunting.Core.DuckDbSql;
+using DeltaZulu.Hunting.Core.Planning;
+using DeltaZulu.Hunting.Core.QueryModel;
+using DeltaZulu.Hunting.Data;
+using DeltaZulu.Hunting.Schema;
+using DeltaZulu.Hunting.Tests.Fixtures;
 
 [TestClass]
 public sealed class EndToEndPipelineTests

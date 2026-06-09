@@ -1,4 +1,4 @@
-namespace Hunting.Core.Planning;
+namespace DeltaZulu.Hunting.Core.Planning;
 
 using System.Text.RegularExpressions;
 

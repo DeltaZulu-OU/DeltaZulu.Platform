@@ -1,8 +1,8 @@
-using Workbench.Domain.Changes;
-using Workbench.Domain.Enums;
-using Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Domain.Changes;
+using DeltaZulu.Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Domain.Identifiers;
 
-namespace Workbench.Application.Abstractions;
+namespace DeltaZulu.Workbench.Application.Abstractions;
 
 /// <summary>
 /// Context passed to an <see cref="ICheck"/> implementation. Contains the draft file

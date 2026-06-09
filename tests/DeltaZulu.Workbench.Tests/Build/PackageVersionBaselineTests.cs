@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 
-namespace Workbench.Tests.Build;
+namespace DeltaZulu.Workbench.Tests.Build;
 
 [TestClass]
 public sealed class PackageVersionBaselineTests

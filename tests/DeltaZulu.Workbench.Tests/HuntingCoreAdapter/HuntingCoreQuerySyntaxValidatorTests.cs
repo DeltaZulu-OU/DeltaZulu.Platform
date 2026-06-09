@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
-using Workbench.Application.Abstractions;
-using Workbench.Domain.Enums;
-using Workbench.HuntingCoreAdapter;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Domain.Enums;
+using DeltaZulu.Workbench.HuntingAdapter;
 
-namespace Workbench.Tests.HuntingCoreAdapter;
+namespace DeltaZulu.Workbench.Tests.HuntingCoreAdapter;
 
 [TestClass]
 public sealed class HuntingCoreQuerySyntaxValidatorTests

@@ -1,8 +1,8 @@
-namespace Hunting.Web.Rendering;
+namespace DeltaZulu.Hunting.Web.Rendering;
 
-using Hunting.Render.Directives;
-using Hunting.Render.Model;
-using Hunting.Render.Services;
+using DeltaZulu.Hunting.Render.Directives;
+using DeltaZulu.Hunting.Render.Model;
+using DeltaZulu.Hunting.Render.Services;
 
 public sealed class RenderedQueryRunner : IRenderedQueryRunner
 {

@@ -1,7 +1,7 @@
-using Workbench.Domain.Detections;
-using Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Domain.Detections;
+using DeltaZulu.Workbench.Domain.Identifiers;
 
-namespace Workbench.Application.Abstractions;
+namespace DeltaZulu.Workbench.Application.Abstractions;
 
 /// <summary>Persistence port for <see cref="DetectionVersion"/> read models.</summary>
 public interface IDetectionVersionRepository

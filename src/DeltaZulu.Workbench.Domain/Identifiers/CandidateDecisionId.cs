@@ -1,4 +1,4 @@
-namespace Workbench.Domain.Identifiers;
+namespace DeltaZulu.Workbench.Domain.Identifiers;
 
 public readonly record struct CandidateDecisionId(Guid Value)
 {

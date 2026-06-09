@@ -1,14 +1,14 @@
-namespace Hunting.Web.Hosting;
+namespace DeltaZulu.Hunting.Web.Hosting;
 
-using Hunting.Core.Catalog;
-using Hunting.Data;
-using Hunting.Data.Persistence;
-using Hunting.Schema;
-using Hunting.Web.Dashboards.DependencyInjection;
-using Hunting.Web.Dashboards.PageState;
-using Hunting.Web.Library;
-using Hunting.Web.Rendering;
-using Hunting.Web.Services;
+using DeltaZulu.Hunting.Core.Catalog;
+using DeltaZulu.Hunting.Data;
+using DeltaZulu.Hunting.Data.Persistence;
+using DeltaZulu.Hunting.Schema;
+using DeltaZulu.Hunting.Web.Dashboards.DependencyInjection;
+using DeltaZulu.Hunting.Web.Dashboards.PageState;
+using DeltaZulu.Hunting.Web.Library;
+using DeltaZulu.Hunting.Web.Rendering;
+using DeltaZulu.Hunting.Web.Services;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 

@@ -1,8 +1,8 @@
-namespace Hunting.Web.Visualizations;
+namespace DeltaZulu.Hunting.Web.Visualizations;
 
 using System.Text.Json;
-using Hunting.Application.Visualizations;
-using Hunting.Render.Model;
+using DeltaZulu.Hunting.Application.Visualizations;
+using DeltaZulu.Hunting.Render.Model;
 
 public static class VisualizationDirectiveMapper
 {

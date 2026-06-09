@@ -1,6 +1,6 @@
-using Workbench.Application.ContentPipeline;
+using DeltaZulu.Workbench.Application.ContentPipeline;
 
-namespace Workbench.Tests.Domain;
+namespace DeltaZulu.Workbench.Tests.Domain;
 
 [TestClass]
 public sealed class CanonicalPathResolverTests

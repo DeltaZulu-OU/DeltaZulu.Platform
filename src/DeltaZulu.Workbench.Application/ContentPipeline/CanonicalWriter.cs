@@ -1,8 +1,8 @@
-using Workbench.Application.Abstractions;
-using Workbench.Domain.Changes;
-using Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Domain.Changes;
+using DeltaZulu.Workbench.Domain.Enums;
 
-namespace Workbench.Application.ContentPipeline;
+namespace DeltaZulu.Workbench.Application.ContentPipeline;
 
 /// <summary>
 /// Transforms a <see cref="ChangeRequest"/>'s draft files into a <see cref="CommitRequest"/>

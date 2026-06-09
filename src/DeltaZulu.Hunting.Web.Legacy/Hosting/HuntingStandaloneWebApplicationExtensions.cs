@@ -1,8 +1,8 @@
-namespace Hunting.Web.Hosting;
+namespace DeltaZulu.Hunting.Web.Hosting;
 
-using Hunting.Data;
-using Hunting.Data.Persistence;
-using Hunting.Schema;
+using DeltaZulu.Hunting.Data;
+using DeltaZulu.Hunting.Data.Persistence;
+using DeltaZulu.Hunting.Schema;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

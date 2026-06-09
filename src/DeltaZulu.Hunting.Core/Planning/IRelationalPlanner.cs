@@ -1,6 +1,6 @@
-namespace Hunting.Core.Planning;
+namespace DeltaZulu.Hunting.Core.Planning;
 
-using Hunting.Core.QueryModel;
+using DeltaZulu.Hunting.Core.QueryModel;
 
 public interface IRelationalPlanner
 {

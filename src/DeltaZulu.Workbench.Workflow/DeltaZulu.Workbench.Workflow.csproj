@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Workbench.Workflow</RootNamespace>
-    <AssemblyName>Workbench.Workflow</AssemblyName>
+    <RootNamespace>DeltaZulu.Workbench.Workflow</RootNamespace>
+    <AssemblyName>DeltaZulu.Workbench.Workflow</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Workbench.Domain\Workbench.Domain.csproj" />
-    <ProjectReference Include="..\Workbench.Application\Workbench.Application.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Workbench.Domain\DeltaZulu.Workbench.Domain.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Workbench.Application\DeltaZulu.Workbench.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

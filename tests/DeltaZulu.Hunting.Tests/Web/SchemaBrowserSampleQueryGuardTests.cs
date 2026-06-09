@@ -1,6 +1,6 @@
-namespace Hunting.Tests.Web;
+namespace DeltaZulu.Hunting.Tests.Web;
 
-using Hunting.Core.Samples;
+using DeltaZulu.Hunting.Core.Samples;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 [TestClass]

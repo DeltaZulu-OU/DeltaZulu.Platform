@@ -1,4 +1,4 @@
-namespace Hunting.Data;
+namespace DeltaZulu.Hunting.Data;
 
 /// <summary>
 /// Enforces conservative schema migration safety based on provenance drift assessments.

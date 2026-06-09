@@ -1,6 +1,6 @@
-namespace Hunting.Core.Schema;
+namespace DeltaZulu.Hunting.Core.Schema;
 
-using Hunting.Core.Mapping;
+using DeltaZulu.Hunting.Core.Mapping;
 
 /// <summary>
 /// A single column in a schema object. Carries both the Kusto type

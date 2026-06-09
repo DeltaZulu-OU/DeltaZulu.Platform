@@ -1,4 +1,4 @@
-namespace Hunting.Core.Schema;
+namespace DeltaZulu.Hunting.Core.Schema;
 
 /// <summary>
 /// UI-agnostic editor metadata generated from the public C# schema contracts.

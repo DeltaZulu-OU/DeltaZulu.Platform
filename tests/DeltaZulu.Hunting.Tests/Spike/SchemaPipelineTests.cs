@@ -1,9 +1,9 @@
-namespace Hunting.Tests.Spike;
+namespace DeltaZulu.Hunting.Tests.Spike;
 
-using Hunting.Core.DuckDbSql;
-using Hunting.Data;
-using Hunting.Schema;
-using Hunting.Tests.Fixtures;
+using DeltaZulu.Hunting.Core.DuckDbSql;
+using DeltaZulu.Hunting.Data;
+using DeltaZulu.Hunting.Schema;
+using DeltaZulu.Hunting.Tests.Fixtures;
 
 /// <summary>
 /// Integration tests for the active Phase 1A medallion schema pipeline:

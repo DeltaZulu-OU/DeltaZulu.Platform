@@ -1,7 +1,7 @@
-using Workbench.Application.Abstractions;
-using Workbench.Validation.Checks;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Validation.Checks;
 
-namespace Workbench.Tests.Validation;
+namespace DeltaZulu.Workbench.Tests.Validation;
 
 [TestClass]
 public sealed class NoteFrontmatterCheckTests
