@@ -1,0 +1,12 @@
+@using Hunting.Web.Components.Hosting
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<HuntingModuleRouter DefaultLayout="@typeof(Hunting.Web.Shared.StandaloneHuntingLayout)">
+    <NotFound>
+        <p>Page not found.</p>
+    </NotFound>
+</HuntingModuleRouter>

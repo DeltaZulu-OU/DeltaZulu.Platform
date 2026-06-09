@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Hunting.Data</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="DuckDB.NET.Data.Full" />
+    <PackageReference Include="DuckDB.NET.Bindings.Full" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hunting.Application\Hunting.Application.csproj" />
+    <ProjectReference Include="..\Hunting.Core\Hunting.Core.csproj" />
+  </ItemGroup>
+
+</Project>

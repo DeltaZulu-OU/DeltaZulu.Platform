@@ -1,0 +1,61 @@
+@page "/settings"
+@namespace Hunting.Web.Pages
+@inject Hunting.Web.Services.UserSettingsState UserSettings
+
+<div class="settings-page">
+    <header class="settings-header">
+        <h1>Settings</h1>
+        <p>Configure default query toolbar behavior. Defaults are applied when opening the hunt page.</p>
+    </header>
+
+    <section class="settings-card" aria-labelledby="default-time-heading">
+        <h2 id="default-time-heading">Default time filter</h2>
+        <p class="settings-help">Select the pre-applied time range for new query sessions.</p>
+
+        <InputRadioGroup @bind-Value="UserSettings.DefaultTimeFilter" @bind-Value:after="PersistSettingsAsync" Name="default-time" class="settings-grid">
+            @foreach (var preset in UserSettings.AvailableTimeFilters)
+            {
+                <label class="settings-option" for="time-@preset.Key">
+                    <InputRadio id="time-preset.Key" class="settings-radio" Value="@preset.Key" />
+                    <span>@preset.Label</span>
+                </label>
+            }
+        </InputRadioGroup>
+    </section>
+
+    <section class="settings-card" aria-labelledby="default-limit-heading">
+        <h2 id="default-limit-heading">Default item limit</h2>
+        <p class="settings-help">Choose a result cap that is applied unless your query specifies a limit.</p>
+        <div class="settings-field-row">
+            <label for="default-limit">Items per query</label>
+            <select id="default-limit" class="settings-select" @bind="SelectedDefaultLimitValue" @bind:after="PersistSettingsAsync">
+                @foreach (var opt in UserSettings.AvailableResultLimits)
+                {
+                    <option value="@(opt?.ToString() ?? string.Empty)">@(opt is null ? "None" : opt.Value.ToString())</option>
+                }
+            </select>
+        </div>
+    </section>
+
+    <footer class="settings-footer-note">
+        <span>These settings are persisted in a local SQLite store for this environment.</span>
+    </footer>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await UserSettings.EnsureLoadedAsync();
+    }
+
+    private string SelectedDefaultLimitValue
+    {
+        get => UserSettings.DefaultResultLimit?.ToString() ?? string.Empty;
+        set => UserSettings.DefaultResultLimit = int.TryParse(value, out var parsed) ? parsed : null;
+    }
+
+    private Task PersistSettingsAsync()
+    {
+        return UserSettings.SaveAsync();
+    }
+}

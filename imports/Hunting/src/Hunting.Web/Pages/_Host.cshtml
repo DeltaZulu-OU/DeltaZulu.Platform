@@ -1,0 +1,42 @@
+@page "/"
+@namespace Hunting.Web.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KQL Hunting Workbench</title>
+    <base href="~/" />
+    <link rel="stylesheet" href="_content/MudBlazor/MudBlazor.min.css" />
+    <link rel="stylesheet" href="css/deltazulu/colors_and_type.css" asp-append-version="true" />
+    <link rel="stylesheet" href="css/app.css" asp-append-version="true" />
+    <link href="css/query-library-drawer.css" rel="stylesheet" />
+    <link href="css/kql-helper-drawer.css" rel="stylesheet" asp-append-version="true" />
+</head>
+<body>
+    <component type="typeof(Hunting.Web.App)" render-mode="Server" />
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+    <script src="~/js/monaco.js" asp-append-version="true"></script>
+    <script src="~/js/kql-helper-editor.js" asp-append-version="true"></script>
+    <script src="~/js/monaco-theme-loader.js" asp-append-version="true"></script>
+    <script src="~/js/dashboard-widget-editor.js" asp-append-version="true"></script>
+    <script src="~/js/dashboard-transfer.js" asp-append-version="true"></script>
+    <script src="~/js/dashboard-grid-layout.js" asp-append-version="true"></script>
+    <script src="~/js/dashboard-chart-resize.js" asp-append-version="true"></script>
+    <script src="~/js/charts.js" asp-append-version="true"></script>
+    <script src="~/js/splitter.js" asp-append-version="true"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <!-- Load Vizor bundle which includes echarts -->
+    <script src="_content/Vizor.ECharts/js/vizor-echarts-bundle-min.js"></script>
+    <script src="_framework/blazor.server.js" autostart="false"></script>
+    <script>
+        Blazor.start();
+    </script>
+</body>
+</html>
