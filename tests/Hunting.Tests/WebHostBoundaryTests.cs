@@ -48,6 +48,29 @@ public sealed class WebHostBoundaryTests
         }
     }
 
+    [TestMethod]
+    [Description("Hunting web registration keeps runtime, application state, and web module layers named separately for platform import.")]
+    public void WebModuleRegistration_ExposesSeparateRuntimeAndApplicationStateLayers()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var registration = File.ReadAllText(Path.Combine(repositoryRoot, "src/Hunting.Web/Hosting/HuntingWebModuleServiceCollectionExtensions.cs"));
+
+        StringAssert.Contains(registration, "AddHuntingRuntime(");
+        StringAssert.Contains(registration, "AddHuntingApplicationState(");
+        StringAssert.Contains(registration, "AddHuntingWebModule(");
+        StringAssert.Contains(registration, "services.AddHuntingRuntime(options);");
+        StringAssert.Contains(registration, "services.AddHuntingApplicationState(options);");
+
+        var runtimeStart = registration.IndexOf("AddHuntingRuntime(", StringComparison.Ordinal);
+        var applicationStateStart = registration.IndexOf("AddHuntingApplicationState(", StringComparison.Ordinal);
+        var runtimeSection = registration[runtimeStart..applicationStateStart];
+
+        Assert.IsFalse(
+            runtimeSection.Contains("AppDbPath", StringComparison.Ordinal)
+            || runtimeSection.Contains("AddApplicationPersistence", StringComparison.Ordinal),
+            "Runtime registration must not own application-state persistence paths.");
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

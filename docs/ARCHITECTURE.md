@@ -210,16 +210,28 @@ Hunting should remain responsible for query execution and analytical lineage. Wo
 
 ### Target post-merge module boundaries and sequence
 
-Suggested `DeltaZulu.Platform` module boundaries after consolidation:
+Suggested `DeltaZulu.Platform` module boundaries after consolidation should use one shared taxonomy instead of competing Workbench and Hunting names:
 
 | Module | Owns |
 |---|---|
-| `DeltaZulu.Platform.ThreatHunting` | `HuntInvestigation`, lifecycle, backlog integration, findings, decisions, metrics, handovers. |
-| `DeltaZulu.Platform.Hunting.Analytics` | KQL execution, query runs, result snapshots, evidence artifact storage, visualizations, pivots, lineage. |
-| `DeltaZulu.Platform.DetectionEngineering` | Detection rules, versions, tests, deployment, promotion queue. |
-| `DeltaZulu.Platform.Operations` | Alerts, incident candidates, triage-ready operational signals. |
-| `DeltaZulu.Platform.Workbench` | Shell, assignment, comments, generic tasks, user workflow UX. |
-| `DeltaZulu.Platform.Contracts` | Shared identifiers, DTOs, domain events, reference types. |
+| `DeltaZulu.Platform.Web` | Central host, providers, shell, route composition, static asset loading. |
+| `DeltaZulu.Platform.Web.Abstractions` | Shared module descriptors, navigation items, route groups, static asset descriptors, and platform module contracts. |
+| `DeltaZulu.Blazor.Components` | Domain-light shared UI primitives and design-system components. |
+| `DeltaZulu.DetectionContent` | Accepted detection-content identity, path/reference, executable read-model, fixture/test references, and metadata contracts. |
+| `DeltaZulu.Hunting.Querying` | KQL validation, translation, query execution orchestration, diagnostics, and query-run lineage. |
+| `DeltaZulu.Hunting.Runtime` | DuckDB-backed runtime state, detection runs, alerts, evidence capture, and runtime repositories. |
+| `DeltaZulu.Hunting.Schema` | Bronze/Silver/Golden security schema contracts and schema projection. |
+| `DeltaZulu.Hunting.Render` | Render directive parsing, chart/table models, and visualization execution behavior. |
+| `DeltaZulu.Hunting.Web` | Hunting module UI mounted under a platform-owned route manifest. |
+| `DeltaZulu.Security.Alerts` | Shared alert/candidate contracts when operational boundaries are finalized. |
+| `DeltaZulu.Security.Correlation` | Deterministic correlation and incident-candidate contract family. |
+| `DeltaZulu.Security.Cases` | Incident/case lifecycle outside Hunting query execution. |
+| `DeltaZulu.Workbench.DetectionContent` | Draft/check/review/accept workflow over governed detection content. |
+| `DeltaZulu.Workbench.Hunts` | `HuntInvestigation`, lifecycle, backlog integration, findings, decisions, metrics, and handovers. |
+| `DeltaZulu.Workbench.Workflow` | Generic analyst workflow patterns used by Workbench-owned domains. |
+| `DeltaZulu.Workbench.Web` | Workbench module UI, not the platform host shell. |
+
+`AddHuntingWebModule(...)` and `HuntingModuleRouter` are temporary compatibility seams. ADR 0017 records that final platform hosting should use `DeltaZulu.Platform.Web.Abstractions` rather than a Hunting-owned router or a Workbench-owned shell as the shared abstraction.
 
 Post-merge sequence: validate actual Workbench entities, define shared contracts, implement `HuntInvestigation`, add Hunting-owned durable `HuntQueryRun` and result snapshots, add data-source readiness checks and visibility-gap findings, implement typed handovers, then add UI and metrics once contracts are stable.
 

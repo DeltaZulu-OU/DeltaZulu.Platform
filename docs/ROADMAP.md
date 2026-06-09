@@ -207,6 +207,7 @@ owns product hosting and detection-content governance.
 | 3 | P2 | Implemented baseline: expose a Core validation interface over approved catalog translation. | Workbench consumes approved schema/catalog contracts without reaching into translator internals. |
 | 4 | P2 | Review generated SQL/debug SQL exposure and ensure it remains developer/runtime-only. | Detection-content governance stays separate from runtime internals. |
 | 5 | P2 | Implemented baseline: extract Hunting web-module service registration and standalone bootstrapping while keeping query/runtime/schema/data logic outside web. | Later migration into a shared host shell requires less service-registration and orchestration rewrite. |
+| 6 | P0 | Implemented hardening: split registration into `AddHuntingRuntime(...)`, `AddHuntingApplicationState(...)`, and `AddHuntingWebModule(...)`. | Platform import can replace persistence/provider ownership without disturbing DuckDB runtime registration. |
 
 Exit criteria:
 
@@ -214,6 +215,7 @@ Exit criteria:
 - Validation-only tests instantiate the schema/catalog and KQL translator path without a DuckDB connection.
 - Runtime SQL remains transient and exposed only through explicit developer-mode/debug paths.
 - Web composition is factored behind registration/mapping seams suitable for a shared host.
+- Broad H2+ detection/candidate/incident feature work stays paused until module naming, route manifests, and shared candidate/incident/hunt contracts are settled.
 
 ### MP2 — Content library and application-state separation
 
@@ -225,6 +227,7 @@ confusing accepted detection content with local hunting state.
 | 1 | P1 | Implemented baseline: map saved queries to draft-only content-library artifacts. | Saved queries can evolve into detection-content library artifacts without becoming accepted content by default. |
 | 2 | P1 | Implemented vocabulary transition: library UI classifies local query records as saved queries, with compatibility aliases only. | Workbench can govern, version, review, or accept query artifacts later. |
 | 3 | P1 | Implemented baseline: document the shared accepted detection-content dependency and keep saved queries draft-only application state without adding local competing contracts. | Transient hunting state is not mistaken for accepted detection content. |
+| 4 | P0 | Implemented hardening: add an executable accepted-detection read-model boundary note without implementing local accepted-content contracts. | Hunting can state runtime needs for query text, enabled state, severity, confidence, schedule, entity hints, suppression, fixtures, and metadata while waiting for `DeltaZulu.DetectionContent`. |
 
 Exit criteria:
 
@@ -243,6 +246,7 @@ Exit criteria:
 | 3 | P1 | Implemented baseline: Hunting `app.css` scopes compatibility aliases under `.hunt-app` and sources values from DeltaZulu semantic tokens. | Assets can move into a shared host with less styling and script friction. |
 | 4 | P1 | In progress: continue dashboard/component cleanup; after platform import, move generic table/panel/dialog/empty-state/page-header/Markdown/dashboard chrome onto `DeltaZulu.Blazor.Components`. | The merged app does not carry a second visual system. |
 | 5 | P2 | Implemented baseline: add `docs/MERGE-PREPARATION.md` with host, UI, asset, persistence, routing-manifest, and detection-content migration notes. | The later server merge is explicit, reviewable, and testable. |
+| 5a | P0 | Implemented hardening: accept ADR 0017 for `DeltaZulu.Platform.Web.Abstractions` and document `/hunting` route-prefix candidates before final host mounting. | Hunting and Workbench do not standardize on incompatible local router/shell abstractions. |
 | 6 | P2 | Implemented baseline: document Hunting's intended role in the merged architecture: runtime, KQL validation, schema catalog, render, dashboards. | Workbench/Hunting responsibilities do not drift during merge work. |
 
 Exit criteria:

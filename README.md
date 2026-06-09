@@ -20,8 +20,8 @@ Hunting is intended to provide a familiar threat-hunting experience over local o
 - Deterministic query translation, diagnostics, reusable KQL syntax validation, and tests for supported KQL constructs.
 - Render-aware query execution and dashboard composition without introducing a second query runtime.
 - Saved queries can be projected into draft-only content-library artifacts for later Workbench governance without treating local hunting state as accepted content.
-- Standalone web-host concerns are separated from module registration/routing so Hunting can later mount inside `DeltaZulu.Platform.Web` without moving query/runtime/schema/data logic into the web edge.
-- Accepted detection-content ownership is documented as a future shared-package dependency; Hunting keeps saved queries and local detections out of canonical governed content.
+- Standalone web-host concerns are separated from module registration/routing so Hunting can later mount inside `DeltaZulu.Platform.Web` without moving query/runtime/schema/data logic into the web edge; registration is now staged through runtime, application-state, and web-module layers.
+- Accepted detection-content ownership is documented as a future shared-package dependency; Hunting keeps saved queries and local detections out of canonical governed content, and the executable accepted-detection read-model boundary is captured as documentation only.
 - Dashboard detail pages default to readonly mode; edit-mode changes are staged locally, including collision-aware title-bar layout drags, and persisted by the top-right Save action.
 - Dashboard widgets prioritize visualization/table content while keeping source and execution metadata for all run outcomes in Debug logs.
 
@@ -34,6 +34,8 @@ Implementation-status snapshot: dependency versions are centrally pinned, packag
 - Dashboard QA checklist: [`docs/DASHBOARD-PR-CHECKLIST.md`](docs/DASHBOARD-PR-CHECKLIST.md)
 - Threat hunting workflow boundary: [`docs/ARCHITECTURE.md#threat-hunting-workflow-boundary`](docs/ARCHITECTURE.md#threat-hunting-workflow-boundary)
 - Merge preparation: [`docs/MERGE-PREPARATION.md`](docs/MERGE-PREPARATION.md)
+- Platform web module ADR: [`docs/adr/0017-use-shared-platform-web-module-abstractions.md`](docs/adr/0017-use-shared-platform-web-module-abstractions.md)
+- Executable detection-content boundary: [`docs/analysis/executable-detection-content-boundary.md`](docs/analysis/executable-detection-content-boundary.md)
 
 ## Usage
 

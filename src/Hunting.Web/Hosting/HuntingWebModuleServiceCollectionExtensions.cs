@@ -15,21 +15,15 @@ using MudBlazor.Services;
 public static class HuntingWebModuleServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the current Hunting web module services for standalone hosting or early platform composition.
-    /// This is not the final platform module contract: before production mounting, split runtime/query services,
-    /// application-state services, and standalone persistence defaults behind shared platform abstractions.
+    /// Registers DuckDB-backed Hunting query/runtime services. This layer is reusable outside the
+    /// standalone Blazor host and deliberately excludes application-state persistence and UI providers.
     /// </summary>
-    public static IServiceCollection AddHuntingWebModule(
+    public static IServiceCollection AddHuntingRuntime(
         this IServiceCollection services,
         HuntingWebModuleOptions options)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
-
-        if (options.RegisterMudServices)
-        {
-            services.AddMudServices();
-        }
 
         services.AddSingleton(_ => {
             var catalog = new ApprovedViewCatalog();
@@ -46,21 +40,58 @@ public static class HuntingWebModuleServiceCollectionExtensions
             timeoutSeconds: options.TimeoutSeconds,
             developerMode: options.DeveloperMode,
             plannerMaxIterations: options.PlannerMaxIterations));
-
         services.AddSingleton<QueryService>();
-        services.AddScoped<EditorBus>();
-        services.AddScoped<LanguageService>();
-        // Standalone-compatible default. A platform host should supply tenant/module-aware
-        // persistence ownership before final mounting instead of relying on a module-local path.
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers local Hunting application-state persistence and stateful services that depend on it.
+    /// This is a standalone-compatible bridge; a platform host should replace the path-based SQLite
+    /// ownership with tenant/module-aware persistence before final mounting.
+    /// </summary>
+    public static IServiceCollection AddHuntingApplicationState(
+        this IServiceCollection services,
+        HuntingWebModuleOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(options);
+
         services.AddApplicationPersistence($"Data Source={options.AppDbPath}");
         services.AddDashboards();
-        services.AddHuntingRenderWeb();
         services.AddScoped<UserSettingsState>();
         services.AddScoped<QueryLibraryService>();
         services.AddScoped<VisualizationLibraryService>();
         services.AddScoped<LibraryService>();
         services.AddScoped<LibraryPageController>();
         services.AddScoped<DashboardListPageController>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the current Hunting web module services for standalone hosting or early platform composition.
+    /// This is not the final platform module contract: before production mounting, the route manifest,
+    /// navigation entries, static assets, provider ownership, and persistence ownership should move behind
+    /// shared <c>DeltaZulu.Platform.Web.Abstractions</c> contracts.
+    /// </summary>
+    public static IServiceCollection AddHuntingWebModule(
+        this IServiceCollection services,
+        HuntingWebModuleOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(options);
+
+        if (options.RegisterMudServices)
+        {
+            services.AddMudServices();
+        }
+
+        services.AddHuntingRuntime(options);
+        services.AddHuntingApplicationState(options);
+        services.AddHuntingRenderWeb();
+        services.AddScoped<EditorBus>();
+        services.AddScoped<LanguageService>();
 
         return services;
     }

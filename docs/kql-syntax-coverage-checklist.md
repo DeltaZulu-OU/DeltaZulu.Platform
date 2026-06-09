@@ -32,6 +32,8 @@ Translator decomposition is also structural only: public `KustoToRelational` rem
 
 Validation adapter note: reusable query validation is now structural only and does not change KQL construct coverage. `Hunting.Core.Validation.IQuerySyntaxValidator` runs the approved-catalog translator path and returns `QueryDiagnostic` results without executing DuckDB SQL or referencing `Hunting.Web`.
 
+Platform module hardening note: splitting Hunting registration into runtime, application-state, and web-module layers and documenting the future shared platform route manifest are composition-only changes. They do not add KQL tables, translation constructs, or emitted SQL semantics.
+
 Dashboard readonly/edit mode is UI-only: dashboard detail pages default to readonly mode, expose a top-right Edit/Save mode switch, gate dashboard settings, widget editing, widget deletion, widget creation, and layout changes behind edit mode, and persist staged edit-mode changes only when Save is selected. Dashboard layout drag behavior is also UI-only: edit-mode widget movement starts from the title bar, excludes widget action controls, uses push-down displacement to keep free-axis movement non-overlapping, and batches changed layout updates into the staged draft only. This does not change construct coverage or KQL translation semantics.
 
 Dashboard markdown widgets are UI-only: Markdown content is rendered by the Web dashboard host with Markdig 1.2.0, Monaco switches the widget editor between `kql` and `markdown` language modes by widget kind, and this does not change construct coverage or KQL translation semantics.
