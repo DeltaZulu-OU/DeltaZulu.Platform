@@ -7,12 +7,12 @@
 <MudSnackbarProvider />
 
 <MudLayout>
-    <DzAppBar ProductName="Detection Content Workbench"
-              ProductBadge="POC"
-              LogoSrc="logo-light.png"
+    <DzAppBar ProductName="@WorkbenchShell.ProductName"
+              ProductBadge="@WorkbenchShell.ProductBadge"
+              LogoSrc="@WorkbenchShell.LogoSrc"
               OnMenuClick="@ToggleDrawer" />
 
-    <DzSideNav @bind-Open="_drawerOpen" Items="_navItems" />
+    <DzSideNav @bind-Open="_drawerOpen" Items="WorkbenchShell.ModuleNavItems" />
 
     <DzMainContent>
         @Body
@@ -21,16 +21,6 @@
 
 @code {
     private static readonly MudTheme _theme = Workbench.Web.WorkbenchTheme.Create();
-
-    private static readonly IReadOnlyList<DzNavItem> _navItems =
-    [
-        new("Home", "/", Icons.Material.Outlined.Dashboard, NavLinkMatch.All),
-        new("Detections", "/detections", Icons.Material.Outlined.Radar),
-        new("Changes", "/changes", Icons.Material.Outlined.Assignment),
-        new("History", "/history", Icons.Material.Outlined.History),
-        new("Settings", "/settings", Icons.Material.Outlined.Settings, DividerBefore: true),
-    ];
-
     private bool _drawerOpen = true;
 
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;

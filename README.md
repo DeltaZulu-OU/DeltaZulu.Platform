@@ -18,6 +18,8 @@ engines, or SIEM runtimes.
 
 ```text
 src/
+  DeltaZulu.Blazor.Components Reusable DeltaZulu design-system Razor components
+  DeltaZulu.DetectionContent Shared detection-content contracts and path conventions
   Workbench.Web              ASP.NET Core Blazor Web App (Server interactive), MudBlazor shell
   Workbench.Application      Application services and module-owned abstractions
   Workbench.Domain           Domain entities, enums, invariants
@@ -78,6 +80,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the product definition, u
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Product definition, user stories, module boundaries, data ownership, technical model. |
 | [`docs/AGENTS.md`](docs/AGENTS.md) | Constraints for contributors and AI agents. |
 | [`docs/design-system/WORKBENCH_DESIGN_AUDIT.md`](docs/design-system/WORKBENCH_DESIGN_AUDIT.md) | Local design-system drift audit. |
+| [`docs/PLATFORM_MERGE_PREP.md`](docs/PLATFORM_MERGE_PREP.md) | Reusable UI, shared detection-content, and central-host merge-preparation inventory. |
 | [`docs/adr/`](docs/adr/) | Architecture Decision Records. Binding unless superseded. |
 
 ## Conventions

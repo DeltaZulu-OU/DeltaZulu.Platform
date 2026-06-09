@@ -23,9 +23,13 @@
         "resolved": "18.0.0",
         "contentHash": "ptHVgcYmLejGuWXV7RMFoEqFKYMXnieOlWLPzEslfDtzZ9ngMhjYwykfqjBN2+fMEAEyobozkj07lKEpR4dssA=="
       },
+      "deltazulu.detectioncontent": {
+        "type": "Project"
+      },
       "workbench.application": {
         "type": "Project",
         "dependencies": {
+          "DeltaZulu.DetectionContent": "[1.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.8, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.8, )",
           "Workbench.Domain": "[1.0.0, )"

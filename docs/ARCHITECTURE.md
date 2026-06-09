@@ -415,6 +415,8 @@ Single ASP.NET Core modular monolith (ADR-0001).
 
 ```text
 src/
+  DeltaZulu.Blazor.Components Reusable DeltaZulu design-system primitives and static assets
+  DeltaZulu.DetectionContent Shared detection-content identity/path/reference contracts
   Workbench.Web              Blazor/MudBlazor host and composition root
   Workbench.Application      Application services, ports, read models
   Workbench.Domain           Aggregates, enums, invariants, value objects
@@ -598,3 +600,7 @@ Security boundaries:
 - Repository writes happen only during merge or controlled restore.
 - Restore creates new content; never rewrites history.
 - Fixture sizes and row counts are limited.
+
+## Platform merge-preparation boundaries
+
+Workbench is being prepared for eventual composition inside `DeltaZulu.Platform.Web`, but this repository does not build that central host. Reusable design-system primitives live in `DeltaZulu.Blazor.Components`; Workbench-specific adapters stay in `Workbench.Web` when they depend on Workbench domain/application enums or workflow state. Stable detection-content identity, slug/path, file, and accepted-reference contracts live in `DeltaZulu.DetectionContent`; drafts, change requests, checks, reviews, approvals, merge readiness, and workflow orchestration remain Workbench-owned operational/governance concepts. See [`PLATFORM_MERGE_PREP.md`](PLATFORM_MERGE_PREP.md) for the current inventory and remaining blockers.

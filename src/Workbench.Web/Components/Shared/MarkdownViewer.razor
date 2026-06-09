@@ -1,11 +1,6 @@
 @namespace Workbench.Web.Components.Shared
-@using Markdig
-@using Markdig.Syntax
-@using Markdig.Syntax.Inlines
 
-<div class="markdown-viewer">
-    @((MarkupString)_renderedHtml)
-</div>
+<DzMarkdownText Content="@Content" CurrentDocumentPath="@CurrentFilePath" LinkMapper="@MapToRoute" />
 
 @code {
     /// <summary>Raw markdown content to render.</summary>
@@ -18,81 +13,6 @@
     /// </summary>
     [Parameter]
     public string? CurrentFilePath { get; set; }
-
-    private string _renderedHtml = string.Empty;
-
-    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
-        .UseAdvancedExtensions()
-        .UseYamlFrontMatter()
-        .Build();
-
-    protected override void OnParametersSet()
-    {
-        if (string.IsNullOrEmpty(Content))
-        {
-            _renderedHtml = string.Empty;
-            return;
-        }
-
-        var doc = Markdown.Parse(Content, Pipeline);
-
-        // Rewrite internal relative links to Blazor routes.
-        RewriteLinks(doc);
-
-        using var writer = new StringWriter();
-        var renderer = new Markdig.Renderers.HtmlRenderer(writer);
-        Pipeline.Setup(renderer);
-        renderer.Render(doc);
-        writer.Flush();
-        _renderedHtml = writer.ToString();
-    }
-
-    private void RewriteLinks(MarkdownDocument doc)
-    {
-        foreach (var link in doc.Descendants<LinkInline>())
-        {
-            if (link.Url is null) continue;
-
-            // Skip external URLs and anchors.
-            if (link.Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                || link.Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-                || link.Url.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase)
-                || link.Url.StartsWith('#'))
-            {
-                continue;
-            }
-
-            // Resolve relative path against current file's directory.
-            var resolved = ResolveRelativePath(link.Url);
-            if (resolved is null) continue;
-
-            // Map to Blazor route.
-            link.Url = MapToRoute(resolved);
-        }
-    }
-
-    private string? ResolveRelativePath(string relativePath)
-    {
-        if (CurrentFilePath is null) return relativePath;
-
-        var currentDir = CurrentFilePath.Contains('/')
-            ? CurrentFilePath[..CurrentFilePath.LastIndexOf('/')]
-            : string.Empty;
-
-        // Split and resolve . and ..
-        var parts = $"{currentDir}/{relativePath}".Split('/', StringSplitOptions.RemoveEmptyEntries);
-        var resolved = new Stack<string>();
-
-        foreach (var part in parts)
-        {
-            if (part == ".") continue;
-            if (part == ".." && resolved.Count > 0) { resolved.Pop(); continue; }
-            if (part == "..") continue;
-            resolved.Push(part);
-        }
-
-        return string.Join('/', resolved.Reverse());
-    }
 
     private static string MapToRoute(string repoPath)
     {

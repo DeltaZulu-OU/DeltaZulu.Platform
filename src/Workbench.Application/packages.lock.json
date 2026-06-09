@@ -17,6 +17,9 @@
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.8"
         }
       },
+      "deltazulu.detectioncontent": {
+        "type": "Project"
+      },
       "workbench.domain": {
         "type": "Project"
       }

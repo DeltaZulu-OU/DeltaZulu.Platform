@@ -1,0 +1,36 @@
+<DzMarkdownViewer Html="@_renderedHtml" Class="@Class" @attributes="AdditionalAttributes" />
+
+@code {
+    /// <summary>Raw markdown content to render.</summary>
+    [Parameter, EditorRequired] public string Content { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional current document path used to resolve relative links before mapping them to hrefs.
+    /// </summary>
+    [Parameter] public string? CurrentDocumentPath { get; set; }
+
+    /// <summary>
+    /// Optional link mapper. Receives a normalized repository-relative path for relative links and
+    /// returns the href to render. If omitted, normalized relative links are rendered unchanged.
+    /// </summary>
+    [Parameter] public Func<string, string>? LinkMapper { get; set; }
+
+    /// <summary>
+    /// Allows raw HTML in Markdown. Keep false for untrusted or user-editable content.
+    /// </summary>
+    [Parameter] public bool AllowRawHtml { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string _renderedHtml = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        _renderedHtml = DzMarkdownRenderer.RenderToHtml(
+            Content,
+            CurrentDocumentPath,
+            LinkMapper,
+            AllowRawHtml);
+    }
+}

@@ -9,6 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\DeltaZulu.Blazor.Components\DeltaZulu.Blazor.Components.csproj" />
+    <ProjectReference Include="..\..\src\DeltaZulu.DetectionContent\DeltaZulu.DetectionContent.csproj" />
     <ProjectReference Include="..\..\src\Workbench.Domain\Workbench.Domain.csproj" />
     <ProjectReference Include="..\..\src\Workbench.Application\Workbench.Application.csproj" />
     <ProjectReference Include="..\..\src\Workbench.Persistence\Workbench.Persistence.csproj" />

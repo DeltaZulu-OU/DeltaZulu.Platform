@@ -22,7 +22,7 @@ Product CSS:
 Page-specific CSS only where unavoidable
 ```
 
-Workbench already follows the first-product version of that sequence: MudBlazor base CSS, `deltazulu-tokens.css`, and then `app.css` for DeltaZulu/MudBlazor overrides.
+Workbench follows this sequence for its standalone host: MudBlazor base CSS, `deltazulu-tokens.css`, `dz-components.css`, `dz-shell.css`, and then `app.css` for Workbench-only overrides.
 
 ## Product CSS rules for Hunting
 
@@ -42,3 +42,9 @@ Hunting should not define a second global visual system in `:root`, `html`, or `
 - Keep product selectors scoped with prefixes such as `.workbench-*` and `.hunt-*` when a rule can affect a shared shell.
 - Avoid global resets in product CSS. Shared shell CSS owns `html`, `body`, reset, and font smoothing rules.
 - Page-specific CSS should be rare and must not redefine theme tokens globally.
+
+## Workbench module-readiness notes
+
+Workbench centralizes standalone shell metadata and module navigation in `src/Workbench.Web/Components/Layout/WorkbenchShell.cs`. A future `DeltaZulu.Platform.Web` host should replace Workbench chrome/provider ownership, load shared static assets once, and compose Workbench routes/navigation as module UI instead of nesting the current standalone layout. See [`PLATFORM_MERGE_PREP.md`](PLATFORM_MERGE_PREP.md) for the current blockers.
+
+Shared-library UI guardrails can be checked with `pwsh ./scripts/design-audit.ps1 -IncludeShared`; this keeps the RCL free of Workbench references while retaining the default Workbench-only scan for product-page drift.

@@ -1,29 +1,47 @@
 [CmdletBinding()]
 param(
     [string] $Root = ".",
-    [switch] $Strict
+    [switch] $Strict,
+    [switch] $IncludeShared
 )
 
 $ErrorActionPreference = "Stop"
 
 $rootPath = Resolve-Path $Root
-$webRoot = Join-Path $rootPath "src/Workbench.Web"
+$scanRoots = @(Join-Path $rootPath "src/Workbench.Web")
 
-if (-not (Test-Path $webRoot)) {
-    Write-Error "Could not find src/Workbench.Web under '$rootPath'. Run this script from the repository root or pass -Root."
+if ($IncludeShared) {
+    $scanRoots += Join-Path $rootPath "src/DeltaZulu.Blazor.Components"
 }
 
-$razorFiles = Get-ChildItem -Path $webRoot -Recurse -Filter "*.razor" |
-    Where-Object {
-        $_.FullName -notmatch "\\bin\\" -and
-        $_.FullName -notmatch "\\obj\\"
+foreach ($scanRoot in $scanRoots) {
+    if (-not (Test-Path $scanRoot)) {
+        Write-Error "Could not find scan root '$scanRoot'. Run this script from the repository root or pass -Root."
     }
+}
+
+$razorFiles = $scanRoots | ForEach-Object {
+    Get-ChildItem -Path $_ -Recurse -Filter "*.razor"
+} | Where-Object {
+    $_.FullName -notmatch "\\bin\\" -and
+    $_.FullName -notmatch "\\obj\\"
+}
+
+$sharedFiles = @()
+if ($IncludeShared) {
+    $sharedRoot = Join-Path $rootPath "src/DeltaZulu.Blazor.Components"
+    $sharedFiles = Get-ChildItem -Path $sharedRoot -Recurse -File |
+        Where-Object {
+            $_.FullName -notmatch "\\bin\\" -and
+            $_.FullName -notmatch "\\obj\\"
+        }
+}
 
 $allowedRawMudChipFiles = @(
-    "src/Workbench.Web/Components/DesignSystem/DzMetaChip.razor",
-    "src/Workbench.Web/Components/DesignSystem/DzFilterChip.razor",
-    "src/Workbench.Web/Components/DesignSystem/DzStatusChip.razor",
-    "src/Workbench.Web/Components/Shared/StatusChip.razor"
+    "src/Workbench.Web/Components/Shared/StatusChip.razor",
+    "src/Workbench.Web/Components/Shared/TlpChip.razor",
+    "src/Workbench.Web/Components/Shared/DzComparisonStatusChip.razor",
+    "src/Workbench.Web/Components/Shared/DzReviewDecisionChip.razor"
 )
 
 $allowedStyleFiles = @(
@@ -74,7 +92,7 @@ foreach ($file in $razorFiles) {
                 -File $relative `
                 -Line $lineNumber `
                 -Text $line `
-                -Guidance "Move repeated visual styling into Workbench-design-system.css or a Dz* component. Small one-off layout exceptions should be justified in review."
+                -Guidance "Move repeated visual styling into DeltaZulu.Blazor.Components CSS or a Dz* component. Small one-off layout exceptions should be justified in review."
         }
 
         if ($line -match 'MudOverlay') {
@@ -104,10 +122,10 @@ foreach ($file in $razorFiles) {
                 -File $relative `
                 -Line $lineNumber `
                 -Text $line `
-                -Guidance "Prefer DzMetaChip, DzStatusChip, DzFilterChip, DzComparisonStatusChip, or DzReviewDecisionChip unless the chip is inside a design-system component."
+                -Guidance "Prefer DeltaZulu.Blazor.Components primitives (DzMetaChip, DzStatusChip, DzFilterChip) or Workbench enum adapters unless the chip is inside a design-system component."
         }
 
-        if ($line -match '<MudPaper\b' -and $relative -notmatch '/DesignSystem/') {
+        if ($line -match '<MudPaper\b') {
             Add-Finding `
                 -Rule "raw-mudpaper" `
                 -Severity "info" `
@@ -115,6 +133,27 @@ foreach ($file in $razorFiles) {
                 -Line $lineNumber `
                 -Text $line `
                 -Guidance "Prefer DzPanel, DzEmptyState, dz-table-shell, or another scoped design-system surface for product UI panels."
+        }
+    }
+}
+
+
+foreach ($file in $sharedFiles) {
+    $relative = Get-RelativePath $file.FullName
+    $lines = Get-Content -Path $file.FullName
+
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i]
+        $lineNumber = $i + 1
+
+        if ($line -match 'Workbench\.(Domain|Application|Persistence|Infrastructure|Workflow|Validation|Web)') {
+            Add-Finding `
+                -Rule "shared-workbench-reference" `
+                -Severity "error" `
+                -File $relative `
+                -Line $lineNumber `
+                -Text $line `
+                -Guidance "DeltaZulu.Blazor.Components must remain domain-light and must not reference Workbench projects or namespaces."
         }
     }
 }

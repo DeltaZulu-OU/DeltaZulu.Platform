@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DeltaZulu.DetectionContent\DeltaZulu.DetectionContent.csproj" />
     <ProjectReference Include="..\Workbench.Domain\Workbench.Domain.csproj" />
   </ItemGroup>
 
