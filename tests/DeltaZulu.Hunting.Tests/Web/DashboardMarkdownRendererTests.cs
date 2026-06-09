@@ -1,6 +1,6 @@
-namespace Hunting.Tests.Web;
+namespace DeltaZulu.Hunting.Tests.Web;
 
-using Hunting.Web.Dashboards.Markdown;
+using DeltaZulu.Hunting.Web.Dashboards.Markdown;
 
 [TestClass]
 public sealed class DashboardMarkdownRendererTests

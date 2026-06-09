@@ -1,13 +1,13 @@
-namespace Hunting.Tests.Web;
+namespace DeltaZulu.Hunting.Tests.Web;
 
 using System.Text.Json;
-using Hunting.Application.SavedQueries;
-using Hunting.Application.Visualizations;
-using Hunting.Render.Directives;
-using Hunting.Render.Model;
-using Hunting.Web.Dashboards;
-using Hunting.Web.Dashboards.Persistence;
-using Hunting.Web.Services;
+using DeltaZulu.Hunting.Application.SavedQueries;
+using DeltaZulu.Hunting.Application.Visualizations;
+using DeltaZulu.Hunting.Render.Directives;
+using DeltaZulu.Hunting.Render.Model;
+using DeltaZulu.Hunting.Web.Dashboards;
+using DeltaZulu.Hunting.Web.Dashboards.Persistence;
+using DeltaZulu.Hunting.Web.Services;
 
 [TestClass]
 public sealed class VisualizationLibraryServiceTests

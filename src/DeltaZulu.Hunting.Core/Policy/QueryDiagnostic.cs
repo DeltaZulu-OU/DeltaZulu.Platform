@@ -1,4 +1,4 @@
-namespace Hunting.Core.Policy;
+namespace DeltaZulu.Hunting.Core.Policy;
 
 /// <summary>
 /// Pipeline phase where a diagnostic originated.

@@ -1,6 +1,6 @@
-namespace Hunting.Tests.Render;
+namespace DeltaZulu.Hunting.Tests.Render;
 
-using Hunting.Render.Model;
+using DeltaZulu.Hunting.Render.Model;
 
 [TestClass]
 public sealed class RenderModelContractTests

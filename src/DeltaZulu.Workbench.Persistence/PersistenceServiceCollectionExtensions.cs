@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
-using Workbench.Application.Abstractions;
-using Workbench.Persistence.Repositories;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Persistence.Repositories;
 
-namespace Workbench.Persistence;
+namespace DeltaZulu.Workbench.Persistence;
 
 public static class PersistenceServiceCollectionExtensions
 {

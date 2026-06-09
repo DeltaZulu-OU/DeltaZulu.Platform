@@ -1,7 +1,7 @@
-using Hunting.Core.Schema;
+using DeltaZulu.Hunting.Core.Schema;
 using Microsoft.JSInterop;
 
-namespace Hunting.Web.Services;
+namespace DeltaZulu.Hunting.Web.Services;
 
 public sealed class LanguageService : IAsyncDisposable
 {

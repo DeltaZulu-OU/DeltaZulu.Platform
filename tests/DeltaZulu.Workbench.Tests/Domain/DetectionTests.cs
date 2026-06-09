@@ -1,6 +1,6 @@
-using Workbench.Domain.Detections;
+using DeltaZulu.Workbench.Domain.Detections;
 
-namespace Workbench.Tests.Domain;
+namespace DeltaZulu.Workbench.Tests.Domain;
 
 [TestClass]
 public sealed class DetectionTests

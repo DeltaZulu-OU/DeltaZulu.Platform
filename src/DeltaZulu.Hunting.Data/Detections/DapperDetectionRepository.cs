@@ -1,8 +1,8 @@
-namespace Hunting.Data.Detections;
+namespace DeltaZulu.Hunting.Data.Detections;
 
 using Dapper;
-using Hunting.Application.Detections;
-using Hunting.Data.Persistence;
+using DeltaZulu.Hunting.Application.Detections;
+using DeltaZulu.Hunting.Data.Persistence;
 
 public sealed class DapperDetectionRepository : IDetectionRepository, IDisposable
 {

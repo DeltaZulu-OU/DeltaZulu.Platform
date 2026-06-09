@@ -1,3 +1,3 @@
-namespace Hunting.Core.Samples;
+namespace DeltaZulu.Hunting.Core.Samples;
 
 public sealed record SampleQuery(string Category, string Label, string Kql);

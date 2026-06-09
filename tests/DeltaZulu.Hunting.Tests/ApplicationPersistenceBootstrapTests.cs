@@ -1,11 +1,11 @@
-namespace Hunting.Tests;
+namespace DeltaZulu.Hunting.Tests;
 
-using Hunting.Application.QueryHistory;
-using Hunting.Application.SavedQueries;
-using Hunting.Application.Settings;
-using Hunting.Application.Visualizations;
-using Hunting.Core.Samples;
-using Hunting.Data.Persistence;
+using DeltaZulu.Hunting.Application.QueryHistory;
+using DeltaZulu.Hunting.Application.SavedQueries;
+using DeltaZulu.Hunting.Application.Settings;
+using DeltaZulu.Hunting.Application.Visualizations;
+using DeltaZulu.Hunting.Core.Samples;
+using DeltaZulu.Hunting.Data.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 

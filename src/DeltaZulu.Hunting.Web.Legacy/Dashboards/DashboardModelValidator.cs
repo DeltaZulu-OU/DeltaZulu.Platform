@@ -1,6 +1,6 @@
-namespace Hunting.Web.Dashboards;
+namespace DeltaZulu.Hunting.Web.Dashboards;
 
-using Hunting.Render.Directives;
+using DeltaZulu.Hunting.Render.Directives;
 
 public static class DashboardModelValidator
 {

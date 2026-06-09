@@ -1,6 +1,6 @@
 using MudBlazor;
 
-namespace Workbench.Web;
+namespace DeltaZulu.Workbench.Web;
 
 /// <summary>
 /// MudBlazor theme mapped to the DeltaZulu Design System tokens.

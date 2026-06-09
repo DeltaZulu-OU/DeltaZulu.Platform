@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Workbench.Application</RootNamespace>
-    <AssemblyName>Workbench.Application</AssemblyName>
+    <RootNamespace>DeltaZulu.Workbench.Application</RootNamespace>
+    <AssemblyName>DeltaZulu.Workbench.Application</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DeltaZulu.DetectionContent\DeltaZulu.DetectionContent.csproj" />
-    <ProjectReference Include="..\Workbench.Domain\Workbench.Domain.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Workbench.Domain\DeltaZulu.Workbench.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

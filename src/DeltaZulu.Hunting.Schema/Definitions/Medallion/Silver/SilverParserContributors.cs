@@ -1,8 +1,8 @@
-namespace Hunting.Schema.Definitions.Medallion.Silver;
+namespace DeltaZulu.Hunting.Schema.Definitions.Medallion.Silver;
 
-using Hunting.Core.Mapping;
-using Hunting.Core.Schema;
-using Hunting.Schema.Definitions.Medallion.Golden;
+using DeltaZulu.Hunting.Core.Mapping;
+using DeltaZulu.Hunting.Core.Schema;
+using DeltaZulu.Hunting.Schema.Definitions.Medallion.Golden;
 using static Hunting.Core.Mapping.MapDsl;
 
 /// <summary>

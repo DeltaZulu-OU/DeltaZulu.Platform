@@ -1,6 +1,6 @@
-namespace Hunting.Core.Validation;
+namespace DeltaZulu.Hunting.Core.Validation;
 
-using Hunting.Core.Policy;
+using DeltaZulu.Hunting.Core.Policy;
 
 public sealed record QuerySyntaxValidationResult(
     bool IsValid,

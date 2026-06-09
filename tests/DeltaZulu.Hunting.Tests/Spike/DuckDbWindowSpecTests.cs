@@ -1,8 +1,8 @@
-namespace Hunting.Tests.Spike;
+namespace DeltaZulu.Hunting.Tests.Spike;
 
 using System.Globalization;
 using DuckDB.NET.Data;
-using Hunting.Data;
+using DeltaZulu.Hunting.Data;
 
 /// <summary>
 /// <para>

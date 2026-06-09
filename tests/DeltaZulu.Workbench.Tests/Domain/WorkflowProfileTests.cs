@@ -1,6 +1,6 @@
-using Workbench.Domain.Workflow;
+using DeltaZulu.Workbench.Domain.Workflow;
 
-namespace Workbench.Tests.Domain;
+namespace DeltaZulu.Workbench.Tests.Domain;
 
 [TestClass]
 public sealed class WorkflowProfileTests

@@ -1,4 +1,4 @@
-namespace Hunting.Web.Dashboards.Persistence;
+namespace DeltaZulu.Hunting.Web.Dashboards.Persistence;
 
 internal static class DashboardStoreSql
 {

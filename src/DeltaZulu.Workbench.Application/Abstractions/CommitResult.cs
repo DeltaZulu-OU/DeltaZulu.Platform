@@ -1,4 +1,4 @@
-namespace Workbench.Application.Abstractions;
+namespace DeltaZulu.Workbench.Application.Abstractions;
 
 /// <summary>Result of a successful commit to the accepted content store.</summary>
 public sealed record CommitResult

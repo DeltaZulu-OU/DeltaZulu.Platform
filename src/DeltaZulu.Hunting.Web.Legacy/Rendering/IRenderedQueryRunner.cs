@@ -1,6 +1,6 @@
-namespace Hunting.Web.Rendering;
+namespace DeltaZulu.Hunting.Web.Rendering;
 
-using Hunting.Render.Model;
+using DeltaZulu.Hunting.Render.Model;
 
 public interface IRenderedQueryRunner
 {

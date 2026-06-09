@@ -1,6 +1,6 @@
-namespace Hunting.Schema.Definitions.Medallion.Golden;
+namespace DeltaZulu.Hunting.Schema.Definitions.Medallion.Golden;
 
-using Hunting.Core.Schema;
+using DeltaZulu.Hunting.Core.Schema;
 
 /// <summary>
 /// <para>Active Phase 1A Golden operator-facing contracts.</para>

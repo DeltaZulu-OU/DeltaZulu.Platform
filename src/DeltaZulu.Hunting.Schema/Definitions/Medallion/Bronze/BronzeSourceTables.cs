@@ -1,6 +1,6 @@
-namespace Hunting.Schema.Definitions.Medallion.Bronze;
+namespace DeltaZulu.Hunting.Schema.Definitions.Medallion.Bronze;
 
-using Hunting.Core.Schema;
+using DeltaZulu.Hunting.Core.Schema;
 
 /// <summary>
 /// <para>Active Phase 1A source-family Bronze table definitions.</para>

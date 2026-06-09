@@ -1,8 +1,8 @@
 using System.Globalization;
-using Workbench.Domain.ContentLibrary;
-using Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Domain.ContentLibrary;
+using DeltaZulu.Workbench.Domain.Enums;
 
-namespace Workbench.Application.ContentLibrary;
+namespace DeltaZulu.Workbench.Application.ContentLibrary;
 
 /// <summary>
 /// Converts existing Hunting saved-query exports into Workbench content-library records.

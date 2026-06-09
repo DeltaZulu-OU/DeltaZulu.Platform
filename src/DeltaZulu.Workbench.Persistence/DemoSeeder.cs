@@ -1,7 +1,7 @@
 using Dapper;
 using Microsoft.Data.Sqlite;
 
-namespace Workbench.Persistence;
+namespace DeltaZulu.Workbench.Persistence;
 
 public static class DemoSeeder
 {

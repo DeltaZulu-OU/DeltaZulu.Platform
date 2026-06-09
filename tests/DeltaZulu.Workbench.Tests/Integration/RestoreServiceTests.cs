@@ -1,8 +1,8 @@
-using Workbench.Application.Services;
-using Workbench.Domain.Changes;
-using Workbench.Domain.Detections;
+using DeltaZulu.Workbench.Application.Services;
+using DeltaZulu.Workbench.Domain.Changes;
+using DeltaZulu.Workbench.Domain.Detections;
 
-namespace Workbench.Tests.Integration;
+namespace DeltaZulu.Workbench.Tests.Integration;
 
 [TestClass]
 public sealed class RestoreServiceTests : IDisposable

@@ -1,9 +1,9 @@
 using System.Text;
 using LibGit2Sharp;
 using Microsoft.Extensions.Options;
-using Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Application.Abstractions;
 
-namespace Workbench.Infrastructure.AcceptedContent;
+namespace DeltaZulu.Workbench.Infrastructure.AcceptedContent;
 
 /// <summary>
 /// LibGit2Sharp-backed implementation of <see cref="IAcceptedContentStore"/> for accepted

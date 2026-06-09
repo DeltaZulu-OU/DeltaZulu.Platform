@@ -1,4 +1,4 @@
-namespace Workbench.Application.Abstractions;
+namespace DeltaZulu.Workbench.Application.Abstractions;
 
 /// <summary>
 /// Abstraction over the Git-backed accepted content store. The application layer talks to

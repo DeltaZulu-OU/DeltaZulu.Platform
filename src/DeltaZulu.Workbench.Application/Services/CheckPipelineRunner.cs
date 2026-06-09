@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Logging;
-using Workbench.Application.Abstractions;
-using Workbench.Domain.Common;
-using Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Domain.Common;
+using DeltaZulu.Workbench.Domain.Identifiers;
 
-namespace Workbench.Application.Services;
+namespace DeltaZulu.Workbench.Application.Services;
 
 public sealed class CheckPipelineRunner(
     IChangeRequestRepository changes,

@@ -1,7 +1,7 @@
-namespace Hunting.Data;
+namespace DeltaZulu.Hunting.Data;
 
-using Hunting.Core.DuckDbSql;
-using Hunting.Core.Schema;
+using DeltaZulu.Hunting.Core.DuckDbSql;
+using DeltaZulu.Hunting.Core.Schema;
 
 /// <summary>
 /// Compares expected schema-object fingerprints with recorded provenance rows.

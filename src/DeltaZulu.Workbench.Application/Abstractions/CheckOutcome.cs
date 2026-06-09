@@ -1,6 +1,6 @@
-using Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Domain.Enums;
 
-namespace Workbench.Application.Abstractions;
+namespace DeltaZulu.Workbench.Application.Abstractions;
 
 /// <summary>
 /// Result of running a single <see cref="ICheck"/>. The pipeline maps this to

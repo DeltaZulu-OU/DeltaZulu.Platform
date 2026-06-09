@@ -1,4 +1,4 @@
-namespace Hunting.Web.Dashboards;
+namespace DeltaZulu.Hunting.Web.Dashboards;
 
 using System.Text.Json;
 

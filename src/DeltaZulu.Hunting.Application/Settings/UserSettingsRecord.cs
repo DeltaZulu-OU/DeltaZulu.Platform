@@ -1,3 +1,3 @@
-namespace Hunting.Application.Settings;
+namespace DeltaZulu.Hunting.Application.Settings;
 
 public sealed record UserSettingsRecord(string DefaultTimeFilter, int? DefaultResultLimit);

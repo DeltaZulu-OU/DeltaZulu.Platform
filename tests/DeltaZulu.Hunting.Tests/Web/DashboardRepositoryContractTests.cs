@@ -1,7 +1,7 @@
-namespace Hunting.Tests.Web;
+namespace DeltaZulu.Hunting.Tests.Web;
 
-using Hunting.Web.Dashboards;
-using Hunting.Web.Dashboards.Persistence;
+using DeltaZulu.Hunting.Web.Dashboards;
+using DeltaZulu.Hunting.Web.Dashboards.Persistence;
 
 [TestClass]
 public sealed class DashboardRepositoryContractTests

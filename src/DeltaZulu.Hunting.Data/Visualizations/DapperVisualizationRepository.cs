@@ -1,7 +1,7 @@
-namespace Hunting.Data.Visualizations;
+namespace DeltaZulu.Hunting.Data.Visualizations;
 
 using Dapper;
-using Hunting.Data.Persistence;
+using DeltaZulu.Hunting.Data.Persistence;
 using AppIVisualizationRepository = Hunting.Application.Visualizations.IVisualizationRepository;
 using AppVisualizationRecord = Hunting.Application.Visualizations.VisualizationRecord;
 

@@ -1,8 +1,8 @@
-namespace Hunting.Data;
+namespace DeltaZulu.Hunting.Data;
 
 using Dapper;
-using Hunting.Core.DuckDbSql;
-using Hunting.Core.Schema;
+using DeltaZulu.Hunting.Core.DuckDbSql;
+using DeltaZulu.Hunting.Core.Schema;
 
 /// <summary>
 /// Records applied schema-object fingerprints into internal.schema_provenance.

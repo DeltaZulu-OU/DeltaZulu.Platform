@@ -1,4 +1,4 @@
-namespace Workbench.Domain.Workflow;
+namespace DeltaZulu.Workbench.Domain.Workflow;
 
 /// <summary>
 /// Result of evaluating whether a change is currently mergeable. Names the unmet gates

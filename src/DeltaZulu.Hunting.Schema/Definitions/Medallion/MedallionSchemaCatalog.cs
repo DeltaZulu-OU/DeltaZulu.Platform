@@ -1,9 +1,9 @@
-namespace Hunting.Schema.Definitions.Medallion;
+namespace DeltaZulu.Hunting.Schema.Definitions.Medallion;
 
-using Hunting.Core.Schema;
-using Hunting.Schema.Definitions.Medallion.Bronze;
-using Hunting.Schema.Definitions.Medallion.Golden;
-using Hunting.Schema.Definitions.Medallion.Silver;
+using DeltaZulu.Hunting.Core.Schema;
+using DeltaZulu.Hunting.Schema.Definitions.Medallion.Bronze;
+using DeltaZulu.Hunting.Schema.Definitions.Medallion.Golden;
+using DeltaZulu.Hunting.Schema.Definitions.Medallion.Silver;
 
 /// <summary>
 /// <para>C#-first catalog for the medallion schema path.</para>

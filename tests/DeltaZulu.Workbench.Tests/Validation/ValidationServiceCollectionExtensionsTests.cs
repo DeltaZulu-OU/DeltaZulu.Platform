@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
-using Workbench.Application.Abstractions;
-using Workbench.Validation;
-using Workbench.Validation.Checks;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Validation;
+using DeltaZulu.Workbench.Validation.Checks;
 
-namespace Workbench.Tests.Validation;
+namespace DeltaZulu.Workbench.Tests.Validation;
 
 [TestClass]
 public sealed class ValidationServiceCollectionExtensionsTests

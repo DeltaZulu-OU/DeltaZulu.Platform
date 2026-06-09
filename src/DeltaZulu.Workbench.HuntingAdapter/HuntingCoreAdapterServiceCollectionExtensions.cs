@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Application.Abstractions;
 
-namespace Workbench.HuntingCoreAdapter;
+namespace DeltaZulu.Workbench.HuntingAdapter;
 
 /// <summary>Dependency-injection helpers for wiring the Hunting.Core-backed Workbench validator.</summary>
 public static class HuntingCoreAdapterServiceCollectionExtensions

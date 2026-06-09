@@ -1,4 +1,4 @@
-namespace Hunting.Core.Schema;
+namespace DeltaZulu.Hunting.Core.Schema;
 
 public enum ParserProjectionKind
 {

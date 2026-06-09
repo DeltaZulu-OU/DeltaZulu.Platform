@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>DeltaZulu.Hunting.Web</RootNamespace>
+    <AssemblyName>DeltaZulu.Hunting.Web.Legacy</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="hunting.db" />
+    <None Remove="hunting.db.wal" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DeltaZulu.Hunting.Application\DeltaZulu.Hunting.Application.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Hunting.Core\DeltaZulu.Hunting.Core.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Hunting.Data\DeltaZulu.Hunting.Data.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Hunting.Render\DeltaZulu.Hunting.Render.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Hunting.Schema\DeltaZulu.Hunting.Schema.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Markdig" />
+    <PackageReference Include="MudBlazor" />
+    <PackageReference Include="Vizor.ECharts" />
+  </ItemGroup>
+
+</Project>

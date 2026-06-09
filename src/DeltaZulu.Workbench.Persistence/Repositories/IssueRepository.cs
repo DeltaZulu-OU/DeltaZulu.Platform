@@ -1,10 +1,10 @@
 using Dapper;
-using Workbench.Application.Abstractions;
-using Workbench.Domain.Enums;
-using Workbench.Domain.Identifiers;
-using Workbench.Domain.Issues;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Domain.Issues;
 
-namespace Workbench.Persistence.Repositories;
+namespace DeltaZulu.Workbench.Persistence.Repositories;
 
 internal sealed class IssueRepository(DapperSession session) : IIssueRepository
 {

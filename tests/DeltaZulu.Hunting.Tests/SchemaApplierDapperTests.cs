@@ -1,7 +1,7 @@
-namespace Hunting.Tests;
+namespace DeltaZulu.Hunting.Tests;
 
-using Hunting.Core.Schema;
-using Hunting.Data;
+using DeltaZulu.Hunting.Core.Schema;
+using DeltaZulu.Hunting.Data;
 
 [TestClass]
 public sealed class SchemaApplierDapperTests

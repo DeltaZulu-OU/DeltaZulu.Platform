@@ -1,4 +1,4 @@
-namespace Hunting.Data;
+namespace DeltaZulu.Hunting.Data;
 
 /// <summary>
 /// Classifies provenance drift into conservative migration-safety outcomes.

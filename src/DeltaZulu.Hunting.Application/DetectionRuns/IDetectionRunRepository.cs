@@ -1,4 +1,4 @@
-namespace Hunting.Application.DetectionRuns;
+namespace DeltaZulu.Hunting.Application.DetectionRuns;
 
 public interface IDetectionRunRepository
 {

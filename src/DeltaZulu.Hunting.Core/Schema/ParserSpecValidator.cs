@@ -1,4 +1,4 @@
-namespace Hunting.Core.Schema;
+namespace DeltaZulu.Hunting.Core.Schema;
 
 /// <summary>
 /// Validates parser specifications against target Golden contracts.

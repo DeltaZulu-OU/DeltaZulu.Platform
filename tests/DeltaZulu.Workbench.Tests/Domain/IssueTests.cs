@@ -1,6 +1,6 @@
-using Workbench.Domain.Issues;
+using DeltaZulu.Workbench.Domain.Issues;
 
-namespace Workbench.Tests.Domain;
+namespace DeltaZulu.Workbench.Tests.Domain;
 
 [TestClass]
 public sealed class IssueTests

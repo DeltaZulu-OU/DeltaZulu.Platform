@@ -1,11 +1,11 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
-using Workbench.Application;
-using Workbench.Application.Services;
-using Workbench.Domain.Issues;
-using Workbench.Persistence;
+using DeltaZulu.Workbench.Application;
+using DeltaZulu.Workbench.Application.Services;
+using DeltaZulu.Workbench.Domain.Issues;
+using DeltaZulu.Workbench.Persistence;
 
-namespace Workbench.Tests.Integration;
+namespace DeltaZulu.Workbench.Tests.Integration;
 
 [TestClass]
 public sealed class SchemaInitializerTests

@@ -1,6 +1,6 @@
-namespace Hunting.Data;
+namespace DeltaZulu.Hunting.Data;
 
-using Hunting.Core.Policy;
+using DeltaZulu.Hunting.Core.Policy;
 
 public sealed class QueryStreamResult
 {

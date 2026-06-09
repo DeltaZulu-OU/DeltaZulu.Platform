@@ -1,8 +1,8 @@
-using Hunting.Core.Catalog;
-using Hunting.Core.Schema;
-using Hunting.Schema;
+using DeltaZulu.Hunting.Core.Catalog;
+using DeltaZulu.Hunting.Core.Schema;
+using DeltaZulu.Hunting.Schema;
 
-namespace Hunting.Tests.Schema;
+namespace DeltaZulu.Hunting.Tests.Schema;
 
 [TestClass]
 public class EditorSchemaMetadataTests

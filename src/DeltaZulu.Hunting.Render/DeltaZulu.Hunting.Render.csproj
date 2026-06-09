@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Hunting.Render</RootNamespace>
+    <RootNamespace>DeltaZulu.Hunting.Render</RootNamespace>
+    <AssemblyName>DeltaZulu.Hunting.Render</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

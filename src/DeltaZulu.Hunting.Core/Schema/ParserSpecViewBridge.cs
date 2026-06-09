@@ -1,4 +1,4 @@
-namespace Hunting.Core.Schema;
+namespace DeltaZulu.Hunting.Core.Schema;
 
 /// <summary>
 /// Bridge between Phase 1D parser specifications and the existing ParserViewDef model.

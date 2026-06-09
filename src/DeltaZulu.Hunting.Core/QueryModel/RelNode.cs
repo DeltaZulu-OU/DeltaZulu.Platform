@@ -1,4 +1,4 @@
-namespace Hunting.Core.QueryModel;
+namespace DeltaZulu.Hunting.Core.QueryModel;
 
 #region Relational nodes (query plan)
 

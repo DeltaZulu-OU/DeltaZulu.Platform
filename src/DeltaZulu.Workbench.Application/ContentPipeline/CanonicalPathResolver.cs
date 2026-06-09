@@ -1,7 +1,7 @@
 using DeltaZulu.DetectionContent.Paths;
-using Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Domain.Identifiers;
 
-namespace Workbench.Application.ContentPipeline;
+namespace DeltaZulu.Workbench.Application.ContentPipeline;
 
 /// <summary>
 /// Workbench compatibility adapter for the shared detection-content accepted path convention.

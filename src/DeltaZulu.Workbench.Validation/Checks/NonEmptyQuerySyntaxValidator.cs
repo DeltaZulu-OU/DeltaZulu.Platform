@@ -1,6 +1,6 @@
-using Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Application.Abstractions;
 
-namespace Workbench.Validation.Checks;
+namespace DeltaZulu.Workbench.Validation.Checks;
 
 /// <summary>
 /// Minimal deterministic validator used until a product parser adapter is registered.

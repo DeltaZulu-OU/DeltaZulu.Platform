@@ -1,4 +1,4 @@
-namespace Hunting.Data;
+namespace DeltaZulu.Hunting.Data;
 
 using Dapper;
 using DuckDB.NET.Data;

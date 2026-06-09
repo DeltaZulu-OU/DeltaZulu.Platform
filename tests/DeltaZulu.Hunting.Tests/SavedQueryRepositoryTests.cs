@@ -1,7 +1,7 @@
-namespace Hunting.Tests;
+namespace DeltaZulu.Hunting.Tests;
 
-using Hunting.Data.Persistence;
-using Hunting.Data.SavedQueries;
+using DeltaZulu.Hunting.Data.Persistence;
+using DeltaZulu.Hunting.Data.SavedQueries;
 using Microsoft.Data.Sqlite;
 using AppSavedQueryRecord = Hunting.Application.SavedQueries.SavedQueryRecord;
 

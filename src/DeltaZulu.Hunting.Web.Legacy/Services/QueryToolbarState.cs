@@ -1,4 +1,4 @@
-namespace Hunting.Web.Services;
+namespace DeltaZulu.Hunting.Web.Services;
 
 using System.Globalization;
 using System.Text.RegularExpressions;

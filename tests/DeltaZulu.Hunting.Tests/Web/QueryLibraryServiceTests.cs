@@ -1,9 +1,9 @@
-namespace Hunting.Tests.Web;
+namespace DeltaZulu.Hunting.Tests.Web;
 
-using Hunting.Application.QueryHistory;
-using Hunting.Application.SavedQueries;
-using Hunting.Application.Visualizations;
-using Hunting.Web.Services;
+using DeltaZulu.Hunting.Application.QueryHistory;
+using DeltaZulu.Hunting.Application.SavedQueries;
+using DeltaZulu.Hunting.Application.Visualizations;
+using DeltaZulu.Hunting.Web.Services;
 
 [TestClass]
 public sealed class QueryLibraryServiceTests

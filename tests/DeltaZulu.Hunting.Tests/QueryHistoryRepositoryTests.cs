@@ -1,7 +1,7 @@
-namespace Hunting.Tests;
+namespace DeltaZulu.Hunting.Tests;
 
-using Hunting.Data.Persistence;
-using Hunting.Data.QueryHistory;
+using DeltaZulu.Hunting.Data.Persistence;
+using DeltaZulu.Hunting.Data.QueryHistory;
 using Microsoft.Data.Sqlite;
 using AppQueryHistoryRecord = Hunting.Application.QueryHistory.QueryHistoryRecord;
 

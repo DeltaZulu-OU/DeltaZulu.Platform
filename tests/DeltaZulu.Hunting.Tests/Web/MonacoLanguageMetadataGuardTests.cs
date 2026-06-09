@@ -1,4 +1,4 @@
-namespace Hunting.Tests.Web;
+namespace DeltaZulu.Hunting.Tests.Web;
 
 [TestClass]
 public sealed class MonacoLanguageMetadataGuardTests

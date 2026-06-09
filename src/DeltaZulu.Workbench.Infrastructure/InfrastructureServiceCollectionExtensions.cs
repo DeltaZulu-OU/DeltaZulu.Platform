@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Workbench.Application.Abstractions;
-using Workbench.Infrastructure.AcceptedContent;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Infrastructure.AcceptedContent;
 
-namespace Workbench.Infrastructure;
+namespace DeltaZulu.Workbench.Infrastructure;
 
 /// <summary>Dependency injection registration for infrastructure adapters.</summary>
 public static class InfrastructureServiceCollectionExtensions

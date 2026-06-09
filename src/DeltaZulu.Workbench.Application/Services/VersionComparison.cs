@@ -1,6 +1,6 @@
-using Workbench.Domain.Detections;
+using DeltaZulu.Workbench.Domain.Detections;
 
-namespace Workbench.Application.Services;
+namespace DeltaZulu.Workbench.Application.Services;
 
 /// <summary>
 /// User-facing status for a file between two accepted detection versions.

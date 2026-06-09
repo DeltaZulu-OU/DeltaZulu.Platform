@@ -1,9 +1,9 @@
-namespace Hunting.Schema;
+namespace DeltaZulu.Hunting.Schema;
 
-using Hunting.Core.Catalog;
-using Hunting.Core.Schema;
-using Hunting.Schema.Definitions.Internal;
-using Hunting.Schema.Definitions.Medallion;
+using DeltaZulu.Hunting.Core.Catalog;
+using DeltaZulu.Hunting.Core.Schema;
+using DeltaZulu.Hunting.Schema.Definitions.Internal;
+using DeltaZulu.Hunting.Schema.Definitions.Medallion;
 
 /// <summary>
 /// Central schema conventions and bootstrap contracts for the hunting model.

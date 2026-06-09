@@ -1,6 +1,6 @@
-namespace Hunting.Tests.Web;
+namespace DeltaZulu.Hunting.Tests.Web;
 
-using Hunting.Web.Services;
+using DeltaZulu.Hunting.Web.Services;
 
 [TestClass]
 public sealed class EditorBusTests

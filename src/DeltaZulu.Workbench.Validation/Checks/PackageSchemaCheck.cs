@@ -1,8 +1,8 @@
-using Workbench.Application.Abstractions;
-using Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Domain.Enums;
 using YamlDotNet.RepresentationModel;
 
-namespace Workbench.Validation.Checks;
+namespace DeltaZulu.Workbench.Validation.Checks;
 
 /// <summary>
 /// Validates that the detection metadata YAML (<c>detection.yaml</c>) contains required

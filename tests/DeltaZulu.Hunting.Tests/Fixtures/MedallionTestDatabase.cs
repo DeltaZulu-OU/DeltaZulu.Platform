@@ -1,4 +1,4 @@
-namespace Hunting.Tests.Fixtures;
+namespace DeltaZulu.Hunting.Tests.Fixtures;
 
 using System.Globalization;
 using DuckDB.NET.Data;

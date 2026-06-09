@@ -1,7 +1,7 @@
-namespace Hunting.Data;
+namespace DeltaZulu.Hunting.Data;
 
 using Dapper;
-using Hunting.Core.Schema;
+using DeltaZulu.Hunting.Core.Schema;
 
 /// <summary>
 /// <para>

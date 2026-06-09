@@ -1,7 +1,7 @@
-using Workbench.Domain.Issues;
-using Workbench.Domain.Triage;
+using DeltaZulu.Workbench.Domain.Issues;
+using DeltaZulu.Workbench.Domain.Triage;
 
-namespace Workbench.Tests.Domain;
+namespace DeltaZulu.Workbench.Tests.Domain;
 
 [TestClass]
 public sealed class IncidentTests

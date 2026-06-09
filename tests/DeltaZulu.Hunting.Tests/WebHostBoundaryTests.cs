@@ -1,4 +1,4 @@
-namespace Hunting.Tests;
+namespace DeltaZulu.Hunting.Tests;
 
 [TestClass]
 public sealed class WebHostBoundaryTests

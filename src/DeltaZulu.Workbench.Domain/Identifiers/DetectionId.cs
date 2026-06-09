@@ -1,4 +1,4 @@
-namespace Workbench.Domain.Identifiers;
+namespace DeltaZulu.Workbench.Domain.Identifiers;
 
 /// <summary>Identifier for a <see cref="Detections.Detection"/>.</summary>
 public readonly record struct DetectionId(Guid Value)

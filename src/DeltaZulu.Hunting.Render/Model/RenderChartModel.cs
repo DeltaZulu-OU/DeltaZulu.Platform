@@ -1,4 +1,4 @@
-namespace Hunting.Render.Model;
+namespace DeltaZulu.Hunting.Render.Model;
 
 public sealed record RenderChartModel(
     bool CanRender,

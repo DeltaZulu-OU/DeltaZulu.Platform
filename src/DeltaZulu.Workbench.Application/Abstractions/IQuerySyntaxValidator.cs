@@ -1,6 +1,6 @@
-using Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Domain.Enums;
 
-namespace Workbench.Application.Abstractions;
+namespace DeltaZulu.Workbench.Application.Abstractions;
 
 /// <summary>
 /// Validates draft query text without touching runtime execution services, web modules,

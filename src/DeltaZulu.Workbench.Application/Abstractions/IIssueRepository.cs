@@ -1,7 +1,7 @@
-using Workbench.Domain.Identifiers;
-using Workbench.Domain.Issues;
+using DeltaZulu.Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Domain.Issues;
 
-namespace Workbench.Application.Abstractions;
+namespace DeltaZulu.Workbench.Application.Abstractions;
 
 public interface IIssueRepository
 {

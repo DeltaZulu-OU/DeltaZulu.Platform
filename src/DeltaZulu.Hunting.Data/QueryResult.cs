@@ -1,6 +1,6 @@
-namespace Hunting.Data;
+namespace DeltaZulu.Hunting.Data;
 
-using Hunting.Core.Policy;
+using DeltaZulu.Hunting.Core.Policy;
 
 /// <summary>
 /// Result of a query execution — either data or diagnostics.

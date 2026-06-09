@@ -1,9 +1,9 @@
 using System.Text.RegularExpressions;
-using Workbench.Domain.Common;
-using Workbench.Domain.Enums;
-using Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Domain.Common;
+using DeltaZulu.Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Domain.Identifiers;
 
-namespace Workbench.Domain.Detections;
+namespace DeltaZulu.Workbench.Domain.Detections;
 
 /// <summary>
 /// A detection is the identity object for a piece of detection content. It can exist before

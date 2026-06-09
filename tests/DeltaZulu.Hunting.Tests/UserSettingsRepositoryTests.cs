@@ -1,8 +1,8 @@
-namespace Hunting.Tests;
+namespace DeltaZulu.Hunting.Tests;
 
-using Hunting.Application.Settings;
-using Hunting.Data.Persistence;
-using Hunting.Data.Settings;
+using DeltaZulu.Hunting.Application.Settings;
+using DeltaZulu.Hunting.Data.Persistence;
+using DeltaZulu.Hunting.Data.Settings;
 using Microsoft.Data.Sqlite;
 
 [TestClass]

@@ -1,7 +1,7 @@
-namespace Hunting.Tests.DuckDbSql;
+namespace DeltaZulu.Hunting.Tests.DuckDbSql;
 
-using Hunting.Core.DuckDbSql;
-using Hunting.Core.Schema;
+using DeltaZulu.Hunting.Core.DuckDbSql;
+using DeltaZulu.Hunting.Core.Schema;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 [TestClass]

@@ -1,6 +1,6 @@
-namespace Hunting.Web.Dashboards.PageState;
+namespace DeltaZulu.Hunting.Web.Dashboards.PageState;
 
-using Hunting.Web.Dashboards.Runtime;
+using DeltaZulu.Hunting.Web.Dashboards.Runtime;
 
 public sealed class DashboardPageState
 {

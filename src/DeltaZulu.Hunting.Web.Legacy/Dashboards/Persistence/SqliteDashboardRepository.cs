@@ -1,8 +1,8 @@
-namespace Hunting.Web.Dashboards.Persistence;
+namespace DeltaZulu.Hunting.Web.Dashboards.Persistence;
 
 using System.Text.Json;
 using Dapper;
-using Hunting.Data.Persistence;
+using DeltaZulu.Hunting.Data.Persistence;
 
 public sealed class SqliteDashboardRepository : IDashboardRepository, IDisposable
 {

@@ -1,6 +1,6 @@
-using Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Application.Abstractions;
 
-namespace Workbench.Tests.Infrastructure;
+namespace DeltaZulu.Workbench.Tests.Infrastructure;
 
 /// <summary>
 /// In-memory implementation of <see cref="IAcceptedContentStore"/> for deterministic tests.

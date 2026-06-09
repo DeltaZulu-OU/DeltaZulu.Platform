@@ -1,6 +1,6 @@
-namespace Hunting.Web.Dashboards.Persistence;
+namespace DeltaZulu.Hunting.Web.Dashboards.Persistence;
 
-using Hunting.Web.Dashboards;
+using DeltaZulu.Hunting.Web.Dashboards;
 
 public interface IDashboardRepository
 {

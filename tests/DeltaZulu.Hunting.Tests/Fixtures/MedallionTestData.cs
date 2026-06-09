@@ -1,4 +1,4 @@
-namespace Hunting.Tests.Fixtures;
+namespace DeltaZulu.Hunting.Tests.Fixtures;
 
 /// <summary>
 /// <para>Small deterministic medallion fixture for runtime/schema tests.</para>
@@ -8,7 +8,7 @@ namespace Hunting.Tests.Fixtures;
 /// semantics. Tests that need stable Golden behavior should seed this fixture.
 /// </para>
 /// <para>
-/// Keep this type in namespace Hunting.Tests so tests under Hunting.Tests.*,
+/// Keep this type in namespace DeltaZulu.Hunting.Tests so tests under Hunting.Tests.*,
 /// including root-level MedallionTestDataTests, can resolve it without extra
 /// using directives.
 /// </para>

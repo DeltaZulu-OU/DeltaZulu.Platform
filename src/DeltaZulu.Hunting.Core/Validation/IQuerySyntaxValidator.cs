@@ -1,4 +1,4 @@
-namespace Hunting.Core.Validation;
+namespace DeltaZulu.Hunting.Core.Validation;
 
 /// <summary>
 /// Host-agnostic query syntax validation seam for consumers such as Workbench.

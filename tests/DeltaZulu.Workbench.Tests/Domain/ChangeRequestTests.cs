@@ -1,6 +1,6 @@
-using Workbench.Domain.Changes;
+using DeltaZulu.Workbench.Domain.Changes;
 
-namespace Workbench.Tests.Domain;
+namespace DeltaZulu.Workbench.Tests.Domain;
 
 [TestClass]
 public sealed class ChangeRequestTests

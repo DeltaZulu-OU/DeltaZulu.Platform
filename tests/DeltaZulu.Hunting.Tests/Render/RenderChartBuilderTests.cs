@@ -1,8 +1,8 @@
-namespace Hunting.Tests.Render;
+namespace DeltaZulu.Hunting.Tests.Render;
 
-using Hunting.Render.Model;
-using Hunting.Render.Services;
-using Hunting.Render.Tabular;
+using DeltaZulu.Hunting.Render.Model;
+using DeltaZulu.Hunting.Render.Services;
+using DeltaZulu.Hunting.Render.Tabular;
 
 [TestClass]
 public sealed class RenderChartBuilderTests

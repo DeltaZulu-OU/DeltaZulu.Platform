@@ -1,8 +1,8 @@
-namespace Hunting.Tests.DuckDbSql;
+namespace DeltaZulu.Hunting.Tests.DuckDbSql;
 
-using Hunting.Core.DuckDbSql;
-using Hunting.Core.Mapping;
-using Hunting.Core.Schema;
+using DeltaZulu.Hunting.Core.DuckDbSql;
+using DeltaZulu.Hunting.Core.Mapping;
+using DeltaZulu.Hunting.Core.Schema;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Hunting.Core.Mapping.MapDsl;
 

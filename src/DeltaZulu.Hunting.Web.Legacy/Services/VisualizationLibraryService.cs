@@ -1,11 +1,11 @@
-namespace Hunting.Web.Services;
+namespace DeltaZulu.Hunting.Web.Services;
 
 using System.Text.Json;
-using Hunting.Application.SavedQueries;
-using Hunting.Application.Visualizations;
-using Hunting.Render.Directives;
-using Hunting.Render.Model;
-using Hunting.Web.Dashboards.Persistence;
+using DeltaZulu.Hunting.Application.SavedQueries;
+using DeltaZulu.Hunting.Application.Visualizations;
+using DeltaZulu.Hunting.Render.Directives;
+using DeltaZulu.Hunting.Render.Model;
+using DeltaZulu.Hunting.Web.Dashboards.Persistence;
 
 /// <summary>
 /// Application-facing service for saved visualization definitions.

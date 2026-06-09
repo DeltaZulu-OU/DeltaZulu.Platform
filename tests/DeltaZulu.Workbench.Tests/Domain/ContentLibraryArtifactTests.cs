@@ -1,6 +1,6 @@
-using Workbench.Domain.ContentLibrary;
+using DeltaZulu.Workbench.Domain.ContentLibrary;
 
-namespace Workbench.Tests.Domain;
+namespace DeltaZulu.Workbench.Tests.Domain;
 
 [TestClass]
 public sealed class ContentLibraryArtifactTests

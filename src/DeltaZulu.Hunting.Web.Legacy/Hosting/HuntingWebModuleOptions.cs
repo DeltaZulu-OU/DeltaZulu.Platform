@@ -1,4 +1,4 @@
-namespace Hunting.Web.Hosting;
+namespace DeltaZulu.Hunting.Web.Hosting;
 
 /// <summary>
 /// Options for the current standalone-compatible Hunting module registration seam.

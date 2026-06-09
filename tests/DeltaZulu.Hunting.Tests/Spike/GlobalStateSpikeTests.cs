@@ -1,7 +1,7 @@
-namespace Hunting.Tests.Spike;
+namespace DeltaZulu.Hunting.Tests.Spike;
 
-using Hunting.Core.Catalog;
-using Hunting.Schema;
+using DeltaZulu.Hunting.Core.Catalog;
+using DeltaZulu.Hunting.Schema;
 using Kusto.Language;
 
 /// <summary>

@@ -1,7 +1,7 @@
-using Workbench.Application.Abstractions;
-using Workbench.Tests.Infrastructure;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Tests.Infrastructure;
 
-namespace Workbench.Tests.Integration;
+namespace DeltaZulu.Workbench.Tests.Integration;
 
 [TestClass]
 public sealed class InMemoryContentStoreTests

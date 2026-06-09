@@ -1,4 +1,4 @@
-namespace Hunting.Web.Dashboards.Persistence;
+namespace DeltaZulu.Hunting.Web.Dashboards.Persistence;
 
 public sealed class DashboardRepositoryException : Exception
 {

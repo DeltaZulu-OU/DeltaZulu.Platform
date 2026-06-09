@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
-using Workbench.Application.ContentLibrary;
-using Workbench.Application.Services;
+using DeltaZulu.Workbench.Application.ContentLibrary;
+using DeltaZulu.Workbench.Application.Services;
 
-namespace Workbench.Application;
+namespace DeltaZulu.Workbench.Application;
 
 public static class ApplicationServiceCollectionExtensions
 {

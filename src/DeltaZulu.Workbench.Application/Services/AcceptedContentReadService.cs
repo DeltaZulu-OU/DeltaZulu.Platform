@@ -1,9 +1,9 @@
-using Workbench.Application.Abstractions;
-using Workbench.Application.ContentPipeline;
-using Workbench.Domain.Common;
-using Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Application.ContentPipeline;
+using DeltaZulu.Workbench.Domain.Common;
+using DeltaZulu.Workbench.Domain.Identifiers;
 
-namespace Workbench.Application.Services;
+namespace DeltaZulu.Workbench.Application.Services;
 
 /// <summary>Comparison status between one draft file and current accepted content.</summary>
 public enum DraftAcceptedComparisonStatus

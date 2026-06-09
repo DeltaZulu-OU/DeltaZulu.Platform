@@ -1,4 +1,4 @@
-namespace Workbench.Domain.Common;
+namespace DeltaZulu.Workbench.Domain.Common;
 
 /// <summary>
 /// Thrown when a domain invariant is violated. Application services translate this into

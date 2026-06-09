@@ -1,9 +1,9 @@
-using Workbench.Application.Abstractions;
-using Workbench.Application.Services;
-using Workbench.Domain.Enums;
-using Workbench.Domain.Identifiers;
+using DeltaZulu.Workbench.Application.Abstractions;
+using DeltaZulu.Workbench.Application.Services;
+using DeltaZulu.Workbench.Domain.Enums;
+using DeltaZulu.Workbench.Domain.Identifiers;
 
-namespace Workbench.Tests.Integration;
+namespace DeltaZulu.Workbench.Tests.Integration;
 
 [TestClass]
 public sealed class MergeReconciliationServiceTests : IDisposable

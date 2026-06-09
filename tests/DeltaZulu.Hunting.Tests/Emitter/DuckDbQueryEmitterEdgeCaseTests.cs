@@ -1,8 +1,8 @@
-namespace Hunting.Tests.Emitter;
+namespace DeltaZulu.Hunting.Tests.Emitter;
 
 using System.Text.RegularExpressions;
-using Hunting.Core.DuckDbSql;
-using Hunting.Core.QueryModel;
+using DeltaZulu.Hunting.Core.DuckDbSql;
+using DeltaZulu.Hunting.Core.QueryModel;
 
 /// <summary>
 /// Edge case, boundary, and adversarial tests for the DuckDB query emitter.

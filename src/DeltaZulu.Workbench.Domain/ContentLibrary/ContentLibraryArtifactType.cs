@@ -1,4 +1,4 @@
-namespace Workbench.Domain.ContentLibrary;
+namespace DeltaZulu.Workbench.Domain.ContentLibrary;
 
 /// <summary>Object types supported by the shared detection-content library model.</summary>
 public enum ContentLibraryArtifactType

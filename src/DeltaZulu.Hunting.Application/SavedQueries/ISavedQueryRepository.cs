@@ -1,4 +1,4 @@
-namespace Hunting.Application.SavedQueries;
+namespace DeltaZulu.Hunting.Application.SavedQueries;
 
 public interface ISavedQueryRepository
 {

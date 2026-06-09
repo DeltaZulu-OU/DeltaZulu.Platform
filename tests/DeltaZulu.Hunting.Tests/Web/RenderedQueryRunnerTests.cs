@@ -1,10 +1,10 @@
-namespace Hunting.Tests.Web;
+namespace DeltaZulu.Hunting.Tests.Web;
 
-using Hunting.Core.Policy;
-using Hunting.Data;
-using Hunting.Render.Directives;
-using Hunting.Render.Services;
-using Hunting.Web.Rendering;
+using DeltaZulu.Hunting.Core.Policy;
+using DeltaZulu.Hunting.Data;
+using DeltaZulu.Hunting.Render.Directives;
+using DeltaZulu.Hunting.Render.Services;
+using DeltaZulu.Hunting.Web.Rendering;
 
 [TestClass]public sealed class RenderedQueryRunnerTests
 {

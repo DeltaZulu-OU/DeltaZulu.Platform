@@ -1,8 +1,8 @@
-namespace Hunting.Web.Dashboards.DependencyInjection;
+namespace DeltaZulu.Hunting.Web.Dashboards.DependencyInjection;
 
-using Hunting.Web.Dashboards.PageState;
-using Hunting.Web.Dashboards.Persistence;
-using Hunting.Web.Dashboards.Runtime;
+using DeltaZulu.Hunting.Web.Dashboards.PageState;
+using DeltaZulu.Hunting.Web.Dashboards.Persistence;
+using DeltaZulu.Hunting.Web.Dashboards.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 
 public static class DashboardServiceCollectionExtensions
