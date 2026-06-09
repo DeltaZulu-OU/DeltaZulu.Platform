@@ -316,7 +316,7 @@ public sealed class DashboardPageControllerTests
             Id = id,
             Title = id,
             Kind = DashboardWidgetKind.Query,
-            QueryText = "ProcessEvent | take 10",
+            QueryText = "ProcessEvent | take 10 | render",
             Layout = new DashboardLayout
             {
                 X = 0,
@@ -334,7 +334,7 @@ public sealed class DashboardPageControllerTests
         RenderChartModel chart)
         => new(
             queryResult,
-            RenderDirective.Table("No render directive."),
+            new RenderDirective { Kind = RenderKind.Table },
             chart);
 
     private static QueryResult CreateSuccessfulQueryResult()

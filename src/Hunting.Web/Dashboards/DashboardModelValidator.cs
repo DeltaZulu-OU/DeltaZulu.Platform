@@ -1,8 +1,12 @@
 namespace Hunting.Web.Dashboards;
 
+using Hunting.Render.Directives;
+
 public static class DashboardModelValidator
 {
     private const int DashboardGridColumnCount = 12;
+
+    private static readonly RenderDirectiveParser RenderDirectiveParser = new();
 
     public static IReadOnlyList<string> Validate(DashboardDefinition? dashboard)
     {
@@ -121,6 +125,24 @@ public static class DashboardModelValidator
         if (hasQueryText && hasVisualizationId)
         {
             errors.Add($"Query widget '{DisplayWidgetId(widget, index)}' must not define both query text and a visualization ID.");
+        }
+
+        if (hasQueryText)
+        {
+            ValidateWidgetRenderIntent(widget, index, errors);
+        }
+    }
+
+    private static void ValidateWidgetRenderIntent(
+        DashboardWidgetDefinition widget,
+        int index,
+        List<string> errors)
+    {
+        var parsed = RenderDirectiveParser.Parse(widget.QueryText);
+        if (!parsed.HasRenderDirective)
+        {
+            errors.Add(
+                $"Query widget '{DisplayWidgetId(widget, index)}' must include a render command. Use '| render' or '| render table' for a table widget, or choose a chart render type.");
         }
     }
 

@@ -11,6 +11,7 @@
  * :root and .hunt-app so scoped variables cannot silently defeat the
  * DeltaZulu product theme.
  */
+@import url("./deltazulu/dz-query-result-table.css");
 
 :root,
 .hunt-app {

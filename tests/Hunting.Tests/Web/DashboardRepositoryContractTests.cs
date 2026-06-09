@@ -18,7 +18,7 @@ public sealed class DashboardRepositoryContractTests
                 new DashboardWidgetDefinition
                 {
                     Title = "Events",
-                    QueryText = "ProcessEvent | take 5"
+                    QueryText = "ProcessEvent | take 5 | render"
                 }
             ]
         };

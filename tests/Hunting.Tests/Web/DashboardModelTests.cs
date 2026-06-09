@@ -24,7 +24,7 @@ public sealed class DashboardModelTests
         var widget = new DashboardWidgetDefinition
         {
             Title = "Processes",
-            QueryText = "ProcessEvent | take 10"
+            QueryText = "ProcessEvent | take 10 | render"
         };
         Assert.IsFalse(string.IsNullOrWhiteSpace(widget.Id));
         Assert.AreEqual(DashboardWidgetKind.Query, widget.Kind);
@@ -79,6 +79,24 @@ public sealed class DashboardModelTests
         };
         var errors = DashboardModelValidator.Validate(dashboard);
         Assert.Contains(error => error.Contains("must have query text", StringComparison.OrdinalIgnoreCase), errors);
+    }
+
+    [TestMethod]
+    public void Validate_QueryWidgetWithoutRenderCommand_ReturnsError()
+    {
+        var dashboard = CreateValidDashboard() with
+        {
+            Widgets =
+            [
+                CreateValidWidget() with { QueryText = "ProcessEvent | take 10" }
+            ]
+        };
+
+        var errors = DashboardModelValidator.Validate(dashboard);
+
+        Assert.Contains(
+            error => error.Contains("must include a render command", StringComparison.OrdinalIgnoreCase),
+            errors);
     }
 
     [TestMethod]
@@ -179,7 +197,7 @@ public sealed class DashboardModelTests
         => new()
         {
             Title = "Recent processes",
-            QueryText = "ProcessEvent | take 10"
+            QueryText = "ProcessEvent | take 10 | render"
         };
 
     private static void AssertContains(IReadOnlyList<string> errors, string expected)

@@ -1,5 +1,5 @@
 @namespace Hunting.Web.Components.Dashboards
-@using Hunting.Data
+@using Hunting.Web.Components.Dz
 @using Hunting.Web.Dashboards.Runtime
 
 <div class="dashboard-table-widget">
@@ -48,61 +48,13 @@
             Query result is missing.
         </div>
     }
-    else if (Result.QueryResult.RowCount == 0 || Result.QueryResult.ColumnCount == 0)
-    {
-        <div class="dashboard-widget-state dashboard-widget-state-muted">
-            Query returned no rows.
-        </div>
-    }
     else
     {
-        var queryResult = Result.QueryResult;
-        var visibleColumns = GetVisibleColumns(queryResult).ToArray();
-        var visibleRows = GetVisibleRows(queryResult).ToArray();
-
-        <div class="dashboard-table-meta">
-            <span>@queryResult.RowCount rows</span>
-            <span>@queryResult.ColumnCount columns</span>
-            @if (Result.Duration > TimeSpan.Zero)
-            {
-                <span>@Result.Duration.TotalMilliseconds.ToString("F0") ms</span>
-            }
-        </div>
-
-        <div class="dashboard-table-scroll">
-            <table class="dashboard-table">
-                <thead>
-                    <tr>
-                        @foreach (var columnIndex in visibleColumns)
-                        {
-                            <th title="@queryResult.Columns[columnIndex].TypeName">
-                                @queryResult.Columns[columnIndex].Name
-                            </th>
-                        }
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var rowIndex in visibleRows)
-                    {
-                        <tr>
-                            @foreach (var columnIndex in visibleColumns)
-                            {
-                                <td title="@FormatCell(queryResult.GetValue(rowIndex, columnIndex))">
-                                    @FormatCell(queryResult.GetValue(rowIndex, columnIndex))
-                                </td>
-                            }
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        @if (queryResult.RowCount > visibleRows.Length || queryResult.ColumnCount > visibleColumns.Length)
-        {
-            <div class="dashboard-table-truncation">
-                Showing @visibleRows.Length of @queryResult.RowCount rows and @visibleColumns.Length of @queryResult.ColumnCount columns.
-            </div>
-        }
+        <DzQueryResultTable Result="Result.QueryResult"
+                            Duration="Result.Duration"
+                            MaxColumns="MaxColumns"
+                            RowsPerPage="RowsPerPage"
+                            Height="@Height" />
     }
 </div>
 
@@ -111,35 +63,14 @@
     public DashboardWidgetRunResult? Result { get; set; }
 
     [Parameter]
-    public int MaxRows { get; set; } = 100;
+    public int MaxColumns { get; set; } = 30;
 
     [Parameter]
-    public int MaxColumns { get; set; } = 20;
+    public int RowsPerPage { get; set; } = 25;
 
     [Parameter]
     public int MaxDiagnostics { get; set; } = 5;
 
-    private IEnumerable<int> GetVisibleColumns(QueryResult result)
-    {
-        var count = Math.Clamp(MaxColumns, 1, result.ColumnCount);
-        return Enumerable.Range(0, count);
-    }
-
-    private IEnumerable<int> GetVisibleRows(QueryResult result)
-    {
-        var count = Math.Clamp(MaxRows, 1, result.RowCount);
-        return Enumerable.Range(0, count);
-    }
-
-    private static string FormatCell(object? value)
-    {
-        return value switch
-        {
-            null => string.Empty,
-            DateTime dateTime => dateTime.ToString("O"),
-            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("O"),
-            bool boolean => boolean ? "true" : "false",
-            _ => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty
-        };
-    }
+    [Parameter]
+    public string Height { get; set; } = "100%";
 }

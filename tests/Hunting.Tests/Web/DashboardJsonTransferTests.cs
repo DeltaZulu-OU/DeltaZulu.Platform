@@ -68,7 +68,7 @@ public sealed class DashboardJsonTransferTests
                     Id = "process-count",
                     Title = "Process count",
                     Kind = DashboardWidgetKind.Query,
-                    QueryText = "ProcessEvent | summarize Count = count()",
+                    QueryText = "ProcessEvent | summarize Count = count() | render",
                     Layout = new DashboardLayout
                     {
                         X = 0,

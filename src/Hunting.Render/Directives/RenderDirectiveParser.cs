@@ -20,6 +20,7 @@ public sealed partial class RenderDirectiveParser : IRenderDirectiveParser
             return new RenderDirectiveParseResult
             {
                 QueryTextWithoutRender = queryText,
+                HasRenderDirective = ContainsRenderToken(queryText),
                 Directive = ContainsRenderToken(queryText)
                     ? RenderDirective.Table("Render clause must be terminal and use key=value properties.")
                     : RenderDirective.Table()
@@ -32,16 +33,23 @@ public sealed partial class RenderDirectiveParser : IRenderDirectiveParser
             return new RenderDirectiveParseResult
             {
                 QueryTextWithoutRender = queryText,
+                HasRenderDirective = true,
                 Directive = RenderDirective.Table("Render clause must be terminal and use key=value properties.")
             };
         }
 
         var kindRaw = match.Groups["kind"].Value;
+        if (string.IsNullOrWhiteSpace(kindRaw))
+        {
+            kindRaw = "table";
+        }
+
         if (!SupportedKinds.Contains(kindRaw))
         {
             return new RenderDirectiveParseResult
             {
                 QueryTextWithoutRender = queryText[..match.Index].TrimEnd(),
+                HasRenderDirective = true,
                 Directive = RenderDirective.Table($"Unsupported render kind '{kindRaw}'.")
             };
         }
@@ -53,6 +61,7 @@ public sealed partial class RenderDirectiveParser : IRenderDirectiveParser
             return new RenderDirectiveParseResult
             {
                 QueryTextWithoutRender = queryText[..match.Index].TrimEnd(),
+                HasRenderDirective = true,
                 Directive = RenderDirective.Table($"Malformed render property '{malformedProperty}'. Expected key=value.")
             };
         }
@@ -60,6 +69,7 @@ public sealed partial class RenderDirectiveParser : IRenderDirectiveParser
         return new RenderDirectiveParseResult
         {
             QueryTextWithoutRender = queryText[..match.Index].TrimEnd(),
+            HasRenderDirective = true,
             Directive = new RenderDirective
             {
                 Kind = ParseKind(kindRaw),
@@ -149,7 +159,7 @@ public sealed partial class RenderDirectiveParser : IRenderDirectiveParser
             ? []
             : csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-    [GeneratedRegex(@"\|\s*render\s+(?<kind>[A-Za-z][A-Za-z0-9_-]*)(?<tail>.*?)\s*;?\s*$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\|\s*render(?:\s+(?<kind>[A-Za-z][A-Za-z0-9_-]*))?(?<tail>.*?)\s*;?\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex RenderRegex();
 
     [GeneratedRegex(@"^(?<legacy>.*?)(?:\s+with\s*\((?<withProps>.*)\))?\s*$", RegexOptions.IgnoreCase)]

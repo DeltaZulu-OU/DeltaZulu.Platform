@@ -150,7 +150,7 @@ public sealed class SqliteDashboardRepositoryTests
         Assert.AreEqual("Operations", loaded.Name);
         Assert.HasCount(1, loaded.Widgets);
         Assert.AreEqual("Process count", loaded.Widgets[0].Title);
-        Assert.AreEqual("ProcessEvent | summarize Count = count()", loaded.Widgets[0].QueryText);
+        Assert.AreEqual("ProcessEvent | summarize Count = count() | render", loaded.Widgets[0].QueryText);
     }
     private static DashboardDefinition CreateDashboard(
         string id = "dashboard-1",
@@ -175,7 +175,7 @@ public sealed class SqliteDashboardRepositoryTests
                     Id = "widget-1",
                     Title = "Process count",
                     Kind = DashboardWidgetKind.Query,
-                    QueryText = "ProcessEvent | summarize Count = count()",
+                    QueryText = "ProcessEvent | summarize Count = count() | render",
                     Layout = new DashboardLayout
                     {
                         X = 0,
@@ -280,7 +280,7 @@ public sealed class SqliteDashboardRepositoryTests
                 'Broken',
                 NULL,
                 0,
-                '{ not valid json',
+                '{not json',
                 '2026-01-01T00:00:00.0000000Z',
                 '2026-01-01T00:00:00.0000000Z'
             );
