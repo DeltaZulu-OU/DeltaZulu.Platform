@@ -1,0 +1,27 @@
+@namespace Workbench.Web.Components.Layout
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <DzAppBar ProductName="@WorkbenchShell.ProductName"
+              ProductBadge="@WorkbenchShell.ProductBadge"
+              LogoSrc="@WorkbenchShell.LogoSrc"
+              OnMenuClick="@ToggleDrawer" />
+
+    <DzSideNav @bind-Open="_drawerOpen" Items="WorkbenchShell.ModuleNavItems" />
+
+    <DzMainContent>
+        @Body
+    </DzMainContent>
+</MudLayout>
+
+@code {
+    private static readonly MudTheme _theme = Workbench.Web.WorkbenchTheme.Create();
+    private bool _drawerOpen = true;
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+}

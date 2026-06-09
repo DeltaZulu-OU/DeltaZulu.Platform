@@ -1,0 +1,63 @@
+@using Microsoft.AspNetCore.Components.Routing
+
+<MudDrawer Open="@Open"
+           OpenChanged="@OpenChanged"
+           ClipMode="@ClipMode"
+           Elevation="@Elevation"
+           Class="@DrawerClass">
+    @if (!string.IsNullOrWhiteSpace(Heading))
+    {
+        <div class="dz-shell-nav-heading">
+            <span class="eyebrow">@Heading</span>
+        </div>
+    }
+
+    @if (Header is not null)
+    {
+        <div class="dz-side-nav__header">
+            @Header
+        </div>
+    }
+
+    <MudNavMenu Class="dz-side-nav__menu">
+        @foreach (var item in Items)
+        {
+            if (item.DividerBefore)
+            {
+                <MudDivider Class="my-3 mx-4 dz-nav-divider" />
+            }
+
+            <MudNavLink Href="@item.Href"
+                        Match="@item.Match"
+                        Icon="@item.Icon">
+                @item.Label
+            </MudNavLink>
+        }
+    </MudNavMenu>
+
+    @if (Footer is not null)
+    {
+        <div class="dz-side-nav__footer">
+            @Footer
+        </div>
+    }
+</MudDrawer>
+
+@code {
+    [Parameter] public bool Open { get; set; } = true;
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public IReadOnlyList<DzNavItem> Items { get; set; } = [];
+    [Parameter] public string? Heading { get; set; } = "Navigation";
+    [Parameter] public DrawerClipMode ClipMode { get; set; } = DrawerClipMode.Always;
+    [Parameter] public int Elevation { get; set; }
+    [Parameter] public RenderFragment? Header { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string DrawerClass => string.Join(" ", new[]
+    {
+        "dz-side-nav",
+        Class
+    }.Where(static value => !string.IsNullOrWhiteSpace(value)));
+}

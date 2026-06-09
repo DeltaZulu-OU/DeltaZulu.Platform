@@ -1,0 +1,9 @@
+/* ============================================================
+   Detection Content Workbench — product-level CSS only
+
+   Shared DeltaZulu tokens, shell, MudBlazor overrides, navigation,
+   markdown, table, button, chip, and baseline rules now live in
+   DeltaZulu.Blazor.Components static assets.
+   ============================================================ */
+
+/* Keep this file for Workbench-specific overrides only. */

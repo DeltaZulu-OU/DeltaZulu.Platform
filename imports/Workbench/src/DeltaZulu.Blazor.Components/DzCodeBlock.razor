@@ -1,0 +1,29 @@
+<pre class="@BlockClass" @attributes="AdditionalAttributes"><code>@Content</code></pre>
+
+@code {
+    [Parameter] public string? Content { get; set; }
+    [Parameter] public bool Wrap { get; set; } = true;
+    [Parameter] public bool Light { get; set; }
+    [Parameter] public bool Compact { get; set; }
+    [Parameter] public int? MaxHeightPx { get; set; } = 480;
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string? MaxHeightClass => MaxHeightPx switch
+    {
+        null => null,
+        <= 320 => "dz-code-block--max-320",
+        <= 400 => "dz-code-block--max-400",
+        _ => "dz-code-block--max-480",
+    };
+
+    private string BlockClass => string.Join(" ", new[]
+    {
+        "dz-code-block",
+        Wrap ? "dz-code-block--wrap" : null,
+        Light ? "dz-code-block--light" : null,
+        Compact ? "dz-code-block--compact" : null,
+        MaxHeightClass,
+        Class
+    }.Where(static value => !string.IsNullOrWhiteSpace(value)));
+}

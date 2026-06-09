@@ -1,0 +1,55 @@
+<MudPaper Class="@PanelClass" Elevation="@Elevation" Outlined="@Outlined" @attributes="AdditionalAttributes">
+    @if (!string.IsNullOrWhiteSpace(Eyebrow) || !string.IsNullOrWhiteSpace(Title) || Header is not null || Actions is not null)
+    {
+        <div class="dz-panel__header">
+            <div class="dz-panel__heading">
+                @if (!string.IsNullOrWhiteSpace(Eyebrow))
+                {
+                    <span class="eyebrow dz-panel__eyebrow">@Eyebrow</span>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(Title))
+                {
+                    <MudText Typo="@TitleTypo" Class="dz-panel__title">@Title</MudText>
+                }
+
+                @if (Header is not null)
+                {
+                    @Header
+                }
+            </div>
+
+            @if (Actions is not null)
+            {
+                <div class="dz-panel__actions">
+                    @Actions
+                </div>
+            }
+        </div>
+    }
+
+    <div class="dz-panel__body">
+        @ChildContent
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Eyebrow { get; set; }
+    [Parameter] public Typo TitleTypo { get; set; } = Typo.h6;
+    [Parameter] public RenderFragment? Header { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public int Elevation { get; set; } = 1;
+    [Parameter] public bool Outlined { get; set; }
+    [Parameter] public bool Compact { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string PanelClass => string.Join(" ", new[]
+    {
+        "dz-panel",
+        Compact ? "dz-panel--compact" : null,
+        Class
+    }.Where(static value => !string.IsNullOrWhiteSpace(value)));
+}

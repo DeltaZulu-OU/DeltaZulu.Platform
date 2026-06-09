@@ -1,0 +1,435 @@
+@namespace Workbench.Web.Components.Pages
+@page "/issues/{Id}"
+@using MudBlazor
+@rendermode InteractiveServer
+@using Workbench.Application.Services
+@using Workbench.Domain.Changes
+@using Workbench.Domain.Common
+@using Workbench.Domain.Enums
+@using Workbench.Domain.Identifiers
+@using Workbench.Domain.Issues
+@inject IssueService IssueService
+@inject ChangeService ChangeService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Issue — @(_issue?.Key ?? "Loading")</PageTitle>
+
+@if (_issue is null)
+{
+    <MudProgressLinear Indeterminate="true" />
+    return;
+}
+
+<MudBreadcrumbs Items="_breadcrumbs" Class="mb-2" />
+
+<DzPageHeader Eyebrow="@IssueTypeLabel(_issue.Type)"
+              Title="@($"{_issue.Key} {_issue.Title}")">
+    <Metadata>
+        <StatusChip IssueStatus="_issue.Status" />
+        <DzMetaChip Kind="file">@_issue.Type</DzMetaChip>
+        @if (_issue.Tlp.HasValue)
+        {
+            <TlpChip Level="_issue.Tlp.Value" />
+        }
+    </Metadata>
+    <Actions>
+        @if (_issue.Status == IssueStatus.New)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       OnClick="TriageAsync">
+                Approve for triage
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Dark" Size="Size.Small"
+                       OnClick="RequestInfoAsync">
+                Request info
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                       OnClick="RejectAsync">
+                Reject
+            </MudButton>
+        }
+        @if (_issue.Status == IssueStatus.NeedsInfo)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       OnClick="ProvideInfoAsync">
+                Info provided
+            </MudButton>
+        }
+        @if (_issue.Status == IssueStatus.Triaged)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       OnClick="AcceptAsync">
+                Accept to backlog
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                       OnClick="RejectAsync">
+                Reject
+            </MudButton>
+        }
+        @if (_issue.Status == IssueStatus.Backlog)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       OnClick="() => _showCriteriaForm = true">
+                Define acceptance criteria
+            </MudButton>
+        }
+        @if (_issue.Status == IssueStatus.Ready)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       OnClick="StartWorkAsync">
+                Start work
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small"
+                       OnClick="BlockAsync">
+                Mark blocked
+            </MudButton>
+        }
+        @if (_issue.Status == IssueStatus.Blocked)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Warning" Size="Size.Small"
+                       OnClick="UnblockAsync">
+                Unblock
+            </MudButton>
+        }
+        @if (_issue.Status == IssueStatus.InProgress)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       OnClick="SubmitForReviewAsync">
+                Submit for review
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small"
+                       OnClick="BlockAsync">
+                Mark blocked
+            </MudButton>
+        }
+        @if (_issue.Status == IssueStatus.InReview)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                       OnClick="CompleteAsync">
+                Approve &amp; merge
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small"
+                       OnClick="RequestChangesAsync">
+                Request changes
+            </MudButton>
+        }
+        @if (_issue.Status == IssueStatus.Merged)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Dark" Size="Size.Small"
+                       OnClick="PublishAsync">
+                Publish
+            </MudButton>
+        }
+        @if (_issue.Status is not IssueStatus.Rejected and not IssueStatus.Closed
+                              and not IssueStatus.Merged and not IssueStatus.Published)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Dark" Size="Size.Small"
+                       OnClick="CloseAsync">
+                Close
+            </MudButton>
+        }
+    </Actions>
+</DzPageHeader>
+
+@if (_showCriteriaForm)
+{
+    <DzPanel Title="Acceptance criteria" Class="mb-4">
+        <MudText Typo="Typo.subtitle2" Class="mb-2">Acceptance criteria</MudText>
+        <MudTextField @bind-Value="_criteriaText" Multiline="true" Lines="4"
+                      Placeholder="Describe what the completed work must demonstrate."
+                      FullWidth="true" Class="mb-2" />
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       OnClick="DefineCriteriaAsync">Save criteria</MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small"
+                       OnClick="@(() => _showCriteriaForm = false)">Cancel</MudButton>
+        </div>
+    </DzPanel>
+}
+
+@if (_issue.ExternalCase is not null)
+{
+    <div class="dz-external-reference mb-4">
+        <MudIcon Icon="@Icons.Material.Outlined.OpenInNew" Size="Size.Small" Class="dz-inline-icon" />
+        @if (_issue.ExternalCase.Url is not null)
+        {
+            <MudLink Href="@_issue.ExternalCase.Url" Target="_blank" Typo="Typo.body2">
+                @_issue.ExternalCase.System: @_issue.ExternalCase.ExternalId
+            </MudLink>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                @_issue.ExternalCase.System: @_issue.ExternalCase.ExternalId
+            </MudText>
+        }
+    </div>
+}
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="Details">
+            <DzDetailList>
+                @if (!string.IsNullOrWhiteSpace(_issue.Description))
+                {
+                    <DzDetailItem Label="Description" Value="@_issue.Description" />
+                }
+                @if (!string.IsNullOrWhiteSpace(_issue.AcceptanceCriteria))
+                {
+                    <DzDetailItem Label="Acceptance criteria" Value="@_issue.AcceptanceCriteria" />
+                }
+                @if (!string.IsNullOrWhiteSpace(_issue.DataSource))
+                {
+                    <DzDetailItem Label="Data source" Value="@_issue.DataSource" Mono="true" />
+                }
+                @if (!string.IsNullOrWhiteSpace(_issue.Platform))
+                {
+                    <DzDetailItem Label="Platform" Value="@_issue.Platform" />
+                }
+                @if (!string.IsNullOrWhiteSpace(_issue.AttackTechniqueId))
+                {
+                    <DzDetailItem Label="ATT&amp;CK technique" Value="@_issue.AttackTechniqueId" Mono="true" />
+                }
+                @if (_issue.ExternalCase is null && _issue.Type == IssueType.Case)
+                {
+                    <DzDetailItem Label="External case">
+                        @if (!_showExternalCaseForm)
+                        {
+                            <DzActionLink OnClick="@(() => _showExternalCaseForm = true)" Class="mt-1">
+                                Link external case
+                            </DzActionLink>
+                        }
+                        else
+                        {
+                            <div class="mt-1">
+                                <MudTextField @bind-Value="_extSystem" Label="System" Margin="Margin.Dense" Class="mb-2" />
+                                <MudTextField @bind-Value="_extCaseId" Label="Case ID" Margin="Margin.Dense" Class="mb-2" />
+                                <MudTextField @bind-Value="_extCaseUrl" Label="URL (optional)" Margin="Margin.Dense" Class="mb-2" />
+                                <div class="d-flex gap-2">
+                                    <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Secondary"
+                                               OnClick="LinkExternalCase">Link</MudButton>
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => _showExternalCaseForm = false)">Cancel</MudButton>
+                                </div>
+                            </div>
+                        }
+                    </DzDetailItem>
+                }
+                <DzDetailItem Label="Classification">
+                    @if (!_showClassifyForm)
+                    {
+                        <div class="d-flex flex-wrap align-center gap-1 mt-1">
+                            @if (_issue.Tlp.HasValue)
+                            {
+                                <TlpChip Level="_issue.Tlp.Value" />
+                            }
+                            @foreach (var label in _issue.Labels)
+                            {
+                                <DzMetaChip Kind="label">@label</DzMetaChip>
+                            }
+                            @if (!_issue.Tlp.HasValue && _issue.Labels.Count == 0)
+                            {
+                                <MudText Typo="Typo.caption" Class="text-muted">None</MudText>
+                            }
+                            <DzActionLink OnClick="@(() => OpenClassifyForm())">
+                                Edit
+                            </DzActionLink>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mt-1">
+                            <MudSelect T="TlpLevel?" @bind-Value="_tlpInput" Label="TLP level"
+                                       Dense="true" Margin="Margin.Dense" Class="mb-2" Clearable="true">
+                                <MudSelectItem T="TlpLevel?" Value="@((TlpLevel?)null)">None</MudSelectItem>
+                                <MudSelectItem T="TlpLevel?" Value="@((TlpLevel?)TlpLevel.Clear)">TLP:CLEAR</MudSelectItem>
+                                <MudSelectItem T="TlpLevel?" Value="@((TlpLevel?)TlpLevel.Green)">TLP:GREEN</MudSelectItem>
+                                <MudSelectItem T="TlpLevel?" Value="@((TlpLevel?)TlpLevel.Amber)">TLP:AMBER</MudSelectItem>
+                                <MudSelectItem T="TlpLevel?" Value="@((TlpLevel?)TlpLevel.AmberStrict)">TLP:AMBER+STRICT</MudSelectItem>
+                                <MudSelectItem T="TlpLevel?" Value="@((TlpLevel?)TlpLevel.Red)">TLP:RED</MudSelectItem>
+                            </MudSelect>
+                            <MudTextField @bind-Value="_labelsInput" Label="Labels (comma-separated)"
+                                          Dense="true" Margin="Margin.Dense" Class="mb-2"
+                                          Placeholder="e.g. lateral-movement, windows" />
+                            <div class="d-flex gap-2">
+                                <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Secondary"
+                                           OnClick="SaveClassificationAsync">Save</MudButton>
+                                <MudButton Variant="Variant.Text" Size="Size.Small"
+                                           OnClick="@(() => _showClassifyForm = false)">Cancel</MudButton>
+                            </div>
+                        </div>
+                    }
+                </DzDetailItem>
+                <DzDetailItem Label="Created" Value="@_issue.CreatedAt.ToString("yyyy-MM-dd HH:mm")" Mono="true" />
+                <DzDetailItem Label="Updated" Value="@_issue.UpdatedAt.ToString("yyyy-MM-dd HH:mm")" Mono="true" />
+            </DzDetailList>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="8">
+        <MudText Typo="Typo.subtitle2" Class="dz-section-title">Related changes</MudText>
+        @if (_relatedChanges.Count == 0)
+        {
+            <DzEmptyState Title="No changes linked to this issue."
+                          Description="Linked changes will appear here once work starts from this issue."
+                          Icon="@Icons.Material.Outlined.Assignment" />
+        }
+        else
+        {
+            <DzTableShell>
+                <MudTable Items="_relatedChanges" Dense="true" Hover="true"
+                          OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item!.Id}"))"
+                          T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Key</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Updated</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
+                        <MudTd DataLabel="Title">@context.Title</MudTd>
+                        <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
+                        <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </DzTableShell>
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public string Id { get; set; } = null!;
+
+    private Issue? _issue;
+    private List<ChangeRequest> _relatedChanges = [];
+    private List<BreadcrumbItem> _breadcrumbs = [];
+
+    private bool _showExternalCaseForm;
+    private string _extSystem = "";
+    private string _extCaseId = "";
+    private string _extCaseUrl = "";
+
+    private bool _showCriteriaForm;
+    private string _criteriaText = "";
+
+    private bool _showClassifyForm;
+    private TlpLevel? _tlpInput;
+    private string _labelsInput = "";
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        if (!Guid.TryParse(Id, out var guid)) return;
+        var issueId = new IssueId(guid);
+
+        _issue = await IssueService.GetByIdAsync(issueId);
+        if (_issue is null) return;
+
+        _breadcrumbs =
+        [
+            new("Changes", "/changes"),
+            new(_issue.Key, null, disabled: true),
+        ];
+
+        var allChanges = await ChangeService.ListAsync();
+        _relatedChanges = allChanges.Where(c => c.LinkedIssueId == _issue.Id).ToList();
+    }
+
+    private static string IssueTypeLabel(IssueType type) => type switch
+    {
+        IssueType.Case => "Case",
+        IssueType.DetectionRequest => "Detection Request",
+        IssueType.FalsePositiveReport => "False Positive",
+        IssueType.DetectionBug => "Detection Bug",
+        IssueType.CoverageGap => "Coverage Gap",
+        IssueType.MetadataIssue => "Metadata Issue",
+        IssueType.TestFailure => "Test Failure",
+        IssueType.DocumentationIssue => "Documentation",
+        IssueType.Deprecation => "Deprecation",
+        _ => "Issue",
+    };
+
+    private async Task RequestInfoAsync() => await RunActionAsync(IssueService.RequestInfoAsync);
+    private async Task ProvideInfoAsync() => await RunActionAsync(IssueService.ProvideInfoAsync);
+    private async Task TriageAsync() => await RunActionAsync(IssueService.TriageAsync);
+    private async Task AcceptAsync() => await RunActionAsync(IssueService.AcceptAsync);
+    private async Task RejectAsync() => await RunActionAsync(IssueService.RejectAsync);
+    private async Task StartWorkAsync() => await RunActionAsync(IssueService.StartWorkAsync);
+    private async Task BlockAsync() => await RunActionAsync(IssueService.BlockAsync);
+    private async Task UnblockAsync() => await RunActionAsync(IssueService.UnblockAsync);
+    private async Task SubmitForReviewAsync() => await RunActionAsync(IssueService.SubmitForReviewAsync);
+    private async Task RequestChangesAsync() => await RunActionAsync(IssueService.RequestChangesAsync);
+    private async Task CompleteAsync() => await RunActionAsync(IssueService.CompleteAsync);
+    private async Task PublishAsync() => await RunActionAsync(IssueService.PublishAsync);
+    private async Task CloseAsync() => await RunActionAsync(IssueService.CloseAsync);
+
+    private async Task DefineCriteriaAsync()
+    {
+        if (_issue is null || string.IsNullOrWhiteSpace(_criteriaText)) return;
+        try
+        {
+            await IssueService.DefineAcceptanceCriteriaAsync(_issue.Id, _criteriaText.Trim());
+            _showCriteriaForm = false;
+            _criteriaText = "";
+            Snackbar.Add("Acceptance criteria saved.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+
+    private void OpenClassifyForm()
+    {
+        if (_issue is null) return;
+        _tlpInput = _issue.Tlp;
+        _labelsInput = string.Join(", ", _issue.Labels);
+        _showClassifyForm = true;
+    }
+
+    private async Task SaveClassificationAsync()
+    {
+        if (_issue is null) return;
+        try
+        {
+            var labels = _labelsInput
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(l => !string.IsNullOrWhiteSpace(l))
+                .ToList();
+            await IssueService.ClassifyAsync(_issue.Id, _tlpInput, labels);
+            _showClassifyForm = false;
+            Snackbar.Add("Classification saved.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+
+    private async Task RunActionAsync(Func<IssueId, CancellationToken, Task> action)
+    {
+        if (_issue is null) return;
+        try
+        {
+            await action(_issue.Id, CancellationToken.None);
+            Snackbar.Add($"Issue updated.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+
+    private async Task LinkExternalCase()
+    {
+        if (_issue is null || string.IsNullOrWhiteSpace(_extSystem) || string.IsNullOrWhiteSpace(_extCaseId)) return;
+        try
+        {
+            var url = string.IsNullOrWhiteSpace(_extCaseUrl) ? null : _extCaseUrl.Trim();
+            await IssueService.LinkExternalCaseAsync(_issue.Id, _extSystem.Trim(), _extCaseId.Trim(), url);
+            _showExternalCaseForm = false;
+            _extSystem = "";
+            _extCaseId = "";
+            _extCaseUrl = "";
+            Snackbar.Add("External case linked.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    }
+}

@@ -1,0 +1,91 @@
+@namespace Workbench.Web.Components.Shared
+@using Workbench.Domain.Changes
+@using Workbench.Domain.Workflow
+
+@if (Readiness is null)
+{
+    return;
+}
+
+<DzPanel Eyebrow="Acceptance readiness" Class="dz-gate-panel mb-4">
+    @if (Readiness.IsReady)
+    {
+        <div class="dz-gate-ready">
+            <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small" Class="dz-gate-ready__icon" />
+            <MudText Typo="Typo.body2" Class="dz-gate-ready__text">
+                All gates satisfied. Ready to accept.
+            </MudText>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnAccept"
+                   Disabled="IsRunning" StartIcon="@Icons.Material.Outlined.CheckCircle"
+                   Class="mt-3">
+            Accept
+        </MudButton>
+    }
+    else
+    {
+        <div class="dz-gate-list">
+            @foreach (var gate in Readiness.UnmetGates)
+            {
+                <div class="dz-gate-row">
+                    <MudIcon Icon="@GateIcon(gate.Code)" Size="Size.Small" Class="@GateIconClass(gate.Code)" />
+                    <MudText Typo="Typo.body2" Class="dz-gate-row__message">@GateDisplayText(gate.Code, gate.Message)</MudText>
+                    @{ var action = GateAction(gate.Code); }
+                    @if (action is not null)
+                    {
+                        <DzActionLink OnClick="action.Value.Callback" Disabled="IsRunning">
+                            @action.Value.Label
+                        </DzActionLink>
+                    }
+                </div>
+            }
+        </div>
+    }
+</DzPanel>
+
+@code {
+    [Parameter] public MergeReadiness? Readiness { get; set; }
+    [Parameter] public ChangeRequest? Change { get; set; }
+    [Parameter] public EventCallback OnRunChecks { get; set; }
+    [Parameter] public EventCallback OnRequestReview { get; set; }
+    [Parameter] public EventCallback OnAccept { get; set; }
+    [Parameter] public bool IsRunning { get; set; }
+
+    private static string GateDisplayText(string code, string fallback) => code switch
+    {
+        "gate.no_checks" => "Run required checks before accepting.",
+        "gate.checks_missing" => "Required checks have not run yet.",
+        "gate.checks_not_passed" => "Fix failed checks before accepting.",
+        "gate.approval_missing" => "An approval is required before accepting.",
+        "gate.non_author_approval_missing" => "Approval from someone other than the author is required.",
+        "gate.stale" => "A newer version was accepted since this change was opened.",
+        "gate.terminal_state" => "This change has been completed.",
+        _ => fallback,
+    };
+
+    private static string GateIcon(string code) => code switch
+    {
+        "gate.stale" => Icons.Material.Outlined.Update,
+        "gate.approval_missing" => Icons.Material.Outlined.HowToReg,
+        "gate.non_author_approval_missing" => Icons.Material.Outlined.SupervisorAccount,
+        "gate.no_checks" or "gate.checks_missing" => Icons.Material.Outlined.PlaylistAddCheck,
+        "gate.checks_not_passed" => Icons.Material.Outlined.ErrorOutline,
+        _ => Icons.Material.Outlined.Cancel,
+    };
+
+    private static string GateIconClass(string code) => code switch
+    {
+        "gate.checks_not_passed" => "dz-gate-row__icon dz-gate-row__icon--error",
+        _ => "dz-gate-row__icon dz-gate-row__icon--warning",
+    };
+
+    private (string Label, EventCallback Callback)? GateAction(string code) => code switch
+    {
+        "gate.no_checks" => ("Run checks", OnRunChecks),
+        "gate.checks_missing" => ("Run checks", OnRunChecks),
+        "gate.checks_not_passed" => ("Run checks", OnRunChecks),
+        "gate.approval_missing" => ("Request review", OnRequestReview),
+        "gate.non_author_approval_missing" => ("Request review", OnRequestReview),
+        _ => null,
+    };
+}

@@ -1,0 +1,80 @@
+<MudDialog Class="dz-confirm-dialog">
+    <DialogContent>
+        <div class="dz-confirm-dialog__header">
+            @if (!string.IsNullOrWhiteSpace(Icon))
+            {
+                <MudIcon Icon="@Icon" Class="@IconClass" />
+            }
+            <div>
+                <MudText Typo="Typo.h6" Class="dz-confirm-dialog__title">@Title</MudText>
+                @if (!string.IsNullOrWhiteSpace(Message))
+                {
+                    <MudText Typo="Typo.body2" Class="dz-confirm-dialog__message">@Message</MudText>
+                }
+            </div>
+        </div>
+
+        @if (ChildContent is not null)
+        {
+            <div class="dz-confirm-dialog__body">
+                @ChildContent
+            </div>
+        }
+
+        @if (RequireReason)
+        {
+            <MudTextField @bind-Value="_reason"
+                          Label="@ReasonLabel"
+                          Lines="@ReasonLines"
+                          Required="true"
+                          Class="mt-3" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">@CancelText</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="@ConfirmColor"
+                   Disabled="@(RequireReason && string.IsNullOrWhiteSpace(_reason))"
+                   OnClick="Confirm">
+            @ConfirmText
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool RequireReason { get; set; }
+    [Parameter] public string ReasonLabel { get; set; } = "Reason";
+    [Parameter] public int ReasonLines { get; set; } = 3;
+    [Parameter] public string ConfirmText { get; set; } = "Confirm";
+    [Parameter] public string CancelText { get; set; } = "Cancel";
+    [Parameter] public Color ConfirmColor { get; set; } = Color.Error;
+    [Parameter] public string Tone { get; set; } = "warning";
+
+    private string _reason = string.Empty;
+
+    private string IconClass => Tone switch
+    {
+        "error" => "dz-confirm-dialog__icon dz-confirm-dialog__icon--error",
+        "success" => "dz-confirm-dialog__icon dz-confirm-dialog__icon--success",
+        _ => "dz-confirm-dialog__icon dz-confirm-dialog__icon--warning"
+    };
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Confirm()
+    {
+        if (RequireReason)
+        {
+            MudDialog.Close(DialogResult.Ok(_reason.Trim()));
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}

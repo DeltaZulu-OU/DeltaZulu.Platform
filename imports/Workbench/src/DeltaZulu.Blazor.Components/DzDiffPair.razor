@@ -1,0 +1,35 @@
+<div class="dz-diff-pair @Class" @attributes="AdditionalAttributes">
+    <DzPanel Class="dz-diff-pair__side" Compact="true" Outlined="true" Elevation="0" Title="@LeftTitle" TitleTypo="Typo.subtitle2">
+        @if (string.IsNullOrWhiteSpace(LeftContent))
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">@EmptyLeftText</MudAlert>
+        }
+        else
+        {
+            <DzCodeBlock Content="@LeftContent" Light="true" MaxHeightPx="@MaxHeightPx" />
+        }
+    </DzPanel>
+
+    <DzPanel Class="dz-diff-pair__side" Compact="true" Outlined="true" Elevation="0" Title="@RightTitle" TitleTypo="Typo.subtitle2">
+        @if (string.IsNullOrWhiteSpace(RightContent))
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">@EmptyRightText</MudAlert>
+        }
+        else
+        {
+            <DzCodeBlock Content="@RightContent" Light="true" MaxHeightPx="@MaxHeightPx" />
+        }
+    </DzPanel>
+</div>
+
+@code {
+    [Parameter] public string LeftTitle { get; set; } = "Accepted";
+    [Parameter] public string RightTitle { get; set; } = "Draft";
+    [Parameter] public string? LeftContent { get; set; }
+    [Parameter] public string? RightContent { get; set; }
+    [Parameter] public string EmptyLeftText { get; set; } = "No accepted version of this file exists yet.";
+    [Parameter] public string EmptyRightText { get; set; } = "No draft content is available.";
+    [Parameter] public int? MaxHeightPx { get; set; } = 400;
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+}

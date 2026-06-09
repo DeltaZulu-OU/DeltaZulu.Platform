@@ -1,0 +1,31 @@
+<MudButton Variant="Variant.Text"
+           Size="@Size"
+           Color="@Color"
+           Href="@Href"
+           Target="@Target"
+           Disabled="@Disabled"
+           OnClick="@OnClick"
+           StartIcon="@Icon"
+           Class="@ButtonClass"
+           @attributes="AdditionalAttributes">
+    @ChildContent
+</MudButton>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Href { get; set; }
+    [Parameter] public string? Target { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public Size Size { get; set; } = Size.Small;
+    [Parameter] public Color Color { get; set; } = Color.Secondary;
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string ButtonClass => string.Join(" ", new[]
+    {
+        "dz-link-button",
+        Class
+    }.Where(static value => !string.IsNullOrWhiteSpace(value)));
+}

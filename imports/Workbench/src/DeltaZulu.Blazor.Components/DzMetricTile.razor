@@ -1,0 +1,55 @@
+<DzPanel Class="@PanelClass" Elevation="@Elevation" Outlined="@Outlined" @attributes="AdditionalAttributes">
+    @if (!string.IsNullOrWhiteSpace(Icon))
+    {
+        <MudIcon Icon="@Icon" Size="@IconSize" Class="@IconClass" />
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Eyebrow))
+    {
+        <span class="eyebrow">@Eyebrow</span>
+    }
+
+    <MudText Typo="@ValueTypo" Class="dz-metric-tile__value">@Value</MudText>
+
+    @if (!string.IsNullOrWhiteSpace(Label))
+    {
+        <MudText Typo="Typo.caption" Class="dz-metric-tile__label">@Label</MudText>
+    }
+
+    @if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+</DzPanel>
+
+@code {
+    [Parameter] public string? Eyebrow { get; set; }
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public string Tone { get; set; } = "neutral";
+    [Parameter] public Size IconSize { get; set; } = Size.Medium;
+    [Parameter] public Typo ValueTypo { get; set; } = Typo.h4;
+    [Parameter] public int Elevation { get; set; } = 1;
+    [Parameter] public bool Outlined { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string PanelClass => string.Join(" ", new[]
+    {
+        "dz-metric-tile",
+        Class
+    }.Where(static value => !string.IsNullOrWhiteSpace(value)));
+
+    private string IconClass => string.Join(" ", new[]
+    {
+        "dz-metric-tile__icon",
+        Tone switch
+        {
+            "success" => "dz-metric-tile__icon--success",
+            "error" => "dz-metric-tile__icon--error",
+            _ => null
+        }
+    }.Where(static value => !string.IsNullOrWhiteSpace(value)));
+}

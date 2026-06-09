@@ -1,0 +1,163 @@
+@namespace Workbench.Web.Components.Pages
+@using MudBlazor
+@using Workbench.Application.Services
+@using Workbench.Domain.Common
+@using Workbench.Domain.Detections
+@using Workbench.Domain.Enums
+@using Workbench.Domain.Identifiers
+@using Workbench.Web.Services
+@inject ChangeService ChangeService
+@inject DetectionContentService DetectionService
+@inject PocUserContext UserContext
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6" Class="dz-dialog-title">Open change</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            @if (DetectionId is null)
+            {
+                <MudSelect @bind-Value="_selectedDetectionId" Label="Detection" T="Guid?" Required="true" Class="mb-3">
+                    @foreach (var detection in _detections)
+                    {
+                        <MudSelectItem Value="@(detection.Id.Value)">
+                            @detection.Slug — @detection.Title
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
+            <MudTextField @bind-Value="_key"
+                          Label="Change key"
+                          HelperText="Short tracking key, for example CHG-001."
+                          Required="true"
+                          Immediate="true"
+                          Class="mb-3 dz-mono-input" />
+
+            <MudTextField @bind-Value="_title"
+                          Label="Title"
+                          Required="true"
+                          Immediate="true"
+                          Class="mb-3" />
+
+            <MudSelect @bind-Value="_workflowProfileId"
+                       Label="Workflow profile"
+                       T="WorkflowProfileId"
+                       Class="mb-3">
+                <MudSelectItem Value="WorkflowProfileId.QuickLab">Quick lab</MudSelectItem>
+                <MudSelectItem Value="WorkflowProfileId.ControlledReview">Controlled review</MudSelectItem>
+            </MudSelect>
+
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@_error</MudAlert>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="Submit"
+                   Disabled="@(_submitting || _loading || !CanSubmit)">
+            @if (_submitting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Open
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public DetectionId? DetectionId { get; set; }
+    [Parameter] public UserId? AuthorId { get; set; }
+
+    private readonly List<Detection> _detections = [];
+    private Guid? _selectedDetectionId;
+    private string _key = "";
+    private string _title = "";
+    private WorkflowProfileId _workflowProfileId = WorkflowProfileId.QuickLab;
+    private string? _error;
+    private bool _loading = true;
+    private bool _submitting;
+
+    private bool CanSubmit
+        => !string.IsNullOrWhiteSpace(_key)
+           && !string.IsNullOrWhiteSpace(_title)
+           && ResolveDetectionId() is not null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _detections.AddRange(await DetectionService.ListAsync());
+            if (DetectionId is not null)
+            {
+                _selectedDetectionId = DetectionId.Value.Value;
+            }
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        var detectionId = ResolveDetectionId();
+        if (detectionId is null)
+        {
+            _error = "Select a detection.";
+            return;
+        }
+
+        _error = null;
+        _submitting = true;
+
+        try
+        {
+            var authorId = AuthorId ?? UserContext.CurrentUser.Id;
+            var change = await ChangeService.OpenChangeAsync(
+                _key.Trim(),
+                _title.Trim(),
+                detectionId.Value,
+                authorId,
+                _workflowProfileId);
+
+            Snackbar.Add($"Opened {change.Key}.", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(change.Id));
+        }
+        catch (DomainException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private DetectionId? ResolveDetectionId()
+    {
+        if (DetectionId is not null)
+        {
+            return DetectionId;
+        }
+
+        return _selectedDetectionId is Guid value
+            ? new DetectionId(value)
+            : null;
+    }
+}

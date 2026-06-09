@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Project Path="src/DeltaZulu.Blazor.Components/DeltaZulu.Blazor.Components.csproj" />
+  <Project Path="src/DeltaZulu.DetectionContent/DeltaZulu.DetectionContent.csproj" />
+  <Project Path="src/Workbench.Application/Workbench.Application.csproj" />
+  <Project Path="src/Workbench.Domain/Workbench.Domain.csproj" />
+  <Project Path="src/Workbench.Infrastructure/Workbench.Infrastructure.csproj" />
+  <Project Path="src/Workbench.HuntingCoreAdapter/Workbench.HuntingCoreAdapter.csproj" />
+  <Project Path="src/Workbench.Persistence/Workbench.Persistence.csproj" />
+  <Project Path="src/Workbench.Validation/Workbench.Validation.csproj" />
+  <Project Path="src/Workbench.Web/Workbench.Web.csproj" />
+  <Project Path="src/Workbench.Workflow/Workbench.Workflow.csproj" />
+  <Project Path="tests/Workbench.Tests/Workbench.Tests.csproj" />
+</Solution>
