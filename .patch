@@ -1,0 +1,1079 @@
+diff --git a/README.md b/README.md
+index 09e2c5966b283fbbc93b8ef9d3746a8f8eb9f52d..3efdfe19dd39ab3a1be61e5917c4ab9cce956b45 100644
+--- a/README.md
++++ b/README.md
+@@ -1,58 +1,61 @@
+ # Hunting
+ 
+ ## Description
+ 
+ Hunting is a schema-first KQL-on-DuckDB security hunting workbench built with .NET.
+ 
+ Analysts write a controlled KQL subset against logical security tables such as `ProcessEvent`, `NetworkSession`, and `Dns`. The application parses KQL with `Microsoft.Azure.Kusto.Language`, translates it through an internal relational model, emits transient DuckDB SQL, executes the query, and returns bounded tabular or rendered results in a Blazor Server UI.
+ 
+ Runtime SQL is generated and discarded. It is not a durable project artifact.
+ 
+ <img src="docs/animation.gif" width="956" height="504" />
+ 
+ ## Purpose
+ 
+ Hunting is intended to provide a familiar threat-hunting experience over local or embedded security data without becoming a generic SQL explorer. The current implementation focuses on:
+ 
+ - KQL-style analyst workflow over governed Golden security views.
+ - DuckDB-backed local execution for development, validation, and early product exploration, with database paths configurable through `Hunting:DuckDbPath` and `Hunting:AppDbPath`.
+ - Schema-first Bronze/Silver/Golden contracts for telemetry normalization.
+ - Deterministic query translation, diagnostics, reusable KQL syntax validation, and tests for supported KQL constructs.
+ - Render-aware query execution and dashboard composition without introducing a second query runtime.
+ - Saved queries can be projected into draft-only content-library artifacts for later Workbench governance without treating local hunting state as accepted content.
++- Standalone web-host concerns are separated from module registration/routing so Hunting can later mount inside `DeltaZulu.Platform.Web` without moving query/runtime/schema/data logic into the web edge.
++- Accepted detection-content ownership is documented as a future shared-package dependency; Hunting keeps saved queries and local detections out of canonical governed content.
+ - Dashboard detail pages default to readonly mode; edit-mode changes are staged locally, including collision-aware title-bar layout drags, and persisted by the top-right Save action.
+ - Dashboard widgets prioritize visualization/table content while keeping source and execution metadata for all run outcomes in Debug logs.
+ 
+ Implementation-status snapshot: dependency versions are centrally pinned, package-lock generation is enabled, shared build props now use the future monorepo analyzer/style baseline, reusable validation lives in `Hunting.Core`, Hunting CSS uses DeltaZulu-scoped aliases rather than a root-level parallel token system. Detailed feature status is tracked in the documentation, not in this README:
+ 
+ - Roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+ - KQL syntax coverage: [`docs/kql-syntax-coverage-checklist.md`](docs/kql-syntax-coverage-checklist.md)
+ - Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+ - Dashboard architecture: [`docs/DASHBOARD-ARCHITECTURE.md`](docs/DASHBOARD-ARCHITECTURE.md)
+ - Dashboard QA checklist: [`docs/DASHBOARD-PR-CHECKLIST.md`](docs/DASHBOARD-PR-CHECKLIST.md)
+ - Threat hunting workflow boundary: [`docs/ARCHITECTURE.md#threat-hunting-workflow-boundary`](docs/ARCHITECTURE.md#threat-hunting-workflow-boundary)
++- Merge preparation: [`docs/MERGE-PREPARATION.md`](docs/MERGE-PREPARATION.md)
+ 
+ ## Usage
+ 
+ Install the .NET SDK required by the solution, then run the Blazor application from the repository root:
+ 
+ ```bash
+ dotnet restore
+ dotnet run --project src/Hunting.Web
+ ```
+ 
+ Open the local application URL printed by `dotnet run`. Use the query editor to run KQL against the active Golden schema.
+ 
+ Example queries:
+ 
+ ```kql
+ ProcessEvent
+ | project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine
+ | take 50
+ ```
+ 
+ ```kql
+ ProcessEvent
+ | summarize LaunchCount = count() by AccountName
+ | render barchart xcolumn=AccountName ycolumns=LaunchCount title="Launches by account"
+ ```
+diff --git a/docs/MERGE-PREPARATION.md b/docs/MERGE-PREPARATION.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..dda272a5fd23de353f55da22319dd41bb857964b
+--- /dev/null
++++ b/docs/MERGE-PREPARATION.md
+@@ -0,0 +1,97 @@
++# Hunting Merge Preparation for `DeltaZulu.Platform.Web`
++
++## Architecture summary: current coupling and boundary problems
++
++Hunting already keeps query translation, schema contracts, DuckDB runtime, rendering, saved-query persistence, detection records, detection runs, alerts, and visualization records outside the Blazor host. The main coupling risk was the web edge: `Hunting.Web` registered MudBlazor providers, owned the top-level router, owned the global navigation rail, bootstrapped local databases, seeded development data, and mapped fallback routes in one `Program.cs` path. That made the application runnable, but it also made Hunting look like the only web host.
++
++This change separates the standalone host path from a module-host path:
++
++- Standalone execution still owns providers, `_Host`, fallback routing, static files, schema bootstrap, and local app persistence bootstrap.
++- Hunting module registration now sits behind `AddHuntingWebModule(...)` so a future platform host can register Hunting services without adopting Hunting's shell.
++- Hunting route rendering now sits behind `HuntingModuleRouter`, with a default module layout and an overridable layout for a platform shell.
++- Standalone global chrome moved into `StandaloneHuntingLayout`; `MainLayout` and `HuntingModuleLayout` are shell-light module layouts.
++- Detection-content consumption remains a documented boundary only until Hunting can reference the shared `DeltaZulu.DetectionContent` package; Hunting does not define parallel accepted-content contracts or turn saved queries/local detections into canonical governed content.
++
++## Concrete refactor plan
++
++| Step | Status | Outcome |
++|---|---|---|
++| Extract web module service registration from `Program.cs`. | Done | Platform host can call `AddHuntingWebModule(...)` and choose whether it owns MudBlazor services. |
++| Keep standalone bootstrapping separate. | Done | `AddHuntingStandaloneWeb()` and `UseHuntingStandaloneWebAsync()` preserve the current app behavior. |
++| Split routing/layout concerns. | Done | `HuntingModuleRouter` can be embedded with a platform-provided layout, while standalone mode uses `StandaloneHuntingLayout`. |
++| Document the detection-content consumption boundary without local replacement contracts. | Done | Hunting can later consume `DeltaZulu.DetectionContent` without deleting a competing local model. |
++| Document move/keep/later decisions. | Done | Reviewers can see what belongs in a shared design system or shared detection-content package later. |
++| Prefix/remap routes under `/threat-hunting` or `/hunt`. | Later | Requires a shared host routing decision; current page directives remain absolute for compatibility. |
++| Move generic UI primitives to shared RCL. | Later | Requires `DeltaZulu.Platform.DesignSystem` or equivalent package. |
++
++## Web concern classification
++
++| Current concern | Classification | Notes |
++|---|---|---|
++| `_Host.cshtml`, server-side Blazor hub mapping, fallback route, static files middleware | Host-only | Standalone host keeps these; platform host should own equivalents. |
++| Application persistence paths and connection ownership | Standalone by default; platform-supplied later | `AddHuntingWebModule(...)` accepts paths today, but tenant/module-aware persistence should come from the platform composition root before final merge. |
++| Mud theme/popover/dialog/snackbar providers | Host-only in platform; standalone-only here | Providers remain in `App.razor` for standalone mode. A platform shell should provide them once. |
++| Top app bar, global rail, brand, Overview/Library/Dashboards/Settings navigation | Host-only / shared shell chrome | Moved into `StandaloneHuntingLayout`; should not be required for module embedding. |
++| `HuntingModuleRouter` | Module-host compatibility | Lets a host choose the layout around Hunting routes. |
++| `HuntingModuleLayout` / `MainLayout` | Hunting module layout shim | Minimal layout for embedded scenarios. |
++| Query editor, schema browser, KQL helper drawer, query library drawer | Hunting-specific module UI | These are part of the hunting workflow. |
++| Dashboard pages and widgets | Hunting-specific for now | Generic grid/panel/editor patterns should later come from shared UI, but dashboard semantics are currently Hunting-local. |
++| `DzQueryResultTable` | Shared UI candidate | Generic result-table styling should move to a shared design system; Hunting-specific result binding can stay local. |
++| `wwwroot/css/deltazulu/*` and global `app.css` shell rules | Shared design-system candidate | Keep scoped now; migrate tokens/components later. |
++| Monaco and dashboard JavaScript assets | Hunting-specific behavior with host-asset implications | Platform host must serve/import these assets or Hunting must package them as RCL static web assets. |
++
++## UI move / keep / later table
++
++| UI piece | Move later to shared platform UI | Keep in Hunting | Later review |
++|---|---:|---:|---:|
++| Mud provider ownership | Yes | No | No |
++| App/root shell, brand, global nav rail, top app bar | Yes | Standalone compatibility only | No |
++| Generic page header/toolbar/empty-state styles | Yes | Temporary local styles | Yes |
++| Generic button/panel/table/dialog patterns | Yes | Temporary local styles | Yes |
++| Query editor and KQL execution workflow | No | Yes | No |
++| Schema browser over approved Golden views | No | Yes | No |
++| KQL helper drawer and editor insertion bus | No | Yes | No |
++| Query result rendering adapters | No | Yes | No |
++| `DzQueryResultTable` visual component | Yes | Binding behavior only | Yes |
++| Dashboard grid mechanics | Possible | Hunting dashboard semantics | Yes |
++| Dashboard widget editor/chart/table/markdown widgets | Generic chrome possible | Hunting data/query behavior | Yes |
++| Settings page | Platform settings shell later | Hunting runtime/query settings only | Yes |
++
++## Detection-content concept table
++
++| Concept | Move later to shared detection-content boundary | Keep local Hunting state | Later review |
++|---|---:|---:|---:|
++| Stable detection identity | Yes, `DetectionContentId`/GUID shape from shared package | No local identity type | No |
++| Detection version identity | Yes, `DetectionContentVersionId`/GUID shape from shared package | No local version type | No |
++| Accepted detection content read model for execution | Yes, from `DeltaZulu.DetectionContent` | No local model in Hunting | No |
++| Detection query text used by runtime | Shared contract supplies it | Execution remains Hunting-owned | No |
++| Metadata required for execution/scheduling/severity/risk | Yes | Local detection records remain runtime/import state only | No |
++| Content file/logical references | Yes, accepted refs from shared package | No local placeholders | Yes |
++| Test/fixture references | Yes, from shared package | No local placeholders | Yes |
++| Git-backed draft/review/acceptance workflow | Yes, outside Hunting | No | No |
++| Saved queries | No | Yes, draft-only local application state | No |
++| Query history / last-run timestamps | No | Yes | No |
++| Dashboards and visualizations | Possibly content-adjacent | Yes today | Yes |
++| Detection runs | No | Yes, runtime execution state | No |
++| Alerts/candidates/incidents | Shared operational contracts later | Hunting owns detection outputs/candidates until platform boundary is settled | Yes |
++
++## Follow-up constraints accepted by this merge-preparation slice
++
++| Constraint | Required follow-up before final platform hosting |
++|---|---|
++| `HuntingModuleRouter` is temporary. | Replace per-module router components with a shared `DeltaZulu.Platform.Web.Abstractions` route/module manifest after the platform host exists. |
++| `AddHuntingWebModule(...)` still wires application persistence. | Split registration into runtime/query services, application-state services, and standalone persistence defaults so the platform host owns tenant/module persistence. |
++| Generic-looking UI remains local only as a bridge. | Refactor result-table visuals, generic panel/table/dialog/empty-state/page-header/Markdown/dashboard chrome onto `DeltaZulu.Blazor.Components` after platform import. |
++| Absolute routes remain in this PR. | Treat prefixing `/`, `/settings`, `/library`, and `/dashboards` as a pre-host-merge blocker, not post-merge cleanup. |
++| File-content architecture tests are smoke tests. | Replace brittle text assertions with compile-time or architecture-test rules when shared platform abstractions make that practical. |
++
++## Remaining blockers before platform mounting
++
++1. **Route prefixing:** Hunting pages still use absolute `@page` routes. A future host must decide whether Hunting mounts at root, `/threat-hunting`, or `/hunt`, then route directives or endpoint mapping need a mechanical prefixing pass.
++2. **Static web assets:** Monaco, dashboard JS, chart JS, CSS, and images are still served from `Hunting.Web/wwwroot`. A platform host needs an RCL static-web-asset packaging plan or explicit asset import strategy.
++3. **Provider ownership:** Standalone mode still owns Mud providers. Platform mode should register/provide Mud once and call `AddHuntingWebModule(... RegisterMudServices = false)`.
++4. **Platform persistence ownership:** `AddHuntingWebModule(...)` still wires app persistence from configured paths for standalone compatibility. A platform host should supply tenant-aware or module-aware persistence settings/connection ownership before production mounting.
++5. **Design system extraction:** Generic shell chrome, page scaffolding, empty states, panels, result-table styling, dialogs, and dashboard editor chrome still need a shared Razor Class Library owner.
++6. **Detection-content package consumption:** Hunting intentionally does not define local accepted detection-content contracts. Consume `DeltaZulu.DetectionContent` once it is available, including its GUID identity/version types, slug/path conventions, accepted references, and fixture/test references.
++7. **Governance boundary:** Hunting still has local saved-query/detection persistence, but it must only treat content as accepted when it comes from the future governed shared source; it should not add draft/review/accept workflows.
++8. **Settings ownership:** The current `/settings` route is standalone-friendly but will conflict with platform-level settings unless renamed or nested.
+diff --git a/docs/ROADMAP.md b/docs/ROADMAP.md
+index 8c62fc18b90a2ccb69c7a45b2a89ee45341de0f4..e80cc8605696404b886124e736df8d074022eeda 100644
+--- a/docs/ROADMAP.md
++++ b/docs/ROADMAP.md
+@@ -184,87 +184,87 @@ monorepo migration.
+ | 2 | P0 | Implemented locally; awaiting external baseline confirmation | Align Hunting package versions with the shared dependency baseline. | Hunting does not introduce duplicate or conflicting transitive dependency graphs. |
+ | 3 | P0 | Implemented | Add or adopt shared `Directory.Build.props` conventions. | Nullable, implicit usings, analysis level, deterministic build, package-lock generation, warning policy, and style behavior match the future Workbench baseline. |
+ | 4 | P0 | Blocked on local SDK in this environment | Verify Hunting builds cleanly under the future shared build props and generate package lock files. | Analyzer/style/build setting breakage and lock-file drift are caught before migration. |
+ | 5 | P1 | Implemented with existing OS matrix plus floating-version guard | Add CI coverage for build/test using the same OS matrix expected for the future monorepo. | Platform-specific restore/build/test failures are caught before merge. |
+ 
+ Exit criteria:
+ 
+ - No direct package reference uses a floating version range.
+ - Package versions are either centrally managed or demonstrably aligned to the shared baseline.
+ - Common build properties are centralized instead of duplicated per project unless project-specific.
+ - `RestorePackagesWithLockFile=true` is enabled; package lock files must be generated and committed once a .NET SDK is available in the execution environment.
+ - `dotnet restore`, `dotnet build`, and `dotnet test` run in the future shared-build configuration.
+ - CI exercises the future shared OS matrix.
+ 
+ ### MP1 — Reusable runtime and validation boundaries 🚧 NEXT
+ 
+ **Objective:** Preserve Hunting as reusable runtime, schema, render, and validation modules while Workbench
+ owns product hosting and detection-content governance.
+ 
+ | Order | Priority | Task | Outcome |
+ |---:|---|---|---|
+ | 1 | P0 | Implemented: keep `Hunting.Core`, `Hunting.Schema`, `Hunting.Data`, and `Hunting.Render` independent from `Hunting.Web`, with a regression test. | Reusable modules remain host-agnostic and can be consumed by Workbench validation or shared hosting. |
+ | 2 | P0 | Implemented: extract a reusable KQL validation service from the current query pipeline. | Workbench can validate detection-library KQL without depending on Hunting Web or executing queries. |
+ | 3 | P2 | Implemented baseline: expose a Core validation interface over approved catalog translation. | Workbench consumes approved schema/catalog contracts without reaching into translator internals. |
+ | 4 | P2 | Review generated SQL/debug SQL exposure and ensure it remains developer/runtime-only. | Detection-content governance stays separate from runtime internals. |
+-| 5 | P2 | Reduce Web-layer coupling around `QueryService`, `RenderedQueryRunner`, and dashboard execution. | Later migration into a shared host shell requires less service-registration and orchestration rewrite. |
++| 5 | P2 | Implemented baseline: extract Hunting web-module service registration and standalone bootstrapping while keeping query/runtime/schema/data logic outside web. | Later migration into a shared host shell requires less service-registration and orchestration rewrite. |
+ 
+ Exit criteria:
+ 
+ - A test or build check prevents reusable projects from referencing `Hunting.Web`.
+ - Validation-only tests instantiate the schema/catalog and KQL translator path without a DuckDB connection.
+ - Runtime SQL remains transient and exposed only through explicit developer-mode/debug paths.
+ - Web composition is factored behind registration/mapping seams suitable for a shared host.
+ 
+ ### MP2 — Content library and application-state separation
+ 
+ **Objective:** Prepare saved queries, visualizations, and dashboards for Workbench governance without
+ confusing accepted detection content with local hunting state.
+ 
+ | Order | Priority | Task | Outcome |
+ |---:|---|---|---|
+ | 1 | P1 | Implemented baseline: map saved queries to draft-only content-library artifacts. | Saved queries can evolve into detection-content library artifacts without becoming accepted content by default. |
+ | 2 | P1 | Implemented vocabulary transition: library UI classifies local query records as saved queries, with compatibility aliases only. | Workbench can govern, version, review, or accept query artifacts later. |
+-| 3 | P1 | Make query library, visualization library, and dashboard persistence clearly application-state modules. | Transient hunting state is not mistaken for accepted detection content. |
++| 3 | P1 | Implemented baseline: document the shared accepted detection-content dependency and keep saved queries draft-only application state without adding local competing contracts. | Transient hunting state is not mistaken for accepted detection content. |
+ 
+ Exit criteria:
+ 
+ - Content records and runtime/editor state have separate contracts.
+ - Run history, last-run timestamps, drawer state, and dashboard layout state are explicitly application state.
+ - Compatibility paths preserve current saved-query, visualization, and dashboard workflows during migration.
+ 
+ ### MP3 — Shared host routing, settings, and web assets
+ 
+ **Objective:** Make Hunting mount cleanly inside a Workbench-owned host shell and visual system.
+ 
+ | Order | Priority | Task | Outcome |
+ |---:|---|---|---|
+-| 1 | P1 | Make Hunting pages mountable below a product route such as `/threat-hunting` or `/hunt`. | Workbench can own `/` while Hunting remains a product area. |
++| 1 | P1 | Partially implemented: add temporary `HuntingModuleRouter`, module layout, and standalone layout split; route-prefixing remains a pre-host-merge blocker. | Workbench can own `/` while Hunting remains a product area. |
+ | 2 | P1 | Rename or route Hunting's settings page as runtime/query settings, or prepare to remove it. | Hunting does not conflict with Workbench operator/product settings. |
+ | 3 | P1 | Implemented baseline: Hunting `app.css` scopes compatibility aliases under `.hunt-app` and sources values from DeltaZulu semantic tokens. | Assets can move into a shared host with less styling and script friction. |
+-| 4 | P1 | In progress: continue dashboard/component cleanup against shared design tokens and common MudBlazor styling conventions. | The merged app does not carry a second visual system. |
+-| 5 | P2 | Add migration notes for moving `Hunting.Web` from classic Blazor Server hosting to the selected common host model. | The later server merge is explicit, reviewable, and testable. |
++| 4 | P1 | In progress: continue dashboard/component cleanup; after platform import, move generic table/panel/dialog/empty-state/page-header/Markdown/dashboard chrome onto `DeltaZulu.Blazor.Components`. | The merged app does not carry a second visual system. |
++| 5 | P2 | Implemented baseline: add `docs/MERGE-PREPARATION.md` with host, UI, asset, persistence, routing-manifest, and detection-content migration notes. | The later server merge is explicit, reviewable, and testable. |
+ | 6 | P2 | Implemented baseline: document Hunting's intended role in the merged architecture: runtime, KQL validation, schema catalog, render, dashboards. | Workbench/Hunting responsibilities do not drift during merge work. |
+ 
+ Exit criteria:
+ 
+ - Hunting routes can be grouped under the selected product prefix without conflicting with Workbench-owned `/` or `/settings`.
+ - Static assets are namespaced or documented for shared-host loading order.
+ - Dashboard styling uses shared tokens and MudBlazor conventions consistently.
+ - Architecture docs identify Workbench-owned concerns versus Hunting-owned reusable services.
+ 
+ ---
+ 
+ ## Medallion Schema Roadmap
+ 
+ ### Current checkpoint — Phase 1A complete
+ 
+ Phase 1A is the active medallion checkpoint. It is intentionally narrow and should be treated as a structural baseline, not as approval for broad table expansion.
+ 
+ | Layer | Active objects |
+ |---|---|
+ | Bronze | `windows_sysmon_event`, `windows_security_event`, `dns_server_event` |
+ | Silver | Six source/event-specific parser contributors |
+ | Golden | `ProcessEvent`, `NetworkSession`, `Dns` |
+ 
+ The Phase 1A cleanup removed the older vertical-slice names and seed entry point:
+ 
+diff --git a/src/Hunting.Web/App.razor b/src/Hunting.Web/App.razor
+index 8400be5d4090b311b2274021612d645c2af5b79a..94aec826034ee63b61816c0ea8fcbd85e38bb2d4 100644
+--- a/src/Hunting.Web/App.razor
++++ b/src/Hunting.Web/App.razor
+@@ -1,17 +1,12 @@
+-@using Microsoft.AspNetCore.Components.Routing
++@using Hunting.Web.Components.Hosting
+ 
+ <MudThemeProvider />
+ <MudPopoverProvider />
+ <MudDialogProvider />
+ <MudSnackbarProvider />
+ 
+-<Router AppAssembly="@typeof(App).Assembly">
+-    <Found Context="routeData">
+-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Shared.MainLayout)" />
+-    </Found>
++<HuntingModuleRouter DefaultLayout="@typeof(Hunting.Web.Shared.StandaloneHuntingLayout)">
+     <NotFound>
+-        <LayoutView Layout="@typeof(Shared.MainLayout)">
+-            <p>Page not found.</p>
+-        </LayoutView>
++        <p>Page not found.</p>
+     </NotFound>
+-</Router>
++</HuntingModuleRouter>
+diff --git a/src/Hunting.Web/Components/Hosting/HuntingModuleRouter.razor b/src/Hunting.Web/Components/Hosting/HuntingModuleRouter.razor
+new file mode 100644
+index 0000000000000000000000000000000000000000..ab839be13f7e319443a5f48ae33917c54b6613e4
+--- /dev/null
++++ b/src/Hunting.Web/Components/Hosting/HuntingModuleRouter.razor
+@@ -0,0 +1,26 @@
++@namespace Hunting.Web.Components.Hosting
++@*
++    Temporary compatibility seam for standalone/module hosting. The final platform host should prefer a
++    shared DeltaZulu.Platform.Web.Abstractions module/route manifest rather than standardizing on
++    per-module router components.
++*@
++@using Microsoft.AspNetCore.Components.Routing
++
++<Router AppAssembly="@typeof(HuntingModuleRouter).Assembly">
++    <Found Context="routeData">
++        <RouteView RouteData="@routeData" DefaultLayout="@DefaultLayout" />
++    </Found>
++    <NotFound>
++        <LayoutView Layout="@DefaultLayout">
++            @NotFound
++        </LayoutView>
++    </NotFound>
++</Router>
++
++@code {
++    [Parameter]
++    public Type DefaultLayout { get; set; } = typeof(Hunting.Web.Shared.HuntingModuleLayout);
++
++    [Parameter]
++    public RenderFragment NotFound { get; set; } = builder => builder.AddContent(0, "Hunting page not found.");
++}
+diff --git a/src/Hunting.Web/Hosting/HuntingStandaloneWebApplicationExtensions.cs b/src/Hunting.Web/Hosting/HuntingStandaloneWebApplicationExtensions.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..577fd7877864e652c91bb92f48ad5c174fe08074
+--- /dev/null
++++ b/src/Hunting.Web/Hosting/HuntingStandaloneWebApplicationExtensions.cs
+@@ -0,0 +1,144 @@
++namespace Hunting.Web.Hosting;
++
++using Hunting.Data;
++using Hunting.Data.Persistence;
++using Hunting.Schema;
++using Microsoft.AspNetCore.Builder;
++using Microsoft.Extensions.Configuration;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.Logging;
++
++public static class HuntingStandaloneWebApplicationExtensions
++{
++    public static IServiceCollection AddHuntingStandaloneWeb(
++        this WebApplicationBuilder builder)
++    {
++        ArgumentNullException.ThrowIfNull(builder);
++
++        builder.Services.AddRazorPages();
++        builder.Services.AddServerSideBlazor();
++        builder.Services.AddHuntingWebModule(new HuntingWebModuleOptions
++        {
++            DuckDbPath = ResolveConfiguredPath(
++                builder.Configuration["Hunting:DuckDbPath"],
++                builder.Environment.ContentRootPath,
++                "hunting.db"),
++            AppDbPath = ResolveConfiguredPath(
++                builder.Configuration["Hunting:AppDbPath"],
++                builder.Environment.ContentRootPath,
++                "settings.db"),
++            PlannerMaxIterations = builder.Configuration.GetValue("Planner:MaxIterations", 3),
++            DeveloperMode = builder.Environment.IsDevelopment(),
++            RegisterMudServices = true
++        });
++
++        return builder.Services;
++    }
++
++    public static async Task UseHuntingStandaloneWebAsync(this WebApplication app)
++    {
++        ArgumentNullException.ThrowIfNull(app);
++
++        await app.BootstrapHuntingModuleAsync(new HuntingWebModuleOptions
++        {
++            BootstrapDuckDbSchema = true,
++            BootstrapApplicationPersistence = true,
++            SeedDevelopmentMedallionSources = true
++        });
++
++        if (!app.Environment.IsDevelopment())
++        {
++            app.UseExceptionHandler("/Error");
++        }
++
++        app.UseStaticFiles();
++        app.UseRouting();
++        app.MapBlazorHub();
++        app.MapFallbackToPage("/_Host");
++    }
++
++    public static async Task BootstrapHuntingModuleAsync(
++        this WebApplication app,
++        HuntingWebModuleOptions options)
++    {
++        ArgumentNullException.ThrowIfNull(app);
++        ArgumentNullException.ThrowIfNull(options);
++
++        if (options.BootstrapDuckDbSchema)
++        {
++            await BootstrapSchemaAsync(app, options.SeedDevelopmentMedallionSources);
++        }
++
++        if (options.BootstrapApplicationPersistence)
++        {
++            await app.Services.InitializeApplicationPersistenceAsync();
++            app.Logger.LogInformation("Hunting application persistence initialized");
++        }
++    }
++
++    private static async Task BootstrapSchemaAsync(WebApplication app, bool seedDevelopmentMedallionSources)
++    {
++        await Task.Run(() => {
++            var applier = app.Services.GetRequiredService<SchemaApplier>();
++            var emitter = new Hunting.Core.DuckDbSql.SchemaEmitter();
++
++            var ddl = emitter.EmitAll(
++                rawTables: SchemaConventions.RawTables,
++                internalTables: [],
++                parserViews: SchemaConventions.ParserViews,
++                canonicalViews: SchemaConventions.CanonicalViews);
++
++            applier.ApplyStatements(ddl);
++            applier.ExecuteRaw($"SET schema = '{SchemaConventions.GoldenSchema}'");
++            app.Logger.LogInformation("Hunting schema bootstrapped: {Count} DDL statements applied", ddl.Count);
++
++            if (seedDevelopmentMedallionSources)
++            {
++                SeedMedallionSources(applier, app.Logger);
++            }
++        });
++    }
++
++    private static void SeedMedallionSources(SchemaApplier applier, ILogger logger)
++    {
++        var expectedRowsByTable = MockDataSeeder.GetExpectedMedallionRowCountsByTable();
++
++        foreach (var (tableName, seedSql) in MockDataSeeder.GetMedallionSeedSqlByTable())
++        {
++            var expectedRows = expectedRowsByTable[tableName];
++            var existingRows = applier.QueryScalar($"SELECT count(*) FROM {tableName}");
++
++            if (existingRows >= expectedRows)
++            {
++                logger.LogInformation("Skipping seed for {TableName}: {RowCount} existing rows", tableName, existingRows);
++                continue;
++            }
++
++            if (existingRows > 0)
++            {
++                logger.LogWarning(
++                    "Repairing underseeded development table {TableName}: {ExistingRows} existing rows, expected at least {ExpectedRows}",
++                    tableName,
++                    existingRows,
++                    expectedRows);
++
++                applier.ExecuteRaw($"DELETE FROM {tableName}");
++            }
++
++            applier.ExecuteRaw(seedSql);
++            var insertedRows = applier.QueryScalar($"SELECT count(*) FROM {tableName}");
++            logger.LogInformation("Seeded {RowCount} rows into {TableName}", insertedRows, tableName);
++        }
++    }
++
++    private static string ResolveConfiguredPath(string? configuredPath, string contentRootPath, string defaultFileName)
++    {
++        var path = string.IsNullOrWhiteSpace(configuredPath)
++            ? defaultFileName
++            : configuredPath;
++
++        return Path.IsPathRooted(path)
++            ? path
++            : Path.Combine(contentRootPath, path);
++    }
++}
+diff --git a/src/Hunting.Web/Hosting/HuntingWebModuleOptions.cs b/src/Hunting.Web/Hosting/HuntingWebModuleOptions.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..6df4f69385b9ad12d3e3342f0c0fb75546b9c081
+--- /dev/null
++++ b/src/Hunting.Web/Hosting/HuntingWebModuleOptions.cs
+@@ -0,0 +1,20 @@
++namespace Hunting.Web.Hosting;
++
++/// <summary>
++/// Options for the current standalone-compatible Hunting module registration seam.
++/// These path-based persistence defaults are intentionally transitional; the final
++/// platform host should provide tenant/module-aware persistence configuration.
++/// </summary>
++public sealed record HuntingWebModuleOptions
++{
++    public string DuckDbPath { get; init; } = "hunting.db";
++    public string AppDbPath { get; init; } = "settings.db";
++    public int PlannerMaxIterations { get; init; } = 3;
++    public int DefaultLimit { get; init; } = 10_000;
++    public int TimeoutSeconds { get; init; } = 30;
++    public bool DeveloperMode { get; init; }
++    public bool RegisterMudServices { get; init; } = true;
++    public bool BootstrapDuckDbSchema { get; init; } = true;
++    public bool BootstrapApplicationPersistence { get; init; } = true;
++    public bool SeedDevelopmentMedallionSources { get; init; } = true;
++}
+diff --git a/src/Hunting.Web/Hosting/HuntingWebModuleServiceCollectionExtensions.cs b/src/Hunting.Web/Hosting/HuntingWebModuleServiceCollectionExtensions.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..34da203fbeb54722db93fe30227f82d4340a0434
+--- /dev/null
++++ b/src/Hunting.Web/Hosting/HuntingWebModuleServiceCollectionExtensions.cs
+@@ -0,0 +1,67 @@
++namespace Hunting.Web.Hosting;
++
++using Hunting.Core.Catalog;
++using Hunting.Data;
++using Hunting.Data.Persistence;
++using Hunting.Schema;
++using Hunting.Web.Dashboards.DependencyInjection;
++using Hunting.Web.Dashboards.PageState;
++using Hunting.Web.Library;
++using Hunting.Web.Rendering;
++using Hunting.Web.Services;
++using Microsoft.Extensions.DependencyInjection;
++using MudBlazor.Services;
++
++public static class HuntingWebModuleServiceCollectionExtensions
++{
++    /// <summary>
++    /// Registers the current Hunting web module services for standalone hosting or early platform composition.
++    /// This is not the final platform module contract: before production mounting, split runtime/query services,
++    /// application-state services, and standalone persistence defaults behind shared platform abstractions.
++    /// </summary>
++    public static IServiceCollection AddHuntingWebModule(
++        this IServiceCollection services,
++        HuntingWebModuleOptions options)
++    {
++        ArgumentNullException.ThrowIfNull(services);
++        ArgumentNullException.ThrowIfNull(options);
++
++        if (options.RegisterMudServices)
++        {
++            services.AddMudServices();
++        }
++
++        services.AddSingleton(_ => {
++            var catalog = new ApprovedViewCatalog();
++            SchemaConventions.RegisterCanonicalViews(catalog);
++            return catalog;
++        });
++
++        services.AddSingleton(_ => new DuckDbConnectionFactory($"DataSource={options.DuckDbPath}"));
++        services.AddSingleton<SchemaApplier>();
++        services.AddSingleton(sp => new QueryRuntime(
++            sp.GetRequiredService<ApprovedViewCatalog>(),
++            sp.GetRequiredService<DuckDbConnectionFactory>(),
++            defaultLimit: options.DefaultLimit,
++            timeoutSeconds: options.TimeoutSeconds,
++            developerMode: options.DeveloperMode,
++            plannerMaxIterations: options.PlannerMaxIterations));
++
++        services.AddSingleton<QueryService>();
++        services.AddScoped<EditorBus>();
++        services.AddScoped<LanguageService>();
++        // Standalone-compatible default. A platform host should supply tenant/module-aware
++        // persistence ownership before final mounting instead of relying on a module-local path.
++        services.AddApplicationPersistence($"Data Source={options.AppDbPath}");
++        services.AddDashboards();
++        services.AddHuntingRenderWeb();
++        services.AddScoped<UserSettingsState>();
++        services.AddScoped<QueryLibraryService>();
++        services.AddScoped<VisualizationLibraryService>();
++        services.AddScoped<LibraryService>();
++        services.AddScoped<LibraryPageController>();
++        services.AddScoped<DashboardListPageController>();
++
++        return services;
++    }
++}
+diff --git a/src/Hunting.Web/Program.cs b/src/Hunting.Web/Program.cs
+index 07cd08dcea7964cc37ee1db4c8e1bb101e85bb19..2a1327ca34c1e07c4934214a4f8f09ff0381bba0 100644
+--- a/src/Hunting.Web/Program.cs
++++ b/src/Hunting.Web/Program.cs
+@@ -1,165 +1,8 @@
+-using Hunting.Core.Catalog;
+-using Hunting.Data;
+-using Hunting.Data.Persistence;
+-using Hunting.Schema;
+-using Hunting.Web.Dashboards.DependencyInjection;
+-using Hunting.Web.Dashboards.PageState;
+-using Hunting.Web.Library;
+-using Hunting.Web.Rendering;
+-using Hunting.Web.Services;
+-using MudBlazor.Services;
++using Hunting.Web.Hosting;
+ 
+ var builder = WebApplication.CreateBuilder(args);
+-
+-// ─── Services ────────────────────────────────────────────────────────────────
+-
+-builder.Services.AddRazorPages();
+-builder.Services.AddServerSideBlazor();
+-builder.Services.AddMudServices();
+-
+-// Schema catalog — singleton, shared across all Blazor circuits
+-builder.Services.AddSingleton(_ => {
+-    var catalog = new ApprovedViewCatalog();
+-    SchemaConventions.RegisterCanonicalViews(catalog);
+-    return catalog;
+-});
+-
+-// DuckDB connection factory — singleton MVP model
+-builder.Services.AddSingleton(_ => {
+-    var duckDbPath = ResolveConfiguredPath(
+-        builder.Configuration["Hunting:DuckDbPath"],
+-        builder.Environment.ContentRootPath,
+-        "hunting.db");
+-
+-    return new DuckDbConnectionFactory($"DataSource={duckDbPath}");
+-});
+-
+-// Schema applier — used at startup to bootstrap schema
+-builder.Services.AddSingleton<SchemaApplier>();
+-
+-// Query runtime — singleton; single connection is serialized by the factory lock
+-builder.Services.AddSingleton(sp => {
+-    var plannerMaxIterations = builder.Configuration.GetValue("Planner:MaxIterations", 3);
+-
+-    return new QueryRuntime(
+-        sp.GetRequiredService<ApprovedViewCatalog>(),
+-        sp.GetRequiredService<DuckDbConnectionFactory>(),
+-        defaultLimit: 10_000,
+-        timeoutSeconds: 30,
+-        developerMode: builder.Environment.IsDevelopment(),
+-        plannerMaxIterations: plannerMaxIterations);
+-});
+-
+-// Query execution service with Blazor-level lock for single-connection MVP
+-builder.Services.AddSingleton<QueryService>();
+-
+-// Per-circuit channel bridging the layout sidebar to the editor page
+-builder.Services.AddScoped<EditorBus>();
+-builder.Services.AddScoped<LanguageService>();
+-
+-var settingsDbPath = ResolveConfiguredPath(
+-    builder.Configuration["Hunting:AppDbPath"],
+-    builder.Environment.ContentRootPath,
+-    "settings.db");
+-builder.Services.AddApplicationPersistence($"Data Source={settingsDbPath}");
+-builder.Services.AddDashboards();
+-builder.Services.AddHuntingRenderWeb();
+-
+-builder.Services.AddScoped<UserSettingsState>();
+-builder.Services.AddScoped<QueryLibraryService>();
+-builder.Services.AddScoped<VisualizationLibraryService>();
+-builder.Services.AddScoped<LibraryService>();
+-builder.Services.AddScoped<LibraryPageController>();
+-builder.Services.AddScoped<DashboardListPageController>();
++builder.AddHuntingStandaloneWeb();
+ 
+ var app = builder.Build();
+-
+-// ─── Schema bootstrap ─────────────────────────────────────────────────────────
+-
+-await BootstrapSchemaAsync(app);
+-await BootstrapApplicationPersistenceAsync(app);
+-
+-// ─── Middleware ───────────────────────────────────────────────────────────────
+-
+-if (!app.Environment.IsDevelopment())
+-{
+-    app.UseExceptionHandler("/Error");
+-}
+-
+-app.UseStaticFiles();
+-app.UseRouting();
+-app.MapBlazorHub();
+-app.MapFallbackToPage("/_Host");
+-
++await app.UseHuntingStandaloneWebAsync();
+ app.Run();
+-
+-// ─── Schema bootstrap helper ─────────────────────────────────────────────────
+-
+-static async Task BootstrapSchemaAsync(WebApplication app)
+-{
+-    await Task.Run(() => {
+-        var applier = app.Services.GetRequiredService<SchemaApplier>();
+-        var emitter = new Hunting.Core.DuckDbSql.SchemaEmitter();
+-
+-        var ddl = emitter.EmitAll(
+-            rawTables: SchemaConventions.RawTables,
+-            internalTables: [],
+-            parserViews: SchemaConventions.ParserViews,
+-            canonicalViews: SchemaConventions.CanonicalViews);
+-
+-        applier.ApplyStatements(ddl);
+-        applier.ExecuteRaw($"SET schema = '{SchemaConventions.GoldenSchema}'");
+-        app.Logger.LogInformation("Schema bootstrapped: {Count} DDL statements applied", ddl.Count);
+-
+-        SeedMedallionSources(applier, app.Logger);
+-    });
+-}
+-
+-static void SeedMedallionSources(SchemaApplier applier, ILogger logger)
+-{
+-    var expectedRowsByTable = MockDataSeeder.GetExpectedMedallionRowCountsByTable();
+-
+-    foreach (var (tableName, seedSql) in MockDataSeeder.GetMedallionSeedSqlByTable())
+-    {
+-        var expectedRows = expectedRowsByTable[tableName];
+-        var existingRows = applier.QueryScalar($"SELECT count(*) FROM {tableName}");
+-
+-        if (existingRows >= expectedRows)
+-        {
+-            logger.LogInformation("Skipping seed for {TableName}: {RowCount} existing rows", tableName, existingRows);
+-            continue;
+-        }
+-
+-        if (existingRows > 0)
+-        {
+-            logger.LogWarning(
+-                "Repairing underseeded development table {TableName}: {ExistingRows} existing rows, expected at least {ExpectedRows}",
+-                tableName,
+-                existingRows,
+-                expectedRows);
+-
+-            applier.ExecuteRaw($"DELETE FROM {tableName}");
+-        }
+-
+-        applier.ExecuteRaw(seedSql);
+-        var insertedRows = applier.QueryScalar($"SELECT count(*) FROM {tableName}");
+-        logger.LogInformation("Seeded {RowCount} rows into {TableName}", insertedRows, tableName);
+-    }
+-}
+-
+-static async Task BootstrapApplicationPersistenceAsync(WebApplication app)
+-{
+-    await app.Services.InitializeApplicationPersistenceAsync();
+-    app.Logger.LogInformation("Application persistence initialized");
+-}
+-
+-static string ResolveConfiguredPath(string? configuredPath, string contentRootPath, string defaultFileName)
+-{
+-    var path = string.IsNullOrWhiteSpace(configuredPath)
+-        ? defaultFileName
+-        : configuredPath;
+-
+-    return Path.IsPathRooted(path)
+-        ? path
+-        : Path.Combine(contentRootPath, path);
+-}
+\ No newline at end of file
+diff --git a/src/Hunting.Web/Shared/HuntingModuleLayout.razor b/src/Hunting.Web/Shared/HuntingModuleLayout.razor
+new file mode 100644
+index 0000000000000000000000000000000000000000..872e4b63e853300e6ba794b5451513fd5eb07610
+--- /dev/null
++++ b/src/Hunting.Web/Shared/HuntingModuleLayout.razor
+@@ -0,0 +1,6 @@
++@inherits LayoutComponentBase
++@namespace Hunting.Web.Shared
++
++<main class="hunt-module-main">
++    @Body
++</main>
+diff --git a/src/Hunting.Web/Shared/MainLayout.razor b/src/Hunting.Web/Shared/MainLayout.razor
+index e193e410a32375e23b92e77003a7632bee074ace..872e4b63e853300e6ba794b5451513fd5eb07610 100644
+--- a/src/Hunting.Web/Shared/MainLayout.razor
++++ b/src/Hunting.Web/Shared/MainLayout.razor
+@@ -1,65 +1,6 @@
+ @inherits LayoutComponentBase
+ @namespace Hunting.Web.Shared
+ 
+-<div class="@($"hunt-app {(_globalNavDocked ? "hunt-global-nav-docked" : "hunt-global-nav-undocked")}")">
+-    <MudAppBar Dense="true" Fixed="false" Elevation="1" Class="hunt-topbar">
+-        <NavLink href="/" Match="NavLinkMatch.All" class="hunt-brand" aria-label="Open overview">
+-            <span class="hunt-brand-text">Hunting Workbench</span>
+-        </NavLink>
+-
+-        <MudSpacer />
+-    </MudAppBar>
+-
+-    <div class="hunt-shell">
+-        <aside class="hunt-global-sidebar" aria-label="Global navigation">
+-            <nav class="hunt-global-nav">
+-                <NavLink href="/" Match="NavLinkMatch.All" class="hunt-global-nav-link">
+-                    <span class="hunt-global-nav-icon" aria-hidden="true">⌂</span>
+-                    <span class="hunt-global-nav-text">Overview</span>
+-                </NavLink>
+-                <NavLink href="/threat-hunting" class="hunt-global-nav-link">
+-                    <span class="hunt-global-nav-icon" aria-hidden="true">⌕</span>
+-                    <span class="hunt-global-nav-text">Threat Hunting</span>
+-                </NavLink>
+-                <NavLink href="/library" class="hunt-global-nav-link">
+-                    <span class="hunt-global-nav-icon" aria-hidden="true">▤</span>
+-                    <span class="hunt-global-nav-text">Library</span>
+-                </NavLink>
+-                <NavLink href="/dashboards" class="hunt-global-nav-link">
+-                    <span class="hunt-global-nav-icon" aria-hidden="true">▦</span>
+-                    <span class="hunt-global-nav-text">Dashboards</span>
+-                </NavLink>
+-                <NavLink href="/settings" class="hunt-global-nav-link">
+-                    <span class="hunt-global-nav-icon" aria-hidden="true">⚙</span>
+-                    <span class="hunt-global-nav-text">Settings</span>
+-                </NavLink>
+-            </nav>
+-
+-            <div class="hunt-global-nav-footer">
+-                <button type="button"
+-                        class="hunt-global-nav-toggle"
+-                        @onclick="ToggleGlobalNavigation"
+-                        aria-label="@GlobalNavToggleLabel"
+-                        title="@GlobalNavToggleLabel">
+-                    <span class="hunt-global-nav-icon" aria-hidden="true">@(_globalNavDocked ? "⇤" : "⇥")</span>
+-                    <span class="hunt-global-nav-text">@(_globalNavDocked ? "Collapse" : "Expand")</span>
+-                </button>
+-            </div>
+-        </aside>
+-
+-        <main class="hunt-main">
+-            @Body
+-        </main>
+-    </div>
+-</div>
+-
+-@code {
+-    private bool _globalNavDocked = true;
+-
+-    private string GlobalNavToggleLabel => _globalNavDocked
+-        ? "Undock global navigation"
+-        : "Dock global navigation";
+-
+-    private void ToggleGlobalNavigation()
+-        => _globalNavDocked = !_globalNavDocked;
+-}
++<main class="hunt-module-main">
++    @Body
++</main>
+diff --git a/src/Hunting.Web/Shared/StandaloneHuntingLayout.razor b/src/Hunting.Web/Shared/StandaloneHuntingLayout.razor
+new file mode 100644
+index 0000000000000000000000000000000000000000..e193e410a32375e23b92e77003a7632bee074ace
+--- /dev/null
++++ b/src/Hunting.Web/Shared/StandaloneHuntingLayout.razor
+@@ -0,0 +1,65 @@
++@inherits LayoutComponentBase
++@namespace Hunting.Web.Shared
++
++<div class="@($"hunt-app {(_globalNavDocked ? "hunt-global-nav-docked" : "hunt-global-nav-undocked")}")">
++    <MudAppBar Dense="true" Fixed="false" Elevation="1" Class="hunt-topbar">
++        <NavLink href="/" Match="NavLinkMatch.All" class="hunt-brand" aria-label="Open overview">
++            <span class="hunt-brand-text">Hunting Workbench</span>
++        </NavLink>
++
++        <MudSpacer />
++    </MudAppBar>
++
++    <div class="hunt-shell">
++        <aside class="hunt-global-sidebar" aria-label="Global navigation">
++            <nav class="hunt-global-nav">
++                <NavLink href="/" Match="NavLinkMatch.All" class="hunt-global-nav-link">
++                    <span class="hunt-global-nav-icon" aria-hidden="true">⌂</span>
++                    <span class="hunt-global-nav-text">Overview</span>
++                </NavLink>
++                <NavLink href="/threat-hunting" class="hunt-global-nav-link">
++                    <span class="hunt-global-nav-icon" aria-hidden="true">⌕</span>
++                    <span class="hunt-global-nav-text">Threat Hunting</span>
++                </NavLink>
++                <NavLink href="/library" class="hunt-global-nav-link">
++                    <span class="hunt-global-nav-icon" aria-hidden="true">▤</span>
++                    <span class="hunt-global-nav-text">Library</span>
++                </NavLink>
++                <NavLink href="/dashboards" class="hunt-global-nav-link">
++                    <span class="hunt-global-nav-icon" aria-hidden="true">▦</span>
++                    <span class="hunt-global-nav-text">Dashboards</span>
++                </NavLink>
++                <NavLink href="/settings" class="hunt-global-nav-link">
++                    <span class="hunt-global-nav-icon" aria-hidden="true">⚙</span>
++                    <span class="hunt-global-nav-text">Settings</span>
++                </NavLink>
++            </nav>
++
++            <div class="hunt-global-nav-footer">
++                <button type="button"
++                        class="hunt-global-nav-toggle"
++                        @onclick="ToggleGlobalNavigation"
++                        aria-label="@GlobalNavToggleLabel"
++                        title="@GlobalNavToggleLabel">
++                    <span class="hunt-global-nav-icon" aria-hidden="true">@(_globalNavDocked ? "⇤" : "⇥")</span>
++                    <span class="hunt-global-nav-text">@(_globalNavDocked ? "Collapse" : "Expand")</span>
++                </button>
++            </div>
++        </aside>
++
++        <main class="hunt-main">
++            @Body
++        </main>
++    </div>
++</div>
++
++@code {
++    private bool _globalNavDocked = true;
++
++    private string GlobalNavToggleLabel => _globalNavDocked
++        ? "Undock global navigation"
++        : "Dock global navigation";
++
++    private void ToggleGlobalNavigation()
++        => _globalNavDocked = !_globalNavDocked;
++}
+diff --git a/src/Hunting.Web/wwwroot/css/app.css b/src/Hunting.Web/wwwroot/css/app.css
+index 97591bf329632720101654820b883a238840a87e..9e480b6eb0185909e8b46ea50cf69594ccb50d7b 100644
+--- a/src/Hunting.Web/wwwroot/css/app.css
++++ b/src/Hunting.Web/wwwroot/css/app.css
+@@ -3262,25 +3262,30 @@ body.hunt-splitter-active {
+     min-height: calc(100vh - 60px);
+ }
+ 
+ @media (max-width: 760px) {
+     .hunt-topbar {
+         padding: 0 14px;
+     }
+ 
+     .hunt-brand-text {
+         display: none;
+     }
+ 
+     .hunt-primary-nav {
+         margin-left: 0;
+     }
+ 
+     .hunt-nav-link {
+         padding: 0 10px;
+         font-size: 11px;
+     }
+ }
+ 
+ .hunt-global-nav-toggle {
+     flex: 0 0 auto;
+ }
++
++/* Module-host surface: used when Hunting pages are rendered inside an external shell. */
++.hunt-module-main {
++    min-width: 0;
++}
+diff --git a/tests/Hunting.Tests/DetectionContentGovernanceBoundaryTests.cs b/tests/Hunting.Tests/DetectionContentGovernanceBoundaryTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..bd3c6fecc65164ef187783e72497f4030d443656
+--- /dev/null
++++ b/tests/Hunting.Tests/DetectionContentGovernanceBoundaryTests.cs
+@@ -0,0 +1,61 @@
++namespace Hunting.Tests;
++
++using Hunting.Application.ContentLibrary;
++using Hunting.Application.SavedQueries;
++
++[TestClass]
++public sealed class DetectionContentGovernanceBoundaryTests
++{
++    [TestMethod]
++    [Description("Hunting does not define a parallel accepted detection-content contract before consuming the shared package.")]
++    public void ApplicationProject_DoesNotDefineLocalDetectionContentContracts()
++    {
++        var repositoryRoot = FindRepositoryRoot();
++        var localContractDirectory = Path.Combine(repositoryRoot, "src/Hunting.Application/DetectionContent");
++
++        Assert.IsFalse(
++            Directory.Exists(localContractDirectory),
++            "Hunting.Application must not define local DetectionContent contracts; consume the shared DeltaZulu.DetectionContent package instead.");
++    }
++
++    [TestMethod]
++    [Description("Saved queries remain draft-only local state and are not promoted to accepted detection content by Hunting.")]
++    public void SavedQueries_MapToDraftOnlyArtifacts_NotAcceptedContent()
++    {
++        var timestamp = new DateTime(2026, 6, 9, 1, 2, 3, DateTimeKind.Utc);
++        var savedQuery = new SavedQueryRecord(
++            "query-1",
++            "Suspicious PowerShell",
++            "Find encoded commands.",
++            "ProcessEvent | where ProcessName == 'powershell.exe'",
++            timestamp,
++            timestamp,
++            LastRunAt: null);
++
++        var artifact = SavedQueryContentLibraryMapper.ToDraftArtifact(savedQuery);
++
++        Assert.AreEqual(ContentLibraryArtifactType.SavedQuery, artifact.Type);
++        Assert.AreEqual(ContentLibraryArtifactState.DraftOnly, artifact.State);
++        Assert.AreNotEqual(ContentLibraryArtifactType.DetectionQuery, artifact.Type);
++        Assert.AreNotEqual(ContentLibraryArtifactState.AcceptedContent, artifact.State);
++        Assert.AreEqual("draft-only", artifact.Metadata["governance"]);
++    }
++
++    private static string FindRepositoryRoot()
++    {
++        var directory = new DirectoryInfo(AppContext.BaseDirectory);
++
++        while (directory is not null)
++        {
++            if (File.Exists(Path.Combine(directory.FullName, "Hunting.slnx")))
++            {
++                return directory.FullName;
++            }
++
++            directory = directory.Parent;
++        }
++
++        Assert.Fail("Could not locate repository root from test base directory.");
++        return string.Empty;
++    }
++}
+diff --git a/tests/Hunting.Tests/WebHostBoundaryTests.cs b/tests/Hunting.Tests/WebHostBoundaryTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..c8c44d76266b4700235d0dbd57797d65e7fc7eb1
+--- /dev/null
++++ b/tests/Hunting.Tests/WebHostBoundaryTests.cs
+@@ -0,0 +1,68 @@
++namespace Hunting.Tests;
++
++[TestClass]
++public sealed class WebHostBoundaryTests
++{
++    [TestMethod]
++    [Description("Standalone host remains a thin composition root over reusable Hunting web-module registration.")]
++    public void Program_DelegatesToStandaloneHostExtensions()
++    {
++        var repositoryRoot = FindRepositoryRoot();
++        var program = File.ReadAllText(Path.Combine(repositoryRoot, "src/Hunting.Web/Program.cs"));
++
++        StringAssert.Contains(program, "builder.AddHuntingStandaloneWeb();");
++        StringAssert.Contains(program, "await app.UseHuntingStandaloneWebAsync();");
++        Assert.IsFalse(program.Contains("AddMudServices", StringComparison.Ordinal));
++        Assert.IsFalse(program.Contains("MapFallbackToPage", StringComparison.Ordinal));
++    }
++
++    [TestMethod]
++    [Description("Hunting exposes a module router so a future platform host can choose layout/provider ownership.")]
++    public void App_UsesModuleRouterWithStandaloneLayout()
++    {
++        var repositoryRoot = FindRepositoryRoot();
++        var app = File.ReadAllText(Path.Combine(repositoryRoot, "src/Hunting.Web/App.razor"));
++
++        StringAssert.Contains(app, "<HuntingModuleRouter");
++        StringAssert.Contains(app, "StandaloneHuntingLayout");
++    }
++
++    [TestMethod]
++    [Description("Hunting pages do not explicitly opt back into the standalone shell layout.")]
++    public void RazorFiles_DoNotExplicitlyUseMainLayout()
++    {
++        var repositoryRoot = FindRepositoryRoot();
++        var webRoot = Path.Combine(repositoryRoot, "src/Hunting.Web");
++        var razorFiles = Directory.EnumerateFiles(webRoot, "*.razor", SearchOption.AllDirectories)
++            .Where(path => !path.EndsWith(Path.Combine("Shared", "MainLayout.razor"), StringComparison.OrdinalIgnoreCase))
++            .Where(path => !path.EndsWith(Path.Combine("Shared", "StandaloneHuntingLayout.razor"), StringComparison.OrdinalIgnoreCase))
++            .Where(path => !path.EndsWith(Path.Combine("Shared", "HuntingModuleLayout.razor"), StringComparison.OrdinalIgnoreCase));
++
++        foreach (var file in razorFiles)
++        {
++            var text = File.ReadAllText(file);
++            Assert.IsFalse(
++                text.Contains("@layout MainLayout", StringComparison.OrdinalIgnoreCase)
++                || text.Contains("@layout Hunting.Web.Shared.MainLayout", StringComparison.OrdinalIgnoreCase),
++                $"{Path.GetRelativePath(repositoryRoot, file)} should not explicitly force the standalone/module layout.");
++        }
++    }
++
++    private static string FindRepositoryRoot()
++    {
++        var directory = new DirectoryInfo(AppContext.BaseDirectory);
++
++        while (directory is not null)
++        {
++            if (File.Exists(Path.Combine(directory.FullName, "Hunting.slnx")))
++            {
++                return directory.FullName;
++            }
++
++            directory = directory.Parent;
++        }
++
++        Assert.Fail("Could not locate repository root from test base directory.");
++        return string.Empty;
++    }
++}

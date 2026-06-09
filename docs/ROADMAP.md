@@ -206,7 +206,7 @@ owns product hosting and detection-content governance.
 | 2 | P0 | Implemented: extract a reusable KQL validation service from the current query pipeline. | Workbench can validate detection-library KQL without depending on Hunting Web or executing queries. |
 | 3 | P2 | Implemented baseline: expose a Core validation interface over approved catalog translation. | Workbench consumes approved schema/catalog contracts without reaching into translator internals. |
 | 4 | P2 | Review generated SQL/debug SQL exposure and ensure it remains developer/runtime-only. | Detection-content governance stays separate from runtime internals. |
-| 5 | P2 | Reduce Web-layer coupling around `QueryService`, `RenderedQueryRunner`, and dashboard execution. | Later migration into a shared host shell requires less service-registration and orchestration rewrite. |
+| 5 | P2 | Implemented baseline: extract Hunting web-module service registration and standalone bootstrapping while keeping query/runtime/schema/data logic outside web. | Later migration into a shared host shell requires less service-registration and orchestration rewrite. |
 
 Exit criteria:
 
@@ -224,7 +224,7 @@ confusing accepted detection content with local hunting state.
 |---:|---|---|---|
 | 1 | P1 | Implemented baseline: map saved queries to draft-only content-library artifacts. | Saved queries can evolve into detection-content library artifacts without becoming accepted content by default. |
 | 2 | P1 | Implemented vocabulary transition: library UI classifies local query records as saved queries, with compatibility aliases only. | Workbench can govern, version, review, or accept query artifacts later. |
-| 3 | P1 | Make query library, visualization library, and dashboard persistence clearly application-state modules. | Transient hunting state is not mistaken for accepted detection content. |
+| 3 | P1 | Implemented baseline: document the shared accepted detection-content dependency and keep saved queries draft-only application state without adding local competing contracts. | Transient hunting state is not mistaken for accepted detection content. |
 
 Exit criteria:
 
@@ -238,11 +238,11 @@ Exit criteria:
 
 | Order | Priority | Task | Outcome |
 |---:|---|---|---|
-| 1 | P1 | Make Hunting pages mountable below a product route such as `/threat-hunting` or `/hunt`. | Workbench can own `/` while Hunting remains a product area. |
+| 1 | P1 | Partially implemented: add temporary `HuntingModuleRouter`, module layout, and standalone layout split; route-prefixing remains a pre-host-merge blocker. | Workbench can own `/` while Hunting remains a product area. |
 | 2 | P1 | Rename or route Hunting's settings page as runtime/query settings, or prepare to remove it. | Hunting does not conflict with Workbench operator/product settings. |
 | 3 | P1 | Implemented baseline: Hunting `app.css` scopes compatibility aliases under `.hunt-app` and sources values from DeltaZulu semantic tokens. | Assets can move into a shared host with less styling and script friction. |
-| 4 | P1 | In progress: continue dashboard/component cleanup against shared design tokens and common MudBlazor styling conventions. | The merged app does not carry a second visual system. |
-| 5 | P2 | Add migration notes for moving `Hunting.Web` from classic Blazor Server hosting to the selected common host model. | The later server merge is explicit, reviewable, and testable. |
+| 4 | P1 | In progress: continue dashboard/component cleanup; after platform import, move generic table/panel/dialog/empty-state/page-header/Markdown/dashboard chrome onto `DeltaZulu.Blazor.Components`. | The merged app does not carry a second visual system. |
+| 5 | P2 | Implemented baseline: add `docs/MERGE-PREPARATION.md` with host, UI, asset, persistence, routing-manifest, and detection-content migration notes. | The later server merge is explicit, reviewable, and testable. |
 | 6 | P2 | Implemented baseline: document Hunting's intended role in the merged architecture: runtime, KQL validation, schema catalog, render, dashboards. | Workbench/Hunting responsibilities do not drift during merge work. |
 
 Exit criteria:

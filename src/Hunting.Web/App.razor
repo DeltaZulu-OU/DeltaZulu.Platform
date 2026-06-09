@@ -1,17 +1,12 @@
-@using Microsoft.AspNetCore.Components.Routing
+@using Hunting.Web.Components.Hosting
 
 <MudThemeProvider />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<Router AppAssembly="@typeof(App).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Shared.MainLayout)" />
-    </Found>
+<HuntingModuleRouter DefaultLayout="@typeof(Hunting.Web.Shared.StandaloneHuntingLayout)">
     <NotFound>
-        <LayoutView Layout="@typeof(Shared.MainLayout)">
-            <p>Page not found.</p>
-        </LayoutView>
+        <p>Page not found.</p>
     </NotFound>
-</Router>
+</HuntingModuleRouter>

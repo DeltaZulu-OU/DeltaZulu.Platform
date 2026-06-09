@@ -3284,3 +3284,8 @@ body.hunt-splitter-active {
 .hunt-global-nav-toggle {
     flex: 0 0 auto;
 }
+
+/* Module-host surface: used when Hunting pages are rendered inside an external shell. */
+.hunt-module-main {
+    min-width: 0;
+}
