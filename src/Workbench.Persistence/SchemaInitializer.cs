@@ -18,24 +18,16 @@ public static class SchemaInitializer
 
     private static void MigrateExistingData(SqliteConnection conn)
     {
-        // Add columns to issues table that may not exist in older databases.
-        // ALTER TABLE ... ADD COLUMN is idempotent when the column already exists in SQLite 3.37+.
-        var alterStatements = new[]
-        {
-            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS ext_case_system_type INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS description TEXT",
-            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS acceptance_criteria TEXT",
-            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS data_source TEXT",
-            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS platform TEXT",
-            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS attack_technique_id TEXT",
-            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS tlp TEXT",
-            "ALTER TABLE issues ADD COLUMN IF NOT EXISTS labels TEXT NOT NULL DEFAULT ''",
-        };
-        foreach (var sql in alterStatements)
-        {
-            try { conn.Execute(sql); }
-            catch { /* column already exists */ }
-        }
+        // Add columns to issues table that may not exist in older databases. SQLite does
+        // not support ALTER TABLE ... ADD COLUMN IF NOT EXISTS, so check table_info first.
+        AddColumnIfMissing(conn, "issues", "ext_case_system_type", "INTEGER NOT NULL DEFAULT 0");
+        AddColumnIfMissing(conn, "issues", "description", "TEXT");
+        AddColumnIfMissing(conn, "issues", "acceptance_criteria", "TEXT");
+        AddColumnIfMissing(conn, "issues", "data_source", "TEXT");
+        AddColumnIfMissing(conn, "issues", "platform", "TEXT");
+        AddColumnIfMissing(conn, "issues", "attack_technique_id", "TEXT");
+        AddColumnIfMissing(conn, "issues", "tlp", "TEXT");
+        AddColumnIfMissing(conn, "issues", "labels", "TEXT NOT NULL DEFAULT ''");
 
         // Migrate detection lifecycle values from the old pre-acceptance name to Draft.
         conn.Execute("UPDATE detections SET lifecycle = 'Draft' WHERE lifecycle = 'Conceived'");
@@ -44,6 +36,24 @@ public static class SchemaInitializer
         conn.Execute("UPDATE issues SET status = 'New'    WHERE status = 'Open'");
         conn.Execute("UPDATE issues SET status = 'Merged' WHERE status = 'Resolved'");
         // InProgress, Blocked, Closed retain the same string names.
+    }
+
+    private static void AddColumnIfMissing(
+        SqliteConnection conn,
+        string tableName,
+        string columnName,
+        string columnDefinition)
+    {
+        var columns = conn.Query<SqliteColumnInfo>($"PRAGMA table_info({tableName})");
+        if (columns.Any(c => string.Equals(c.name, columnName, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        conn.Execute($"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition}");
+    }
+
+    private sealed class SqliteColumnInfo
+    {
+        public string name { get; set; } = "";
     }
 
     private const string Schema = """
