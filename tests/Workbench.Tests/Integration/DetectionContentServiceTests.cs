@@ -14,7 +14,7 @@ public sealed class DetectionContentServiceTests : IDisposable
     public void Teardown() => _host.Dispose();
 
     [TestMethod]
-    public async Task ConceiveAsync_PersistsDetection_And_ListReturnsIt()
+    public async Task CreateAsync_PersistsDetection_And_ListReturnsIt()
     {
         DetectionId id;
 
@@ -22,10 +22,10 @@ public sealed class DetectionContentServiceTests : IDisposable
         using (var scope = _host.CreateScope())
         {
             var svc = _host.Resolve<DetectionContentService>(scope);
-            var det = await svc.ConceiveAsync("anomalous-sign-in", "Anomalous Sign-In", "Detects unusual sign-in patterns.", TestContext.CancellationToken);
+            var det = await svc.CreateAsync("anomalous-sign-in", "Anomalous Sign-In", "Detects unusual sign-in patterns.", TestContext.CancellationToken);
             id = det.Id;
             Assert.AreEqual("anomalous-sign-in", det.Slug);
-            Assert.AreEqual(DetectionLifecycle.Conceived, det.Lifecycle);
+            Assert.AreEqual(DetectionLifecycle.Draft, det.Lifecycle);
         }
 
         // Scope 2: read back from a fresh DbContext
@@ -40,15 +40,15 @@ public sealed class DetectionContentServiceTests : IDisposable
     }
 
     [TestMethod]
-    public async Task ConceiveAsync_DuplicateSlug_Throws()
+    public async Task CreateAsync_DuplicateSlug_Throws()
     {
         using var scope = _host.CreateScope();
         var svc = _host.Resolve<DetectionContentService>(scope);
 
-        await svc.ConceiveAsync("dup-slug", "First", "", TestContext.CancellationToken);
+        await svc.CreateAsync("dup-slug", "First", "", TestContext.CancellationToken);
 
         var ex = await Assert.ThrowsExactlyAsync<DomainException>(
-            () => svc.ConceiveAsync("dup-slug", "Second", "", TestContext.CancellationToken));
+            () => svc.CreateAsync("dup-slug", "Second", "", TestContext.CancellationToken));
         Assert.AreEqual("detection.slug_duplicate", ex.Code);
     }
 
@@ -59,7 +59,7 @@ public sealed class DetectionContentServiceTests : IDisposable
         using (var scope = _host.CreateScope())
         {
             var svc = _host.Resolve<DetectionContentService>(scope);
-            var det = await svc.ConceiveAsync("rename-me", "Old Title", "", TestContext.CancellationToken);
+            var det = await svc.CreateAsync("rename-me", "Old Title", "", TestContext.CancellationToken);
             id = det.Id;
         }
 

@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-The workbench accumulated seven user-facing top-level concepts (Detections, Issues, Changes, Checks, Reviews, Versions, Settings) plus sub-concepts (workflow profiles, external case references, detection conception). A design review found that:
+The workbench accumulated seven user-facing top-level concepts (Detections, Issues, Changes, Checks, Reviews, Versions, Settings) plus sub-concepts (workflow profiles, external case references, pre-accepted detection identities). A design review found that:
 
 1. Users must understand the full domain model before they can act.
 2. Issue is a required step before opening a Change, adding indirection.
@@ -45,14 +45,14 @@ Home, Detections, Changes, History, Settings.
 - The system derives governance from workspace configuration.
 - The UI shows the effect ("requires approval") not the mechanism ("controlled_review").
 
-### Detection conception is implicit
+### Detection identity creation is implicit
 
 - Creating a Change for a new detection implicitly creates the detection identity.
-- No separate "Conceive Detection" step in the UI.
+- No separate detection-intake step appears in the UI.
 
 ### Documentation consolidated
 
-- Product definition lives in `docs/DESIGN.md`.
+- Product definition lives in `docs/ARCHITECTURE.md`.
 - Analysis artifacts (GAP_ANALYSIS, USER_STORIES, UX_REDESIGN_ANALYSIS, UI_ACTIVITY_DIAGRAM, ROADMAP) are archived.
 - README, ARCHITECTURE, and AGENTS are updated.
 
@@ -67,4 +67,4 @@ Home, Detections, Changes, History, Settings.
 
 ## Supersedes
 
-This ADR modifies the UI expression of ADR-0007 and ADR-0008 without invalidating their domain-level decisions.
+This ADR modifies the UI expression of ADR-0007 and ADR-0008 without invalidating their domain-level decisions. ADR-0019 updates the terminology guidance for pre-accepted detections.

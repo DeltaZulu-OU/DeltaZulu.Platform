@@ -8,14 +8,14 @@ namespace Workbench.Application.Services;
 public sealed class DetectionContentService(
     IDetectionRepository detections, TimeProvider time)
 {
-    public async Task<Detection> ConceiveAsync(
+    public async Task<Detection> CreateAsync(
         string slug, string title, string summary, CancellationToken ct = default)
     {
         var existing = await detections.GetBySlugAsync(slug, ct);
         if (existing is not null)
             throw new DomainException("detection.slug_duplicate", $"Detection slug '{slug}' is already in use.");
 
-        var detection = Detection.Conceive(DetectionId.New(), slug, title, summary, time.GetUtcNow());
+        var detection = Detection.CreateDraft(DetectionId.New(), slug, title, summary, time.GetUtcNow());
         detections.Add(detection);
         return detection;
     }

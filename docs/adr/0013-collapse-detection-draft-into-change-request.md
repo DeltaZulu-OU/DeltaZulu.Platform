@@ -1,4 +1,4 @@
-# ADR-0013: Collapse DetectionDraft into ChangeRequest, conceive Detection at first reference
+# ADR-0013: Collapse DetectionDraft into ChangeRequest
 
 ## Status
 
@@ -8,7 +8,7 @@ Accepted (Phase 0 — domain layer).
 
 [AGENTS.md §"Required domain objects"](../AGENTS.md) lists both `Detection` and `DetectionDraft`
 as distinct objects, and the spec's "first implementation slice" sequence starts with "create a
-detection draft in the database" before any change is opened. [ARCHITECTURE.md §10](../ARCHITECTURE.md)
+detection draft in the database" before any change is opened. [ARCHITECTURE.md](../ARCHITECTURE.md)
 also models `ChangeRequest` with `ChangeDraftFile` children. The relationship between the two
 draft mechanisms was left implicit.
 
@@ -36,9 +36,9 @@ spec does not specify where this identifier originates.
    `DetectionDraft` aggregate or table. The draft state of a detection package is the
    `ChangeDraftFile` collection of its currently open `ChangeRequest`.
 
-2. **Conceive a `Detection` row at the moment a user decides to create a new detection.** The
-   `Detection` aggregate has a `Lifecycle` discriminator (`Conceived`, `Accepted`,
-   `Deprecated`). A detection in `Conceived` state has no `CurrentVersionId` and no canonical
+2. **Create a `Detection` row at the moment a user starts a new detection.** The
+   `Detection` aggregate has a `Lifecycle` discriminator (`Draft`, `Accepted`,
+   `Deprecated`). A detection in `Draft` state has no `CurrentVersionId` and no canonical
    content in Git; it exists in the database to provide a stable identifier for issues, cases,
    and changes to reference before the first merge.
 
@@ -61,9 +61,9 @@ spec does not specify where this identifier originates.
   re-introduce a `DetectionDraft` aggregate (with its own ADR) if a workflow surfaces that
   needs it.
 - Net-new detections occupy a database row before they have any content. Cleanup of
-  long-abandoned `Conceived` detections is a future concern, not blocked by this decision.
-- The `Detection.Lifecycle` enum carries an extra value that has no counterpart in the spec
-  text; readers must consult this ADR to understand it.
+  long-abandoned `Draft` detections is a future concern, not blocked by this decision.
+- The `Detection.Lifecycle` enum carries a pre-accepted `Draft` value; readers must consult
+  this ADR and ADR-0019 to understand the storage and terminology boundary.
 
 ## Re-evaluation triggers
 

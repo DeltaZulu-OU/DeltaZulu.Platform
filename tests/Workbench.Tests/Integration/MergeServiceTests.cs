@@ -18,17 +18,17 @@ public sealed class MergeServiceTests : IDisposable
     [TestCleanup]
     public void Teardown() => _host.Dispose();
 
-    private async Task<DetectionId> ConceiveDetection(string slug = "test-det")
+    private async Task<DetectionId> CreateDetection(string slug = "test-det")
     {
         using var scope = _host.CreateScope();
         var svc = _host.Resolve<DetectionContentService>(scope);
-        return (await svc.ConceiveAsync(slug, "Test Detection", "For merge tests", TestContext.CancellationToken)).Id;
+        return (await svc.CreateAsync(slug, "Test Detection", "For merge tests", TestContext.CancellationToken)).Id;
     }
 
     [TestMethod]
     public async Task QuickLab_Merge_CommitsToContentStore_CreatesVersion_UpdatesDetection()
     {
-        var detId = await ConceiveDetection("quick-merge");
+        var detId = await CreateDetection("quick-merge");
         ChangeRequestId changeId;
 
         // Open and seed a change.
@@ -84,7 +84,7 @@ public sealed class MergeServiceTests : IDisposable
     [TestMethod]
     public async Task ControlledReview_Merge_RequiresChecksAndApproval()
     {
-        var detId = await ConceiveDetection("ctrl-merge");
+        var detId = await CreateDetection("ctrl-merge");
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -146,7 +146,7 @@ public sealed class MergeServiceTests : IDisposable
     [TestMethod]
     public async Task Merge_MarksSiblingChangesAsStale()
     {
-        var detId = await ConceiveDetection("stale-test");
+        var detId = await CreateDetection("stale-test");
         ChangeRequestId firstId, secondId;
 
         using (var scope = _host.CreateScope())
@@ -182,7 +182,7 @@ public sealed class MergeServiceTests : IDisposable
     [TestMethod]
     public async Task Merge_SecondVersion_IncrementsSequenceNumber()
     {
-        var detId = await ConceiveDetection("multi-version");
+        var detId = await CreateDetection("multi-version");
 
         // First merge.
         ChangeRequestId firstId;
@@ -227,7 +227,7 @@ public sealed class MergeServiceTests : IDisposable
     [TestMethod]
     public async Task Merge_WithInvestigationNote_CommitsNoteToGit()
     {
-        var detId = await ConceiveDetection("noted-det");
+        var detId = await CreateDetection("noted-det");
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -255,7 +255,7 @@ public sealed class MergeServiceTests : IDisposable
     [TestMethod]
     public async Task Merge_WithStaticAsset_CommitsAsBinary()
     {
-        var detId = await ConceiveDetection("asset-det");
+        var detId = await CreateDetection("asset-det");
         ChangeRequestId changeId;
         var pngB64 = Convert.ToBase64String(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A });
 
@@ -283,7 +283,7 @@ public sealed class MergeServiceTests : IDisposable
     [TestMethod]
     public async Task Merge_PartialDraft_PreservesUnchangedAcceptedFiles()
     {
-        var detId = await ConceiveDetection("partial-preserve");
+        var detId = await CreateDetection("partial-preserve");
 
         // Create accepted v1 with two canonical files.
         ChangeRequestId firstId;
@@ -336,7 +336,7 @@ public sealed class MergeServiceTests : IDisposable
     [TestMethod]
     public async Task ControlledReview_BlocksMerge_WhenBaseVersionDrifted_WithoutIsStaleFlag()
     {
-        var detId = await ConceiveDetection("stale-drift");
+        var detId = await CreateDetection("stale-drift");
 
         // Merge a first change to create v1.
         ChangeRequestId firstId;

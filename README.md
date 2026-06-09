@@ -69,15 +69,13 @@ raw chips, inline styles, and page-local panel surfaces. See
 The domain, application, persistence, infrastructure, workflow, and validation modules do not
 depend on `Workbench.Web`; the web project composes them at the edge.
 
-See [`docs/DESIGN.md`](docs/DESIGN.md) for the product definition and user stories.
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for module boundaries and data ownership.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the product definition, user stories, module boundaries, and data ownership.
 
 ## Documentation
 
 | File | Purpose |
 |---|---|
-| [`docs/DESIGN.md`](docs/DESIGN.md) | Product definition, user stories, navigation model. |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Module boundaries, data ownership, technical model. |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Product definition, user stories, module boundaries, data ownership, technical model. |
 | [`docs/AGENTS.md`](docs/AGENTS.md) | Constraints for contributors and AI agents. |
 | [`docs/design-system/WORKBENCH_DESIGN_AUDIT.md`](docs/design-system/WORKBENCH_DESIGN_AUDIT.md) | Local design-system drift audit. |
 | [`docs/adr/`](docs/adr/) | Architecture Decision Records. Binding unless superseded. |

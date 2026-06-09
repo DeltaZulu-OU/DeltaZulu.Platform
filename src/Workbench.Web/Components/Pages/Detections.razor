@@ -15,11 +15,11 @@
 <PageTitle>Detections</PageTitle>
 
 <DzPageHeader Title="Detections"
-              Description="Detection content packages versioned in Git.">
+              Description="Detection content packages and their accepted versions.">
     <Actions>
         <MudButton Variant="Variant.Filled" Color="Color.Primary"
                    StartIcon="@Icons.Material.Outlined.Add"
-                   OnClick="OpenConceiveDialog">
+                   OnClick="OpenNewDetectionDialog">
             New detection
         </MudButton>
     </Actions>
@@ -34,8 +34,8 @@
         <DzFilterChip Value="all" Selected="@(_lifecycleFilter == "all")" OnClick="@(() => OnLifecycleFilterChanged("all"))">
             All (@_detections.Count)
         </DzFilterChip>
-        <DzFilterChip Value="Conceived" Selected="@(_lifecycleFilter == "Conceived")" OnClick="@(() => OnLifecycleFilterChanged("Conceived"))">
-            Conceived (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Conceived))
+        <DzFilterChip Value="Draft" Selected="@(_lifecycleFilter == "Draft")" OnClick="@(() => OnLifecycleFilterChanged("Draft"))">
+            Draft (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Draft))
         </DzFilterChip>
         <DzFilterChip Value="Accepted" Selected="@(_lifecycleFilter == "Accepted")" OnClick="@(() => OnLifecycleFilterChanged("Accepted"))">
             Accepted (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Accepted))
@@ -53,12 +53,12 @@
 else if (_filteredDetections.Count == 0)
 {
     <DzEmptyState Title="No detections match the current filter."
-                  Description="Create a new detection or adjust the current search and lifecycle filters."
+                  Description="Create a new detection or adjust the current search and status filters."
                   Icon="@Icons.Material.Outlined.SearchOff">
         <Actions>
             <MudButton Variant="Variant.Filled" Color="Color.Primary"
                        StartIcon="@Icons.Material.Outlined.Add"
-                       OnClick="OpenConceiveDialog">
+                       OnClick="OpenNewDetectionDialog">
                 New detection
             </MudButton>
         </Actions>
@@ -73,14 +73,14 @@ else
             <HeaderContent>
                 <MudTh>Slug</MudTh>
                 <MudTh>Title</MudTh>
-                <MudTh>Lifecycle</MudTh>
+                <MudTh>Status</MudTh>
                 <MudTh>Updated</MudTh>
                 <MudTh>Actions</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Slug"><code>@context.Slug</code></MudTd>
                 <MudTd DataLabel="Title">@context.Title</MudTd>
-                <MudTd DataLabel="Lifecycle"><StatusChip Lifecycle="context.Lifecycle" /></MudTd>
+                <MudTd DataLabel="Status"><StatusChip Lifecycle="context.Lifecycle" /></MudTd>
                 <MudTd DataLabel="Updated">
                     <MudText Typo="Typo.caption" Class="text-muted">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
                 </MudTd>
@@ -136,10 +136,10 @@ else
             .ToList();
     }
 
-    private async Task OpenConceiveDialog()
+    private async Task OpenNewDetectionDialog()
     {
         var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<ConceiveDetectionDialog>("New detection", options);
+        var dialog = await DialogService.ShowAsync<NewDetectionDialog>("New detection", options);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled) await LoadAsync();
     }

@@ -11,11 +11,11 @@ public sealed class DetectionTests
     [DataRow("anomalous-sign-in")]
     [DataRow("a1b2")]
     [DataRow("aws-iam-root-login")]
-    public void Conceive_AcceptsValidSlugs(string slug)
+    public void CreateDraft_AcceptsValidSlugs(string slug)
     {
-        var d = Detection.Conceive(DetectionId.New(), slug, "title", "summary", Now);
+        var d = Detection.CreateDraft(DetectionId.New(), slug, "title", "summary", Now);
         Assert.AreEqual(slug, d.Slug);
-        Assert.AreEqual(DetectionLifecycle.Conceived, d.Lifecycle);
+        Assert.AreEqual(DetectionLifecycle.Draft, d.Lifecycle);
         Assert.IsNull(d.CurrentVersionId);
     }
 
@@ -26,17 +26,17 @@ public sealed class DetectionTests
     [DataRow("ab")]
     [DataRow("has space")]
     [DataRow("with_underscore")]
-    public void Conceive_RejectsInvalidSlugs(string slug)
+    public void CreateDraft_RejectsInvalidSlugs(string slug)
     {
         var ex = Assert.ThrowsExactly<DomainException>(
-            () => Detection.Conceive(DetectionId.New(), slug, "title", "summary", Now));
+            () => Detection.CreateDraft(DetectionId.New(), slug, "title", "summary", Now));
         Assert.AreEqual("detection.slug_invalid", ex.Code);
     }
 
     [TestMethod]
     public void MarkAccepted_PromotesLifecycleAndRecordsVersion()
     {
-        var d = Detection.Conceive(DetectionId.New(), "demo", "Title", "Summary", Now);
+        var d = Detection.CreateDraft(DetectionId.New(), "demo", "Title", "Summary", Now);
         var v = VersionId.New();
 
         d.MarkAccepted(v, Now.AddMinutes(5));
@@ -48,7 +48,7 @@ public sealed class DetectionTests
     [TestMethod]
     public void MarkAccepted_OnDeprecatedDetection_Throws()
     {
-        var d = Detection.Conceive(DetectionId.New(), "demo", "Title", "Summary", Now);
+        var d = Detection.CreateDraft(DetectionId.New(), "demo", "Title", "Summary", Now);
         d.Deprecate(Now);
 
         var ex = Assert.ThrowsExactly<DomainException>(() => d.MarkAccepted(VersionId.New(), Now));

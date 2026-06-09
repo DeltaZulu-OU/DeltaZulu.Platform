@@ -14,7 +14,7 @@ public sealed class MergeReconciliationServiceTests : IDisposable
     [TestMethod]
     public async Task ListUnresolvedAsync_AfterSuccessfulMerge_DoesNotReportCompletedIntent()
     {
-        var detectionId = await ConceiveDetectionAsync("merge-intent-completed");
+        var detectionId = await CreateDetectionAsync("merge-intent-completed");
         var changeId = await OpenQuickLabChangeAsync(detectionId, "CHG-MI-1");
 
         using (var scope = _host.CreateScope())
@@ -75,7 +75,7 @@ public sealed class MergeReconciliationServiceTests : IDisposable
     [TestMethod]
     public async Task RepairCommittedAsync_CommittedIntentWithoutProjection_CreatesVersionProjection()
     {
-        var detectionId = await ConceiveDetectionAsync("merge-intent-repair");
+        var detectionId = await CreateDetectionAsync("merge-intent-repair");
         var changeId = await OpenQuickLabChangeAsync(detectionId, "CHG-MI-3");
         CommitResult commitResult;
 
@@ -217,11 +217,11 @@ public sealed class MergeReconciliationServiceTests : IDisposable
         StringAssert.Contains(guidance.Message, "no accepted snapshot is recorded");
     }
 
-    private async Task<DetectionId> ConceiveDetectionAsync(string slug)
+    private async Task<DetectionId> CreateDetectionAsync(string slug)
     {
         using var scope = _host.CreateScope();
         var svc = _host.Resolve<DetectionContentService>(scope);
-        return (await svc.ConceiveAsync(slug, "Merge Intent Test Detection", "", TestContext.CancellationToken)).Id;
+        return (await svc.CreateAsync(slug, "Merge Intent Test Detection", "", TestContext.CancellationToken)).Id;
     }
 
     private async Task<ChangeRequestId> OpenQuickLabChangeAsync(DetectionId detectionId, string key)

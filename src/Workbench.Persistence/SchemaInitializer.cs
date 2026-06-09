@@ -37,6 +37,9 @@ public static class SchemaInitializer
             catch { /* column already exists */ }
         }
 
+        // Migrate detection lifecycle values from the old pre-acceptance name to Draft.
+        conn.Execute("UPDATE detections SET lifecycle = 'Draft' WHERE lifecycle = 'Conceived'");
+
         // Migrate issue status values from the old 5-state enum to the 13-state machine.
         conn.Execute("UPDATE issues SET status = 'New'    WHERE status = 'Open'");
         conn.Execute("UPDATE issues SET status = 'Merged' WHERE status = 'Resolved'");
@@ -49,7 +52,7 @@ public static class SchemaInitializer
             slug            TEXT NOT NULL UNIQUE,
             title           TEXT NOT NULL,
             summary         TEXT NOT NULL DEFAULT '',
-            lifecycle       TEXT NOT NULL DEFAULT 'Conceived',
+            lifecycle       TEXT NOT NULL DEFAULT 'Draft',
             current_version_id TEXT,
             created_at      TEXT NOT NULL,
             updated_at      TEXT NOT NULL

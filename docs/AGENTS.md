@@ -3,7 +3,7 @@
 ## Purpose
 
 Instructions for AI coding agents and human contributors. Before writing code, read this file,
-the root `README.md`, `docs/DESIGN.md`, `docs/ARCHITECTURE.md`, and the ADRs under `docs/adr/`.
+the root `README.md`, `docs/ARCHITECTURE.md`, and the ADRs under `docs/adr/`.
 ADRs are binding unless superseded by a newer ADR.
 
 The product is a domain-focused Detection Content Workbench. Do not drift into building a

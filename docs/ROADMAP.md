@@ -16,19 +16,32 @@ The current Workbench already owns detection content management (edit, validate,
 into Git). That scope remains. The roadmap extends Workbench to consume security operations
 objects produced by Hunting without becoming the owner of their generation logic.
 
+### FIRST-aligned detection engineering guidance
+
+FIRST Detection Engineering & Threat Hunting SIG guidance reinforces the current content workflow while shaping future roadmap work:
+
+- **Outcomes and tuning reasons** should explain whether a change responds to a false positive, false negative, coverage gap, test failure, validated hunting finding, or other feedback source.
+- **Tiering, fidelity, coverage, and precision** should be metadata and reporting dimensions around detections and accepted versions, not standalone navigation or required forms for starting a change.
+- **Ecosystem feedback** from CTI, hunting, SOC analysis, incident response, offensive validation, and platform teams should enter Workbench as links, summaries, reasons, checks, reviews, and version history.
+- **Scope boundaries** remain: Workbench should not become a CTI platform, threat-hunting notebook, case-management system, SIEM runtime, or taxonomy manager.
+
+These items should be introduced only when they support concrete prioritization, reporting, or detection-quality feedback stories.
+
 ## 2. Phases
 
 ### W1: Audit existing issue/workflow model
 
 Review the current Issue, Change, status, check, review, and comment models. Identify which
 concepts are generic workflow (reusable) and which would need to become security-specific
-(candidate triage, incident promotion). ADR-0017 simplified Issues to optional; ADR-0018
-expanded the Issue domain for detection content. This audit determines whether the expanded
-Issue model can host SOC candidate/incident decisions or whether a separate domain is needed.
+(candidate triage, incident promotion, TaHiTI hunt investigations). ADR-0017 simplified Issues
+to optional; ADR-0018 expanded the Issue domain for detection content; ADR-0020 keeps threat
+hunting on a separate `HuntInvestigation` aggregate. This audit determines whether existing
+models can support future SOC and hunt workflows or whether separate domains are needed.
 
 **Exit criteria:** A decision table showing what can be reused, what must stay separate, and
-what must not be bent into a shape it was not designed for. The key question: can `Issue` or
-`Change` host candidate decisions, or do candidates need their own aggregate?
+what must not be bent into a shape it was not designed for. The key questions: can `Issue` or
+`Change` host candidate decisions, and can either host TaHiTI hunt investigations? ADR-0020
+answers the hunt question as no: hunts need their own aggregate.
 
 ### W2: Separate generic workflow from SOC workflow
 
@@ -180,6 +193,7 @@ Workbench must meet these criteria before merging into DeltaZulu.Platform:
 - Incident promotion is explicit and requires analyst approval.
 - Audit trail and permission model are defined and enforced.
 - Detection content workflow (edit → validate → review → accept) remains intact and tested.
+- TaHiTI hunt workflow remains a documented boundary until shared contracts are stable.
 
 ## 8. Suggested module names
 
@@ -191,6 +205,7 @@ Workbench must meet these criteria before merging into DeltaZulu.Platform:
 | Candidate generation and evidence | `DeltaZulu.Security.Correlation` |
 | Incident/case workflow contracts | `DeltaZulu.Security.Cases` |
 | Detection content workflow (Workbench) | `DeltaZulu.Workbench` |
+| Threat hunting lifecycle and handover | `DeltaZulu.Workbench.Hunts` |
 | Shared UI/design primitives | `DeltaZulu.Platform.DesignSystem` |
 | Single web host | `DeltaZulu.Platform.Web` |
 

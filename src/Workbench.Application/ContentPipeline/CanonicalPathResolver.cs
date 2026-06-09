@@ -17,7 +17,7 @@ namespace Workbench.Application.ContentPipeline;
 /// </code>
 /// <para>The resolver does not validate that the slug or logical path are well-formed;
 /// that validation has already happened in the domain layer (<see cref="LogicalPath.Parse"/>
-/// and <c>Detection.Conceive</c>).</para>
+/// and the detection identity factory).</para>
 /// </remarks>
 public static class CanonicalPathResolver
 {

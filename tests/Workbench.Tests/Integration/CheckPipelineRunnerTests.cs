@@ -14,17 +14,17 @@ public sealed class CheckPipelineRunnerTests : IDisposable
     [TestCleanup]
     public void Teardown() => _host.Dispose();
 
-    private async Task<DetectionId> ConceiveDetection(string slug = "check-det")
+    private async Task<DetectionId> CreateDetection(string slug = "check-det")
     {
         using var scope = _host.CreateScope();
         var svc = _host.Resolve<DetectionContentService>(scope);
-        return (await svc.ConceiveAsync(slug, "Check Test Detection", "", TestContext.CancellationToken)).Id;
+        return (await svc.CreateAsync(slug, "Check Test Detection", "", TestContext.CancellationToken)).Id;
     }
 
     [TestMethod]
     public async Task Pipeline_ValidPackage_AllBlockingChecksPassed_ChangeAdvancesToReviewRequired()
     {
-        var detId = await ConceiveDetection();
+        var detId = await CreateDetection();
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -68,7 +68,7 @@ public sealed class CheckPipelineRunnerTests : IDisposable
     [TestMethod]
     public async Task Pipeline_InvalidSchema_BlockingCheckFails_ChangeRevertsToDraft()
     {
-        var detId = await ConceiveDetection("fail-det");
+        var detId = await CreateDetection("fail-det");
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -105,7 +105,7 @@ public sealed class CheckPipelineRunnerTests : IDisposable
     [TestMethod]
     public async Task Pipeline_ControlledReview_MissingRequiredQueryCheck_RemainsDraft()
     {
-        var detId = await ConceiveDetection("metadata-only-det");
+        var detId = await CreateDetection("metadata-only-det");
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -143,7 +143,7 @@ public sealed class CheckPipelineRunnerTests : IDisposable
     [TestMethod]
     public async Task Pipeline_QuickLab_FailedCheckDoesNotBlock_ChangeAdvancesToReadyToAccept()
     {
-        var detId = await ConceiveDetection("ql-fail-det");
+        var detId = await CreateDetection("ql-fail-det");
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -174,7 +174,7 @@ public sealed class CheckPipelineRunnerTests : IDisposable
     [TestMethod]
     public async Task Pipeline_WithInvestigationNote_RunsNonBlockingNoteCheck()
     {
-        var detId = await ConceiveDetection("note-check-det");
+        var detId = await CreateDetection("note-check-det");
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -213,7 +213,7 @@ public sealed class CheckPipelineRunnerTests : IDisposable
     [TestMethod]
     public async Task Pipeline_WithFixtures_RunsFixtureCheck()
     {
-        var detId = await ConceiveDetection("fixture-check-det");
+        var detId = await CreateDetection("fixture-check-det");
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -241,7 +241,7 @@ public sealed class CheckPipelineRunnerTests : IDisposable
     [TestMethod]
     public async Task Pipeline_StaticAssetOnly_SkipsAllTextChecks()
     {
-        var detId = await ConceiveDetection("asset-only-det");
+        var detId = await CreateDetection("asset-only-det");
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -267,7 +267,7 @@ public sealed class CheckPipelineRunnerTests : IDisposable
     [TestMethod]
     public async Task Pipeline_ReRun_ClearsOldChecks_SecondRunNotPollutedByFirst()
     {
-        var detId = await ConceiveDetection("rerun-det");
+        var detId = await CreateDetection("rerun-det");
         ChangeRequestId changeId;
 
         // Create change with invalid schema (missing fields).

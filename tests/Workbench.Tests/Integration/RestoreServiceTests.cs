@@ -19,7 +19,7 @@ public sealed class RestoreServiceTests : IDisposable
     [TestMethod]
     public async Task RestoreVersionAsChange_PopulatesDraftFromAcceptedVersion_WithoutRewritingHistory()
     {
-        var detectionId = await ConceiveDetectionAsync("restore-det");
+        var detectionId = await CreateDetectionAsync("restore-det");
         var version1 = await MergeQuickLabAsync(
             detectionId,
             "CHG-R1",
@@ -77,7 +77,7 @@ public sealed class RestoreServiceTests : IDisposable
     [TestMethod]
     public async Task RestoreVersionAsChange_PreservesBinaryAcceptedFilesAsStaticAssets()
     {
-        var detectionId = await ConceiveDetectionAsync("restore-binary");
+        var detectionId = await CreateDetectionAsync("restore-binary");
         var pngB64 = Convert.ToBase64String(new byte[] { 0x89, 0x50, 0x4E, 0x47 });
         var version = await MergeQuickLabAsync(
             detectionId,
@@ -106,7 +106,7 @@ public sealed class RestoreServiceTests : IDisposable
     [TestMethod]
     public async Task RestoreVersionAsChange_MissingAcceptedCommit_ReportsReconciliationNeeded()
     {
-        var detectionId = await ConceiveDetectionAsync("restore-missing-commit");
+        var detectionId = await CreateDetectionAsync("restore-missing-commit");
         var version = await MergeQuickLabAsync(
             detectionId,
             "CHG-M1",
@@ -130,11 +130,11 @@ public sealed class RestoreServiceTests : IDisposable
         Assert.AreEqual("accepted_content.commit_missing", ex.Code);
     }
 
-    private async Task<DetectionId> ConceiveDetectionAsync(string slug)
+    private async Task<DetectionId> CreateDetectionAsync(string slug)
     {
         using var scope = _host.CreateScope();
         var svc = _host.Resolve<DetectionContentService>(scope);
-        return (await svc.ConceiveAsync(slug, "Restore Test Detection", "", TestContext.CancellationToken)).Id;
+        return (await svc.CreateAsync(slug, "Restore Test Detection", "", TestContext.CancellationToken)).Id;
     }
 
     private async Task<DetectionVersion> MergeQuickLabAsync(

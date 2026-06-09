@@ -47,8 +47,8 @@
         _submitting = true;
         try
         {
-            await DetectionService.ConceiveAsync(_slug.Trim(), _title.Trim(), _summary.Trim());
-            Snackbar.Add($"Detection '{_slug}' conceived.", Severity.Success);
+            await DetectionService.CreateAsync(_slug.Trim(), _title.Trim(), _summary.Trim());
+            Snackbar.Add($"Detection '{_slug}' created.", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
         catch (DomainException ex) { _error = ex.Message; }

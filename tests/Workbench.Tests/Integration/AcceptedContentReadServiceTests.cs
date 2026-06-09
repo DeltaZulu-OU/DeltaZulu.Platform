@@ -107,7 +107,7 @@ public sealed class AcceptedContentReadServiceTests : IDisposable
         var changes = _host.Resolve<ChangeService>(scope);
         var merge = _host.Resolve<MergeService>(scope);
 
-        var detection = await detections.ConceiveAsync(
+        var detection = await detections.CreateAsync(
             slug,
             slug,
             "For accepted-content read service tests",

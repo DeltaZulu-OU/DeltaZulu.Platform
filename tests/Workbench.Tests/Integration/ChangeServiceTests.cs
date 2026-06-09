@@ -15,18 +15,18 @@ public sealed class ChangeServiceTests : IDisposable
     [TestCleanup]
     public void Teardown() => _host.Dispose();
 
-    private async Task<DetectionId> ConceiveDetection(string slug = "test-det")
+    private async Task<DetectionId> CreateDetection(string slug = "test-det")
     {
         using var scope = _host.CreateScope();
         var svc = _host.Resolve<DetectionContentService>(scope);
-        var det = await svc.ConceiveAsync(slug, "Test Detection", "For integration tests", TestContext.CancellationToken);
+        var det = await svc.CreateAsync(slug, "Test Detection", "For integration tests", TestContext.CancellationToken);
         return det.Id;
     }
 
     [TestMethod]
     public async Task OpenChangeAsync_PersistsChange_WithBaseVersionNull_ForNewDetection()
     {
-        var detId = await ConceiveDetection();
+        var detId = await CreateDetection();
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -62,7 +62,7 @@ public sealed class ChangeServiceTests : IDisposable
     [TestMethod]
     public async Task UpsertDraftFileAsync_CreatesAndUpdatesFiles_PersistsAcrossScopes()
     {
-        var detId = await ConceiveDetection();
+        var detId = await CreateDetection();
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -113,7 +113,7 @@ public sealed class ChangeServiceTests : IDisposable
     [TestMethod]
     public async Task LinkIssueAsync_PersistsLink()
     {
-        var detId = await ConceiveDetection();
+        var detId = await CreateDetection();
         ChangeRequestId changeId;
         IssueId issueId;
 
@@ -149,7 +149,7 @@ public sealed class ChangeServiceTests : IDisposable
     [TestMethod]
     public async Task RecordReviewAsync_SelfApprovalBlock_SurvivesRoundTrip()
     {
-        var detId = await ConceiveDetection("self-appr-det");
+        var detId = await CreateDetection("self-appr-det");
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -191,7 +191,7 @@ public sealed class ChangeServiceTests : IDisposable
     [TestMethod]
     public async Task SelectWorkflowProfileAsync_LockedAfterReview()
     {
-        var detId = await ConceiveDetection("profile-lock-det");
+        var detId = await CreateDetection("profile-lock-det");
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -222,7 +222,7 @@ public sealed class ChangeServiceTests : IDisposable
     [TestMethod]
     public async Task CloseAsync_PersistsTerminalState()
     {
-        var detId = await ConceiveDetection("close-det");
+        var detId = await CreateDetection("close-det");
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -251,7 +251,7 @@ public sealed class ChangeServiceTests : IDisposable
     [TestMethod]
     public async Task ListAsync_ReturnsMultipleChanges()
     {
-        var detId = await ConceiveDetection("list-det");
+        var detId = await CreateDetection("list-det");
 
         using (var scope = _host.CreateScope())
         {

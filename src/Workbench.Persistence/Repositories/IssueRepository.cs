@@ -125,12 +125,21 @@ internal sealed class IssueRepository(DapperSession session) : IIssueRepository
             return Issue.Reconstitute(
                 new IssueId(Guid.Parse(id)), key, title,
                 Enum.Parse<IssueType>(type),
-                Enum.Parse<IssueStatus>(status),
+                ParseStatus(status),
                 extCase,
                 DateTimeOffset.Parse(created_at),
                 DateTimeOffset.Parse(updated_at),
                 description, acceptance_criteria, data_source, platform, attack_technique_id,
                 tlpLevel, labelList);
         }
+
+        private static IssueStatus ParseStatus(string status) => status switch
+        {
+            // Legacy 5-state issue lifecycle values retained for databases seeded or created
+            // before ADR-0018 expanded the issue workflow state machine.
+            "Open" => IssueStatus.New,
+            "Resolved" => IssueStatus.Merged,
+            _ => Enum.Parse<IssueStatus>(status),
+        };
     }
 }

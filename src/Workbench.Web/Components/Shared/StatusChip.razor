@@ -56,10 +56,16 @@
         }
         else if (Lifecycle is not null)
         {
-            _text = Lifecycle.Value.ToString();
+            _text = Lifecycle.Value switch
+            {
+                DetectionLifecycle.Draft => "Draft",
+                DetectionLifecycle.Accepted => "Accepted",
+                DetectionLifecycle.Deprecated => "Deprecated",
+                _ => Lifecycle.Value.ToString(),
+            };
             _tone = Lifecycle.Value switch
             {
-                DetectionLifecycle.Conceived => "neutral",
+                DetectionLifecycle.Draft => "neutral",
                 DetectionLifecycle.Accepted => "success",
                 DetectionLifecycle.Deprecated => "muted",
                 _ => "neutral",

@@ -19,7 +19,7 @@ public sealed class VersionServiceTests : IDisposable
     [TestMethod]
     public async Task CompareWithPrevious_FirstVersion_ReportsAcceptedFilesAsAdded()
     {
-        var detectionId = await ConceiveDetectionAsync("compare-first");
+        var detectionId = await CreateDetectionAsync("compare-first");
         var version = await MergeQuickLabAsync(
             detectionId,
             "CHG-C1",
@@ -43,7 +43,7 @@ public sealed class VersionServiceTests : IDisposable
     [TestMethod]
     public async Task CompareWithPrevious_ReportsAddedModifiedAndUnchangedFiles()
     {
-        var detectionId = await ConceiveDetectionAsync("compare-changes");
+        var detectionId = await CreateDetectionAsync("compare-changes");
         await MergeQuickLabAsync(
             detectionId,
             "CHG-C2A",
@@ -80,7 +80,7 @@ public sealed class VersionServiceTests : IDisposable
     [TestMethod]
     public async Task CompareAsync_ExplicitAcceptedVersions_UsesSelectedBaseline()
     {
-        var detectionId = await ConceiveDetectionAsync("compare-explicit");
+        var detectionId = await CreateDetectionAsync("compare-explicit");
         var version1 = await MergeQuickLabAsync(
             detectionId,
             "CHG-E1",
@@ -120,7 +120,7 @@ public sealed class VersionServiceTests : IDisposable
     [TestMethod]
     public async Task ListComparisonBaselines_OnlyReturnsEarlierAcceptedVersions()
     {
-        var detectionId = await ConceiveDetectionAsync("compare-baselines");
+        var detectionId = await CreateDetectionAsync("compare-baselines");
         var version1 = await MergeQuickLabAsync(
             detectionId,
             "CHG-B1",
@@ -158,7 +158,7 @@ public sealed class VersionServiceTests : IDisposable
     [TestMethod]
     public async Task CompareAsync_LaterBaseline_IsRejected()
     {
-        var detectionId = await ConceiveDetectionAsync("compare-later-baseline");
+        var detectionId = await CreateDetectionAsync("compare-later-baseline");
         var version1 = await MergeQuickLabAsync(
             detectionId,
             "CHG-L1",
@@ -187,7 +187,7 @@ public sealed class VersionServiceTests : IDisposable
     [TestMethod]
     public async Task CompareWithPrevious_ModifiedTextFile_IncludesInlineDiffHunk()
     {
-        var detectionId = await ConceiveDetectionAsync("compare-inline");
+        var detectionId = await CreateDetectionAsync("compare-inline");
         await MergeQuickLabAsync(
             detectionId,
             "CHG-C3A",
@@ -235,7 +235,7 @@ public sealed class VersionServiceTests : IDisposable
     [TestMethod]
     public async Task CompareWithPrevious_UnchangedTextFile_DoesNotCreateInlineHunks()
     {
-        var detectionId = await ConceiveDetectionAsync("compare-inline-unchanged");
+        var detectionId = await CreateDetectionAsync("compare-inline-unchanged");
         await MergeQuickLabAsync(
             detectionId,
             "CHG-C4A",
@@ -271,7 +271,7 @@ public sealed class VersionServiceTests : IDisposable
     [TestMethod]
     public async Task CompareWithPrevious_DistantTextChanges_CreatesSeparateContextHunks()
     {
-        var detectionId = await ConceiveDetectionAsync("compare-inline-distant");
+        var detectionId = await CreateDetectionAsync("compare-inline-distant");
         var before = string.Join("\n", Enumerable.Range(1, 12).Select(index => $"row{index:00}"));
         var after = string.Join("\n", Enumerable.Range(1, 12).Select(index => index switch
         {
@@ -321,7 +321,7 @@ public sealed class VersionServiceTests : IDisposable
     [TestMethod]
     public async Task CompareWithPrevious_MissingAcceptedCommit_ReportsReconciliationNeeded()
     {
-        var detectionId = await ConceiveDetectionAsync("compare-missing-commit");
+        var detectionId = await CreateDetectionAsync("compare-missing-commit");
         var version = await MergeQuickLabAsync(
             detectionId,
             "CHG-C6",
@@ -340,11 +340,11 @@ public sealed class VersionServiceTests : IDisposable
         Assert.AreEqual("accepted_content.commit_missing", ex.Code);
     }
 
-    private async Task<DetectionId> ConceiveDetectionAsync(string slug)
+    private async Task<DetectionId> CreateDetectionAsync(string slug)
     {
         using var scope = _host.CreateScope();
         var svc = _host.Resolve<DetectionContentService>(scope);
-        return (await svc.ConceiveAsync(slug, "Compare Test Detection", "", TestContext.CancellationToken)).Id;
+        return (await svc.CreateAsync(slug, "Compare Test Detection", "", TestContext.CancellationToken)).Id;
     }
 
     private async Task<DetectionVersion> MergeQuickLabAsync(

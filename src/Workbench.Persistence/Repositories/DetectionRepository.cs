@@ -81,9 +81,15 @@ internal sealed class DetectionRepository(DapperSession session) : IDetectionRep
         public Detection ToDomain() => Detection.Reconstitute(
             new DetectionId(Guid.Parse(id)),
             slug, title, summary,
-            Enum.Parse<DetectionLifecycle>(lifecycle),
+            ParseLifecycle(lifecycle),
             current_version_id is not null ? new VersionId(Guid.Parse(current_version_id)) : null,
             DateTimeOffset.Parse(created_at),
             DateTimeOffset.Parse(updated_at));
+
+        private static DetectionLifecycle ParseLifecycle(string lifecycle) => lifecycle switch
+        {
+            "Conceived" => DetectionLifecycle.Draft,
+            _ => Enum.Parse<DetectionLifecycle>(lifecycle),
+        };
     }
 }

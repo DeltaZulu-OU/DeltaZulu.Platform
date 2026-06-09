@@ -16,11 +16,11 @@ public sealed class WorkflowOrchestratorTests : IDisposable
     [TestCleanup]
     public void Teardown() => _host.Dispose();
 
-    private async Task<DetectionId> ConceiveDetection(string slug = "orch-det")
+    private async Task<DetectionId> CreateDetection(string slug = "orch-det")
     {
         using var scope = _host.CreateScope();
         var svc = _host.Resolve<DetectionContentService>(scope);
-        return (await svc.ConceiveAsync(slug, "Orchestrator Test", "", TestContext.CancellationToken)).Id;
+        return (await svc.CreateAsync(slug, "Orchestrator Test", "", TestContext.CancellationToken)).Id;
     }
 
     [TestMethod]
@@ -30,7 +30,7 @@ public sealed class WorkflowOrchestratorTests : IDisposable
         // verifying that the DomainDrivenOrchestrator dispatch points don't throw
         // and the domain state machine advances correctly.
 
-        var detId = await ConceiveDetection();
+        var detId = await CreateDetection();
         ChangeRequestId changeId;
 
         // 1. Open change → OnChangeOpened dispatched.
@@ -84,7 +84,7 @@ public sealed class WorkflowOrchestratorTests : IDisposable
     [TestMethod]
     public async Task CloseLifecycle_OrchestratorDispatchesOnChangeClosed()
     {
-        var detId = await ConceiveDetection("close-orch");
+        var detId = await CreateDetection("close-orch");
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())
@@ -113,7 +113,7 @@ public sealed class WorkflowOrchestratorTests : IDisposable
     [TestMethod]
     public async Task ControlledReview_FullLifecycle_WithOrchestrator()
     {
-        var detId = await ConceiveDetection("ctrl-orch");
+        var detId = await CreateDetection("ctrl-orch");
         ChangeRequestId changeId;
 
         using (var scope = _host.CreateScope())

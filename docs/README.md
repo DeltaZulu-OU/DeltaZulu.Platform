@@ -63,13 +63,15 @@ See [`adr/`](adr/) for the full set. Key decisions:
 | ADR-0006 | PR-like changes in DB, not Git branches. |
 | ADR-0014 | Delegate case management to external systems. |
 | ADR-0017 | Simplify to three user-facing concepts. |
+| ADR-0019 | Use practitioner detection-engineering language and FIRST-aligned guidance. |
+| ADR-0020 | Model TaHiTI threat hunting as a separate workflow aggregate. |
 
 ## Non-goals
 
 - SIEM runtime, live ingestion, scheduled execution, alert generation.
 - User-authored workflow YAML or arbitrary automation.
 - Git branch/rebase/checkout/staging UI.
-- Internal case management (tasks, observables, timelines, outcomes).
+- Internal incident/case management (response tasks, observables, timelines, closure outcomes).
 - ITSM features (SLA, CAB, CMDB).
 - SOAR response automation.
 - Remote Git synchronization as a user workflow.
@@ -78,8 +80,7 @@ See [`adr/`](adr/) for the full set. Key decisions:
 
 | File | Purpose |
 |---|---|
-| [`DESIGN.md`](DESIGN.md) | Product definition, five user stories, simplified Change model. |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Module boundaries, data ownership, technical model. |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Product definition, five user stories, module boundaries, data ownership, technical model. |
 | [`AGENTS.md`](AGENTS.md) | Constraints for contributors and AI agents. |
 | [`adr/`](adr/) | Architecture Decision Records. |
 | [`archive/`](archive/) | Superseded analysis documents preserved for reference. |

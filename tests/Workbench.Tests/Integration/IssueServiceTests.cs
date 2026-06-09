@@ -1,3 +1,4 @@
+using Workbench.Persistence;
 using Workbench.Application.Services;
 
 namespace Workbench.Tests.Integration;
@@ -118,6 +119,32 @@ public sealed class IssueServiceTests : IDisposable
     }
 
     [TestMethod]
+    public async Task GetByIdAsync_MapsLegacyIssueStatuses()
+    {
+        var openId = IssueId.New();
+        var resolvedId = IssueId.New();
+
+        using (var scope = _host.CreateScope())
+        {
+            var session = _host.Resolve<DapperSession>(scope);
+            InsertLegacyIssue(session, openId, "LEG-OPEN", "Open");
+            InsertLegacyIssue(session, resolvedId, "LEG-RES", "Resolved");
+        }
+
+        using (var scope = _host.CreateScope())
+        {
+            var svc = _host.Resolve<IssueService>(scope);
+            var open = await svc.GetByIdAsync(openId, TestContext.CancellationToken);
+            var resolved = await svc.GetByIdAsync(resolvedId, TestContext.CancellationToken);
+
+            Assert.IsNotNull(open);
+            Assert.AreEqual(IssueStatus.New, open.Status);
+            Assert.IsNotNull(resolved);
+            Assert.AreEqual(IssueStatus.Merged, resolved.Status);
+        }
+    }
+
+    [TestMethod]
     public async Task ListAsync_ReturnsBothIssueTypes()
     {
         using (var scope = _host.CreateScope())
@@ -135,6 +162,24 @@ public sealed class IssueServiceTests : IDisposable
             Assert.Contains(i => i.Type == IssueType.Request, list);
             Assert.Contains(i => i.Type == IssueType.Case, list);
         }
+    }
+
+    private static void InsertLegacyIssue(DapperSession session, IssueId id, string key, string status)
+    {
+        using var command = session.Connection.CreateCommand();
+        command.Transaction = session.Transaction;
+        command.CommandText = """
+            INSERT INTO issues
+                (id, key, title, type, status, created_at, updated_at)
+            VALUES
+                ($id, $key, $title, 'Request', $status, $now, $now)
+            """;
+        command.Parameters.AddWithValue("$id", id.Value.ToString());
+        command.Parameters.AddWithValue("$key", key);
+        command.Parameters.AddWithValue("$title", $"Legacy {status} issue");
+        command.Parameters.AddWithValue("$status", status);
+        command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToString("O"));
+        command.ExecuteNonQuery();
     }
 
     public void Dispose()

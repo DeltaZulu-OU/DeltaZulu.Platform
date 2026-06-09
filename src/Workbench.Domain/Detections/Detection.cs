@@ -6,10 +6,10 @@ using Workbench.Domain.Identifiers;
 namespace Workbench.Domain.Detections;
 
 /// <summary>
-/// A detection is the identity object for a piece of detection content. It exists from the
-/// moment a user conceives a new detection (so that issues and changes can be linked to it),
-/// and becomes <see cref="DetectionLifecycle.Accepted"/> only when an initial change is merged
-/// and canonical content is committed to Git.
+/// A detection is the identity object for a piece of detection content. It can exist before
+/// accepted content exists so that changes can target it, and becomes
+/// <see cref="DetectionLifecycle.Accepted"/> only when an initial change is merged and
+/// canonical content is committed to Git.
 /// </summary>
 public sealed partial class Detection : Entity<DetectionId>
 {
@@ -31,12 +31,12 @@ public sealed partial class Detection : Entity<DetectionId>
         Slug = slug;
         Title = title;
         Summary = summary;
-        Lifecycle = DetectionLifecycle.Conceived;
+        Lifecycle = DetectionLifecycle.Draft;
         CreatedAt = createdAt;
         UpdatedAt = createdAt;
     }
 
-    public static Detection Conceive(
+    public static Detection CreateDraft(
         DetectionId id, string slug, string title, string summary, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(slug);
