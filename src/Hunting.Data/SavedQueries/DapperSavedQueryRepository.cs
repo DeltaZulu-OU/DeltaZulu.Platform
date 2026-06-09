@@ -5,7 +5,7 @@ using Hunting.Data.Persistence;
 using AppISavedQueryRepository = Hunting.Application.SavedQueries.ISavedQueryRepository;
 using AppSavedQueryRecord = Hunting.Application.SavedQueries.SavedQueryRecord;
 
-public sealed class DapperSavedQueryRepository : AppISavedQueryRepository
+public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisposable
 {
     private const string CreateSchemaSql =
         """
@@ -210,9 +210,7 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository
             cancellationToken: cancellationToken));
     }
 
-    private static AppSavedQueryRecord ToRecord(SavedQueryRow row)
-    {
-        return new AppSavedQueryRecord(
+    private static AppSavedQueryRecord ToRecord(SavedQueryRow row) => new AppSavedQueryRecord(
             row.Id,
             row.Name,
             row.Description,
@@ -220,37 +218,23 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository
             ParseDateTime(row.CreatedAt),
             ParseDateTime(row.UpdatedAt),
             ParseNullableDateTime(row.LastRunAt));
-    }
 
-    private static string FormatDateTime(DateTime value)
-    {
-        return NormalizeUtc(value).ToString("O");
-    }
+    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
 
-    private static string? FormatNullableDateTime(DateTime? value)
-    {
-        return value is null ? null : FormatDateTime(value.Value);
-    }
+    private static string? FormatNullableDateTime(DateTime? value) => value is null ? null : FormatDateTime(value.Value);
 
-    private static DateTime ParseDateTime(string value)
-    {
-        return DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-    }
+    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
 
-    private static DateTime? ParseNullableDateTime(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? null : ParseDateTime(value);
-    }
+    private static DateTime? ParseNullableDateTime(string? value) => string.IsNullOrWhiteSpace(value) ? null : ParseDateTime(value);
 
-    private static DateTime NormalizeUtc(DateTime value)
+    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
     {
-        return value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Local => value.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-        };
-    }
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+    };
+
+    public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 
     private sealed class SavedQueryRow
     {

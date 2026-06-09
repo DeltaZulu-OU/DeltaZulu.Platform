@@ -1,5 +1,6 @@
 namespace Hunting.Tests.Spike;
 
+using System.Globalization;
 using DuckDB.NET.Data;
 
 /// <summary>
@@ -49,7 +50,7 @@ public sealed class DuckDbTimestampSpecTests
     {
         // This is the documented approach and what our emitter now generates
         var result = Convert.ToInt64(Scalar(
-            "SELECT CASE WHEN (current_timestamp - INTERVAL '1 hour') < current_timestamp THEN 1 ELSE 0 END"));
+            "SELECT CASE WHEN (current_timestamp - INTERVAL '1 hour') < current_timestamp THEN 1 ELSE 0 END"), CultureInfo.InvariantCulture);
         Assert.AreEqual(1L, result,
             "current_timestamp - INTERVAL '1 hour' should produce a past timestamp");
     }
@@ -61,14 +62,14 @@ public sealed class DuckDbTimestampSpecTests
         try
         {
             var result = Convert.ToInt64(Scalar(
-                "SELECT CASE WHEN ago(INTERVAL '1 hour') < current_timestamp THEN 1 ELSE 0 END"));
+                "SELECT CASE WHEN ago(INTERVAL '1 hour') < current_timestamp THEN 1 ELSE 0 END"), CultureInfo.InvariantCulture);
             Assert.AreEqual(1L, result);
         }
         catch (Exception ex) when (ex.Message.Contains("ago") || ex.Message.Contains("function"))
         {
 #pragma warning disable MSTEST0058 // Do not use asserts in catch blocks
             Assert.Inconclusive(
-                $"ago() not available in this DuckDB version. " +
+                "ago() not available in this DuckDB version. " +
                 $"Emitter uses current_timestamp - INTERVAL instead. Exception: {ex.Message}");
 #pragma warning restore MSTEST0058 // Do not use asserts in catch blocks
         }
@@ -87,7 +88,7 @@ public sealed class DuckDbTimestampSpecTests
     public void DateDiff_Day()
     {
         var result = Convert.ToInt64(Scalar(
-            "SELECT date_diff('day', TIMESTAMP '2024-01-01', TIMESTAMP '2024-01-05')"));
+            "SELECT date_diff('day', TIMESTAMP '2024-01-01', TIMESTAMP '2024-01-05')"), CultureInfo.InvariantCulture);
         Assert.AreEqual(4L, result);
     }
 
@@ -96,7 +97,7 @@ public sealed class DuckDbTimestampSpecTests
     public void DateDiff_Hour()
     {
         var result = Convert.ToInt64(Scalar(
-            "SELECT date_diff('hour', TIMESTAMP '2024-01-01 23:59:59', TIMESTAMP '2024-01-02 01:00:01')"));
+            "SELECT date_diff('hour', TIMESTAMP '2024-01-01 23:59:59', TIMESTAMP '2024-01-02 01:00:01')"), CultureInfo.InvariantCulture);
         Assert.AreEqual(2L, result); // crosses two hour boundaries
     }
 
@@ -105,7 +106,7 @@ public sealed class DuckDbTimestampSpecTests
     public void DateDiff_Negative()
     {
         var result = Convert.ToInt64(Scalar(
-            "SELECT date_diff('day', TIMESTAMP '2024-01-05', TIMESTAMP '2024-01-01')"));
+            "SELECT date_diff('day', TIMESTAMP '2024-01-05', TIMESTAMP '2024-01-01')"), CultureInfo.InvariantCulture);
         Assert.AreEqual(-4L, result);
     }
 
@@ -115,7 +116,7 @@ public sealed class DuckDbTimestampSpecTests
     public void DateDiff_Second()
     {
         var result = Convert.ToInt64(Scalar(
-            "SELECT date_diff('second', TIMESTAMP '2024-01-01 10:00:00', TIMESTAMP '2024-01-01 10:01:00')"));
+            "SELECT date_diff('second', TIMESTAMP '2024-01-01 10:00:00', TIMESTAMP '2024-01-01 10:01:00')"), CultureInfo.InvariantCulture);
         Assert.AreEqual(60L, result);
     }
 
@@ -123,7 +124,7 @@ public sealed class DuckDbTimestampSpecTests
     [Description("date_part('day', ts) extracts day of month")]
     public void DatePart_Day()
     {
-        var result = Convert.ToInt64(Scalar("SELECT date_part('day', TIMESTAMP '2024-03-15 14:30:00')"));
+        var result = Convert.ToInt64(Scalar("SELECT date_part('day', TIMESTAMP '2024-03-15 14:30:00')"), CultureInfo.InvariantCulture);
         Assert.AreEqual(15L, result);
     }
 
@@ -132,7 +133,7 @@ public sealed class DuckDbTimestampSpecTests
     public void DatePart_DayOfWeek()
     {
         // 2024-03-15 is Friday = 5 in DuckDB (0=Sun, 1=Mon, ... 5=Fri)
-        var result = Convert.ToInt64(Scalar("SELECT date_part('dow', TIMESTAMP '2024-03-15')"));
+        var result = Convert.ToInt64(Scalar("SELECT date_part('dow', TIMESTAMP '2024-03-15')"), CultureInfo.InvariantCulture);
         Assert.AreEqual(5L, result);
     }
 
@@ -141,7 +142,7 @@ public sealed class DuckDbTimestampSpecTests
     public void DatePart_DayOfYear()
     {
         // 2024-03-15: Jan(31) + Feb(29, leap) + 15 = 75
-        var result = Convert.ToInt64(Scalar("SELECT date_part('doy', TIMESTAMP '2024-03-15')"));
+        var result = Convert.ToInt64(Scalar("SELECT date_part('doy', TIMESTAMP '2024-03-15')"), CultureInfo.InvariantCulture);
         Assert.AreEqual(75L, result);
     }
 
@@ -149,7 +150,7 @@ public sealed class DuckDbTimestampSpecTests
     [Description("date_part('hour', ts) extracts hour")]
     public void DatePart_Hour()
     {
-        var result = Convert.ToInt64(Scalar("SELECT date_part('hour', TIMESTAMP '2024-03-15 14:30:00')"));
+        var result = Convert.ToInt64(Scalar("SELECT date_part('hour', TIMESTAMP '2024-03-15 14:30:00')"), CultureInfo.InvariantCulture);
         Assert.AreEqual(14L, result);
     }
 
@@ -157,7 +158,7 @@ public sealed class DuckDbTimestampSpecTests
     [Description("date_part('month', ts) extracts month")]
     public void DatePart_Month()
     {
-        var result = Convert.ToInt64(Scalar("SELECT date_part('month', TIMESTAMP '2024-03-15 14:30:00')"));
+        var result = Convert.ToInt64(Scalar("SELECT date_part('month', TIMESTAMP '2024-03-15 14:30:00')"), CultureInfo.InvariantCulture);
         Assert.AreEqual(3L, result);
     }
 
@@ -177,7 +178,7 @@ public sealed class DuckDbTimestampSpecTests
     [Description("date_part('year', ts) extracts year")]
     public void DatePart_Year()
     {
-        var result = Convert.ToInt64(Scalar("SELECT date_part('year', TIMESTAMP '2024-03-15 14:30:00')"));
+        var result = Convert.ToInt64(Scalar("SELECT date_part('year', TIMESTAMP '2024-03-15 14:30:00')"), CultureInfo.InvariantCulture);
         Assert.AreEqual(2024L, result);
     }
 
@@ -271,7 +272,7 @@ public sealed class DuckDbTimestampSpecTests
     [Description("epoch(ts) returns seconds since epoch")]
     public void Epoch_Seconds()
     {
-        var result = Convert.ToInt64(Scalar("SELECT epoch(TIMESTAMP '2024-01-01 00:00:00')"));
+        var result = Convert.ToInt64(Scalar("SELECT epoch(TIMESTAMP '2024-01-01 00:00:00')"), CultureInfo.InvariantCulture);
         Assert.AreEqual(1704067200L, result);
     }
 
@@ -281,7 +282,7 @@ public sealed class DuckDbTimestampSpecTests
     [Description("epoch_ms(ts) returns milliseconds since epoch")]
     public void EpochMs_FromTimestamp()
     {
-        var result = Convert.ToInt64(Scalar("SELECT epoch_ms(TIMESTAMP '2024-01-01 00:00:00')"));
+        var result = Convert.ToInt64(Scalar("SELECT epoch_ms(TIMESTAMP '2024-01-01 00:00:00')"), CultureInfo.InvariantCulture);
         Assert.AreEqual(1704067200000L, result);
     }
 
@@ -459,7 +460,7 @@ public sealed class DuckDbTimestampSpecTests
             }
 
             var micro = (fracTicks / 10); // 1 microsecond = 10 ticks
-            var microStr = micro.ToString("D6");
+            var microStr = micro.ToString("D6", CultureInfo.InvariantCulture);
             microStr = microStr.TrimEnd('0');
             return baseStr + "." + microStr;
         }

@@ -24,16 +24,10 @@ public sealed class DashboardJsonTransferTests
     }
 
     [TestMethod]
-    public void ImportAsCopy_RejectsEmptyJson()
-    {
-        Assert.Throws<InvalidOperationException>(() => DashboardJsonTransfer.ImportAsCopy(""));
-    }
+    public void ImportAsCopy_RejectsEmptyJson() => Assert.Throws<InvalidOperationException>(() => DashboardJsonTransfer.ImportAsCopy(""));
 
     [TestMethod]
-    public void ImportAsCopy_RejectsInvalidJson()
-    {
-        Assert.Throws<InvalidOperationException>(() => DashboardJsonTransfer.ImportAsCopy("{not json"));
-    }
+    public void ImportAsCopy_RejectsInvalidJson() => Assert.Throws<InvalidOperationException>(() => DashboardJsonTransfer.ImportAsCopy("{not json"));
 
     [TestMethod]
     public void ImportAsCopy_RejectsInvalidDashboard()

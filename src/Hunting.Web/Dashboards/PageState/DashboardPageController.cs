@@ -3,7 +3,7 @@ namespace Hunting.Web.Dashboards.PageState;
 using Hunting.Web.Dashboards.Persistence;
 using Hunting.Web.Dashboards.Runtime;
 
-public sealed class DashboardPageController
+public sealed class DashboardPageController: IDisposable
 {
     private readonly IDashboardRepository _dashboardRepository;
     private readonly DashboardWidgetRunner _widgetRunner;
@@ -548,4 +548,6 @@ public sealed class DashboardPageController
 
         return $"{safeName}-{DateTime.UtcNow:yyyyMMddHHmmss}.json";
     }
+
+    public void Dispose() => _autoRefreshCts?.Dispose();
 }

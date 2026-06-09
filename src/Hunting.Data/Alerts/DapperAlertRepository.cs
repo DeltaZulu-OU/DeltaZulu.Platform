@@ -4,7 +4,7 @@ using Dapper;
 using Hunting.Application.Alerts;
 using Hunting.Data.Persistence;
 
-public sealed class DapperAlertRepository : IAlertRepository
+public sealed class DapperAlertRepository : IAlertRepository, IDisposable
 {
     private const string CreateSchemaSql =
         """
@@ -278,12 +278,9 @@ public sealed class DapperAlertRepository : IAlertRepository
     private static async Task ExecuteUpsertAsync(
         System.Data.Common.DbConnection connection,
         AlertRecord alert,
-        CancellationToken cancellationToken)
-    {
-        await connection.ExecuteAsync(new CommandDefinition(
+        CancellationToken cancellationToken) => await connection.ExecuteAsync(new CommandDefinition(
             UpsertSql,
-            new
-            {
+            new {
                 alert.Id,
                 alert.DetectionId,
                 alert.DetectionVersion,
@@ -300,11 +297,8 @@ public sealed class DapperAlertRepository : IAlertRepository
                 UpdatedAtUtc = FormatDateTime(alert.UpdatedAtUtc)
             },
             cancellationToken: cancellationToken));
-    }
 
-    private static AlertRecord ToRecord(AlertRow row)
-    {
-        return new AlertRecord(
+    private static AlertRecord ToRecord(AlertRow row) => new AlertRecord(
             row.Id,
             row.DetectionId,
             row.DetectionVersion,
@@ -319,27 +313,19 @@ public sealed class DapperAlertRepository : IAlertRepository
             row.Status,
             ParseDateTime(row.CreatedAtUtc),
             ParseDateTime(row.UpdatedAtUtc));
-    }
 
-    private static string FormatDateTime(DateTime value)
-    {
-        return NormalizeUtc(value).ToString("O");
-    }
+    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
 
-    private static DateTime ParseDateTime(string value)
-    {
-        return DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-    }
+    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
 
-    private static DateTime NormalizeUtc(DateTime value)
+    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
     {
-        return value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Local => value.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-        };
-    }
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+    };
+
+    public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 
     private sealed class AlertRow
     {

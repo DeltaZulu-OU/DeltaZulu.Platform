@@ -200,9 +200,7 @@ public sealed class AlertRepositoryTests
         string id = "alert-001",
         DateTime alertTimeUtc = default,
         DateTime createdAtUtc = default,
-        DateTime updatedAtUtc = default)
-    {
-        return new AlertRecord(
+        DateTime updatedAtUtc = default) => new AlertRecord(
             Id: id,
             DetectionId: "det-001",
             DetectionVersion: 2,
@@ -217,7 +215,6 @@ public sealed class AlertRepositoryTests
             Status: "New",
             CreatedAtUtc: createdAtUtc,
             UpdatedAtUtc: updatedAtUtc);
-    }
 
     private static DapperAlertRepository CreateRepository(out string dbPath)
     {

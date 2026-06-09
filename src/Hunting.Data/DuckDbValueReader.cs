@@ -285,19 +285,13 @@ public static class DuckDbValueReader
         }
     }
 
-    private static bool IsScalarLike(Type type)
-    {
-        return type.IsPrimitive
+    private static bool IsScalarLike(Type type) => type.IsPrimitive
             || type == typeof(decimal)
             || type == typeof(DateTime)
             || type == typeof(DateTimeOffset)
             || type == typeof(Guid);
-    }
 
-    private static bool IsProviderMaterializationFailure(Exception ex)
-    {
-        return ex is InvalidCastException
+    private static bool IsProviderMaterializationFailure(Exception ex) => ex is InvalidCastException
             or NotSupportedException
             or MissingMethodException;
-    }
 }

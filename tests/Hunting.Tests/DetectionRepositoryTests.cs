@@ -217,9 +217,7 @@ public sealed class DetectionRepositoryTests
         string name = "Test Detection",
         string? queryText = null,
         DateTime createdAtUtc = default,
-        DateTime updatedAtUtc = default)
-    {
-        return new DetectionRecord(
+        DateTime updatedAtUtc = default) => new DetectionRecord(
             Id: id,
             DetectionId: detectionId,
             Version: version,
@@ -239,7 +237,6 @@ public sealed class DetectionRepositoryTests
             TestMetadataJson: null,
             CreatedAtUtc: createdAtUtc,
             UpdatedAtUtc: updatedAtUtc);
-    }
 
     private static DapperDetectionRepository CreateRepository(out string dbPath)
     {

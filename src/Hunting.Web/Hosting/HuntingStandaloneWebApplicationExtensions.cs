@@ -76,28 +76,25 @@ public static class HuntingStandaloneWebApplicationExtensions
         }
     }
 
-    private static async Task BootstrapSchemaAsync(WebApplication app, bool seedDevelopmentMedallionSources)
-    {
-        await Task.Run(() => {
-            var applier = app.Services.GetRequiredService<SchemaApplier>();
-            var emitter = new Hunting.Core.DuckDbSql.SchemaEmitter();
+    private static async Task BootstrapSchemaAsync(WebApplication app, bool seedDevelopmentMedallionSources) => await Task.Run(() => {
+        var applier = app.Services.GetRequiredService<SchemaApplier>();
+        var emitter = new Hunting.Core.DuckDbSql.SchemaEmitter();
 
-            var ddl = emitter.EmitAll(
-                rawTables: SchemaConventions.RawTables,
-                internalTables: [],
-                parserViews: SchemaConventions.ParserViews,
-                canonicalViews: SchemaConventions.CanonicalViews);
+        var ddl = emitter.EmitAll(
+            rawTables: SchemaConventions.RawTables,
+            internalTables: [],
+            parserViews: SchemaConventions.ParserViews,
+            canonicalViews: SchemaConventions.CanonicalViews);
 
-            applier.ApplyStatements(ddl);
-            applier.ExecuteRaw($"SET schema = '{SchemaConventions.GoldenSchema}'");
-            app.Logger.LogInformation("Hunting schema bootstrapped: {Count} DDL statements applied", ddl.Count);
+        applier.ApplyStatements(ddl);
+        applier.ExecuteRaw($"SET schema = '{SchemaConventions.GoldenSchema}'");
+        app.Logger.LogInformation("Hunting schema bootstrapped: {Count} DDL statements applied", ddl.Count);
 
-            if (seedDevelopmentMedallionSources)
-            {
-                SeedMedallionSources(applier, app.Logger);
-            }
-        });
-    }
+        if (seedDevelopmentMedallionSources)
+        {
+            SeedMedallionSources(applier, app.Logger);
+        }
+    });
 
     private static void SeedMedallionSources(SchemaApplier applier, ILogger logger)
     {

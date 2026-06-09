@@ -156,9 +156,7 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
         await connection.ExecuteAsync(new CommandDefinition(ClearSql, cancellationToken: cancellationToken));
     }
 
-    private static AppQueryHistoryRecord ToRecord(QueryHistoryRow row)
-    {
-        return new AppQueryHistoryRecord(
+    private static AppQueryHistoryRecord ToRecord(QueryHistoryRow row) => new AppQueryHistoryRecord(
             row.Id,
             row.QueryText,
             ParseDateTime(row.ExecutedAt),
@@ -166,7 +164,6 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
             ConvertNullableInt32(row.RowCount),
             row.DurationMs,
             row.DiagnosticSummary);
-    }
 
     private static int? ConvertNullableInt32(long? value)
     {
@@ -183,25 +180,16 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
         return checked((int)value.Value);
     }
 
-    private static string FormatDateTime(DateTime value)
-    {
-        return NormalizeUtc(value).ToString("O");
-    }
+    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
 
-    private static DateTime ParseDateTime(string value)
-    {
-        return DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-    }
+    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
 
-    private static DateTime NormalizeUtc(DateTime value)
+    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
     {
-        return value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Local => value.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-        };
-    }
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+    };
 
     private sealed class QueryHistoryRow
     {
@@ -214,8 +202,5 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
         public string? DiagnosticSummary { get; init; }
     }
 
-    public void Dispose()
-    {
-        _schemaSemaphore.Dispose();
-    }
+    public void Dispose() => _schemaSemaphore.Dispose();
 }

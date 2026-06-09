@@ -1,5 +1,6 @@
 namespace Hunting.Tests.Spike;
 
+using System.Globalization;
 using DuckDB.NET.Data;
 using Hunting.Data;
 
@@ -337,8 +338,8 @@ public sealed class DuckDbWindowSpecTests
                 decimal d => (long)d,
                 double db => (long)db,
                 float f => (long)f,
-                string s => long.Parse(s),
-                _ => Convert.ToInt64(v)
+                string s => long.Parse(s, CultureInfo.InvariantCulture),
+                _ => Convert.ToInt64(v, CultureInfo.InvariantCulture)
             };
 
     private List<object?[]> Query(string sql)

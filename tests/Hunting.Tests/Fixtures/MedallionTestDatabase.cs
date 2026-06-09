@@ -1,5 +1,6 @@
 namespace Hunting.Tests.Fixtures;
 
+using System.Globalization;
 using DuckDB.NET.Data;
 
 /// <summary>
@@ -19,7 +20,7 @@ internal static class MedallionTestDatabase
         ArgumentException.ThrowIfNullOrWhiteSpace(tableName);
         using var command = connection.CreateCommand();
         command.CommandText = $"SELECT count(*) FROM {tableName};";
-        return Convert.ToInt64(command.ExecuteScalar());
+        return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
     }
 
     public static void CreateBronzeTables(DuckDBConnection connection)

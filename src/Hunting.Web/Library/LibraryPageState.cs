@@ -1,5 +1,6 @@
 namespace Hunting.Web.Library;
 
+using System.Globalization;
 using Hunting.Web.Services;
 
 public sealed class LibraryPageState
@@ -155,5 +156,5 @@ public static class LibraryLabels
         };
 
     public static string UpdatedLabel(DateTime updatedAtUtc)
-        => updatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+        => updatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 }

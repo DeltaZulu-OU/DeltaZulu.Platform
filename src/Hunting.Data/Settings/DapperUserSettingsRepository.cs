@@ -6,7 +6,7 @@ using AppIUserSettingsRepository = Hunting.Application.Settings.IUserSettingsRep
 using AppUserSettingsDefaults = Hunting.Application.Settings.UserSettingsDefaults;
 using AppUserSettingsRecord = Hunting.Application.Settings.UserSettingsRecord;
 
-public sealed class DapperUserSettingsRepository : AppIUserSettingsRepository
+public sealed class DapperUserSettingsRepository : AppIUserSettingsRepository, IDisposable
 {
     private const string CreateSchemaSql =
         """
@@ -123,6 +123,8 @@ public sealed class DapperUserSettingsRepository : AppIUserSettingsRepository
 
         return checked((int)value.Value);
     }
+
+    public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 
     private sealed class UserSettingsRow
     {

@@ -1,5 +1,6 @@
 namespace Hunting.Tests.Spike;
 
+using System.Globalization;
 using Hunting.Data;
 
 [TestClass]
@@ -27,7 +28,7 @@ public sealed class DuckDbConnectionFactoryTests
         using var cmd = factory.GetConnection().CreateCommand();
         cmd.CommandText = "SELECT 1";
 
-        var value = Convert.ToInt32(cmd.ExecuteScalar());
+        var value = Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
         Assert.AreEqual(1, value);
     }
 
@@ -42,7 +43,7 @@ public sealed class DuckDbConnectionFactoryTests
         using var cmd = factory.GetConnection().CreateCommand();
         cmd.CommandText = "SELECT id FROM startup_probe";
 
-        var value = Convert.ToInt32(cmd.ExecuteScalar());
+        var value = Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
         Assert.AreEqual(7, value);
     }
 }

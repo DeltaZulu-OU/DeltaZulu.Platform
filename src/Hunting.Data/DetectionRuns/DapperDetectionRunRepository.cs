@@ -4,7 +4,7 @@ using Dapper;
 using Hunting.Application.DetectionRuns;
 using Hunting.Data.Persistence;
 
-public sealed class DapperDetectionRunRepository : IDetectionRunRepository
+public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IDisposable
 {
     private const string CreateSchemaSql =
         """
@@ -193,9 +193,7 @@ public sealed class DapperDetectionRunRepository : IDetectionRunRepository
             cancellationToken: cancellationToken));
     }
 
-    private static DetectionRunRecord ToRecord(DetectionRunRow row)
-    {
-        return new DetectionRunRecord(
+    private static DetectionRunRecord ToRecord(DetectionRunRow row) => new DetectionRunRecord(
             row.Id,
             row.DetectionId,
             row.DetectionVersion,
@@ -209,37 +207,23 @@ public sealed class DapperDetectionRunRepository : IDetectionRunRepository
             row.QueryHash,
             ParseDateTime(row.StartedAtUtc),
             ParseNullableDateTime(row.CompletedAtUtc));
-    }
 
-    private static string FormatDateTime(DateTime value)
-    {
-        return NormalizeUtc(value).ToString("O");
-    }
+    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
 
-    private static string? FormatNullableDateTime(DateTime? value)
-    {
-        return value is null ? null : FormatDateTime(value.Value);
-    }
+    private static string? FormatNullableDateTime(DateTime? value) => value is null ? null : FormatDateTime(value.Value);
 
-    private static DateTime ParseDateTime(string value)
-    {
-        return DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-    }
+    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
 
-    private static DateTime? ParseNullableDateTime(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? null : ParseDateTime(value);
-    }
+    private static DateTime? ParseNullableDateTime(string? value) => string.IsNullOrWhiteSpace(value) ? null : ParseDateTime(value);
 
-    private static DateTime NormalizeUtc(DateTime value)
+    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
     {
-        return value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Local => value.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-        };
-    }
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+    };
+
+    public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 
     private sealed class DetectionRunRow
     {

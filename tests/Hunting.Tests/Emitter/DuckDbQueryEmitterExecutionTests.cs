@@ -1,5 +1,6 @@
 namespace Hunting.Tests.Emitter;
 
+using System.Globalization;
 using DuckDB.NET.Data;
 using Hunting.Core.DuckDbSql;
 using Hunting.Core.QueryModel;
@@ -13,7 +14,7 @@ using Hunting.Core.QueryModel;
 /// <para>These are integration tests, not unit tests. They depend on DuckDB.NET.</para>
 /// </summary>
 [TestClass]
-public sealed class DuckDbQueryEmitterExecutionTests
+public sealed partial class DuckDbQueryEmitterExecutionTests
 {
     private static DuckDBConnection _conn = null!;
     private static DuckDbQueryEmitter _emitter = null!;
@@ -194,7 +195,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
             new ScanNode("ProcessEvent"),
             [new ProjectionExpr("drive",
                 new FunctionCall("extract",
-                    [new LiteralScalar(@"^([A-Z]):", LiteralKind.String),
+                    [new LiteralScalar("^([A-Z]):", LiteralKind.String),
                      new LiteralScalar(1, LiteralKind.Int),
                      new ColumnRef("FolderPath")]))]);
 
@@ -348,7 +349,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
         var sql = _emitter.Emit(node);
 
         // ORDER BY and LIMIT fused into one block; count(*) is non-nullable so no NULLS modifier.
-        var norm = System.Text.RegularExpressions.Regex.Replace(sql.Trim(), @"\s+", " ");
+        var norm = TrimPattern().Replace(sql.Trim(), " ");
         Assert.Contains("ORDER BY count_ DESC LIMIT 3", norm, $"Expected fused top-k block.\nSQL: {sql}");
 
         var counts = new List<long>();
@@ -359,7 +360,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
             var countOrdinal = reader.GetOrdinal("count_");
             while (reader.Read())
             {
-                counts.Add(Convert.ToInt64(reader.GetValue(countOrdinal)));
+                counts.Add(Convert.ToInt64(reader.GetValue(countOrdinal), CultureInfo.InvariantCulture));
             }
         }
 
@@ -547,7 +548,7 @@ public sealed class DuckDbQueryEmitterExecutionTests
         return reader.IsDBNull(0) ? null : reader.GetValue(0);
     }
 
-    // ─── Full vertical slice executes ───────────────────────────────
-    // ─── CASE expression executes ───────────────────────────────────
-    // ─── Pipeline simplification executes correctly ─────────────────
+    [System.Text.RegularExpressions.GeneratedRegex(@"\s+")]
+    private static partial System.Text.RegularExpressions.Regex TrimPattern();
+
 }

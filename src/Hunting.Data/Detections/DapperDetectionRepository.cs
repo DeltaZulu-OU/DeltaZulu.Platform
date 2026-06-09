@@ -4,7 +4,7 @@ using Dapper;
 using Hunting.Application.Detections;
 using Hunting.Data.Persistence;
 
-public sealed class DapperDetectionRepository : IDetectionRepository
+public sealed class DapperDetectionRepository : IDetectionRepository, IDisposable
 {
     private const string CreateSchemaSql =
         """
@@ -364,9 +364,7 @@ public sealed class DapperDetectionRepository : IDetectionRepository
             cancellationToken: cancellationToken));
     }
 
-    private static DetectionRecord ToRecord(DetectionRow row)
-    {
-        return new DetectionRecord(
+    private static DetectionRecord ToRecord(DetectionRow row) => new DetectionRecord(
             row.Id,
             row.DetectionId,
             row.Version,
@@ -386,27 +384,19 @@ public sealed class DapperDetectionRepository : IDetectionRepository
             row.TestMetadataJson,
             ParseDateTime(row.CreatedAtUtc),
             ParseDateTime(row.UpdatedAtUtc));
-    }
 
-    private static string FormatDateTime(DateTime value)
-    {
-        return NormalizeUtc(value).ToString("O");
-    }
+    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
 
-    private static DateTime ParseDateTime(string value)
-    {
-        return DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-    }
+    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
 
-    private static DateTime NormalizeUtc(DateTime value)
+    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
     {
-        return value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Local => value.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-        };
-    }
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+    };
+
+    public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 
     private sealed class DetectionRow
     {

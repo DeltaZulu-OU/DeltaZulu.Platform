@@ -1,5 +1,6 @@
 namespace Hunting.Tests.Emitter;
 
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Hunting.Core.Catalog;
 using Hunting.Core.DuckDbSql;
@@ -857,8 +858,8 @@ public sealed partial class DuckDbQueryEmitterTests
     {
         var node = new LetBindingNode(
             Name: "cutoff",
-            ScalarValue: new FunctionCall("ago", [new LiteralScalar("7d", LiteralKind.Timespan)]),
             TabularValue: null,
+            ScalarValue: new FunctionCall("ago", [new LiteralScalar("7d", LiteralKind.Timespan)]),
             Body: new FilterNode(
                 new ScanNode("ProcessEvent"),
                 new BinaryScalar(new ColumnRef("Timestamp"), ScalarBinaryOp.Gt, new ColumnRef("cutoff"))));
@@ -874,8 +875,8 @@ public sealed partial class DuckDbQueryEmitterTests
     {
         _emitter.Emit(new LetBindingNode(
             Name: "magic",
-            ScalarValue: new LiteralScalar(42, LiteralKind.Int),
             TabularValue: null,
+            ScalarValue: new LiteralScalar(42, LiteralKind.Int),
             Body: new ScanNode("ProcessEvent")));
 
         var sql = _emitter.Emit(new FilterNode(
@@ -1249,7 +1250,7 @@ public sealed partial class DuckDbQueryEmitterTests
             new BinaryScalar(
                 new ColumnRef("Timestamp"),
                 ScalarBinaryOp.Gt,
-                new LiteralScalar(TimeSpan.Parse("-00:01:30"), LiteralKind.Timespan)));
+                new LiteralScalar(TimeSpan.Parse("-00:01:30", CultureInfo.InvariantCulture), LiteralKind.Timespan)));
 
         var sql = _emitter.Emit(node);
         // -90s must keep both units negative; "INTERVAL '-1 minutes 30 seconds'"

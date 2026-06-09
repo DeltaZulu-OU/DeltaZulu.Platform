@@ -1,5 +1,6 @@
 namespace Hunting.Tests.Spike;
 
+using System.Globalization;
 using DuckDB.NET.Data;
 
 /// <summary>
@@ -21,7 +22,7 @@ public sealed class DuckDbSmokeTests
         cmd.CommandText = "SELECT 42 AS answer";
         var result = cmd.ExecuteScalar();
 
-        Assert.AreEqual(42, Convert.ToInt32(result));
+        Assert.AreEqual(42, Convert.ToInt32(result, CultureInfo.InvariantCulture));
     }
 
     [TestMethod]

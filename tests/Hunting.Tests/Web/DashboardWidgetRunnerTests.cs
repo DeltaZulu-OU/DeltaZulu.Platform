@@ -450,10 +450,7 @@ public sealed class DashboardWidgetRunnerTests
             EventId eventId,
             TState state,
             Exception? exception,
-            Func<TState, Exception?, string> formatter)
-        {
-            Entries.Add(new LogEntry(logLevel, formatter(state, exception)));
-        }
+            Func<TState, Exception?, string> formatter) => Entries.Add(new LogEntry(logLevel, formatter(state, exception)));
     }
 
     private sealed record LogEntry(LogLevel Level, string Message);

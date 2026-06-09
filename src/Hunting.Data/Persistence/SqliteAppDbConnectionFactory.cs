@@ -13,8 +13,5 @@ public sealed class SqliteAppDbConnectionFactory : IAppDbConnectionFactory
         _connectionString = connectionString;
     }
 
-    public DbConnection CreateConnection()
-    {
-        return new SqliteConnection(_connectionString);
-    }
+    public DbConnection CreateConnection() => new SqliteConnection(_connectionString);
 }

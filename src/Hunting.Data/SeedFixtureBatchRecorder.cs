@@ -101,10 +101,7 @@ public sealed class SeedFixtureBatchRecorder
 
     private static object ToParameters(
         SeedFixtureBatch batch,
-        string catalogVersion)
-    {
-        return new
-        {
+        string catalogVersion) => new {
             batch.BatchId,
             batch.TableName,
             batch.SourceName,
@@ -113,7 +110,6 @@ public sealed class SeedFixtureBatchRecorder
             batch.ContentHash,
             CatalogVersion = batch.CatalogVersion ?? catalogVersion
         };
-    }
 }
 
 public sealed record SeedFixtureBatchRecord(

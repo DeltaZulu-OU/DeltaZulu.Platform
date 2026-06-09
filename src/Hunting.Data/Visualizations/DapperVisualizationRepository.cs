@@ -5,7 +5,7 @@ using Hunting.Data.Persistence;
 using AppIVisualizationRepository = Hunting.Application.Visualizations.IVisualizationRepository;
 using AppVisualizationRecord = Hunting.Application.Visualizations.VisualizationRecord;
 
-public sealed class DapperVisualizationRepository : AppIVisualizationRepository
+public sealed class DapperVisualizationRepository : AppIVisualizationRepository, IDisposable
 {
     private const string CreateSchemaSql =
         """
@@ -232,9 +232,7 @@ public sealed class DapperVisualizationRepository : AppIVisualizationRepository
             cancellationToken: cancellationToken));
     }
 
-    private static AppVisualizationRecord ToRecord(VisualizationRow row)
-    {
-        return new AppVisualizationRecord(
+    private static AppVisualizationRecord ToRecord(VisualizationRow row) => new AppVisualizationRecord(
             row.Id,
             row.QueryId,
             row.Name,
@@ -243,27 +241,19 @@ public sealed class DapperVisualizationRepository : AppIVisualizationRepository
             row.SpecJson,
             ParseDateTime(row.CreatedAt),
             ParseDateTime(row.UpdatedAt));
-    }
 
-    private static string FormatDateTime(DateTime value)
-    {
-        return NormalizeUtc(value).ToString("O");
-    }
+    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
 
-    private static DateTime ParseDateTime(string value)
-    {
-        return DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-    }
+    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
 
-    private static DateTime NormalizeUtc(DateTime value)
+    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
     {
-        return value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Local => value.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-        };
-    }
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+    };
+
+    public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 
     private sealed class VisualizationRow
     {

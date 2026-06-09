@@ -47,21 +47,21 @@ public sealed class GlobalStateSpikeTests
     [TestMethod]
     public void T03_ExtendWithScalar()
     {
-        var errors = Analyze("""ProcessEvent | extend lower_name = tolower(FileName)""");
+        var errors = Analyze("ProcessEvent | extend lower_name = tolower(FileName)");
         Assert.IsEmpty(errors, FormatErrors(errors));
     }
 
     [TestMethod]
     public void T04_SummarizeAndSort()
     {
-        var errors = Analyze("""ProcessEvent | summarize count() by FileName | sort by count_ desc""");
+        var errors = Analyze("ProcessEvent | summarize count() by FileName | sort by count_ desc");
         Assert.IsEmpty(errors, FormatErrors(errors));
     }
 
     [TestMethod]
     public void T05_ScalarLetBinding()
     {
-        var errors = Analyze("""let cutoff = ago(7d); ProcessEvent | where Timestamp > cutoff""");
+        var errors = Analyze("let cutoff = ago(7d); ProcessEvent | where Timestamp > cutoff");
         Assert.IsEmpty(errors, FormatErrors(errors));
     }
 
@@ -81,7 +81,7 @@ public sealed class GlobalStateSpikeTests
     [TestMethod]
     public void T07_DynamicFunctionReturn()
     {
-        var errors = Analyze("""ProcessEvent | extend parsed = parse_json(AdditionalFields)""");
+        var errors = Analyze("ProcessEvent | extend parsed = parse_json(AdditionalFields)");
 
         if (errors.Count > 0)
         {

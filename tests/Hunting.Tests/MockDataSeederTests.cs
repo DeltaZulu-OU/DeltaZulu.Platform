@@ -1,5 +1,6 @@
 namespace Hunting.Tests;
 
+using System.Globalization;
 using DuckDB.NET.Data;
 using Hunting.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -118,6 +119,6 @@ public sealed class MockDataSeederTests
     {
         using var command = connection.CreateCommand();
         command.CommandText = $"SELECT count(*) FROM {tableName};";
-        return Convert.ToInt64(command.ExecuteScalar());
+        return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
     }
 }

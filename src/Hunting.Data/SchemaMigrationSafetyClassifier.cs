@@ -17,45 +17,42 @@ public sealed class SchemaMigrationSafetyClassifier
             .ToArray();
     }
 
-    private static SchemaMigrationSafetyAssessment ClassifyOne(SchemaProvenanceDrift drift)
+    private static SchemaMigrationSafetyAssessment ClassifyOne(SchemaProvenanceDrift drift) => drift.Status switch
     {
-        return drift.Status switch
-        {
-            SchemaProvenanceDriftStatus.Unchanged => new(
-                drift.ObjectName,
-                drift.ObjectKind,
-                drift.Status,
-                SchemaMigrationSafety.Safe,
-                RequiresExplicitApproval: false,
-                "Schema object is unchanged."),
+        SchemaProvenanceDriftStatus.Unchanged => new(
+            drift.ObjectName,
+            drift.ObjectKind,
+            drift.Status,
+            SchemaMigrationSafety.Safe,
+            RequiresExplicitApproval: false,
+            "Schema object is unchanged."),
 
-            SchemaProvenanceDriftStatus.NewObject => new(
-                drift.ObjectName,
-                drift.ObjectKind,
-                drift.Status,
-                SchemaMigrationSafety.Safe,
-                RequiresExplicitApproval: false,
-                "Schema object is new. Creating a new schema object is safe in Phase 1B."),
+        SchemaProvenanceDriftStatus.NewObject => new(
+            drift.ObjectName,
+            drift.ObjectKind,
+            drift.Status,
+            SchemaMigrationSafety.Safe,
+            RequiresExplicitApproval: false,
+            "Schema object is new. Creating a new schema object is safe in Phase 1B."),
 
-            SchemaProvenanceDriftStatus.ChangedObject => new(
-                drift.ObjectName,
-                drift.ObjectKind,
-                drift.Status,
-                SchemaMigrationSafety.Unsafe,
-                RequiresExplicitApproval: true,
-                "Schema object hash changed. Phase 1B cannot yet prove whether this is additive, so it is unsafe by default."),
+        SchemaProvenanceDriftStatus.ChangedObject => new(
+            drift.ObjectName,
+            drift.ObjectKind,
+            drift.Status,
+            SchemaMigrationSafety.Unsafe,
+            RequiresExplicitApproval: true,
+            "Schema object hash changed. Phase 1B cannot yet prove whether this is additive, so it is unsafe by default."),
 
-            SchemaProvenanceDriftStatus.MissingObject => new(
-                drift.ObjectName,
-                drift.ObjectKind,
-                drift.Status,
-                SchemaMigrationSafety.Unsafe,
-                RequiresExplicitApproval: true,
-                "Schema object is recorded but no longer expected. Removal is unsafe by default."),
+        SchemaProvenanceDriftStatus.MissingObject => new(
+            drift.ObjectName,
+            drift.ObjectKind,
+            drift.Status,
+            SchemaMigrationSafety.Unsafe,
+            RequiresExplicitApproval: true,
+            "Schema object is recorded but no longer expected. Removal is unsafe by default."),
 
-            _ => throw new ArgumentOutOfRangeException(nameof(drift), drift.Status, "Unknown schema drift status")
-        };
-    }
+        _ => throw new ArgumentOutOfRangeException(nameof(drift), drift.Status, "Unknown schema drift status")
+    };
 }
 
 public sealed record SchemaMigrationSafetyAssessment(

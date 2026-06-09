@@ -11,7 +11,7 @@ public sealed partial class QueryToolbarState
     public string SelectedTimeFilter { get; set; } = "none";
     public DateTime? CustomFrom { get; set; }
     public DateTime? CustomTo { get; set; }
-    public int? SelectedResultLimit { get; set; } = null;
+    public int? SelectedResultLimit { get; set; }
 
     public static IReadOnlyList<int?> ResultLimitOptions { get; } = [null, 10, 20, 50, 100, 500, 1000];
 

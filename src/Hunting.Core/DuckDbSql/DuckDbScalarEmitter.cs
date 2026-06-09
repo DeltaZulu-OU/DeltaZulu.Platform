@@ -53,7 +53,7 @@ internal sealed class DuckDbScalarEmitter
         return lit.Kind switch
         {
             LiteralKind.String => $"'{DuckDbSqlText.EscapeString(lit.Value.ToString()!)}'",
-            LiteralKind.Bool => Convert.ToBoolean(lit.Value) ? "TRUE" : "FALSE",
+            LiteralKind.Bool => Convert.ToBoolean(lit.Value, CultureInfo.InvariantCulture) ? "TRUE" : "FALSE",
             LiteralKind.Timespan => EmitTimespan(lit.Value),
             LiteralKind.DateTime => $"TIMESTAMP '{lit.Value}'",
             _ => lit.Value.ToString()!
@@ -219,9 +219,9 @@ internal sealed class DuckDbScalarEmitter
         var sb = new StringBuilder("CASE");
         foreach (var (when, then) in cs.Branches)
         {
-            sb.Append($" WHEN {EmitScalar(when)} THEN {EmitScalar(then)}");
+            _ = sb.Append($" WHEN {EmitScalar(when)} THEN {EmitScalar(then)}");
         }
-        sb.Append($" ELSE {EmitScalar(cs.Else)} END");
+        _ = sb.Append($" ELSE {EmitScalar(cs.Else)} END");
         return sb.ToString();
     }
 
@@ -459,32 +459,32 @@ internal sealed class DuckDbScalarEmitter
         }
 
         // KQL shorthand: 7d, 2h, 30m, 10s, 500ms
-        if (ts.EndsWith("ms"))
+        if (ts.EndsWith("ms", StringComparison.InvariantCultureIgnoreCase))
         {
             return $"INTERVAL '{ts[..^2]} milliseconds'";
         }
 
-        if (ts.EndsWith("us"))
+        if (ts.EndsWith("us", StringComparison.InvariantCultureIgnoreCase))
         {
             return $"INTERVAL '{ts[..^2]} microseconds'";
         }
 
-        if (ts.EndsWith("d"))
+        if (ts.EndsWith("d", StringComparison.InvariantCultureIgnoreCase))
         {
             return $"INTERVAL '{ts[..^1]} days'";
         }
 
-        if (ts.EndsWith("h"))
+        if (ts.EndsWith("h", StringComparison.InvariantCultureIgnoreCase))
         {
             return $"INTERVAL '{ts[..^1]} hours'";
         }
 
-        if (ts.EndsWith("m"))
+        if (ts.EndsWith("m", StringComparison.InvariantCultureIgnoreCase))
         {
             return $"INTERVAL '{ts[..^1]} minutes'";
         }
 
-        if (ts.EndsWith("s"))
+        if (ts.EndsWith("s", StringComparison.InvariantCultureIgnoreCase))
         {
             return $"INTERVAL '{ts[..^1]} seconds'";
         }
