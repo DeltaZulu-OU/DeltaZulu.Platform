@@ -158,7 +158,7 @@ public sealed class DetectionRunRepositoryTests
 
             var runs = await repository.ListByDetectionAsync("det-001", TestContext.CancellationToken);
 
-            Assert.AreEqual(3, runs.Count);
+            Assert.HasCount(3, runs);
             Assert.AreEqual("run-003", runs[0].Id);
             Assert.AreEqual("run-002", runs[1].Id);
             Assert.AreEqual("run-001", runs[2].Id);

@@ -151,8 +151,8 @@ public sealed class VersionServiceTests : IDisposable
         var baselines = await versionSvc.ListComparisonBaselinesAsync(version2.Id, TestContext.CancellationToken);
 
         CollectionAssert.AreEqual(new[] { version1.Id }, baselines.Select(version => version.Id).ToArray());
-        Assert.IsFalse(baselines.Any(version => version.Id == version2.Id));
-        Assert.IsFalse(baselines.Any(version => version.Id == version3.Id));
+        Assert.DoesNotContain(version => version.Id == version2.Id, baselines);
+        Assert.DoesNotContain(version => version.Id == version3.Id, baselines);
     }
 
     [TestMethod]
@@ -308,14 +308,14 @@ public sealed class VersionServiceTests : IDisposable
         var firstHunk = file.Hunks[0];
         Assert.AreEqual(1, firstHunk.BeforeStartLine);
         Assert.AreEqual(1, firstHunk.AfterStartLine);
-        Assert.IsTrue(firstHunk.Lines.Any(line => line.Text == "changed-row02"));
-        Assert.IsFalse(firstHunk.Lines.Any(line => line.Text == "row06"));
+        Assert.Contains(line => line.Text == "changed-row02", firstHunk.Lines);
+        Assert.DoesNotContain(line => line.Text == "row06", firstHunk.Lines);
 
         var secondHunk = file.Hunks[1];
         Assert.AreEqual(8, secondHunk.BeforeStartLine);
         Assert.AreEqual(8, secondHunk.AfterStartLine);
-        Assert.IsTrue(secondHunk.Lines.Any(line => line.Text == "changed-row11"));
-        Assert.IsFalse(secondHunk.Lines.Any(line => line.Text == "row06"));
+        Assert.Contains(line => line.Text == "changed-row11", secondHunk.Lines);
+        Assert.DoesNotContain(line => line.Text == "row06", secondHunk.Lines);
     }
 
     [TestMethod]

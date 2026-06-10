@@ -81,7 +81,7 @@ public sealed class AlertRepositoryTests
 
             var saved = await repository.ListByRunAsync("run-001", TestContext.CancellationToken);
 
-            Assert.AreEqual(3, saved.Count);
+            Assert.HasCount(3, saved);
         }
         finally
         {
@@ -141,7 +141,7 @@ public sealed class AlertRepositoryTests
 
             var alerts = await repository.ListByDetectionAsync("det-001", TestContext.CancellationToken);
 
-            Assert.AreEqual(3, alerts.Count);
+            Assert.HasCount(3, alerts);
             Assert.AreEqual("alert-002", alerts[0].Id);
             Assert.AreEqual("alert-003", alerts[1].Id);
             Assert.AreEqual("alert-001", alerts[2].Id);

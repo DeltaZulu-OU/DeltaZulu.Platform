@@ -30,7 +30,7 @@ public sealed class HuntingSavedQueryImporterTests
         Assert.AreEqual("rule.kql", result.DraftFiles.Single().LogicalPath);
         Assert.AreEqual(DraftContentType.HuntingQuery, result.DraftFiles.Single().ContentType);
         Assert.AreEqual("SecurityEvent | take 10", result.DraftFiles.Single().Content);
-        Assert.AreEqual(0, result.Warnings.Count);
+        Assert.IsEmpty(result.Warnings);
     }
 
     [TestMethod]
@@ -46,7 +46,7 @@ public sealed class HuntingSavedQueryImporterTests
 
         Assert.AreEqual("draft/saved-queries/repeated-name.kql", results[0].Artifact.LogicalPath);
         Assert.AreEqual("draft/saved-queries/repeated-name-2.kql", results[1].Artifact.LogicalPath);
-        Assert.AreEqual(2, results.Select(r => r.Artifact.LogicalPath).Distinct().Count());
+        Assert.HasCount(2, results.Select(r => r.Artifact.LogicalPath).Distinct());
     }
 
     [TestMethod]

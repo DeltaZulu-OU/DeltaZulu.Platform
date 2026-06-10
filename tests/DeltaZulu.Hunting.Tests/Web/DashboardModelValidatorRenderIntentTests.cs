@@ -12,8 +12,8 @@ public sealed class DashboardModelValidatorRenderIntentTests
 
         var errors = DashboardModelValidator.Validate(dashboard);
 
-        Assert.IsTrue(
-            errors.Any(error => error.Contains("must include a render command", StringComparison.OrdinalIgnoreCase)),
+        Assert.Contains(
+            error => error.Contains("must include a render command", StringComparison.OrdinalIgnoreCase), errors,
             "Query widgets should require explicit render intent.");
     }
 
@@ -24,8 +24,8 @@ public sealed class DashboardModelValidatorRenderIntentTests
 
         var errors = DashboardModelValidator.Validate(dashboard);
 
-        Assert.IsFalse(
-            errors.Any(error => error.Contains("must include a render command", StringComparison.OrdinalIgnoreCase)),
+        Assert.DoesNotContain(
+            error => error.Contains("must include a render command", StringComparison.OrdinalIgnoreCase), errors,
             string.Join(Environment.NewLine, errors));
     }
 
@@ -36,8 +36,8 @@ public sealed class DashboardModelValidatorRenderIntentTests
 
         var errors = DashboardModelValidator.Validate(dashboard);
 
-        Assert.IsFalse(
-            errors.Any(error => error.Contains("must include a render command", StringComparison.OrdinalIgnoreCase)),
+        Assert.DoesNotContain(
+            error => error.Contains("must include a render command", StringComparison.OrdinalIgnoreCase), errors,
             string.Join(Environment.NewLine, errors));
     }
 
@@ -57,8 +57,8 @@ public sealed class DashboardModelValidatorRenderIntentTests
 
         var errors = DashboardModelValidator.Validate(dashboard);
 
-        Assert.IsFalse(
-            errors.Any(error => error.Contains("must include a render command", StringComparison.OrdinalIgnoreCase)),
+        Assert.DoesNotContain(
+            error => error.Contains("must include a render command", StringComparison.OrdinalIgnoreCase), errors,
             string.Join(Environment.NewLine, errors));
     }
 

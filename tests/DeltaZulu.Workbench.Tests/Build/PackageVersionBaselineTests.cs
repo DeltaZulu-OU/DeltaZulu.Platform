@@ -20,7 +20,7 @@ public sealed class PackageVersionBaselineTests
             })
             .ToList();
 
-        Assert.IsTrue(packageVersions.Count > 0, "The shared package baseline must contain explicit PackageVersion items.");
+        Assert.IsNotEmpty(packageVersions, "The shared package baseline must contain explicit PackageVersion items.");
 
         foreach (var package in packageVersions)
         {
@@ -39,7 +39,7 @@ public sealed class PackageVersionBaselineTests
                 && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .ToList();
 
-        Assert.IsTrue(projectFiles.Count > 0, "Expected repository project files to validate.");
+        Assert.IsNotEmpty(projectFiles, "Expected repository project files to validate.");
 
         foreach (var projectFile in projectFiles)
         {
@@ -105,7 +105,7 @@ public sealed class PackageVersionBaselineTests
             .ToList();
 
         CollectionAssert.DoesNotContain(projectReferences, @"..\DeltaZulu.Workbench.Web\DeltaZulu.Workbench.Web.csproj");
-        Assert.IsFalse(projectReferences.Any(reference => reference.Contains("Workbench.Web", StringComparison.OrdinalIgnoreCase)),
+        Assert.DoesNotContain(reference => reference.Contains("Workbench.Web", StringComparison.OrdinalIgnoreCase), projectReferences,
             "The reusable Hunting.Core validation adapter must not reference Workbench.Web or any future Hunting.Web module.");
     }
 

@@ -234,12 +234,12 @@ public sealed class IssueTests
     {
         var issue = CreateDetectionRequest();
         Assert.IsNull(issue.Tlp);
-        Assert.AreEqual(0, issue.Labels.Count);
+        Assert.IsEmpty(issue.Labels);
 
         issue.Classify(TlpLevel.Amber, ["lateral-movement", "windows"], Now);
 
         Assert.AreEqual(TlpLevel.Amber, issue.Tlp);
-        Assert.AreEqual(2, issue.Labels.Count);
+        Assert.HasCount(2, issue.Labels);
         Assert.AreEqual("lateral-movement", issue.Labels[0]);
         Assert.AreEqual("windows", issue.Labels[1]);
     }

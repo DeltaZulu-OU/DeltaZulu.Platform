@@ -17,7 +17,7 @@ public sealed class DashboardJsonTransferTests
         Assert.AreEqual("Operations (imported)", imported.Name);
         Assert.IsTrue(imported.Refresh.Enabled);
         Assert.AreEqual(120, imported.Refresh.IntervalSeconds);
-        Assert.AreEqual(1, imported.Widgets.Count);
+        Assert.HasCount(1, imported.Widgets);
         Assert.AreEqual("Process count", imported.Widgets[0].Title);
         Assert.AreEqual(new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc), imported.CreatedAtUtc);
         Assert.AreEqual(imported.CreatedAtUtc, imported.UpdatedAtUtc);

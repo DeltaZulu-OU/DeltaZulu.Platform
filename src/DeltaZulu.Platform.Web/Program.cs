@@ -1,11 +1,11 @@
 using DeltaZulu.Hunting.Web;
 using DeltaZulu.Hunting.Web.Hosting;
-using DeltaZulu.Platform.Web;
 using DeltaZulu.Platform.Web.Abstractions;
 using DeltaZulu.Workbench.Application;
 using DeltaZulu.Workbench.Infrastructure;
 using DeltaZulu.Workbench.Persistence;
 using DeltaZulu.Workbench.Validation;
+using DeltaZulu.Workbench.Web;
 using DeltaZulu.Workbench.Web.Services;
 using DeltaZulu.Workbench.Workflow;
 using MudBlazor.Services;
@@ -86,7 +86,7 @@ await app.BootstrapHuntingModuleAsync(new HuntingWebModuleOptions
     SeedDevelopmentMedallionSources = app.Environment.IsDevelopment(),
 });
 
-app.MapRazorComponents<App>()
+app.MapRazorComponents<DeltaZulu.Platform.Web.App>()
     .AddInteractiveServerRenderMode()
     .AddAdditionalAssemblies(
         typeof(DeltaZulu.Workbench.Web.Components.Pages.Home).Assembly,

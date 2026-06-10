@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>DeltaZulu.Platform.Web.Tests</RootNamespace>
+    <AssemblyName>DeltaZulu.Platform.Web.Tests</AssemblyName>
+    <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);CS1591;CA1707</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DeltaZulu.Platform.Web\DeltaZulu.Platform.Web.csproj" />
+    <ProjectReference Include="..\..\src\DeltaZulu.Hunting.Web.Legacy\DeltaZulu.Hunting.Web.Legacy.csproj" />
+    <ProjectReference Include="..\..\src\DeltaZulu.Workbench.Web.Legacy\DeltaZulu.Workbench.Web.Legacy.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="MSTest.TestAdapter" />
+    <PackageReference Include="MSTest.TestFramework" />
+  </ItemGroup>
+
+</Project>

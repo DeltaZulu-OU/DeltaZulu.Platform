@@ -34,4 +34,7 @@
   <!-- Tests -->
   <Project Path="tests/DeltaZulu.Workbench.Tests/DeltaZulu.Workbench.Tests.csproj" />
   <Project Path="tests/DeltaZulu.Hunting.Tests/DeltaZulu.Hunting.Tests.csproj" />
+  <Project Path="tests/DeltaZulu.Blazor.Components.Tests/DeltaZulu.Blazor.Components.Tests.csproj" />
+  <Project Path="tests/DeltaZulu.DetectionContent.Tests/DeltaZulu.DetectionContent.Tests.csproj" />
+  <Project Path="tests/DeltaZulu.Platform.Web.Tests/DeltaZulu.Platform.Web.Tests.csproj" />
 </Solution>

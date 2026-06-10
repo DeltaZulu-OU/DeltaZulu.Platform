@@ -12,8 +12,8 @@ public sealed class DashboardModelValidatorTests
 
         var errors = DashboardModelValidator.Validate(dashboard);
 
-        Assert.IsFalse(
-            errors.Any(error => error.Contains("query text or a visualization ID", StringComparison.Ordinal)),
+        Assert.DoesNotContain(
+            error => error.Contains("query text or a visualization ID", StringComparison.Ordinal), errors,
             string.Join(Environment.NewLine, errors));
     }
 
@@ -29,8 +29,8 @@ public sealed class DashboardModelValidatorTests
 
         var errors = DashboardModelValidator.Validate(dashboard);
 
-        Assert.IsFalse(
-            errors.Any(error => error.Contains("query text or a visualization ID", StringComparison.Ordinal)),
+        Assert.DoesNotContain(
+            error => error.Contains("query text or a visualization ID", StringComparison.Ordinal), errors,
             string.Join(Environment.NewLine, errors));
     }
 
@@ -45,8 +45,8 @@ public sealed class DashboardModelValidatorTests
 
         var errors = DashboardModelValidator.Validate(dashboard);
 
-        Assert.IsTrue(
-            errors.Any(error => error.Contains("query text or a visualization ID", StringComparison.Ordinal)),
+        Assert.Contains(
+            error => error.Contains("query text or a visualization ID", StringComparison.Ordinal), errors,
             string.Join(Environment.NewLine, errors));
     }
 
@@ -61,8 +61,8 @@ public sealed class DashboardModelValidatorTests
 
         var errors = DashboardModelValidator.Validate(dashboard);
 
-        Assert.IsTrue(
-            errors.Any(error => error.Contains("must not define both query text and a visualization ID", StringComparison.Ordinal)),
+        Assert.Contains(
+            error => error.Contains("must not define both query text and a visualization ID", StringComparison.Ordinal), errors,
             string.Join(Environment.NewLine, errors));
     }
 
@@ -82,8 +82,8 @@ public sealed class DashboardModelValidatorTests
 
         var errors = DashboardModelValidator.Validate(dashboard);
 
-        Assert.IsTrue(
-            errors.Any(error => error.Contains("X plus width cannot exceed 12 grid columns", StringComparison.Ordinal)),
+        Assert.Contains(
+            error => error.Contains("X plus width cannot exceed 12 grid columns", StringComparison.Ordinal), errors,
             string.Join(Environment.NewLine, errors));
     }
 
@@ -103,8 +103,8 @@ public sealed class DashboardModelValidatorTests
 
         var errors = DashboardModelValidator.Validate(dashboard);
 
-        Assert.IsTrue(
-            errors.Any(error => error.Contains("layout width cannot exceed 12 grid columns", StringComparison.Ordinal)),
+        Assert.Contains(
+            error => error.Contains("layout width cannot exceed 12 grid columns", StringComparison.Ordinal), errors,
             string.Join(Environment.NewLine, errors));
     }
 
@@ -133,8 +133,8 @@ public sealed class DashboardModelValidatorTests
 
         var errors = DashboardModelValidator.Validate(dashboard);
 
-        Assert.IsTrue(
-            errors.Any(error => error.Contains("layout overlaps widget", StringComparison.Ordinal)),
+        Assert.Contains(
+            error => error.Contains("layout overlaps widget", StringComparison.Ordinal), errors,
             string.Join(Environment.NewLine, errors));
     }
 
@@ -163,8 +163,8 @@ public sealed class DashboardModelValidatorTests
 
         var errors = DashboardModelValidator.Validate(dashboard);
 
-        Assert.IsFalse(
-            errors.Any(error => error.Contains("layout overlaps widget", StringComparison.Ordinal)),
+        Assert.DoesNotContain(
+            error => error.Contains("layout overlaps widget", StringComparison.Ordinal), errors,
             string.Join(Environment.NewLine, errors));
     }
 

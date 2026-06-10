@@ -37,6 +37,6 @@ public sealed class WorkbenchModule : IPlatformModule
 
     public IReadOnlyList<PlatformStaticAssetDescriptor> StaticAssets { get; } =
     [
-        new() { Href = "css/workbench.css", Kind = PlatformStaticAssetKind.Stylesheet, Order = 100 },
+        new() { Href = "app.css", Kind = PlatformStaticAssetKind.Stylesheet, Order = 100 },
     ];
 }

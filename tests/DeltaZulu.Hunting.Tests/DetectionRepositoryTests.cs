@@ -89,7 +89,7 @@ public sealed class DetectionRepositoryTests
 
             var list = await repository.ListAsync(TestContext.CancellationToken);
 
-            Assert.AreEqual(1, list.Count);
+            Assert.HasCount(1, list);
             Assert.AreEqual("det-001-v2", list[0].Id);
             Assert.AreEqual(2, list[0].Version);
         }
@@ -121,7 +121,7 @@ public sealed class DetectionRepositoryTests
 
             var versions = await repository.ListVersionsAsync("det-001", TestContext.CancellationToken);
 
-            Assert.AreEqual(3, versions.Count);
+            Assert.HasCount(3, versions);
             Assert.AreEqual(3, versions[0].Version);
             Assert.AreEqual(2, versions[1].Version);
             Assert.AreEqual(1, versions[2].Version);

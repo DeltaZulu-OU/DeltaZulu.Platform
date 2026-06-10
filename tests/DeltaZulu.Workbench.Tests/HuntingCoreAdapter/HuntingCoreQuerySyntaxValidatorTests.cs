@@ -21,7 +21,7 @@ public sealed class HuntingCoreQuerySyntaxValidatorTests
             "example"));
 
         Assert.IsTrue(result.IsValid);
-        Assert.AreEqual(0, result.Diagnostics.Count);
+        Assert.IsEmpty(result.Diagnostics);
         Assert.AreEqual("detections/example/rule.kql", parser.LastRequest?.LogicalPath);
         Assert.AreEqual("SecurityEvent | take 10", parser.LastRequest?.Content);
         Assert.AreEqual("example", parser.LastRequest?.DetectionSlug);

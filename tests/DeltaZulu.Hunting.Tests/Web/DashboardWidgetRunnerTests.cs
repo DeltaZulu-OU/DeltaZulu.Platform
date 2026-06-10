@@ -102,15 +102,15 @@ public sealed class DashboardWidgetRunnerTests
         var result = await runner.RunAsync(CreateWidget(), TestContext.CancellationToken);
 
         Assert.AreEqual(DashboardWidgetRunStatus.Succeeded, result.Status);
-        Assert.IsTrue(
-            logger.Entries.Any(entry =>
+        Assert.Contains(
+            entry =>
                 entry.Level == LogLevel.Debug
                     && entry.Message.Contains("widget-1", StringComparison.OrdinalIgnoreCase)
                     && entry.Message.Contains("Widget 1", StringComparison.OrdinalIgnoreCase)
                     && entry.Message.Contains("query text", StringComparison.OrdinalIgnoreCase)
                     && entry.Message.Contains("Succeeded", StringComparison.OrdinalIgnoreCase)
                     && entry.Message.Contains("XColumn=auto", StringComparison.OrdinalIgnoreCase)
-                    && entry.Message.Contains("SeriesCount=1", StringComparison.OrdinalIgnoreCase)),
+                    && entry.Message.Contains("SeriesCount=1", StringComparison.OrdinalIgnoreCase), logger.Entries,
             "Expected execution metadata to be available through Debug logging instead of chart chrome.");
     }
 
@@ -125,11 +125,11 @@ public sealed class DashboardWidgetRunnerTests
         var result = await runner.RunAsync(widget, TestContext.CancellationToken);
 
         Assert.AreEqual(DashboardWidgetRunStatus.Failed, result.Status);
-        Assert.IsTrue(
-            logger.Entries.Any(entry =>
+        Assert.Contains(
+            entry =>
                 entry.Level == LogLevel.Debug
                     && entry.Message.Contains("widget-1", StringComparison.OrdinalIgnoreCase)
-                    && entry.Message.Contains("Failed", StringComparison.OrdinalIgnoreCase)),
+                    && entry.Message.Contains("Failed", StringComparison.OrdinalIgnoreCase), logger.Entries,
             "Expected failed widget execution metadata to be available through Debug logging.");
     }
 

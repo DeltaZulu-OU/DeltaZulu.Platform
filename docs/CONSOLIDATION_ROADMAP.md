@@ -22,7 +22,7 @@ Prerequisites from the module roadmaps that gate this work are called out inline
 | Route prefix | `/hunting` (C4) | `/workbench` (C4) | No conflict |
 | Module registration | `HuntingModule : IPlatformModule` (C4) | `WorkbenchModule : IPlatformModule` (C4) | `IPlatformModule` in `DeltaZulu.Platform.Web.Abstractions` |
 | Shared contracts | -- | -- | `DeltaZulu.DetectionContent` (identity/path/file) |
-| Test project | `DeltaZulu.Hunting.Tests` | `DeltaZulu.Workbench.Tests` | None for shared libraries |
+| Test project | `DeltaZulu.Hunting.Tests` | `DeltaZulu.Workbench.Tests` | `DeltaZulu.Blazor.Components.Tests`, `DeltaZulu.DetectionContent.Tests`, `DeltaZulu.Platform.Web.Tests` (C7) |
 
 Key pain points:
 
@@ -140,7 +140,7 @@ One provider stack, one theme, one CSS load order.
 **Exit criteria:** The solution has one web host. No standalone host code remains. Documentation is
 current. CI builds and tests pass.
 
-### C7 -- Shared test coverage for platform libraries
+### C7 -- Shared test coverage for platform libraries ✅ COMPLETE
 
 **Objective:** `DeltaZulu.Blazor.Components` and `DeltaZulu.DetectionContent` have their own test
 projects so they are not tested only through Workbench or Hunting test suites.
@@ -153,6 +153,11 @@ projects so they are not tested only through Workbench or Hunting test suites.
 | 4 | Add these test projects to CI. | Regression coverage for shared code. |
 
 **Exit criteria:** Shared libraries have independent test projects. CI runs them.
+
+**Status:** Complete. `DeltaZulu.Blazor.Components.Tests`, `DeltaZulu.DetectionContent.Tests`, and
+`DeltaZulu.Platform.Web.Tests` are in the solution and cover shared component rendering,
+detection-content contracts, module metadata, static-asset resolution, route overlap detection,
+and platform CSS load order.
 
 ---
 
