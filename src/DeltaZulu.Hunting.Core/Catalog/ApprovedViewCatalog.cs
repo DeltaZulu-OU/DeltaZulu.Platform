@@ -14,7 +14,7 @@ public sealed class ApprovedViewCatalog
     private readonly Dictionary<string, CanonicalViewDef> _views = new(StringComparer.OrdinalIgnoreCase);
     private GlobalState? _cachedGlobalState;
     private readonly Lock _gate = new();
-    private long _catalogVersion = 0;
+    private long _catalogVersion;
 
     /// <summary>
     /// Monotonic catalog version incremented whenever canonical view registration changes.

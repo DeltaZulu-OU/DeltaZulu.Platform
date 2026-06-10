@@ -219,7 +219,7 @@ to_json(
                 _ => partName + "s"
             };
 
-            var multiplier = partName.Equals("quarter", StringComparison.InvariantCultureIgnoreCase) ? $"(({args[1]}) * 3)" : args[1];
+            var multiplier = partName.Equals("quarter", StringComparison.OrdinalIgnoreCase) ? $"(({args[1]}) * 3)" : args[1];
             return $"({args[2]} + ({multiplier}) * INTERVAL '1 {unit}')";
         }
 

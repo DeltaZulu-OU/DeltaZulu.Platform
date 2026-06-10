@@ -17,7 +17,7 @@ using DeltaZulu.Hunting.Web.Rendering;
 /// point is explicit and named, not implicit.
 /// </para>
 /// </summary>
-public sealed class QueryService : IDataOnlyQueryService, IDisposable
+public sealed partial class QueryService : IDataOnlyQueryService, IDisposable
 {
     private const int MaxMaterializedRows = 2000;
     private readonly ILogger<QueryService> _logger;
@@ -123,8 +123,7 @@ public sealed class QueryService : IDataOnlyQueryService, IDisposable
             QueryResult result;
             if (!streamResult.Success)
             {
-                _logger.LogWarning(
-                    "Query failed. KQL: {Kql}. SQL: {GeneratedSql}. Diagnostics: {Diagnostics}. Trace: {Trace}",
+                LogQueryFailed(
                     kql,
                     streamResult.GeneratedSql,
                     string.Join(" | ", streamResult.Diagnostics.All.Select(d => d.Message)),
@@ -154,8 +153,7 @@ public sealed class QueryService : IDataOnlyQueryService, IDisposable
 
             if (result.DebugTrace.Count > 0)
             {
-                _logger.LogDebug(
-                    "Query debug trace ({TraceCount} events, success={Success}): {DebugTrace}",
+                LogQueryDebugTrace(
                     result.DebugTrace.Count,
                     result.Success,
                     string.Join(" | ", result.DebugTrace));
@@ -168,7 +166,7 @@ public sealed class QueryService : IDataOnlyQueryService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled error executing KQL: {Kql}", kql);
+            LogUnhandledKqlError(ex, kql);
             var bag = new DiagnosticBag();
             bag.AddError(DiagnosticPhase.Execute,
                 "An unexpected error occurred. Check application logs.");
@@ -215,7 +213,23 @@ public sealed class QueryService : IDataOnlyQueryService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to record query history.");
+            LogQueryHistoryFailure(ex);
         }
     }
+
+    [LoggerMessage(EventId = 1, Level = LogLevel.Warning,
+        Message = "Query failed. KQL: {Kql}. SQL: {GeneratedSql}. Diagnostics: {Diagnostics}. Trace: {Trace}")]
+    private partial void LogQueryFailed(string kql, string? generatedSql, string diagnostics, string trace);
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Debug,
+        Message = "Query debug trace ({TraceCount} events, success={Success}): {DebugTrace}")]
+    private partial void LogQueryDebugTrace(int traceCount, bool success, string debugTrace);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Error,
+        Message = "Unhandled error executing KQL: {Kql}")]
+    private partial void LogUnhandledKqlError(Exception ex, string kql);
+
+    [LoggerMessage(EventId = 4, Level = LogLevel.Warning,
+        Message = "Failed to record query history.")]
+    private partial void LogQueryHistoryFailure(Exception ex);
 }

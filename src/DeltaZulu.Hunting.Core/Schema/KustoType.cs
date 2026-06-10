@@ -3,6 +3,7 @@ namespace DeltaZulu.Hunting.Core.Schema;
 /// <summary>
 /// Kusto scalar types as exposed to KQL users and Monaco editor.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1720:Identifier contains type name", Justification = "Members mirror Kusto's native type names")]
 public enum KustoType
 {
     String,

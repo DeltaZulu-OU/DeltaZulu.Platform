@@ -3,6 +3,7 @@ namespace DeltaZulu.Hunting.Core.Schema;
 /// <summary>
 /// DuckDB column types used in schema generation and SQL emission.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1720:Identifier contains type name", Justification = "Members mirror DuckDB's native type names")]
 public enum DuckDbType
 {
     Varchar,

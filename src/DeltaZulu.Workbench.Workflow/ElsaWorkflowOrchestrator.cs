@@ -19,7 +19,7 @@ namespace DeltaZulu.Workbench.Workflow;
 /// Domain aggregates remain the authoritative state owners. Elsa failures are logged and
 /// swallowed so a workflow engine outage does not block domain operations.
 /// </remarks>
-public sealed class ElsaWorkflowOrchestrator(
+public sealed partial class ElsaWorkflowOrchestrator(
     IWorkflowRuntime runtime,
     ILogger<ElsaWorkflowOrchestrator> logger) : IWorkflowOrchestrator
 {
@@ -27,7 +27,7 @@ public sealed class ElsaWorkflowOrchestrator(
 
     public async Task OnChangeOpenedAsync(ChangeRequestId changeId, WorkflowProfileId profileId, CancellationToken ct = default)
     {
-        logger.LogInformation("Elsa: starting change workflow for {ChangeId}, profile {Profile}.", changeId, profileId);
+        LogStartingChangeWorkflow(logger, changeId, profileId);
         try
         {
             var client = await runtime.CreateClientAsync(ct);
@@ -45,7 +45,7 @@ public sealed class ElsaWorkflowOrchestrator(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Elsa: failed to start change workflow for {ChangeId}.", changeId);
+            LogFailedToStartChangeWorkflow(logger, ex, changeId);
         }
     }
 
@@ -72,7 +72,7 @@ public sealed class ElsaWorkflowOrchestrator(
         ChangeRequestId changeId, string eventName, CancellationToken ct,
         IDictionary<string, object>? input = null)
     {
-        logger.LogInformation("Elsa: dispatching {Event} for change {ChangeId}.", eventName, changeId);
+        LogDispatchingEvent(logger, eventName, changeId);
         try
         {
 #pragma warning disable CS0618
@@ -88,7 +88,19 @@ public sealed class ElsaWorkflowOrchestrator(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Elsa: failed to dispatch {Event} for change {ChangeId}.", eventName, changeId);
+            LogFailedToDispatchEvent(logger, ex, eventName, changeId);
         }
     }
+
+    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Elsa: starting change workflow for {ChangeId}, profile {Profile}.")]
+    private static partial void LogStartingChangeWorkflow(ILogger logger, ChangeRequestId changeId, WorkflowProfileId profile);
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Error, Message = "Elsa: failed to start change workflow for {ChangeId}.")]
+    private static partial void LogFailedToStartChangeWorkflow(ILogger logger, Exception exception, ChangeRequestId changeId);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Information, Message = "Elsa: dispatching {EventName} for change {ChangeId}.")]
+    private static partial void LogDispatchingEvent(ILogger logger, string eventName, ChangeRequestId changeId);
+
+    [LoggerMessage(EventId = 4, Level = LogLevel.Error, Message = "Elsa: failed to dispatch {EventName} for change {ChangeId}.")]
+    private static partial void LogFailedToDispatchEvent(ILogger logger, Exception exception, string eventName, ChangeRequestId changeId);
 }

@@ -5,7 +5,7 @@ using DeltaZulu.Workbench.Domain.Identifiers;
 
 namespace DeltaZulu.Workbench.Application.Services;
 
-public sealed class CheckPipelineRunner(
+public sealed partial class CheckPipelineRunner(
     IChangeRequestRepository changes,
     IDetectionRepository detections,
     IEnumerable<ICheck> checks,
@@ -38,7 +38,7 @@ public sealed class CheckPipelineRunner(
         {
             if (!check.ApplicableContentTypes.Any(t => presentTypes.Contains(t)))
             {
-                logger.LogDebug("Skipping check {CheckName}: no applicable content types.", check.Name);
+                LogSkippingCheck(logger, check.Name);
                 continue;
             }
 
@@ -52,7 +52,7 @@ public sealed class CheckPipelineRunner(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Check {CheckName} threw an unhandled exception.", check.Name);
+                LogCheckUnhandledException(logger, ex, check.Name);
                 var exDetail = ex.ToString();
                 outcome = CheckOutcome.Fail(
                     $"Internal error: {ex.GetType().Name}: {ex.Message}",
@@ -71,6 +71,14 @@ public sealed class CheckPipelineRunner(
 
         return results;
     }
+
+    [LoggerMessage(EventId = 1, Level = LogLevel.Debug,
+        Message = "Skipping check {CheckName}: no applicable content types.")]
+    private static partial void LogSkippingCheck(ILogger logger, string checkName);
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Error,
+        Message = "Check {CheckName} threw an unhandled exception.")]
+    private static partial void LogCheckUnhandledException(ILogger logger, Exception ex, string checkName);
 }
 
 public sealed record PipelineCheckResult(string CheckName, CheckOutcome Outcome);

@@ -136,7 +136,7 @@
 {
     <DzPanel Title="Acceptance criteria" Class="mb-4">
         <MudText Typo="Typo.subtitle2" Class="mb-2">Acceptance criteria</MudText>
-        <MudTextField @bind-Value="_criteriaText" Multiline="true" Lines="4"
+        <MudTextField @bind-Value="_criteriaText" Lines="4"
                       Placeholder="Describe what the completed work must demonstrate."
                       FullWidth="true" Class="mb-2" />
         <div class="d-flex gap-2">
@@ -249,7 +249,7 @@
                                 <MudSelectItem T="TlpLevel?" Value="@((TlpLevel?)TlpLevel.Red)">TLP:RED</MudSelectItem>
                             </MudSelect>
                             <MudTextField @bind-Value="_labelsInput" Label="Labels (comma-separated)"
-                                          Dense="true" Margin="Margin.Dense" Class="mb-2"
+                                          Margin="Margin.Dense" Class="mb-2"
                                           Placeholder="e.g. lateral-movement, windows" />
                             <div class="d-flex gap-2">
                                 <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Secondary"

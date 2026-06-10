@@ -5,10 +5,11 @@ using System.Linq;
 using DeltaZulu.Hunting.Application.SavedQueries;
 using DeltaZulu.Hunting.Application.Visualizations;
 using DeltaZulu.Hunting.Core.Policy;
+using DeltaZulu.Hunting.Render.Model;
 using DeltaZulu.Hunting.Web.Rendering;
 using DeltaZulu.Hunting.Web.Visualizations;
 
-public sealed class DashboardWidgetRunner
+public sealed partial class DashboardWidgetRunner
 {
     private readonly EChartsRenderOptionsBuilder _chartOptionsBuilder;
     private readonly ILogger<DashboardWidgetRunner> _logger;
@@ -183,8 +184,7 @@ public sealed class DashboardWidgetRunner
     {
         var xColumn = rendered?.Directive.Binding.XColumn;
 
-        _logger.LogDebug(
-            "Dashboard widget {WidgetId} ({WidgetTitle}) executed from {WidgetSource} with status {Status} in {DurationMs} ms. RenderKind={RenderKind}; XColumn={XColumn}; SeriesCount={SeriesCount}; VisualizationId={VisualizationId}; VisualizationName={VisualizationName}; SavedQueryId={SavedQueryId}; SavedQueryName={SavedQueryName}; RowCount={RowCount}; ColumnCount={ColumnCount}.",
+        LogWidgetExecution(
             widget.Id,
             widget.Title,
             GetWidgetSource(widget),
@@ -200,6 +200,26 @@ public sealed class DashboardWidgetRunner
             rendered?.QueryResult.RowCount,
             rendered?.QueryResult.ColumnCount);
     }
+
+    [LoggerMessage(
+        EventId = 1,
+        Level = LogLevel.Debug,
+        Message = "Dashboard widget {WidgetId} ({WidgetTitle}) executed from {WidgetSource} with status {Status} in {DurationMs} ms. RenderKind={RenderKind}; XColumn={XColumn}; SeriesCount={SeriesCount}; VisualizationId={VisualizationId}; VisualizationName={VisualizationName}; SavedQueryId={SavedQueryId}; SavedQueryName={SavedQueryName}; RowCount={RowCount}; ColumnCount={ColumnCount}.")]
+    private partial void LogWidgetExecution(
+        string widgetId,
+        string widgetTitle,
+        string widgetSource,
+        DashboardWidgetRunStatus status,
+        double durationMs,
+        RenderKind? renderKind,
+        string xColumn,
+        int? seriesCount,
+        string? visualizationId,
+        string? visualizationName,
+        string? savedQueryId,
+        string? savedQueryName,
+        int? rowCount,
+        int? columnCount);
 
     private static string GetWidgetSource(DashboardWidgetDefinition widget)
         => string.IsNullOrWhiteSpace(widget.VisualizationId)

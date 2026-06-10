@@ -1,5 +1,8 @@
 @namespace DeltaZulu.Workbench.Web.Components.Shared
 @using DeltaZulu.Workbench.Domain.Enums
+@using ChangeStatusEnum = DeltaZulu.Workbench.Domain.Enums.ChangeStatus
+@using IssueStatusEnum = DeltaZulu.Workbench.Domain.Enums.IssueStatus
+@using CheckStatusEnum = DeltaZulu.Workbench.Domain.Enums.CheckStatus
 
 @if (_text is not null)
 {
@@ -22,14 +25,14 @@
             _text = ChangeStatus.Value.ToString();
             _tone = ChangeStatus.Value switch
             {
-                ChangeStatus.Draft => "neutral",
-                ChangeStatus.ChecksRunning => "info",
-                ChangeStatus.ReviewRequired => "warning",
-                ChangeStatus.ChangesRequested => "error",
-                ChangeStatus.ReadyToAccept => "success",
-                ChangeStatus.Merged => "dark",
-                ChangeStatus.Published => "success",
-                ChangeStatus.Closed => "muted",
+                ChangeStatusEnum.Draft => "neutral",
+                ChangeStatusEnum.ChecksRunning => "info",
+                ChangeStatusEnum.ReviewRequired => "warning",
+                ChangeStatusEnum.ChangesRequested => "error",
+                ChangeStatusEnum.ReadyToAccept => "success",
+                ChangeStatusEnum.Merged => "dark",
+                ChangeStatusEnum.Published => "success",
+                ChangeStatusEnum.Closed => "muted",
                 _ => "neutral",
             };
         }
@@ -38,19 +41,19 @@
             _text = IssueStatus.Value.ToString();
             _tone = IssueStatus.Value switch
             {
-                IssueStatus.New => "neutral",
-                IssueStatus.NeedsInfo => "warning",
-                IssueStatus.Triaged => "info",
-                IssueStatus.SanitizationRequired => "error",
-                IssueStatus.Rejected => "muted",
-                IssueStatus.Backlog => "neutral",
-                IssueStatus.Ready => "info",
-                IssueStatus.Blocked => "error",
-                IssueStatus.InProgress => "warning",
-                IssueStatus.InReview => "warning",
-                IssueStatus.Merged => "success",
-                IssueStatus.Published => "dark",
-                IssueStatus.Closed => "muted",
+                IssueStatusEnum.New => "neutral",
+                IssueStatusEnum.NeedsInfo => "warning",
+                IssueStatusEnum.Triaged => "info",
+                IssueStatusEnum.SanitizationRequired => "error",
+                IssueStatusEnum.Rejected => "muted",
+                IssueStatusEnum.Backlog => "neutral",
+                IssueStatusEnum.Ready => "info",
+                IssueStatusEnum.Blocked => "error",
+                IssueStatusEnum.InProgress => "warning",
+                IssueStatusEnum.InReview => "warning",
+                IssueStatusEnum.Merged => "success",
+                IssueStatusEnum.Published => "dark",
+                IssueStatusEnum.Closed => "muted",
                 _ => "neutral",
             };
         }
@@ -76,12 +79,12 @@
             _text = CheckStatus.Value.ToString();
             _tone = CheckStatus.Value switch
             {
-                CheckStatus.Passed => "success",
-                CheckStatus.Failed => "error",
-                CheckStatus.Running => "info",
-                CheckStatus.Queued => "neutral",
-                CheckStatus.Skipped => "muted",
-                CheckStatus.Cancelled => "muted",
+                CheckStatusEnum.Passed => "success",
+                CheckStatusEnum.Failed => "error",
+                CheckStatusEnum.Running => "info",
+                CheckStatusEnum.Queued => "neutral",
+                CheckStatusEnum.Skipped => "muted",
+                CheckStatusEnum.Cancelled => "muted",
                 _ => "neutral",
             };
         }

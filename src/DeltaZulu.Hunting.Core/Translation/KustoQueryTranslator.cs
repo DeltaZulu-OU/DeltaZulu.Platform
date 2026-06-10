@@ -352,7 +352,8 @@ internal sealed class KustoQueryTranslator
 
         // JoinOperator does NOT expose a .Condition property on its generated class —
         // confirmed by CS1061. The on/where clause must be accessed via GetDescendants<T>.
-        var onClause = join.GetDescendants<JoinOnClause>().FirstOrDefault();
+        var onClauses = join.GetDescendants<JoinOnClause>();
+        var onClause = onClauses.Count > 0 ? onClauses[0] : null;
         ScalarExpr predicate;
 
         if (onClause is not null)
@@ -419,7 +420,8 @@ internal sealed class KustoQueryTranslator
             return null;
         }
 
-        var onClause = lookup.GetDescendants<JoinOnClause>().FirstOrDefault();
+        var onClauses = lookup.GetDescendants<JoinOnClause>();
+        var onClause = onClauses.Count > 0 ? onClauses[0] : null;
         if (onClause is null)
         {
             _diagnostics.AddError(DiagnosticPhase.Translate,

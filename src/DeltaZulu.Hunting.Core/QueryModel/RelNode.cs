@@ -152,6 +152,7 @@ public enum SortDirection
 public enum NullOrder
 { Default, First, Last }
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1720:Identifier contains type name", Justification = "Members mirror KQL literal type names")]
 public enum LiteralKind
 { String, Long, Int, Real, Bool, DateTime, Null, Timespan }
 

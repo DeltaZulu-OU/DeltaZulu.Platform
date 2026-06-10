@@ -8,7 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-public static class HuntingStandaloneWebApplicationExtensions
+public static partial class HuntingStandaloneWebApplicationExtensions
 {
     public static IServiceCollection AddHuntingStandaloneWeb(
         this WebApplicationBuilder builder)
@@ -72,7 +72,7 @@ public static class HuntingStandaloneWebApplicationExtensions
         if (options.BootstrapApplicationPersistence)
         {
             await app.Services.InitializeApplicationPersistenceAsync();
-            app.Logger.LogInformation("Hunting application persistence initialized");
+            LogPersistenceInitialized(app.Logger);
         }
     }
 
@@ -88,7 +88,7 @@ public static class HuntingStandaloneWebApplicationExtensions
 
         applier.ApplyStatements(ddl);
         applier.ExecuteRaw($"SET schema = '{SchemaConventions.GoldenSchema}'");
-        app.Logger.LogInformation("Hunting schema bootstrapped: {Count} DDL statements applied", ddl.Count);
+        LogSchemaBootstrapped(app.Logger, ddl.Count);
 
         if (seedDevelopmentMedallionSources)
         {
@@ -107,24 +107,20 @@ public static class HuntingStandaloneWebApplicationExtensions
 
             if (existingRows >= expectedRows)
             {
-                logger.LogInformation("Skipping seed for {TableName}: {RowCount} existing rows", tableName, existingRows);
+                LogSkippingSeed(logger, tableName, existingRows);
                 continue;
             }
 
             if (existingRows > 0)
             {
-                logger.LogWarning(
-                    "Repairing underseeded development table {TableName}: {ExistingRows} existing rows, expected at least {ExpectedRows}",
-                    tableName,
-                    existingRows,
-                    expectedRows);
+                LogRepairingUnderseededTable(logger, tableName, existingRows, expectedRows);
 
                 applier.ExecuteRaw($"DELETE FROM {tableName}");
             }
 
             applier.ExecuteRaw(seedSql);
             var insertedRows = applier.QueryScalar($"SELECT count(*) FROM {tableName}");
-            logger.LogInformation("Seeded {RowCount} rows into {TableName}", insertedRows, tableName);
+            LogSeeded(logger, insertedRows, tableName);
         }
     }
 
@@ -138,4 +134,19 @@ public static class HuntingStandaloneWebApplicationExtensions
             ? path
             : Path.Combine(contentRootPath, path);
     }
+
+    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Hunting application persistence initialized")]
+    private static partial void LogPersistenceInitialized(ILogger logger);
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Information, Message = "Hunting schema bootstrapped: {Count} DDL statements applied")]
+    private static partial void LogSchemaBootstrapped(ILogger logger, int count);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Information, Message = "Skipping seed for {TableName}: {RowCount} existing rows")]
+    private static partial void LogSkippingSeed(ILogger logger, string tableName, long rowCount);
+
+    [LoggerMessage(EventId = 4, Level = LogLevel.Warning, Message = "Repairing underseeded development table {TableName}: {ExistingRows} existing rows, expected at least {ExpectedRows}")]
+    private static partial void LogRepairingUnderseededTable(ILogger logger, string tableName, long existingRows, long expectedRows);
+
+    [LoggerMessage(EventId = 5, Level = LogLevel.Information, Message = "Seeded {RowCount} rows into {TableName}")]
+    private static partial void LogSeeded(ILogger logger, long rowCount, string tableName);
 }

@@ -3,7 +3,7 @@ namespace DeltaZulu.Hunting.Web.Dashboards.PageState;
 using DeltaZulu.Hunting.Web.Dashboards.Persistence;
 using DeltaZulu.Hunting.Web.Dashboards.Runtime;
 
-public sealed class DashboardPageController: IDisposable
+public sealed partial class DashboardPageController: IDisposable
 {
     private readonly IDashboardRepository _dashboardRepository;
     private readonly DashboardWidgetRunner _widgetRunner;
@@ -53,7 +53,7 @@ public sealed class DashboardPageController: IDisposable
         catch (Exception ex)
         {
             State.Error = $"Could not load dashboard. {ex.Message}";
-            _logger.LogWarning(ex, "Could not load dashboard {DashboardId}.", dashboardId);
+            LogCouldNotLoadDashboard(ex, dashboardId);
         }
         finally
         {
@@ -208,7 +208,7 @@ public sealed class DashboardPageController: IDisposable
         catch (Exception ex)
         {
             State.SaveError = $"Could not save dashboard. {ex.Message}";
-            _logger.LogWarning(ex, "Could not save dashboard {DashboardId}.", updatedDashboard.Id);
+            LogCouldNotSaveDashboard(ex, updatedDashboard.Id);
         }
 
         NotifyStateChanged();
@@ -411,7 +411,7 @@ public sealed class DashboardPageController: IDisposable
         catch (Exception ex)
         {
             State.SaveError = $"Could not export dashboard. {ex.Message}";
-            _logger.LogWarning(ex, "Could not export dashboard {DashboardId}.", State.Dashboard.Id);
+            LogCouldNotExportDashboard(ex, State.Dashboard.Id);
             NotifyStateChanged();
             return null;
         }
@@ -550,4 +550,13 @@ public sealed class DashboardPageController: IDisposable
     }
 
     public void Dispose() => _autoRefreshCts?.Dispose();
+
+    [LoggerMessage(EventId = 1, Level = LogLevel.Warning, Message = "Could not load dashboard {DashboardId}.")]
+    private partial void LogCouldNotLoadDashboard(Exception ex, string? dashboardId);
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "Could not save dashboard {DashboardId}.")]
+    private partial void LogCouldNotSaveDashboard(Exception ex, string dashboardId);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Warning, Message = "Could not export dashboard {DashboardId}.")]
+    private partial void LogCouldNotExportDashboard(Exception ex, string dashboardId);
 }

@@ -3,7 +3,7 @@ using Microsoft.JSInterop;
 
 namespace DeltaZulu.Hunting.Web.Services;
 
-public sealed class LanguageService : IAsyncDisposable
+public sealed partial class LanguageService : IAsyncDisposable
 {
     private readonly IJSRuntime _jsRuntime;
     private readonly ILogger<LanguageService> _logger;
@@ -33,7 +33,7 @@ public sealed class LanguageService : IAsyncDisposable
             throw new InvalidOperationException("Monaco failed to initialize in browser runtime.");
         }
         await _jsRuntime.InvokeVoidAsync("huntingMonaco.init", _callbackRef, containerId, initialValue);
-        _logger.LogInformation("Monaco KQL editor initialized for container {ContainerId}.", containerId);
+        LogEditorInitialized(containerId);
     }
 
     public ValueTask SetSchemaAsync(EditorSchemaMetadata schema)
@@ -57,7 +57,7 @@ public sealed class LanguageService : IAsyncDisposable
         }
         catch (JSDisconnectedException)
         {
-            _logger.LogDebug("Skipping Monaco insert because JS runtime is disconnected.");
+            LogInsertSkippedDueToDisconnect();
             return false;
         }
     }
@@ -88,9 +88,18 @@ public sealed class LanguageService : IAsyncDisposable
         }
         catch (JSDisconnectedException)
         {
-            _logger.LogDebug("Skipping Monaco {Operation} because JS runtime is disconnected.", operation);
+            LogOperationSkippedDueToDisconnect(operation);
         }
     }
+
+    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Monaco KQL editor initialized for container {ContainerId}.")]
+    private partial void LogEditorInitialized(string containerId);
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Debug, Message = "Skipping Monaco insert because JS runtime is disconnected.")]
+    private partial void LogInsertSkippedDueToDisconnect();
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Debug, Message = "Skipping Monaco {Operation} because JS runtime is disconnected.")]
+    private partial void LogOperationSkippedDueToDisconnect(string operation);
 
     private sealed class EditorCallbackBridge
     {
