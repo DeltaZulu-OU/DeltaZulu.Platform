@@ -45,6 +45,6 @@ Hunting should not define a second global visual system in `:root`, `html`, or `
 
 ## Workbench module-readiness notes
 
-Workbench centralizes standalone shell metadata and module navigation in `src/Workbench.Web/Components/Layout/WorkbenchShell.cs`. A future `DeltaZulu.Platform.Web` host should replace Workbench chrome/provider ownership, load shared static assets once, and compose Workbench routes/navigation as module UI instead of nesting the current standalone layout. See [`PLATFORM_MERGE_PREP.md`](PLATFORM_MERGE_PREP.md) for the current blockers.
+`DeltaZulu.Platform.Web` now owns Workbench chrome/provider ownership, loads shared static assets once, and composes Workbench routes/navigation from `src/DeltaZulu.Workbench.Web/WorkbenchModule.cs`. Workbench UI remains module UI and should not reintroduce a standalone shell. See [`PLATFORM_MERGE_PREP.md`](PLATFORM_MERGE_PREP.md) for remaining module-boundary notes.
 
 Shared-library UI guardrails can be checked with `pwsh ./scripts/design-audit.ps1 -IncludeShared`; this keeps the RCL free of Workbench references while retaining the default Workbench-only scan for product-page drift.

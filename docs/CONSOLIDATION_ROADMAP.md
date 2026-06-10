@@ -13,7 +13,7 @@ Prerequisites from the module roadmaps that gate this work are called out inline
 
 | Dimension | Hunting Web Legacy | Workbench Web Legacy | Shared |
 |---|---|---|---|
-| Host type | RCL (pages served by platform host) | RCL (pages served by platform host) | `DeltaZulu.Platform.Web` unified Blazor Web App (C5) |
+| Host type | RCL module (`DeltaZulu.Hunting.Web`) | RCL module (`DeltaZulu.Workbench.Web`) | `DeltaZulu.Platform.Web` unified Blazor Web App (C5/C6) |
 | Design tokens | `deltazulu-tokens.css` via RCL (C1) | `deltazulu-tokens.css` via RCL | `DeltaZulu.Blazor.Components` RCL |
 | Component library | `DeltaZulu.Blazor.Components` (C2) | `DeltaZulu.Blazor.Components` | 25 Dz* components |
 | CSS load order | MudBlazor, `deltazulu-tokens.css`, `dz-components.css`, `dz-shell.css`, `app.css` | MudBlazor, `deltazulu-tokens.css`, `dz-components.css`, `dz-shell.css`, `app.css` | Documented in `UI_CONVERGENCE_GUIDE.md` |
@@ -122,23 +122,29 @@ enumerate modules, their routes, and their navigation items through the shared c
 **Exit criteria:** `DeltaZulu.Platform.Web` renders both modules. Navigation works across modules.
 One provider stack, one theme, one CSS load order.
 
-### C6 -- Delete legacy hosts and simplify
+### C6 -- Delete legacy hosts and simplify ✅ COMPLETE
 
 **Objective:** Remove the standalone web projects and clean up orphaned code.
 
 | Step | Work | Outcome |
 |---:|---|---|
-| 1 | Keep both legacy hosts in the solution temporarily with a `<IsPackable>false</IsPackable>` marker and remove them from CI build/publish. | Safety net while the platform host stabilises. |
+| 1 | Keep both legacy hosts in the solution temporarily with a `<IsPackable>false</IsPackable>` marker and remove them from CI build/publish. | Superseded: the standalone host projects were converted into module RCLs after C5/C7 validation. |
 | 2 | Run full test suites and manual smoke tests against `DeltaZulu.Platform.Web` for at least one development cycle. | Confidence that the platform host is stable. |
-| 3 | Delete `DeltaZulu.Hunting.Web.Legacy` and `DeltaZulu.Workbench.Web.Legacy` projects, their `wwwroot` folders, `App.razor`, `MainLayout.razor`, and standalone `Program.cs` files. | Two projects removed from the solution. |
-| 4 | Move any Hunting service-registration code that was coupled to `Hunting.Web.Legacy` into `Hunting.Web` or a new `Hunting.ServiceDefaults` project. Same for Workbench. | Service registration survives host deletion. |
-| 5 | Remove `WorkbenchShell.cs` and any other transitional standalone-host scaffolding. | No dead code. |
-| 6 | Update `DeltaZulu.Platform.slnx`, `Directory.Build.props`, and CI workflows. | Solution is clean. |
+| 3 | Convert the former standalone `DeltaZulu.Hunting.Web` and `DeltaZulu.Workbench.Web` projects into Razor Class Library modules. Delete their standalone `Program.cs`, `App.razor`, host layouts, launch settings, host appsettings, and standalone-only assets while preserving module pages and `wwwroot` assets consumed by `DeltaZulu.Platform.Web`. | No module owns a runnable host or provider shell. |
+| 4 | Move any Hunting service-registration code that was coupled to the standalone host into `Hunting.Web` or a new `Hunting.ServiceDefaults` project. Same for Workbench. | Service registration survives host deletion; Hunting bootstrap remains platform-owned through `BootstrapHuntingModuleAsync`. |
+| 5 | Remove `WorkbenchShell.cs` and any other transitional standalone-host scaffolding. | Workbench module navigation now comes from `WorkbenchModule`; no standalone shell shims remain. |
+| 6 | Update `DeltaZulu.Platform.slnx`, `Directory.Build.props`, and CI workflows. | Solution references only the platform host and module RCLs; the platform host is included in solution builds. |
 | 7 | Delete orphaned CSS files, redundant `_Imports.razor` entries, and unused static assets (logos, favicons that belonged to standalone hosts). | No orphaned files. |
 | 8 | Update all documentation: `README.md`, module roadmaps, `PLATFORM_MERGE_PREP.md`, `UI_CONVERGENCE_GUIDE.md`, and ADRs. Archive superseded docs. | Docs reflect the merged state. |
 
 **Exit criteria:** The solution has one web host. No standalone host code remains. Documentation is
 current. CI builds and tests pass.
+
+**Status:** Complete. `DeltaZulu.Platform.Web` is the only `Microsoft.NET.Sdk.Web` project.
+`DeltaZulu.Hunting.Web` and `DeltaZulu.Workbench.Web` are Razor Class Library modules that
+contribute pages, services, and static assets to the platform host. Standalone `Program.cs`,
+`App.razor`, module-local host layouts, Workbench shell shims, launch settings, and host appsettings
+files have been removed.
 
 ### C7 -- Shared test coverage for platform libraries ✅ COMPLETE
 
@@ -200,11 +206,11 @@ Concrete duplications to resolve during the phases above:
 | Hunting local loading patterns vs `DzLoadingState.razor` | `DzLoadingState.razor` | C2 |
 | Hunting local Markdown rendering vs `DzMarkdownViewer.razor` | `DzMarkdownViewer.razor` | C2 |
 | `WorkbenchTheme.cs` (Workbench-local) | Future `DeltaZuluTheme` in RCL | C3 |
-| Hunting `App.razor` + `Program.cs` host setup | `DeltaZulu.Platform.Web` | C5 |
-| Workbench `App.razor` + `Program.cs` + `MainLayout.razor` host setup | `DeltaZulu.Platform.Web` | C5 |
+| Hunting `App.razor` + `Program.cs` host setup | `DeltaZulu.Platform.Web` | C5/C6 |
+| Workbench `App.razor` + `Program.cs` + `MainLayout.razor` host setup | `DeltaZulu.Platform.Web` | C5/C6 |
 | Two `MudThemeProvider` instances | One in `DeltaZulu.Platform.Web` `MainLayout` | C5 |
 | Two `MudDialogProvider` / `MudSnackbarProvider` instances | One in `DeltaZulu.Platform.Web` `MainLayout` | C5 |
-| `WorkbenchShell.cs` transitional metadata | `IPlatformModule` contract | C4/C6 |
+| `WorkbenchShell.cs` transitional metadata | `WorkbenchModule : IPlatformModule` | C4/C6 |
 
 ---
 

@@ -1,9 +1,8 @@
 # Platform module contract gap
 
-Workbench is ready for a future `DeltaZulu.Platform` import only as a module, not as the final
-platform host. The current standalone shell is intentionally a migration seam: it keeps the
-existing application runnable while the shared platform web contract is designed outside this
-repository.
+Workbench has been imported into `DeltaZulu.Platform` as a module, not as the final
+platform host. The previous standalone shell has been removed; `DeltaZulu.Platform.Web` now owns
+provider, shell, route discovery, and shared static-asset composition.
 
 This note freezes the Workbench-side expectations before broader candidate, incident, or hunt
 feature work continues. It addresses three alignment gaps that must be settled with Hunting
@@ -12,10 +11,9 @@ shared security-operations contracts.
 
 ## Decision summary
 
-1. `WorkbenchShell` is transitional metadata for the standalone Workbench host.
+1. `WorkbenchModule : IPlatformModule` is the Workbench module contract; `WorkbenchShell` has been removed.
 2. Workbench pages remain module UI; they must not become `DeltaZulu.Platform.Web` host pages.
-3. The final route/navigation/static-asset contract belongs in
-   `DeltaZulu.Platform.Web.Abstractions`, not in Workbench.
+3. Route/navigation/static-asset contracts live in `DeltaZulu.Platform.Web.Abstractions`, not in Workbench.
 4. Workbench consumes Hunting-produced candidate and hunt-evidence read models, but it records
    analyst workflow decisions locally.
 5. Workbench must not define runtime alert generation, candidate generation, KQL execution, or
@@ -56,14 +54,12 @@ Workbench owns their lifecycle.
 
 ## Current Workbench seam
 
-`WorkbenchShell` currently centralizes title, logo, and navigation entries for the standalone
-host. That is useful because a platform import can find the Workbench navigation surface in one
-place instead of mining `MainLayout.razor`. It is not the final module contract because it still
-assumes Workbench owns host-level routes and chrome.
+`WorkbenchModule` centralizes Workbench identity, route prefix, navigation entries, route groups,
+and static assets. Platform import no longer mines a Workbench-owned `MainLayout.razor`, and
+Workbench no longer owns host-level routes or chrome.
 
-Current standalone routes such as `/`, `/detections`, `/changes`, `/history`, and `/settings`
-are acceptable only while Workbench runs alone. A central host must compose these routes under a
-module-owned prefix or route group before Workbench and Hunting are mounted together.
+Workbench routes are prefixed under `/workbench` and composed by the central platform host so
+Workbench and Hunting can be mounted together without route conflicts.
 
 ## Required platform web abstraction
 

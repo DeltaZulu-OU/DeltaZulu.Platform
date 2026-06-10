@@ -1,8 +1,9 @@
 # Platform Merge Preparation Audit
 
-This document records the current merge-preparation boundary for moving Workbench into a future
+This document records the merge-preparation boundary for Workbench in the unified
 `DeltaZulu.Platform.Web` host while keeping Workbench domain/application/persistence/workflow
-libraries separate.
+libraries separate. The standalone Workbench host has been retired; `src/DeltaZulu.Workbench.Web`
+is now a Razor Class Library module consumed by the platform host.
 
 ## Reusable UI inventory
 
@@ -20,7 +21,7 @@ libraries separate.
 | Detail-list/action helpers | Shared now | `DzDetailList.razor`, `DzDetailItem.razor`, `DzActionLink.razor` | These are generic operational UI helpers. |
 | Workbench acceptance gates | Keep local | `src/Workbench.Web/Components/Shared/GateChecklist.razor` | Depends on `MergeReadiness`, gate codes, and Workbench acceptance callbacks. |
 | Pages and workflow composites | Keep local | `src/Workbench.Web/Components/Pages/*.razor` | Pages coordinate application services, drafts, checks, review, merge/readiness, and Workbench-specific command flows. |
-| Future host route composition | Later | `src/Workbench.Web/Components/Routes.razor`, `MainLayout.razor`, `WorkbenchShell.cs` | Workbench now centralizes module nav metadata, but final platform route discovery and provider ownership belong in `DeltaZulu.Platform.Web`. |
+| Platform route composition | Complete | `src/DeltaZulu.Workbench.Web/WorkbenchModule.cs`, `src/DeltaZulu.Platform.Web/Routes.razor`, `src/DeltaZulu.Platform.Web/Layout/MainLayout.razor` | Workbench navigation and route metadata are exposed through `IPlatformModule`; route discovery and provider ownership belong to `DeltaZulu.Platform.Web`. |
 
 ## Shared detection-content inventory
 
@@ -43,11 +44,11 @@ libraries separate.
 
 | Host-only concern | Current Workbench state | Merge-prep outcome |
 |---|---|---|
-| App shell ownership | `MainLayout.razor` owns Mud providers, shell, drawer, app bar, and side nav. | Shell metadata/navigation moved into `WorkbenchShell.cs` so a central host can replace chrome without mining layout code. |
-| Route ownership | `Routes.razor` discovers routable Workbench pages in the Web assembly. | Still host-owned today. Future `DeltaZulu.Platform.Web` should import Workbench route/module metadata rather than use Workbench's standalone router. |
-| Mud provider ownership | `MainLayout.razor` owns `MudThemeProvider`, popover, dialog, and snackbar providers. | Still standalone-host responsibility. Final platform host must own one provider set. |
-| Logo/navigation ownership | Logo and nav are centralized through `WorkbenchShell`. | Central host can replace platform branding and include Workbench module nav items. |
-| Static asset loading | `App.razor` loads MudBlazor and `DeltaZulu.Blazor.Components` assets before `app.css`. | Correct for standalone Workbench. Final host should load shared assets once and keep product CSS scoped. |
+| App shell ownership | `DeltaZulu.Platform.Web/Layout/MainLayout.razor` owns Mud providers, shell, drawer, app bar, and side nav. | Workbench exposes metadata/navigation through `WorkbenchModule` and does not own host chrome. |
+| Route ownership | `DeltaZulu.Platform.Web/Routes.razor` discovers routable Workbench pages from the module assembly. | Host-owned through `IPlatformModule` route/module metadata; Workbench no longer has a standalone router. |
+| Mud provider ownership | `DeltaZulu.Platform.Web/Layout/MainLayout.razor` owns `MudThemeProvider`, popover, dialog, and snackbar providers. | Platform host owns one provider set. |
+| Logo/navigation ownership | Nav is centralized through `WorkbenchModule`; `WorkbenchShell` has been removed. | Central host owns platform branding and includes Workbench module nav items from the module contract. |
+| Static asset loading | `DeltaZulu.Platform.Web/App.razor` loads MudBlazor and `DeltaZulu.Blazor.Components` assets before module CSS. | Shared assets load once and Workbench product CSS remains module-scoped. |
 
 ## Remaining blockers before full `DeltaZulu.Platform.Web` integration
 
@@ -55,10 +56,10 @@ See [`analysis/platform-module-contract-gap.md`](analysis/platform-module-contra
 Workbench-side route/module-manifest contract gap and cross-repository naming/contract alignment
 plan.
 
-1. Workbench pages are still routable Blazor pages rather than a hostless module route manifest.
-2. `WorkbenchShell` is transitional standalone metadata, not the final platform module contract.
-3. Mud providers and theme are still created by Workbench's standalone `MainLayout`; a platform host must own a single provider/theme stack.
-4. Workbench static assets (`logo-*.png`, `app.css`) are still standalone-host assets and need platform branding/scoped product CSS treatment.
+1. Workbench pages are routable Blazor module pages discovered by `DeltaZulu.Platform.Web`; route metadata is exposed through `WorkbenchModule`.
+2. `WorkbenchShell` has been removed; `WorkbenchModule : IPlatformModule` is the module contract.
+3. Mud providers and theme are created by `DeltaZulu.Platform.Web` so the platform owns a single provider/theme stack.
+4. Workbench standalone logo assets have been removed; `app.css` remains as module-scoped product CSS loaded by the platform host.
 5. Workbench domain IDs and version projections are not yet migrated to the shared `DeltaZulu.DetectionContent` IDs; mapping is required before Hunting can consume the same contracts directly.
 6. Accepted-content store ports still live in Workbench.Application and expose Workbench-oriented request/result names; only stable file/path/reference shapes have been extracted.
 7. Candidate, incident, hunt, and executable detection-content read models need shared contract placement before broad feature work continues.

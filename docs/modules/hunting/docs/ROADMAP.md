@@ -241,7 +241,7 @@ Exit criteria:
 
 | Order | Priority | Task | Outcome |
 |---:|---|---|---|
-| 1 | P1 | Partially implemented: add temporary `HuntingModuleRouter`, module layout, and standalone layout split; route-prefixing remains a pre-host-merge blocker. | Workbench can own `/` while Hunting remains a product area. |
+| 1 | P1 | Complete: remove temporary `HuntingModuleRouter` and module-local host layouts; platform route discovery uses `HuntingModule : IPlatformModule` and `/hunting`-prefixed page directives. | `DeltaZulu.Platform.Web` owns `/` while Hunting remains a product area under `/hunting`. |
 | 2 | P1 | Rename or route Hunting's settings page as runtime/query settings, or prepare to remove it. | Hunting does not conflict with Workbench operator/product settings. |
 | 3 | P1 | Implemented baseline: Hunting `app.css` scopes compatibility aliases under `.hunt-app` and sources values from DeltaZulu semantic tokens. | Assets can move into a shared host with less styling and script friction. |
 | 4 | P1 | In progress: continue dashboard/component cleanup; after platform import, move generic table/panel/dialog/empty-state/page-header/Markdown/dashboard chrome onto `DeltaZulu.Blazor.Components`. | The merged app does not carry a second visual system. |

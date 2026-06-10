@@ -21,7 +21,7 @@
 		<ProjectReference Include="..\..\src\DeltaZulu.Hunting.Data\DeltaZulu.Hunting.Data.csproj" />
 		<ProjectReference Include="..\..\src\DeltaZulu.Hunting.Schema\DeltaZulu.Hunting.Schema.csproj" />
 		<ProjectReference Include="..\..\src\DeltaZulu.Hunting.Render\DeltaZulu.Hunting.Render.csproj" />
-		<ProjectReference Include="..\..\src\DeltaZulu.Hunting.Web.Legacy\DeltaZulu.Hunting.Web.Legacy.csproj" />
+		<ProjectReference Include="..\..\src\DeltaZulu.Hunting.Web\DeltaZulu.Hunting.Web.csproj" />
 	</ItemGroup>
 
 </Project>

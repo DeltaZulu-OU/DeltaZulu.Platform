@@ -4,12 +4,11 @@
 
 Hunting already keeps query translation, schema contracts, DuckDB runtime, rendering, saved-query persistence, detection records, detection runs, alerts, and visualization records outside the Blazor host. The main coupling risk was the web edge: `Hunting.Web` registered MudBlazor providers, owned the top-level router, owned the global navigation rail, bootstrapped local databases, seeded development data, and mapped fallback routes in one `Program.cs` path. That made the application runnable, but it also made Hunting look like the only web host.
 
-This change separates the standalone host path from a module-host path:
+This history originally separated the standalone host path from a module-host path. C6 completed the transition by removing the standalone path:
 
-- Standalone execution still owns providers, `_Host`, fallback routing, static files, schema bootstrap, and local app persistence bootstrap.
-- Hunting module registration now has named layers: `AddHuntingRuntime(...)`, `AddHuntingApplicationState(...)`, and the current bridge `AddHuntingWebModule(...)`, so a future platform host can replace persistence/provider ownership without adopting Hunting's shell.
-- Hunting route rendering now sits behind `HuntingModuleRouter`, with a default module layout and an overridable layout for a platform shell.
-- Standalone global chrome moved into `StandaloneHuntingLayout`; `MainLayout` and `HuntingModuleLayout` are shell-light module layouts.
+- Platform execution calls `AddHuntingWebModule(...)` without asking Hunting to register Mud providers.
+- Platform execution owns routing, document shell, fallback behavior, shared static asset ordering, and global chrome.
+- Hunting keeps module pages, module services, RCL static assets, and platform-invoked schema/application persistence bootstrap helpers.
 - Detection-content consumption remains a documented boundary only until Hunting can reference the shared `DeltaZulu.DetectionContent` package; Hunting does not define parallel accepted-content contracts or turn saved queries/local detections into canonical governed content. The runtime-executable accepted-detection needs are captured in `docs/analysis/executable-detection-content-boundary.md`.
 
 ## Concrete refactor plan
@@ -17,28 +16,28 @@ This change separates the standalone host path from a module-host path:
 | Step | Status | Outcome |
 |---|---|---|
 | Extract web module service registration from `Program.cs`. | Done | Platform host can call `AddHuntingWebModule(...)` and choose whether it owns MudBlazor services. |
-| Split runtime and application-state registration. | Done | `AddHuntingRuntime(...)` owns DuckDB query/schema runtime; `AddHuntingApplicationState(...)` owns standalone-compatible persistence and state services. |
-| Keep standalone bootstrapping separate. | Done | `AddHuntingStandaloneWeb()` and `UseHuntingStandaloneWebAsync()` preserve the current app behavior. |
-| Split routing/layout concerns. | Done | `HuntingModuleRouter` can be embedded with a platform-provided layout, while standalone mode uses `StandaloneHuntingLayout`. |
+| Split runtime and application-state registration. | Done | `AddHuntingRuntime(...)` owns DuckDB query/schema runtime; `AddHuntingApplicationState(...)` owns platform-supplied path-based persistence and state services. |
+| Remove standalone bootstrapping. | Done | Standalone host extension methods were removed; platform composition calls `AddHuntingWebModule(...)` and `BootstrapHuntingModuleAsync(...)`. |
+| Centralize routing/layout concerns. | Done | `DeltaZulu.Platform.Web` owns route discovery and layout selection; Hunting pages do not opt into module-local layouts. |
 | Document the detection-content consumption boundary without local replacement contracts. | Done | Hunting can later consume `DeltaZulu.DetectionContent` without deleting a competing local model. |
 | Document move/keep/later decisions. | Done | Reviewers can see what belongs in a shared design system or shared detection-content package later. |
-| Prefix/remap routes under `/hunting`, `/hunting/query`, `/hunting/library`, `/hunting/dashboards`, and `/hunting/settings` or another agreed base. | Later | Requires a shared host routing decision; current page directives remain absolute for compatibility. |
+| Prefix routes under `/hunting`, `/hunting/threat-hunting`, `/hunting/library`, `/hunting/dashboards`, and `/hunting/settings`. | Done | Page directives are platform-prefixed and align with `HuntingModule.RoutePrefix`. |
 | Move generic UI primitives to shared RCL. | Later | Requires `DeltaZulu.Blazor.Components`; freeze broad local generic UI primitive development until import. |
 
 ## Web concern classification
 
 | Current concern | Classification | Notes |
 |---|---|---|
-| `_Host.cshtml`, server-side Blazor hub mapping, fallback route, static files middleware | Host-only | Standalone host keeps these; platform host should own equivalents. |
-| Application persistence paths and connection ownership | Standalone by default; platform-supplied later | `AddHuntingApplicationState(...)` accepts paths today through module options, but tenant/module-aware persistence should come from the platform composition root before final merge. |
-| Mud theme/popover/dialog/snackbar providers | Host-only in platform; standalone-only here | Providers remain in `App.razor` for standalone mode. A platform shell should provide them once. |
-| Top app bar, global rail, brand, Overview/Library/Dashboards/Settings navigation | Host-only / shared shell chrome | Moved into `StandaloneHuntingLayout`; should not be required for module embedding. |
-| `HuntingModuleRouter` | Temporary module-host compatibility | Lets a host choose the layout around Hunting routes until `DeltaZulu.Platform.Web.Abstractions` supplies route/module manifests. |
-| `HuntingModuleLayout` / `MainLayout` | Hunting module layout shim | Minimal layout for embedded scenarios. |
+| `_Host.cshtml`, server-side Blazor hub mapping, fallback route, static files middleware | Host-only | Removed from Hunting; `DeltaZulu.Platform.Web` owns host middleware and fallback behavior. |
+| Application persistence paths and connection ownership | Platform-supplied | `AddHuntingApplicationState(...)` accepts paths through module options supplied by `DeltaZulu.Platform.Web`; tenant/module-aware persistence can replace the path-based bridge later. |
+| Mud theme/popover/dialog/snackbar providers | Host-only | Removed from Hunting; the platform shell provides them once. |
+| Top app bar, global rail, brand, Overview/Library/Dashboards/Settings navigation | Host-only / shared shell chrome | `HuntingModule` supplies navigation metadata; platform shared shell renders it. |
+| `HuntingModuleRouter` | Removed | Replaced by `IPlatformModule` route metadata and platform host route discovery. |
+| `HuntingModuleLayout` / `MainLayout` | Removed | Platform `MainLayout` provides the shell and providers. |
 | Query editor, schema browser, KQL helper drawer, query library drawer | Hunting-specific module UI | These are part of the hunting workflow. |
 | Dashboard pages and widgets | Hunting-specific for now | Generic grid/panel/editor patterns should later come from shared UI, but dashboard semantics are currently Hunting-local. |
 | `DzQueryResultTable` | Shared UI extraction candidate; do not broaden locally | Generic result-table styling should move to `DeltaZulu.Blazor.Components`; Hunting-specific result binding can stay local. |
-| `wwwroot/css/deltazulu/*` and global `app.css` shell rules | Shared design-system candidate | Keep scoped now; migrate tokens/components later. |
+| `app.css` remaining shell-era rules | Shared design-system cleanup candidate | Keep scoped now; migrate or delete remaining unused shell-era rules as pages move further onto `DeltaZulu.Blazor.Components`. |
 | Monaco and dashboard JavaScript assets | Hunting-specific behavior with host-asset implications | Platform host must serve/import these assets or Hunting must package them as RCL static web assets. |
 
 ## UI move / keep / later table
@@ -46,7 +45,7 @@ This change separates the standalone host path from a module-host path:
 | UI piece | Move later to shared platform UI | Keep in Hunting | Later review |
 |---|---:|---:|---:|
 | Mud provider ownership | Yes | No | No |
-| App/root shell, brand, global nav rail, top app bar | Yes | Standalone compatibility only | No |
+| App/root shell, brand, global nav rail, top app bar | Yes | No | No |
 | Generic page header/toolbar/empty-state styles | Yes | Temporary local styles | Yes |
 | Generic button/panel/table/dialog patterns | Yes | Temporary local styles | Yes |
 | Query editor and KQL execution workflow | No | Yes | No |
@@ -80,7 +79,7 @@ This change separates the standalone host path from a module-host path:
 
 | Constraint | Required follow-up before final platform hosting |
 |---|---|
-| `HuntingModuleRouter` is temporary. | Replace per-module router components with a shared `DeltaZulu.Platform.Web.Abstractions` route/module manifest after the platform host exists. |
+| `HuntingModuleRouter` is removed. | Platform routing uses `IPlatformModule` route metadata and additional page assemblies. |
 | `AddHuntingWebModule(...)` still composes application persistence through a separate layer. | Replace `AddHuntingApplicationState(...)` path-based defaults with platform-owned tenant/module persistence before final mounting. |
 | Generic-looking UI remains local only as a bridge. | Refactor result-table visuals, generic panel/table/dialog/empty-state/page-header/Markdown/dashboard chrome onto `DeltaZulu.Blazor.Components` after platform import. |
 | Absolute routes remain in this PR. | Treat prefixing `/`, `/settings`, `/library`, and `/dashboards` as a pre-host-merge blocker, not post-merge cleanup. |

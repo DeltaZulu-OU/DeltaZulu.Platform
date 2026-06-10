@@ -4,47 +4,36 @@ namespace DeltaZulu.Hunting.Tests;
 public sealed class WebHostBoundaryTests
 {
     [TestMethod]
-    [Description("Standalone host remains a thin composition root over reusable Hunting web-module registration.")]
-    public void Program_DelegatesToStandaloneHostExtensions()
+    [Description("Hunting web is now a module RCL and no longer contains a standalone host entry point.")]
+    public void ModuleProject_RemovesStandaloneHostEntryPoints()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var program = File.ReadAllText(Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web.Legacy/Program.cs"));
+        var webRoot = Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web");
+        var project = File.ReadAllText(Path.Combine(webRoot, "DeltaZulu.Hunting.Web.csproj"));
 
-        Assert.Contains("builder.AddHuntingStandaloneWeb();", program);
-        Assert.Contains("await app.UseHuntingStandaloneWebAsync();", program);
-        Assert.IsFalse(program.Contains("AddMudServices", StringComparison.Ordinal));
-        Assert.IsFalse(program.Contains("MapFallbackToPage", StringComparison.Ordinal));
+        Assert.Contains("Microsoft.NET.Sdk.Razor", project);
+        Assert.IsFalse(File.Exists(Path.Combine(webRoot, "Program.cs")), "Hunting module should not own a standalone Program.cs.");
+        Assert.IsFalse(File.Exists(Path.Combine(webRoot, "App.razor")), "Hunting module should not own the document shell.");
+        Assert.IsFalse(File.Exists(Path.Combine(webRoot, "Pages", "_Host.cshtml")), "Hunting module should not map a standalone fallback host page.");
     }
 
     [TestMethod]
-    [Description("Hunting exposes a module router so a future platform host can choose layout/provider ownership.")]
-    public void App_UsesModuleRouterWithStandaloneLayout()
+    [Description("Hunting pages rely on the platform host layout instead of standalone or module-local shells.")]
+    public void RazorFiles_DoNotExplicitlyUseModuleLocalLayouts()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var app = File.ReadAllText(Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web.Legacy/App.razor"));
-
-        Assert.Contains("<HuntingModuleRouter", app);
-        Assert.Contains("StandaloneHuntingLayout", app);
-    }
-
-    [TestMethod]
-    [Description("Hunting pages do not explicitly opt back into the standalone shell layout.")]
-    public void RazorFiles_DoNotExplicitlyUseMainLayout()
-    {
-        var repositoryRoot = FindRepositoryRoot();
-        var webRoot = Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web.Legacy");
-        var razorFiles = Directory.EnumerateFiles(webRoot, "*.razor", SearchOption.AllDirectories)
-            .Where(path => !path.EndsWith(Path.Combine("Shared", "MainLayout.razor"), StringComparison.OrdinalIgnoreCase))
-            .Where(path => !path.EndsWith(Path.Combine("Shared", "StandaloneHuntingLayout.razor"), StringComparison.OrdinalIgnoreCase))
-            .Where(path => !path.EndsWith(Path.Combine("Shared", "HuntingModuleLayout.razor"), StringComparison.OrdinalIgnoreCase));
+        var webRoot = Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web");
+        var razorFiles = Directory.EnumerateFiles(webRoot, "*.razor", SearchOption.AllDirectories);
 
         foreach (var file in razorFiles)
         {
             var text = File.ReadAllText(file);
             Assert.IsFalse(
                 text.Contains("@layout MainLayout", StringComparison.OrdinalIgnoreCase)
-                || text.Contains("@layout Hunting.Web.Shared.MainLayout", StringComparison.OrdinalIgnoreCase),
-                $"{Path.GetRelativePath(repositoryRoot, file)} should not explicitly force the standalone/module layout.");
+                || text.Contains("@layout Hunting.Web.Shared.MainLayout", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("StandaloneHuntingLayout", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("HuntingModuleLayout", StringComparison.OrdinalIgnoreCase),
+                $"{Path.GetRelativePath(repositoryRoot, file)} should not explicitly force a module-local layout.");
         }
     }
 
@@ -53,7 +42,7 @@ public sealed class WebHostBoundaryTests
     public void WebModuleRegistration_ExposesSeparateRuntimeAndApplicationStateLayers()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var registration = File.ReadAllText(Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web.Legacy/Hosting/HuntingWebModuleServiceCollectionExtensions.cs"));
+        var registration = File.ReadAllText(Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web/Hosting/HuntingWebModuleServiceCollectionExtensions.cs"));
 
         Assert.Contains("AddHuntingRuntime(", registration);
         Assert.Contains("AddHuntingApplicationState(", registration);
@@ -69,6 +58,20 @@ public sealed class WebHostBoundaryTests
             runtimeSection.Contains("AppDbPath", StringComparison.Ordinal)
             || runtimeSection.Contains("AddApplicationPersistence", StringComparison.Ordinal),
             "Runtime registration must not own application-state persistence paths.");
+    }
+
+    [TestMethod]
+    [Description("Hunting keeps only platform-owned bootstrap code for schema and persistence initialization.")]
+    public void ModuleBootstrap_DoesNotMapStandaloneFallbackRoutes()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var bootstrap = File.ReadAllText(Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web/Hosting/HuntingModuleBootstrapExtensions.cs"));
+
+        Assert.Contains("BootstrapHuntingModuleAsync", bootstrap);
+        Assert.IsFalse(bootstrap.Contains("MapFallbackToPage", StringComparison.Ordinal));
+        Assert.IsFalse(bootstrap.Contains("MapBlazorHub", StringComparison.Ordinal));
+        Assert.IsFalse(bootstrap.Contains("AddServerSideBlazor", StringComparison.Ordinal));
+        Assert.IsFalse(bootstrap.Contains("AddRazorPages", StringComparison.Ordinal));
     }
 
     private static string FindRepositoryRoot()

@@ -99,8 +99,8 @@ public sealed class PlatformCompositionTests
         var repositoryRoot = FindRepositoryRoot();
         var moduleRoots = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["hunting"] = Path.Combine(repositoryRoot, "src", "DeltaZulu.Hunting.Web.Legacy", "wwwroot"),
-            ["workbench"] = Path.Combine(repositoryRoot, "src", "DeltaZulu.Workbench.Web.Legacy", "wwwroot"),
+            ["hunting"] = Path.Combine(repositoryRoot, "src", "DeltaZulu.Hunting.Web", "wwwroot"),
+            ["workbench"] = Path.Combine(repositoryRoot, "src", "DeltaZulu.Workbench.Web", "wwwroot"),
         };
 
         foreach (var module in Modules)
@@ -131,8 +131,8 @@ public sealed class PlatformCompositionTests
             "_content/DeltaZulu.Blazor.Components/deltazulu-tokens.css",
             "_content/DeltaZulu.Blazor.Components/dz-components.css",
             "_content/DeltaZulu.Blazor.Components/dz-shell.css",
-            "_content/DeltaZulu.Hunting.Web.Legacy/css/app.css",
-            "_content/DeltaZulu.Workbench.Web.Legacy/app.css",
+            "_content/DeltaZulu.Hunting.Web/css/app.css",
+            "_content/DeltaZulu.Workbench.Web/app.css",
             "platform.css");
     }
 

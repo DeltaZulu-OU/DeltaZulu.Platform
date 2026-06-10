@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\DeltaZulu.Hunting.Web.Legacy\DeltaZulu.Hunting.Web.Legacy.csproj" />
-    <ProjectReference Include="..\..\src\DeltaZulu.Workbench.Web.Legacy\DeltaZulu.Workbench.Web.Legacy.csproj" />
+    <ProjectReference Include="..\..\src\DeltaZulu.Hunting.Web\DeltaZulu.Hunting.Web.csproj" />
+    <ProjectReference Include="..\..\src\DeltaZulu.Workbench.Web\DeltaZulu.Workbench.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

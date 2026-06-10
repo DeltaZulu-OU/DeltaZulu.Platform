@@ -67,7 +67,7 @@ public sealed class SchemaBrowserSampleQueryGuardTests
 
         while (directory is not null)
         {
-            var candidate = Path.Combine(directory.FullName, "src", "DeltaZulu.Hunting.Web.Legacy", "Shared", "SchemaBrowser.razor");
+            var candidate = Path.Combine(directory.FullName, "src", "DeltaZulu.Hunting.Web", "Shared", "SchemaBrowser.razor");
             if (File.Exists(candidate))
             {
                 return File.ReadAllText(candidate);
@@ -76,7 +76,7 @@ public sealed class SchemaBrowserSampleQueryGuardTests
             directory = directory.Parent;
         }
 
-        Assert.Fail("Could not locate src/DeltaZulu.Hunting.Web.Legacy/Shared/SchemaBrowser.razor from the test output directory.");
+        Assert.Fail("Could not locate src/DeltaZulu.Hunting.Web/Shared/SchemaBrowser.razor from the test output directory.");
         return string.Empty;
     }
 }

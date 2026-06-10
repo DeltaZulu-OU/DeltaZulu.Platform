@@ -12,16 +12,14 @@
   <!-- Workbench module -->
   <Project Path="src/DeltaZulu.Workbench.Domain/DeltaZulu.Workbench.Domain.csproj" />
   <Project Path="src/DeltaZulu.Platform.Web.Abstractions/DeltaZulu.Platform.Web.Abstractions.csproj" />
-  <Project Path="src/DeltaZulu.Platform.Web/DeltaZulu.Platform.Web.csproj">
-    <Build Solution="Debug|*" Project="false" />
-  </Project>
+  <Project Path="src/DeltaZulu.Platform.Web/DeltaZulu.Platform.Web.csproj" />
   <Project Path="src/DeltaZulu.Workbench.Application/DeltaZulu.Workbench.Application.csproj" />
   <Project Path="src/DeltaZulu.Workbench.Persistence/DeltaZulu.Workbench.Persistence.csproj" />
   <Project Path="src/DeltaZulu.Workbench.Infrastructure/DeltaZulu.Workbench.Infrastructure.csproj" />
   <Project Path="src/DeltaZulu.Workbench.Workflow/DeltaZulu.Workbench.Workflow.csproj" />
   <Project Path="src/DeltaZulu.Workbench.Validation/DeltaZulu.Workbench.Validation.csproj" />
   <Project Path="src/DeltaZulu.Workbench.HuntingAdapter/DeltaZulu.Workbench.HuntingAdapter.csproj" />
-  <Project Path="src/DeltaZulu.Workbench.Web.Legacy/DeltaZulu.Workbench.Web.Legacy.csproj" />
+  <Project Path="src/DeltaZulu.Workbench.Web/DeltaZulu.Workbench.Web.csproj" />
 
   <!-- Hunting module -->
   <Project Path="src/DeltaZulu.Hunting.Application/DeltaZulu.Hunting.Application.csproj" />
@@ -29,7 +27,7 @@
   <Project Path="src/DeltaZulu.Hunting.Schema/DeltaZulu.Hunting.Schema.csproj" />
   <Project Path="src/DeltaZulu.Hunting.Data/DeltaZulu.Hunting.Data.csproj" />
   <Project Path="src/DeltaZulu.Hunting.Render/DeltaZulu.Hunting.Render.csproj" />
-  <Project Path="src/DeltaZulu.Hunting.Web.Legacy/DeltaZulu.Hunting.Web.Legacy.csproj" />
+  <Project Path="src/DeltaZulu.Hunting.Web/DeltaZulu.Hunting.Web.csproj" />
 
   <!-- Tests -->
   <Project Path="tests/DeltaZulu.Workbench.Tests/DeltaZulu.Workbench.Tests.csproj" />

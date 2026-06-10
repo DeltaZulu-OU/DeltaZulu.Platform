@@ -231,7 +231,7 @@ Suggested `DeltaZulu.Platform` module boundaries after consolidation should use 
 | `DeltaZulu.Workbench.Workflow` | Generic analyst workflow patterns used by Workbench-owned domains. |
 | `DeltaZulu.Workbench.Web` | Workbench module UI, not the platform host shell. |
 
-`AddHuntingWebModule(...)` and `HuntingModuleRouter` are temporary compatibility seams. ADR 0017 records that final platform hosting should use `DeltaZulu.Platform.Web.Abstractions` rather than a Hunting-owned router or a Workbench-owned shell as the shared abstraction.
+`AddHuntingWebModule(...)` remains the module service-registration seam, and `HuntingModule : IPlatformModule` provides the platform route/navigation metadata. The temporary `HuntingModuleRouter` has been removed; final platform hosting uses `DeltaZulu.Platform.Web.Abstractions` rather than a Hunting-owned router or a Workbench-owned shell as the shared abstraction.
 
 Post-merge sequence: validate actual Workbench entities, define shared contracts, implement `HuntInvestigation`, add Hunting-owned durable `HuntQueryRun` and result snapshots, add data-source readiness checks and visibility-gap findings, implement typed handovers, then add UI and metrics once contracts are stable.
 
