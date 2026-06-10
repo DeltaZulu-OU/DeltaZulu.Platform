@@ -168,7 +168,7 @@ public sealed class MergeReconciliationServiceTests : IDisposable
 
             Assert.IsFalse(repair.IsSuccess);
             Assert.AreEqual(MergeRepairStatus.NotRepairable, repair.Status);
-            StringAssert.Contains(repair.Message, "Accepted-content commit was not found");
+            Assert.Contains("Accepted-content commit was not found", repair.Message);
         }
     }
 
@@ -184,7 +184,7 @@ public sealed class MergeReconciliationServiceTests : IDisposable
         Assert.AreEqual(MergeRecoveryActionKind.RepairProjection, guidance.ActionKind);
         Assert.IsTrue(guidance.CanRepair);
         Assert.AreEqual("Repair projection", guidance.RecommendedAction);
-        StringAssert.Contains(guidance.Message, "version projection");
+        Assert.Contains("version projection", guidance.Message);
     }
 
     [TestMethod]
@@ -199,7 +199,7 @@ public sealed class MergeReconciliationServiceTests : IDisposable
         Assert.AreEqual(MergeRecoveryActionKind.WaitingForAcceptedWrite, guidance.ActionKind);
         Assert.IsFalse(guidance.CanRepair);
         Assert.AreEqual("Wait or retry merge", guidance.RecommendedAction);
-        StringAssert.Contains(guidance.Message, "accepted-content write has not completed");
+        Assert.Contains("accepted-content write has not completed", guidance.Message);
     }
 
     [TestMethod]
@@ -214,7 +214,7 @@ public sealed class MergeReconciliationServiceTests : IDisposable
         Assert.AreEqual(MergeRecoveryActionKind.NeedsInvestigation, guidance.ActionKind);
         Assert.IsFalse(guidance.CanRepair);
         Assert.AreEqual("Verify accepted snapshot", guidance.RecommendedAction);
-        StringAssert.Contains(guidance.Message, "no accepted snapshot is recorded");
+        Assert.Contains("no accepted snapshot is recorded", guidance.Message);
     }
 
     private async Task<DetectionId> CreateDetectionAsync(string slug)

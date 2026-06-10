@@ -132,9 +132,18 @@ public sealed class DetectionContentContractTests
         Assert.AreEqual(3, reference.SequenceNumber);
         Assert.AreEqual("v3", reference.DisplayVersion);
         Assert.AreEqual("abc123", reference.AcceptedContentCommitSha);
-        AssertContractError("version.sequence_invalid", () => new AcceptedDetectionVersionRef(versionId, detectionId, slug, 0, "v0", acceptedAt, null));
-        AssertContractError("accepted_content.commit_empty", () => new AcceptedDetectionVersionRef(versionId, detectionId, slug, 1, "v1", acceptedAt, " "));
-        AssertContractError("accepted_content.commit_empty", () => new AcceptedDetectionContentRef(detectionId, slug, versionId, " "));
+
+        AssertContractError(
+            "version.sequence_invalid",
+            () => _ = new AcceptedDetectionVersionRef(versionId, detectionId, slug, 0, "v0", acceptedAt, null));
+
+        AssertContractError(
+            "accepted_content.commit_empty",
+            () => _ = new AcceptedDetectionVersionRef(versionId, detectionId, slug, 1, "v1", acceptedAt, " "));
+
+        AssertContractError(
+            "accepted_content.commit_empty",
+            () => _ = new AcceptedDetectionContentRef(detectionId, slug, versionId, " "));
     }
 
     private static void AssertContractError(string expectedCode, Action action)

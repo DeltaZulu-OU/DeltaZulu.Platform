@@ -1,6 +1,5 @@
 using Bunit;
-using DeltaZulu.Blazor.Components;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MudBlazor.Services;
 
 namespace DeltaZulu.Blazor.Components.Tests;
 
@@ -22,8 +21,7 @@ public sealed class SharedComponentRenderingTests
 
         var header = cut.Find(".dz-page-header");
 
-        StringAssert.Contains(header.GetAttribute("class"), "custom-header");
-        Assert.AreEqual("Module", cut.Find(".dz-page-header__eyebrow").TextContent);
+        AssertHasClass(header, "custom-header"); Assert.AreEqual("Module", cut.Find(".dz-page-header__eyebrow").TextContent);
         Assert.AreEqual("Threat Hunting", cut.Find(".dz-page-header__title").TextContent.Trim());
         Assert.AreEqual("Explore detections and dashboards.", cut.Find(".dz-page-header__description").TextContent.Trim());
         Assert.AreEqual("2 routes", cut.Find(".dz-page-header__metadata").TextContent);
@@ -44,8 +42,8 @@ public sealed class SharedComponentRenderingTests
 
         var panel = cut.Find(".dz-panel");
 
-        StringAssert.Contains(panel.GetAttribute("class"), "dz-panel--compact");
-        StringAssert.Contains(panel.GetAttribute("class"), "module-panel");
+        AssertHasClass(panel, "dz-panel--compact");
+        AssertHasClass(panel, "module-panel");
         Assert.AreEqual("Summary", cut.Find(".dz-panel__eyebrow").TextContent);
         Assert.AreEqual("Panel title", cut.Find(".dz-panel__title").TextContent.Trim());
         Assert.AreEqual("Panel body", cut.Find(".dz-panel__body").TextContent);
@@ -66,7 +64,7 @@ public sealed class SharedComponentRenderingTests
 
         var state = cut.Find(".dz-empty-state");
 
-        StringAssert.Contains(state.GetAttribute("class"), "library-empty");
+        AssertHasClass(state, "library-empty");
         Assert.AreEqual("status", state.GetAttribute("role"));
         Assert.AreEqual("polite", state.GetAttribute("aria-live"));
         Assert.AreEqual("No detections", cut.Find(".dz-empty-state__title").TextContent.Trim());
@@ -78,9 +76,11 @@ public sealed class SharedComponentRenderingTests
     [DataRow("success", "dz-status-chip--success")]
     [DataRow("warning", "dz-status-chip--warning")]
     [DataRow("unknown", "dz-status-chip--neutral")]
-    public void DzStatusChip_MapsToneToCssClass(string tone, string expectedClass)
+    public async Task DzStatusChip_MapsToneToCssClass(string tone, string expectedClass)
     {
-        using var context = new BunitContext();
+        await using var context = new BunitContext();
+        context.Services.AddMudServices();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
 
         var cut = context.Render<DzStatusChip>(parameters => parameters
             .Add(p => p.Label, "Ready")
@@ -89,8 +89,15 @@ public sealed class SharedComponentRenderingTests
 
         var chip = cut.Find(".dz-status-chip");
 
-        StringAssert.Contains(chip.GetAttribute("class"), expectedClass);
-        StringAssert.Contains(chip.GetAttribute("class"), "extra-chip");
+        AssertHasClass(chip, expectedClass);
+        AssertHasClass(chip, "extra-chip");
         Assert.AreEqual("Ready", chip.TextContent.Trim());
+    }
+
+    private static void AssertHasClass(AngleSharp.Dom.IElement element, string expectedClass)
+    {
+        var classes = element.GetAttribute("class") ?? string.Empty;
+
+        Assert.Contains(expectedClass, classes);
     }
 }

@@ -10,7 +10,7 @@ public sealed class DzMarkdownRendererTests
     {
         var html = DzMarkdownRenderer.RenderToHtml("[External](https://example.invalid/path)");
 
-        StringAssert.Contains(html, "href=\"https://example.invalid/path\"");
+        Assert.Contains("href=\"https://example.invalid/path\"", html);
     }
 
     [TestMethod]
@@ -21,7 +21,7 @@ public sealed class DzMarkdownRendererTests
             currentDocumentPath: "detections/anomalous-sign-in/notes/investigation.md",
             linkMapper: path => $"/mapped/{path}");
 
-        StringAssert.Contains(html, "href=\"/mapped/detections/anomalous-sign-in/rule.kql\"");
+        Assert.Contains("href=\"/mapped/detections/anomalous-sign-in/rule.kql\"", html);
     }
 
     [TestMethod]
@@ -30,6 +30,6 @@ public sealed class DzMarkdownRendererTests
         var html = DzMarkdownRenderer.RenderToHtml("<script>alert('x')</script>");
 
         Assert.IsFalse(html.Contains("<script>", StringComparison.OrdinalIgnoreCase));
-        StringAssert.Contains(html, "script");
+        Assert.Contains("script", html);
     }
 }

@@ -10,8 +10,8 @@ public sealed class WebHostBoundaryTests
         var repositoryRoot = FindRepositoryRoot();
         var program = File.ReadAllText(Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web.Legacy/Program.cs"));
 
-        StringAssert.Contains(program, "builder.AddHuntingStandaloneWeb();");
-        StringAssert.Contains(program, "await app.UseHuntingStandaloneWebAsync();");
+        Assert.Contains("builder.AddHuntingStandaloneWeb();", program);
+        Assert.Contains("await app.UseHuntingStandaloneWebAsync();", program);
         Assert.IsFalse(program.Contains("AddMudServices", StringComparison.Ordinal));
         Assert.IsFalse(program.Contains("MapFallbackToPage", StringComparison.Ordinal));
     }
@@ -23,8 +23,8 @@ public sealed class WebHostBoundaryTests
         var repositoryRoot = FindRepositoryRoot();
         var app = File.ReadAllText(Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web.Legacy/App.razor"));
 
-        StringAssert.Contains(app, "<HuntingModuleRouter");
-        StringAssert.Contains(app, "StandaloneHuntingLayout");
+        Assert.Contains("<HuntingModuleRouter", app);
+        Assert.Contains("StandaloneHuntingLayout", app);
     }
 
     [TestMethod]
@@ -55,11 +55,11 @@ public sealed class WebHostBoundaryTests
         var repositoryRoot = FindRepositoryRoot();
         var registration = File.ReadAllText(Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web.Legacy/Hosting/HuntingWebModuleServiceCollectionExtensions.cs"));
 
-        StringAssert.Contains(registration, "AddHuntingRuntime(");
-        StringAssert.Contains(registration, "AddHuntingApplicationState(");
-        StringAssert.Contains(registration, "AddHuntingWebModule(");
-        StringAssert.Contains(registration, "services.AddHuntingRuntime(options);");
-        StringAssert.Contains(registration, "services.AddHuntingApplicationState(options);");
+        Assert.Contains("AddHuntingRuntime(", registration);
+        Assert.Contains("AddHuntingApplicationState(", registration);
+        Assert.Contains("AddHuntingWebModule(", registration);
+        Assert.Contains("services.AddHuntingRuntime(options);", registration);
+        Assert.Contains("services.AddHuntingApplicationState(options);", registration);
 
         var runtimeStart = registration.IndexOf("AddHuntingRuntime(", StringComparison.Ordinal);
         var applicationStateStart = registration.IndexOf("AddHuntingApplicationState(", StringComparison.Ordinal);

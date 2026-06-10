@@ -73,7 +73,7 @@ public sealed class PackageVersionBaselineTests
         Assert.AreEqual("true", restorePackagesWithLockFile, "Directory.Build.props must require package lock files for every Workbench project.");
 
         var ciWorkflow = File.ReadAllText(ciWorkflowPath);
-        StringAssert.Contains(ciWorkflow, "dotnet restore DeltaZulu.Platform.slnx --locked-mode");
+        Assert.Contains("dotnet restore DeltaZulu.Platform.slnx --locked-mode", ciWorkflow);
     }
 
     [TestMethod]

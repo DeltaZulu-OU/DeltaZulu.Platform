@@ -60,7 +60,7 @@ public sealed class HuntingSavedQueryImporterTests
         }).Single();
 
         Assert.AreEqual(string.Empty, result.DraftFiles.Single().Content);
-        StringAssert.Contains(result.Warnings[0], "content is empty");
-        StringAssert.Contains(result.Warnings[1], "No detection slug supplied");
+        Assert.Contains("content is empty", result.Warnings[0]);
+        Assert.Contains("No detection slug supplied", result.Warnings[1]);
     }
 }

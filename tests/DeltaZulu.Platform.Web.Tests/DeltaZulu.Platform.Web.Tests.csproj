@@ -8,7 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\DeltaZulu.Platform.Web\DeltaZulu.Platform.Web.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Hunting.Web.Legacy\DeltaZulu.Hunting.Web.Legacy.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Workbench.Web.Legacy\DeltaZulu.Workbench.Web.Legacy.csproj" />
   </ItemGroup>
