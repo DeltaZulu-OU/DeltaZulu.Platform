@@ -1,7 +1,5 @@
 namespace DeltaZulu.Hunting.Web.Services;
 
-using DeltaZulu.Hunting.Application.SavedQueries;
-using DeltaZulu.Hunting.Application.Visualizations;
 using DeltaZulu.Hunting.Web.Dashboards.Persistence;
 
 /// <summary>

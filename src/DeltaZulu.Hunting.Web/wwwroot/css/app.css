@@ -11,8 +11,8 @@
  * Design tokens, typography classes, and shared component CSS come from
  * DeltaZulu.Blazor.Components. This file contains only Hunting product-
  * specific layout, the --hunt-* scoped alias layer, and legacy --bg-*/
- * --text-* compatibility aliases.
- */
+* --text-* compatibility aliases.
+*/
 @import url("./dz-query-result-table.css");
 
 :root,
@@ -100,7 +100,6 @@
 body:has(.hunt-app) {
     background: var(--dz-product-canvas);
 }
-
 
 /* ==========================================================================
    Base application layout and workbench behavior
@@ -1117,7 +1116,6 @@ body.hunt-splitter-active {
     }
 }
 
-
 /* ==========================================================================
    DeltaZulu product adaptation and MudBlazor harmonisation
    ========================================================================== */
@@ -1862,7 +1860,6 @@ body.hunt-splitter-active {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
     *,
     *::before,
     *::after {
@@ -1946,7 +1943,6 @@ body.hunt-splitter-active {
     z-index: 5;
     outline-offset: 2px;
 }
-
 
 .dashboard-list-page,
 .dashboard-detail-page {
@@ -2764,7 +2760,6 @@ body.hunt-splitter-active {
 }
 
 @media (max-width: 1100px) {
-
     .dashboard-coordinate-grid {
         grid-template-columns: repeat(6, minmax(0, 1fr));
     }
@@ -2785,7 +2780,6 @@ body.hunt-splitter-active {
 }
 
 @media (max-width: 760px) {
-
     .dashboard-list-page,
     .dashboard-detail-page {
         padding: 16px;

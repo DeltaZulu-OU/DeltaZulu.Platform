@@ -46,6 +46,7 @@ public sealed record LetBindingNode(
     RelNode Body) : RelNode;
 
 #endregion Relational nodes (query plan)
+
 #region Scalar expressions
 
 public abstract record ScalarExpr;
@@ -95,6 +96,7 @@ public sealed record WindowScalarExpr(
 public sealed record ListScalar(IReadOnlyList<ScalarExpr> Items) : ScalarExpr;
 
 #endregion Scalar expressions
+
 #region Window specification
 
 /// <summary>
@@ -134,6 +136,7 @@ public enum WindowBoundKind
 }
 
 #endregion Window specification
+
 #region Supporting types
 
 public sealed record ProjectionExpr(string Alias, ScalarExpr Expression);
@@ -181,4 +184,5 @@ public enum ScalarUnaryOp
 {
     Not, Negate
 }
+
 #endregion Supporting types

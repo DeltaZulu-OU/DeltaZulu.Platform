@@ -101,7 +101,6 @@ public sealed class CheckPipelineRunnerTests : IDisposable
         }
     }
 
-
     [TestMethod]
     public async Task Pipeline_ControlledReview_MissingRequiredQueryCheck_RemainsDraft()
     {

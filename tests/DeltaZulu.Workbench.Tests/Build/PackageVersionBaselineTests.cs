@@ -13,8 +13,7 @@ public sealed class PackageVersionBaselineTests
         var document = XDocument.Load(packagesFile);
 
         var packageVersions = document.Descendants("PackageVersion")
-            .Select(element => new
-            {
+            .Select(element => new {
                 Include = (string?)element.Attribute("Include") ?? string.Empty,
                 Version = (string?)element.Attribute("Version") ?? string.Empty,
             })
@@ -91,7 +90,6 @@ public sealed class PackageVersionBaselineTests
             Assert.IsTrue(File.Exists(lockFile), $"{Path.GetRelativePath(repoRoot.FullName, projectFile)} must have a packages.lock.json for locked restores.");
         }
     }
-
 
     [TestMethod]
     public void HuntingCoreAdapter_DoesNotReferenceWorkbenchWeb()

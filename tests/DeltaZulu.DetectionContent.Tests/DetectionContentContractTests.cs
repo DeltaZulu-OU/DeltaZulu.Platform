@@ -1,9 +1,7 @@
-using DeltaZulu.DetectionContent;
 using DeltaZulu.DetectionContent.Files;
 using DeltaZulu.DetectionContent.Identity;
 using DeltaZulu.DetectionContent.Paths;
 using DeltaZulu.DetectionContent.References;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DeltaZulu.DetectionContent.Tests;
 

@@ -1,8 +1,8 @@
-using Elsa.Extensions;
-using Microsoft.Extensions.DependencyInjection;
 using DeltaZulu.Workbench.Application.Abstractions;
 using DeltaZulu.Workbench.Application.Services;
 using DeltaZulu.Workbench.Workflow.Workflows;
+using Elsa.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DeltaZulu.Workbench.Workflow;
 
@@ -15,10 +15,8 @@ public static class WorkflowServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddWorkbenchElsaWorkflows(this IServiceCollection services)
     {
-        services.AddElsa(elsa =>
-        {
-            elsa.UseWorkflowRuntime(runtime =>
-            {
+        services.AddElsa(elsa => {
+            elsa.UseWorkflowRuntime(runtime => {
                 runtime.AddWorkflow<ChangeLifecycleWorkflow>();
             });
             elsa.UseWorkflowManagement();

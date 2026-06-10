@@ -120,8 +120,7 @@ public static class DemoSeeder
                     (@VersionId, @DetectionId, 1, '1.0', @Title, 'Initial version',
                      @AuthorId, 'StandardReview', @CrId, NULL,
                      @AcceptedAt, 'detection.yml;query.kql', @CommitSha, 'All checks passed', 'Approved')
-                """, new
-            {
+                """, new {
                 VersionId = versionId,
                 DetectionId = d.Id,
                 d.Title,
@@ -219,8 +218,7 @@ public static class DemoSeeder
 
         foreach (var i in issues)
         {
-            conn.Execute(sql, new
-            {
+            conn.Execute(sql, new {
                 i.Id,
                 i.Key,
                 i.Title,
@@ -306,8 +304,7 @@ public static class DemoSeeder
 
         foreach (var c in changes)
         {
-            conn.Execute(crSql, new
-            {
+            conn.Execute(crSql, new {
                 c.Id,
                 c.Key,
                 c.Title,
@@ -368,8 +365,7 @@ public static class DemoSeeder
 
         foreach (var c in checks)
         {
-            conn.Execute(sql, new
-            {
+            conn.Execute(sql, new {
                 c.Id,
                 c.CrId,
                 c.Name,
@@ -389,8 +385,7 @@ public static class DemoSeeder
         conn.Execute("""
             INSERT INTO reviews (id, change_request_id, reviewer_id, decision, comment, created_at, is_superseded, superseded_at)
             VALUES (@Id, @CrId, @ReviewerId, 'ChangesRequested', 'Please add an exclusion list parameter instead of hardcoding admin accounts.', @CreatedAt, 1, @SupersededAt)
-            """, new
-        {
+            """, new {
             Id = Guid.NewGuid().ToString("D"),
             CrId = crInReview,
             ReviewerId,
@@ -401,8 +396,7 @@ public static class DemoSeeder
         conn.Execute("""
             INSERT INTO reviews (id, change_request_id, reviewer_id, decision, comment, created_at, is_superseded, superseded_at)
             VALUES (@Id, @CrId, @ReviewerId, 'Approved', 'Exclusion list approach looks good. Approved.', @CreatedAt, 0, NULL)
-            """, new
-        {
+            """, new {
             Id = Guid.NewGuid().ToString("D"),
             CrId = crInReview,
             ReviewerId,

@@ -1,5 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
 using DeltaZulu.Workbench.Application.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DeltaZulu.Workbench.HuntingAdapter;
 

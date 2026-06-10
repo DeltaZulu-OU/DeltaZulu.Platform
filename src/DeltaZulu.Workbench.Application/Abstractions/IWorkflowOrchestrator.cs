@@ -15,10 +15,16 @@ namespace DeltaZulu.Workbench.Application.Abstractions;
 public interface IWorkflowOrchestrator
 {
     Task OnChangeOpenedAsync(ChangeRequestId changeId, WorkflowProfileId profileId, CancellationToken ct = default);
+
     Task OnContentEditedAsync(ChangeRequestId changeId, CancellationToken ct = default);
+
     Task OnChecksCompletedAsync(ChangeRequestId changeId, CancellationToken ct = default);
+
     Task OnReviewRecordedAsync(ChangeRequestId changeId, ReviewDecision decision, CancellationToken ct = default);
+
     Task OnMergeCompletedAsync(ChangeRequestId changeId, CancellationToken ct = default);
+
     Task OnChangePublishedAsync(ChangeRequestId changeId, CancellationToken ct = default);
+
     Task OnChangeClosedAsync(ChangeRequestId changeId, CancellationToken ct = default);
 }

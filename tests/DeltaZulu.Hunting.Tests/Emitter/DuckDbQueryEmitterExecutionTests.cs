@@ -1,9 +1,9 @@
 namespace DeltaZulu.Hunting.Tests.Emitter;
 
 using System.Globalization;
-using DuckDB.NET.Data;
 using DeltaZulu.Hunting.Core.DuckDbSql;
 using DeltaZulu.Hunting.Core.QueryModel;
+using DuckDB.NET.Data;
 
 /// <summary>
 /// <para>
@@ -550,5 +550,4 @@ public sealed partial class DuckDbQueryEmitterExecutionTests
 
     [System.Text.RegularExpressions.GeneratedRegex(@"\s+")]
     private static partial System.Text.RegularExpressions.Regex TrimPattern();
-
 }

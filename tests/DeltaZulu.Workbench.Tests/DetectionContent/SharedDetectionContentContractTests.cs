@@ -4,7 +4,6 @@ using DeltaZulu.DetectionContent.Identity;
 using DeltaZulu.DetectionContent.Paths;
 using DeltaZulu.DetectionContent.References;
 using DeltaZulu.Workbench.Application.ContentPipeline;
-using DeltaZulu.Workbench.Domain.Identifiers;
 
 namespace DeltaZulu.Workbench.Tests.DetectionContent;
 

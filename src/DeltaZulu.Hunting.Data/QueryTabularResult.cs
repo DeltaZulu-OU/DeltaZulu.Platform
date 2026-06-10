@@ -43,4 +43,4 @@ public sealed class QueryTabularResult
             DebugTrace = debugTrace ?? [],
             Diagnostics = diagnostics
         };
-}
+}

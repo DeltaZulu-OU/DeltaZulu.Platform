@@ -25,8 +25,7 @@ public static partial class DashboardMarkdownRenderer
     private static string SanitizeLinks(string html)
         => AnchorHrefRegex().Replace(
             html,
-            match =>
-            {
+            match => {
                 var decodedUrl = WebUtility.HtmlDecode(match.Groups[3].Value).Trim();
                 if (!IsSafeUrl(decodedUrl))
                 {

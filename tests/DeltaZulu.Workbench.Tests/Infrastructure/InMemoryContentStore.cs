@@ -22,10 +22,8 @@ internal sealed class InMemoryContentStore : IAcceptedContentStore
     private string? _headSha;
 
     /// <summary>All commits in order, for inspection in tests.</summary>
-    public IReadOnlyList<string> CommitLog
-    {
-        get
-        {
+    public IReadOnlyList<string> CommitLog {
+        get {
             lock (_lock)
             {
                 return _commits.Keys.ToList();

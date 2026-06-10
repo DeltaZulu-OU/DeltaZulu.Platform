@@ -1,7 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
 using DeltaZulu.Workbench.Application.Abstractions;
-using DeltaZulu.Workbench.Domain.Enums;
 using DeltaZulu.Workbench.HuntingAdapter;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DeltaZulu.Workbench.Tests.HuntingCoreAdapter;
 

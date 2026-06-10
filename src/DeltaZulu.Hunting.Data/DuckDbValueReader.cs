@@ -230,15 +230,19 @@ public static class DuckDbValueReader
                 case null:
                     result = 0;
                     return false;
+
                 case int intValue:
                     result = intValue;
                     return true;
+
                 case string text when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed):
                     result = parsed;
                     return true;
+
                 case IConvertible convertible:
                     result = convertible.ToInt32(CultureInfo.InvariantCulture);
                     return true;
+
                 default:
                     result = 0;
                     return false;
@@ -258,27 +262,35 @@ public static class DuckDbValueReader
             case BigInteger bigInteger:
                 result = bigInteger;
                 return true;
+
             case byte byteValue:
                 result = byteValue;
                 return true;
+
             case short shortValue:
                 result = shortValue;
                 return true;
+
             case int intValue:
                 result = intValue;
                 return true;
+
             case long longValue:
                 result = longValue;
                 return true;
+
             case uint uintValue:
                 result = uintValue;
                 return true;
+
             case ulong ulongValue:
                 result = ulongValue;
                 return true;
+
             case string text when BigInteger.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed):
                 result = parsed;
                 return true;
+
             default:
                 result = BigInteger.Zero;
                 return false;

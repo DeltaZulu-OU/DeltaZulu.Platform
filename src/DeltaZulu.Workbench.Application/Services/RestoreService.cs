@@ -102,14 +102,14 @@ public sealed class RestoreService(
         return file.IsBinary
             ? DraftContentType.StaticAsset
             : logicalPath switch
-        {
-            "detection.yaml" => DraftContentType.DetectionMetadata,
-            "rule.kql" => DraftContentType.HuntingQuery,
-            _ when logicalPath.StartsWith("tests/", StringComparison.Ordinal) => DraftContentType.TestDefinition,
-            _ when logicalPath.StartsWith("fixtures/", StringComparison.Ordinal) => DraftContentType.Fixture,
-            _ when logicalPath.StartsWith("notes/", StringComparison.Ordinal)
-                && logicalPath.EndsWith(".md", StringComparison.OrdinalIgnoreCase) => DraftContentType.InvestigationNote,
-            _ => DraftContentType.DetectionMetadata,
-        };
+            {
+                "detection.yaml" => DraftContentType.DetectionMetadata,
+                "rule.kql" => DraftContentType.HuntingQuery,
+                _ when logicalPath.StartsWith("tests/", StringComparison.Ordinal) => DraftContentType.TestDefinition,
+                _ when logicalPath.StartsWith("fixtures/", StringComparison.Ordinal) => DraftContentType.Fixture,
+                _ when logicalPath.StartsWith("notes/", StringComparison.Ordinal)
+                    && logicalPath.EndsWith(".md", StringComparison.OrdinalIgnoreCase) => DraftContentType.InvestigationNote,
+                _ => DraftContentType.DetectionMetadata,
+            };
     }
 }

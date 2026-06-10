@@ -56,4 +56,4 @@ public sealed class QueryResult
         };
 
     public object? GetValue(int row, int column) => ColumnData[column][row];
-}
+}

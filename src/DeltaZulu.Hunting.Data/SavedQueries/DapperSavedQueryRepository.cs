@@ -167,8 +167,7 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisp
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpsertSql,
-            new
-            {
+            new {
                 query.Id,
                 query.Name,
                 query.Description,

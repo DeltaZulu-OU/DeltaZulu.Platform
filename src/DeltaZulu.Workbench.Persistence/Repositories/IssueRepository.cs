@@ -66,8 +66,7 @@ internal sealed class IssueRepository(DapperSession session) : IIssueRepository
             session.Transaction);
     }
 
-    private static object ToParams(Issue i) => new
-    {
+    private static object ToParams(Issue i) => new {
         Id = i.Id.Value.ToString(),
         i.Key,
         i.Title,

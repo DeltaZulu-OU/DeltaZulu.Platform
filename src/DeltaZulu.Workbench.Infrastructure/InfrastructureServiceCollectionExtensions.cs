@@ -1,7 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using DeltaZulu.Workbench.Application.Abstractions;
 using DeltaZulu.Workbench.Infrastructure.AcceptedContent;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace DeltaZulu.Workbench.Infrastructure;
 

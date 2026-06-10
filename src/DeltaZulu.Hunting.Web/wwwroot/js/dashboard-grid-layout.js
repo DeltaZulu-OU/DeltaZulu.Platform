@@ -484,7 +484,6 @@ window.huntingDashboardGridLayout = (() => {
         registrations.delete(gridId);
     }
 
-
     return {
         initialize,
         dispose

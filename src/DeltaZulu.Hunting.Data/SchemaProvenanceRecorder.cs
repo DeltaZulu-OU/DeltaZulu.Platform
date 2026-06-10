@@ -69,8 +69,7 @@ public sealed class SchemaProvenanceRecorder
 
         foreach (var fingerprint in fingerprints)
         {
-            var parameters = new
-            {
+            var parameters = new {
                 fingerprint.ObjectName,
                 fingerprint.ObjectKind,
                 fingerprint.SchemaHash,

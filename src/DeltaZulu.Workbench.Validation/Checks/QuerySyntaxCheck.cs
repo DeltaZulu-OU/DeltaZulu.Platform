@@ -58,11 +58,9 @@ public sealed class QuerySyntaxCheck(IQuerySyntaxValidator validator) : ICheck
         }
 
         var logs = string.Join('\n', diagnostics.SelectMany(d => d.Diagnostics.Select(x => x.Format(d.LogicalPath))));
-        var details = JsonSerializer.Serialize(new
-        {
+        var details = JsonSerializer.Serialize(new {
             validator = _validator.GetType().Name,
-            diagnostics = diagnostics.Select(d => new
-            {
+            diagnostics = diagnostics.Select(d => new {
                 logicalPath = d.LogicalPath,
                 diagnostics = d.Diagnostics,
             }),

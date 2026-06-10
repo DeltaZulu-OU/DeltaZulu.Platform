@@ -532,6 +532,7 @@ internal sealed class DuckDbScalarEmitter
         // For dynamic operands: use DuckDB's regexp_escape() function
         return $"regexp_escape({emitted})";
     }
+
     private static string EmitTimestampLiteral(DateTime value)
     {
         var utc = value.Kind switch
@@ -545,5 +546,6 @@ internal sealed class DuckDbScalarEmitter
                utc.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) +
                "'";
     }
+
     #endregion Helpers
 }

@@ -16,10 +16,8 @@ public sealed class DashboardListPageState
 
     public int Page { get; set; } = 1;
 
-    public IReadOnlyList<DashboardSummary> FilteredDashboards
-    {
-        get
-        {
+    public IReadOnlyList<DashboardSummary> FilteredDashboards {
+        get {
             if (string.IsNullOrWhiteSpace(SearchText))
             {
                 return Dashboards;
@@ -57,10 +55,8 @@ public sealed class DashboardListPageState
     public bool HasPagination
         => TotalPages > 1;
 
-    public string DashboardRangeText
-    {
-        get
-        {
+    public string DashboardRangeText {
+        get {
             var filteredCount = FilteredDashboards.Count;
             if (filteredCount == 0)
             {

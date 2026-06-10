@@ -1,6 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
 using DeltaZulu.Workbench.Application.Abstractions;
 using DeltaZulu.Workbench.Persistence.Repositories;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DeltaZulu.Workbench.Persistence;
 

@@ -54,10 +54,8 @@ public sealed class LibraryPageState
             _ => "All library items"
         };
 
-    public string RangeText
-    {
-        get
-        {
+    public string RangeText {
+        get {
             if (Loading)
             {
                 return "Loading library items.";

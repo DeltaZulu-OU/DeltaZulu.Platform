@@ -50,8 +50,7 @@ internal sealed class DetectionVersionRepository(DapperSession session) : IDetec
             VALUES (@Id, @DetectionId, @SequenceNumber, @DisplayVersion, @Title, @ChangeSummary,
                 @AuthorId, @WorkflowProfile, @SourceChangeRequestId, @LinkedIssueId,
                 @AcceptedAt, @ChangedSections, @GitCommitSha, @ChecksSummary, @ReviewSummary)
-            """, new
-        {
+            """, new {
             Id = version.Id.Value.ToString(),
             DetectionId = version.DetectionId.Value.ToString(),
             version.SequenceNumber,

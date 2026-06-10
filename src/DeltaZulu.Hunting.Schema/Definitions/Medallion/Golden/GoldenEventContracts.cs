@@ -36,7 +36,6 @@ public static class GoldenEventContracts
         Columns: DnsColumns!,
         Description: "DNS query and response events across configured sources.");
 
-
     public static readonly IReadOnlyList<ColumnDef> NetworkSessionColumns =
     [
         new("Timestamp", DuckDbType.Timestamp, KustoType.DateTime, Description: "Event time."),

@@ -55,8 +55,7 @@ internal sealed class DetectionRepository(DapperSession session) : IDetectionRep
             session.Transaction);
     }
 
-    private static object ToParams(Detection d) => new
-    {
+    private static object ToParams(Detection d) => new {
         Id = d.Id.Value.ToString(),
         d.Slug,
         d.Title,

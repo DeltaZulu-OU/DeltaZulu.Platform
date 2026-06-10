@@ -1,7 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
 using DeltaZulu.Workbench.Application.Abstractions;
 using DeltaZulu.Workbench.Validation;
 using DeltaZulu.Workbench.Validation.Checks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DeltaZulu.Workbench.Tests.Validation;
 

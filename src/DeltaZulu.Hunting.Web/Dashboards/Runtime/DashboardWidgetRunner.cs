@@ -9,6 +9,7 @@ using DeltaZulu.Hunting.Render.Model;
 using DeltaZulu.Hunting.Web.Rendering;
 using DeltaZulu.Hunting.Web.Visualizations;
 using Microsoft.Extensions.Logging;
+
 public sealed partial class DashboardWidgetRunner
 {
     private readonly EChartsRenderOptionsBuilder _chartOptionsBuilder;

@@ -304,8 +304,7 @@ public sealed class DapperDetectionRepository : IDetectionRepository, IDisposabl
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpsertSql,
-            new
-            {
+            new {
                 detection.Id,
                 detection.DetectionId,
                 detection.Version,
@@ -340,8 +339,7 @@ public sealed class DapperDetectionRepository : IDetectionRepository, IDisposabl
 
         await connection.ExecuteAsync(new CommandDefinition(
             SetEnabledSql,
-            new
-            {
+            new {
                 DetectionId = detectionId,
                 IsEnabled = isEnabled ? 1 : 0,
                 UpdatedAtUtc = FormatDateTime(DateTime.UtcNow)

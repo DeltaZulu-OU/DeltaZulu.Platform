@@ -152,6 +152,7 @@ public sealed class SqliteDashboardRepositoryTests
         Assert.AreEqual("Process count", loaded.Widgets[0].Title);
         Assert.AreEqual("ProcessEvent | summarize Count = count() | render", loaded.Widgets[0].QueryText);
     }
+
     private static DashboardDefinition CreateDashboard(
         string id = "dashboard-1",
         string name = "Dashboard",
@@ -223,6 +224,7 @@ public sealed class SqliteDashboardRepositoryTests
         var factory = new SqliteAppDbConnectionFactory(CreateConnectionString());
         return new SqliteDashboardRepository(factory);
     }
+
     private async Task SeedInvalidDashboardAsync()
     {
         var repository = CreateRepository();

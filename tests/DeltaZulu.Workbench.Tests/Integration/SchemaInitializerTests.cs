@@ -1,9 +1,9 @@
-using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.DependencyInjection;
 using DeltaZulu.Workbench.Application;
 using DeltaZulu.Workbench.Application.Services;
 using DeltaZulu.Workbench.Domain.Issues;
 using DeltaZulu.Workbench.Persistence;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DeltaZulu.Workbench.Tests.Integration;
 

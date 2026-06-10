@@ -1,5 +1,5 @@
-using Microsoft.Data.Sqlite;
 using DeltaZulu.Workbench.Application.Abstractions;
+using Microsoft.Data.Sqlite;
 
 namespace DeltaZulu.Workbench.Persistence;
 

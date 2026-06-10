@@ -1,7 +1,7 @@
-using LibGit2Sharp;
-using Microsoft.Extensions.Options;
 using DeltaZulu.Workbench.Application.Abstractions;
 using DeltaZulu.Workbench.Infrastructure.AcceptedContent;
+using LibGit2Sharp;
+using Microsoft.Extensions.Options;
 
 namespace DeltaZulu.Workbench.Tests.Infrastructure;
 
@@ -128,7 +128,6 @@ public sealed class GitAcceptedContentStoreTests
         Assert.IsTrue(files.All(file => file.RepositoryPath.StartsWith("detections/one/", StringComparison.Ordinal)));
     }
 
-
     [TestMethod]
     public async Task ListFilesAtCommit_ReturnsHistoricalFilesUnderPrefix()
     {
@@ -157,7 +156,6 @@ public sealed class GitAcceptedContentStoreTests
         Assert.IsTrue(files.All(file => file.RepositoryPath.StartsWith("detections/test/", StringComparison.Ordinal)));
         Assert.AreEqual("version-1", files.Single(file => file.RepositoryPath.EndsWith("rule.kql", StringComparison.Ordinal)).Content);
     }
-
 
     [TestMethod]
     public async Task CommitExistsAsync_ReportsKnownAndUnknownCommits()

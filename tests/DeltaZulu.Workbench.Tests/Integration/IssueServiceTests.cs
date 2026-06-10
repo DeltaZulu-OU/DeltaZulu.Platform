@@ -1,5 +1,5 @@
-using DeltaZulu.Workbench.Persistence;
 using DeltaZulu.Workbench.Application.Services;
+using DeltaZulu.Workbench.Persistence;
 
 namespace DeltaZulu.Workbench.Tests.Integration;
 

@@ -196,7 +196,6 @@ public sealed class ChangeRequestTests
             "Expected 'gate.no_checks' among unmet gates.");
     }
 
-
     [TestMethod]
     public void ControlledReview_MissingConfiguredRequiredCheck_BlocksMerge()
     {

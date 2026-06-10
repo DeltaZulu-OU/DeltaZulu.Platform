@@ -2,11 +2,11 @@ namespace DeltaZulu.Hunting.Data;
 
 using System.Collections.Concurrent;
 using System.Globalization;
-using DuckDB.NET.Data;
 using DeltaZulu.Hunting.Core.Catalog;
 using DeltaZulu.Hunting.Core.Planning;
 using DeltaZulu.Hunting.Core.Policy;
 using DeltaZulu.Hunting.Core.QueryModel;
+using DuckDB.NET.Data;
 
 /// <summary>
 /// <para>

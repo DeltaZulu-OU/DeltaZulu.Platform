@@ -1,5 +1,4 @@
 using DeltaZulu.Workbench.Application.Services;
-using DeltaZulu.Workbench.Domain.Changes;
 using DeltaZulu.Workbench.Domain.Detections;
 
 namespace DeltaZulu.Workbench.Tests.Integration;
@@ -273,8 +272,7 @@ public sealed class VersionServiceTests : IDisposable
     {
         var detectionId = await CreateDetectionAsync("compare-inline-distant");
         var before = string.Join("\n", Enumerable.Range(1, 12).Select(index => $"row{index:00}"));
-        var after = string.Join("\n", Enumerable.Range(1, 12).Select(index => index switch
-        {
+        var after = string.Join("\n", Enumerable.Range(1, 12).Select(index => index switch {
             2 => "changed-row02",
             11 => "changed-row11",
             _ => $"row{index:00}",

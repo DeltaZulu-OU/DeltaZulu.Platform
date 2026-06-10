@@ -204,8 +204,7 @@ public sealed class DapperVisualizationRepository : AppIVisualizationRepository,
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpsertSql,
-            new
-            {
+            new {
                 visualization.Id,
                 visualization.QueryId,
                 visualization.Name,

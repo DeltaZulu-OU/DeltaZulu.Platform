@@ -46,4 +46,4 @@ public sealed class QueryStreamResult
             PlannerStatsJson = plannerStatsJson,
             SqlShapeStatsJson = sqlShapeStatsJson
         };
-}
+}

@@ -154,10 +154,10 @@
     background: transparent !important;
 }
 
-.dz-filter-chip:hover {
-    border-color: var(--color-border-strong) !important;
-    background: rgba(39, 86, 104, 0.06) !important;
-}
+    .dz-filter-chip:hover {
+        border-color: var(--color-border-strong) !important;
+        background: rgba(39, 86, 104, 0.06) !important;
+    }
 
 .dz-filter-chip--selected {
     border-color: rgba(39, 86, 104, 0.32) !important;
@@ -204,9 +204,9 @@
     overflow: hidden;
 }
 
-.dz-table-shell .mud-table {
-    box-shadow: none;
-}
+    .dz-table-shell .mud-table {
+        box-shadow: none;
+    }
 
 .dz-code-block {
     font-family: var(--font-family-mono);
@@ -361,9 +361,9 @@
     min-width: 0;
 }
 
-.dz-card-list__row code {
-    font-size: 0.85em;
-}
+    .dz-card-list__row code {
+        font-size: 0.85em;
+    }
 
 .dz-inline-icon {
     color: var(--brand-slate) !important;
@@ -378,12 +378,12 @@
     text-align: center;
 }
 
-.dz-metric-tile .dz-panel__body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-1);
-}
+    .dz-metric-tile .dz-panel__body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-1);
+    }
 
 .dz-metric-tile__icon {
     color: var(--brand-slate) !important;
@@ -608,14 +608,14 @@
     border-bottom: 1px solid var(--color-divider);
 }
 
-.dz-detail-list__item:first-child {
-    padding-top: 0;
-}
+    .dz-detail-list__item:first-child {
+        padding-top: 0;
+    }
 
-.dz-detail-list__item:last-child {
-    border-bottom: 0;
-    padding-bottom: 0;
-}
+    .dz-detail-list__item:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+    }
 
 .dz-detail-list__row {
     display: flex;
@@ -649,9 +649,9 @@
     padding: var(--space-4) var(--space-3) var(--space-2) var(--space-3);
 }
 
-.dz-shell-nav-heading .eyebrow {
-    font-size: 0.6875rem;
-}
+    .dz-shell-nav-heading .eyebrow {
+        font-size: 0.6875rem;
+    }
 
 .dz-shell-main {
     max-width: var(--container-max);

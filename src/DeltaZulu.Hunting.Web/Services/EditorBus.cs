@@ -10,10 +10,8 @@ public sealed class EditorBus
     private Action<string>? _insertRequested;
     private string? _pendingInsert;
 
-    public event Action<string> InsertRequested
-    {
-        add
-        {
+    public event Action<string> InsertRequested {
+        add {
             _insertRequested += value;
 
             if (_pendingInsert is not { } pendingInsert)

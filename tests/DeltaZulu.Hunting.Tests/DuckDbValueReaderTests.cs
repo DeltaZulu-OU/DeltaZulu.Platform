@@ -1,7 +1,7 @@
 namespace DeltaZulu.Hunting.Tests;
 
-using DuckDB.NET.Data;
 using DeltaZulu.Hunting.Data;
+using DuckDB.NET.Data;
 
 [TestClass]
 public sealed class DuckDbValueReaderTests

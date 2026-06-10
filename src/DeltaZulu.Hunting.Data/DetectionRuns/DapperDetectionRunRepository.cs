@@ -174,8 +174,7 @@ public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IDis
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpsertSql,
-            new
-            {
+            new {
                 run.Id,
                 run.DetectionId,
                 run.DetectionVersion,

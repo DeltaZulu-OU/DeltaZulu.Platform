@@ -266,8 +266,7 @@ public sealed class DapperAlertRepository : IAlertRepository, IDisposable
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpdateStatusSql,
-            new
-            {
+            new {
                 Id = id,
                 Status = status,
                 UpdatedAtUtc = FormatDateTime(updatedAtUtc)

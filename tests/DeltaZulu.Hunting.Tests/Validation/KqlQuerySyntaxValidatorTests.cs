@@ -98,6 +98,7 @@ public sealed class KqlQuerySyntaxValidatorTests
         Assert.DoesNotContain(diagnostic => diagnostic.Phase == DiagnosticPhase.Emit, result.Diagnostics);
         Assert.DoesNotContain(diagnostic => diagnostic.Phase == DiagnosticPhase.Execute, result.Diagnostics);
     }
+
     [TestMethod]
     [Description("Validation adapter accepts valid KQL through the reusable Core translation seam without DuckDB execution.")]
     public void Validate_ValidKql_ReturnsValidResult()

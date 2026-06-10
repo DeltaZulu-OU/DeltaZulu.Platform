@@ -42,7 +42,6 @@ public sealed class DashboardPageControllerTests
         Assert.AreEqual("The requested dashboard was not found.", controller.State.Error);
     }
 
-
     [TestMethod]
     public async Task LoadAsync_ExistingDashboard_DefaultsToReadonlyMode()
     {
@@ -207,7 +206,6 @@ public sealed class DashboardPageControllerTests
         Assert.Contains("layout overlaps widget", controller.State.SaveError);
         Assert.AreEqual(5, controller.State.Dashboard!.Widgets[1].Layout.X);
     }
-
 
     [TestMethod]
     public async Task SaveWidgetLayoutsAsync_MultipleNonOverlappingChanges_StagesAtomically()

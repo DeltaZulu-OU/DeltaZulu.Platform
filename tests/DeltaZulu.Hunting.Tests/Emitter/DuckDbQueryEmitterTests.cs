@@ -775,9 +775,9 @@ public sealed partial class DuckDbQueryEmitterTests
     [TestMethod]
     [Description("Unknown function names are rejected")]
     public void Func_Unknown_ThrowsNotSupported() => Assert.ThrowsExactly<NotSupportedException>(() =>
-                                                                                                  _emitter.Emit(new ExtendNode(
-                                                                                                      new ScanNode("ProcessEvent"),
-                                                                                                      [new ProjectionExpr("r", new FunctionCall("custom_function_xyz",
+                                                                                                      _emitter.Emit(new ExtendNode(
+                                                                                                          new ScanNode("ProcessEvent"),
+                                                                                                          [new ProjectionExpr("r", new FunctionCall("custom_function_xyz",
                     [new ColumnRef("FileName"), new LiteralScalar(42, LiteralKind.Int)]))])));
 
     [TestMethod]

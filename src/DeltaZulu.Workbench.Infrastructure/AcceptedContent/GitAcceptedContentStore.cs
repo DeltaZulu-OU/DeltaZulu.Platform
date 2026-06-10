@@ -1,7 +1,7 @@
 using System.Text;
+using DeltaZulu.Workbench.Application.Abstractions;
 using LibGit2Sharp;
 using Microsoft.Extensions.Options;
-using DeltaZulu.Workbench.Application.Abstractions;
 
 namespace DeltaZulu.Workbench.Infrastructure.AcceptedContent;
 

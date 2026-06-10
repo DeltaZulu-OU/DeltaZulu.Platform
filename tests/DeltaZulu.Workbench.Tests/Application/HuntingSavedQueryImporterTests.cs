@@ -1,6 +1,5 @@
 using DeltaZulu.Workbench.Application.ContentLibrary;
 using DeltaZulu.Workbench.Domain.ContentLibrary;
-using DeltaZulu.Workbench.Domain.Enums;
 
 namespace DeltaZulu.Workbench.Tests.Application;
 

@@ -43,8 +43,7 @@ public sealed class AcceptedContentReadService(
 
         return change.DraftFiles
             .OrderBy(file => file.Path.Value, StringComparer.Ordinal)
-            .Select(draft =>
-            {
+            .Select(draft => {
                 var logicalPath = draft.Path.Value;
                 acceptedByLogical.TryGetValue(logicalPath, out var accepted);
 
@@ -80,6 +79,7 @@ public sealed class AcceptedContentReadService(
                 file.IsBinary))
             .ToList();
     }
+
     private static Dictionary<string, ContentFile> ToLogicalPathMap(
         string detectionPrefix,
         IReadOnlyList<ContentFile> files)

@@ -133,8 +133,7 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
 
         await connection.ExecuteAsync(new CommandDefinition(
             InsertSql,
-            new
-            {
+            new {
                 record.Id,
                 record.QueryText,
                 ExecutedAt = FormatDateTime(record.ExecutedAt),

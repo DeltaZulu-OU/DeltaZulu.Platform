@@ -25,6 +25,7 @@ public enum BinaryOp
 }
 
 #endregion Expression tree for parser view mappings
+
 #region Projection and query model
 
 public sealed record ProjectionDef(string TargetColumn, ExprDef Expression);
@@ -35,6 +36,7 @@ public sealed record MappingQueryDef(
     IReadOnlyList<ProjectionDef> Projections);
 
 #endregion Projection and query model
+
 #region Builder helpers for concise mapping authoring
 
 public static class MapDsl
@@ -63,4 +65,5 @@ public static class MapDsl
 
     public static BinaryExpr Or(ExprDef left, ExprDef right) => new(left, BinaryOp.Or, right);
 }
+
 #endregion Builder helpers for concise mapping authoring

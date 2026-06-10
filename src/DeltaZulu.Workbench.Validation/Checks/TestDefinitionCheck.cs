@@ -150,5 +150,4 @@ public sealed class TestDefinitionCheck : ICheck
 
         return executed;
     }
-
 }

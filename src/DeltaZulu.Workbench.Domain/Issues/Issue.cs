@@ -20,6 +20,7 @@ public sealed class Issue : Entity<IssueId>
 
     // Structured intake fields — optional; populated based on IssueType.
     public string? Description { get; private set; }
+
     public string? AcceptanceCriteria { get; private set; }
     public string? DataSource { get; private set; }
     public string? Platform { get; private set; }
@@ -27,6 +28,7 @@ public sealed class Issue : Entity<IssueId>
 
     // Classification
     public TlpLevel? Tlp { get; private set; }
+
     public IReadOnlyList<string> Labels { get; private set; } = [];
 
     public DateTimeOffset CreatedAt { get; }

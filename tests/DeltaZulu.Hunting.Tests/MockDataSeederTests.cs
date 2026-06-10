@@ -1,8 +1,8 @@
 namespace DeltaZulu.Hunting.Tests;
 
 using System.Globalization;
-using DuckDB.NET.Data;
 using DeltaZulu.Hunting.Data;
+using DuckDB.NET.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 [TestClass]

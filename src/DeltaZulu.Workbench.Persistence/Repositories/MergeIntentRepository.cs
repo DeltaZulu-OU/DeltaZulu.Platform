@@ -42,8 +42,7 @@ internal sealed class MergeIntentRepository(DapperSession session) : IMergeInten
                 commit_sha = @CommitSha,
                 committed_at = @CommittedAt
             WHERE change_request_id = @ChangeId
-            """, new
-        {
+            """, new {
             ChangeId = changeId.Value.ToString(),
             State = MergeIntentState.Committed.ToString(),
             CommitSha = commitSha,
@@ -63,8 +62,7 @@ internal sealed class MergeIntentRepository(DapperSession session) : IMergeInten
                 version_id = @VersionId,
                 completed_at = @CompletedAt
             WHERE change_request_id = @ChangeId
-            """, new
-        {
+            """, new {
             ChangeId = changeId.Value.ToString(),
             State = MergeIntentState.Completed.ToString(),
             VersionId = versionId.Value.ToString(),
@@ -84,8 +82,7 @@ internal sealed class MergeIntentRepository(DapperSession session) : IMergeInten
         return rows.Select(row => row.ToDomain()).ToArray();
     }
 
-    private static object ToParameters(MergeIntent intent) => new
-    {
+    private static object ToParameters(MergeIntent intent) => new {
         ChangeId = intent.ChangeId.Value.ToString(),
         DetectionId = intent.DetectionId.Value.ToString(),
         intent.DetectionSlug,

@@ -4,7 +4,7 @@ using DeltaZulu.Hunting.Web.Dashboards.Persistence;
 using DeltaZulu.Hunting.Web.Dashboards.Runtime;
 using Microsoft.Extensions.Logging;
 
-public sealed partial class DashboardPageController: IDisposable
+public sealed partial class DashboardPageController : IDisposable
 {
     private readonly IDashboardRepository _dashboardRepository;
     private readonly DashboardWidgetRunner _widgetRunner;
@@ -374,8 +374,7 @@ public sealed partial class DashboardPageController: IDisposable
             .ToDictionary(group => group.Key, group => group.Last().Layout, StringComparer.OrdinalIgnoreCase);
         var changed = false;
         var widgets = State.Dashboard.Widgets
-            .Select(widget =>
-            {
+            .Select(widget => {
                 if (!changesByWidgetId.TryGetValue(widget.Id, out var layout))
                 {
                     return widget;

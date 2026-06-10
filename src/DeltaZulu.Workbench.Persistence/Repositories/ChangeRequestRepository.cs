@@ -82,8 +82,7 @@ internal sealed class ChangeRequestRepository(DapperSession session) : IChangeRe
                 INSERT INTO change_draft_files (change_request_id, logical_path, content_type,
                     content, updated_at, updated_by)
                 VALUES (@ChangeRequestId, @LogicalPath, @ContentType, @Content, @UpdatedAt, @UpdatedBy)
-                """, new
-            {
+                """, new {
                 ChangeRequestId = idStr,
                 LogicalPath = f.Path.Value,
                 ContentType = f.ContentType.ToString(),
@@ -104,8 +103,7 @@ internal sealed class ChangeRequestRepository(DapperSession session) : IChangeRe
                     started_at, completed_at, summary, details_json, logs_excerpt)
                 VALUES (@Id, @ChangeRequestId, @Name, @IsBlocking, @Status,
                     @StartedAt, @CompletedAt, @Summary, @DetailsJson, @LogsExcerpt)
-                """, new
-            {
+                """, new {
                 Id = c.Id.Value.ToString(),
                 ChangeRequestId = idStr,
                 c.Name,
@@ -130,8 +128,7 @@ internal sealed class ChangeRequestRepository(DapperSession session) : IChangeRe
                     created_at, is_superseded, superseded_at)
                 VALUES (@Id, @ChangeRequestId, @ReviewerId, @Decision, @Comment,
                     @CreatedAt, @IsSuperseded, @SupersededAt)
-                """, new
-            {
+                """, new {
                 Id = r.Id.Value.ToString(),
                 ChangeRequestId = idStr,
                 ReviewerId = r.ReviewerId.Value.ToString(),
@@ -179,8 +176,7 @@ internal sealed class ChangeRequestRepository(DapperSession session) : IChangeRe
             reviewRows.Select(r => r.ToDomain()));
     }
 
-    private static object ToParams(ChangeRequest c) => new
-    {
+    private static object ToParams(ChangeRequest c) => new {
         Id = c.Id.Value.ToString(),
         c.Key,
         c.Title,

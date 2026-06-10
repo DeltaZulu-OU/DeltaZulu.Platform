@@ -292,21 +292,27 @@ public sealed partial class QueryToolbarState
                 case '(':
                     parenDepth++;
                     break;
+
                 case ')':
                     parenDepth = Math.Max(0, parenDepth - 1);
                     break;
+
                 case '[':
                     bracketDepth++;
                     break;
+
                 case ']':
                     bracketDepth = Math.Max(0, bracketDepth - 1);
                     break;
+
                 case '{':
                     braceDepth++;
                     break;
+
                 case '}':
                     braceDepth = Math.Max(0, braceDepth - 1);
                     break;
+
                 case '|':
                     if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0)
                     {

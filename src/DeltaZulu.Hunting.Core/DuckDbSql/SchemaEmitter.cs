@@ -23,6 +23,7 @@ public sealed class SchemaEmitter
                 "silver",
                 "golden"
             };
+
     #region Top-level orchestration
 
     /// <summary>
@@ -79,6 +80,7 @@ public sealed class SchemaEmitter
     }
 
     #endregion Top-level orchestration
+
     #region CREATE TABLE
 
     public string EmitCreateTable(SchemaObjectDef table)
@@ -118,6 +120,7 @@ public sealed class SchemaEmitter
     }
 
     #endregion CREATE TABLE
+
     #region Parser view (silver.v_*)
 
     public string EmitParserView(ParserViewDef view)
@@ -191,6 +194,7 @@ public sealed class SchemaEmitter
     }
 
     #endregion Parser view (silver.v_*)
+
     #region Canonical view (golden.*)
 
     public string EmitCanonicalView(CanonicalViewDef view)
@@ -220,8 +224,7 @@ public sealed class SchemaEmitter
         sb.Append(DuckDbSqlText.EscapeQualifiedIdent(view.QualifiedName));
         sb.Append(" AS\n");
 
-        var canonicalColumns = string.Join(",\n    ", view.Columns.Select(c =>
-        {
+        var canonicalColumns = string.Join(",\n    ", view.Columns.Select(c => {
             ArgumentNullException.ThrowIfNull(c);
             return DuckDbSqlText.EscapeIdent(c.Name);
         }));
@@ -243,6 +246,7 @@ public sealed class SchemaEmitter
     }
 
     #endregion Canonical view (golden.*)
+
     #region Mapping expression → SQL
 
     private static string EmitMappingLiteral(LiteralExpr lit)
@@ -312,4 +316,5 @@ public sealed class SchemaEmitter
         _ => throw new NotSupportedException($"Unsupported mapping expression: {expr.GetType().Name}")
     };
 }
-#endregion Mapping expression → SQL
+
+    #endregion Mapping expression → SQL
