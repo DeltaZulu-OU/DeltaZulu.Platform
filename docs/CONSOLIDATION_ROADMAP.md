@@ -167,7 +167,238 @@ and platform CSS load order.
 
 ---
 
+## Architecture end state (Clean Architecture)
+
+C1-C7 merged the two web hosts and established shared UI components. Phases C8-C12 continue the
+consolidation by reducing the solution from 19 source + 5 test projects to **4 source + 1 test
+project**, following Clean Architecture (Onion) with clear layer boundaries.
+
+Guiding principles: **KISS** (fewer projects, folders over projects for organisation),
+**SOLID** (dependency inversion through interfaces in Domain, single responsibility per layer),
+**YAGNI** (no abstractions beyond what the two modules need today).
+
+### Dependency direction (inner → outer)
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                   Platform.Web (Presentation)               │
+│  Blazor host, shared UI components, Hunting & Workbench     │
+│  pages, module contracts, composition root                  │
+├─────────────────────────────────────────────────────────────┤
+│   Platform.Data (Infrastructure)                            │
+│   DuckDB adapter, SQLite repositories, Git content store    │
+├─────────────────────────────────────────────────────────────┤
+│   Platform.Application (Use Cases)                          │
+│   KQL translation pipeline, query planning, rendering,     │
+│   workflow orchestration, validation checks                 │
+├─────────────────────────────────────────────────────────────┤
+│   Platform.Domain (Core)                                    │
+│   Entities, value objects, identifiers, enums, repository   │
+│   interfaces, domain services, DTOs                         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Dependencies point inward: Web → Data → Application → Domain.
+Domain has no project references. Application references only Domain.
+Data references Domain (for repository interfaces). Web references all.
+
+### Project inventory (end state: 5 projects)
+
+| Project | Layer | Absorbs | Key NuGet deps |
+|---|---|---|---|
+| `Platform.Domain` | Domain | `DetectionContent`, `Workbench.Domain`, `Hunting.Application`, `Hunting.Schema`, domain types from `Hunting.Core` and `Hunting.Render`, contracts from `Workbench.Application` | Kusto.Language |
+| `Platform.Application` | Application | `Workbench.Application` (services), `Workbench.Validation`, `Workbench.Workflow`, `Workbench.HuntingAdapter`, application types from `Hunting.Core` and `Hunting.Render` | Elsa, YamlDotNet |
+| `Platform.Data` | Infrastructure | `Hunting.Data`, `Workbench.Persistence`, `Workbench.Infrastructure`, DuckDbSql from `Hunting.Core` | DuckDB.NET, Dapper, Sqlite, LibGit2Sharp |
+| `Platform.Web` | Presentation | `Blazor.Components`, `Platform.Web.Abstractions`, `Hunting.Web`, `Workbench.Web` | MudBlazor, Markdig, Vizor.ECharts |
+| `Platform.Tests` | Tests | All 5 test projects | MSTest, bunit |
+
+### Folder structure (end state)
+
+```
+src/
+  DeltaZulu.Platform.Domain/
+    Detection/              ← DetectionContent (identity, paths, files, references)
+    Hunting/
+      QueryModel/           ← Hunting.Core (RelNode, ScalarExpr, projections, joins)
+      Schema/               ← Hunting.Core + Hunting.Schema (column/table defs, medallion)
+      Mapping/              ← Hunting.Core (ExprDef, MapDsl, MappingQueryDef)
+      Catalog/              ← Hunting.Core (ApprovedViewCatalog)
+      Policy/               ← Hunting.Core (QueryDiagnostic, DiagnosticBag)
+      Rendering/            ← Hunting.Render model types (RenderKind, RenderDirective, etc.)
+      Records/              ← Hunting.Application (SavedQueryRecord, AlertRecord, etc.)
+      Contracts/            ← Hunting.Application (ISavedQueryRepository, etc.)
+    Workbench/
+      Aggregates/           ← Workbench.Domain (Detection, ChangeRequest, Issue, etc.)
+      Common/               ← Workbench.Domain (Entity<T>, DomainException)
+      Enums/                ← Workbench.Domain (ChangeStatus, DetectionLifecycle, etc.)
+      Identifiers/          ← Workbench.Domain (DetectionId, LogicalPath, etc.)
+      ContentLibrary/       ← Workbench.Domain (ContentLibraryArtifact)
+      Workflow/             ← Workbench.Domain (WorkflowProfile, MergeReadiness)
+      Contracts/            ← Workbench.Application (IDetectionRepository, IUnitOfWork, etc.)
+
+  DeltaZulu.Platform.Application/
+    Hunting/
+      Translation/          ← Hunting.Core (KustoQueryTranslator, KustoToRelational)
+      Planning/             ← Hunting.Core (RelationalPlanner, optimisation passes)
+      Validation/           ← Hunting.Core (KqlQuerySyntaxValidator)
+      Rendering/            ← Hunting.Render services (RenderResolver, RenderDirectiveParser)
+      Samples/              ← Hunting.Core (SampleQueryCatalog)
+    Workbench/
+      Services/             ← Workbench.Application (ChangeService, MergeService, etc.)
+      ContentPipeline/      ← Workbench.Application (CanonicalWriter)
+      Validation/           ← Workbench.Validation (check implementations)
+      Workflow/             ← Workbench.Workflow (ElsaWorkflowOrchestrator)
+      Adapter/              ← Workbench.HuntingAdapter (HuntingCoreQuerySyntaxValidator)
+
+  DeltaZulu.Platform.Data/
+    DuckDb/                 ← Hunting.Core DuckDbSql + Hunting.Data DuckDB parts
+    Sqlite/
+      Hunting/              ← Hunting.Data Dapper repositories + schema
+      Workbench/            ← Workbench.Persistence repositories + schema
+    Git/                    ← Workbench.Infrastructure (GitAcceptedContentStore)
+    Seeding/                ← Hunting.Data + Workbench.Persistence seeders
+
+  DeltaZulu.Platform.Web/   (already exists — absorb remaining projects)
+    Components/             ← Blazor.Components (Dz* components, theme, CSS)
+    Hunting/                ← Hunting.Web (pages, dashboards, services)
+    Workbench/              ← Workbench.Web (pages, services)
+    Platform/               ← Platform.Web.Abstractions (IPlatformModule, etc.)
+
+tests/
+  DeltaZulu.Platform.Tests/
+    Domain/                 ← domain tests from all projects
+    Application/            ← application + validation tests
+    Data/                   ← repository + DuckDB + Git tests
+    Web/                    ← UI, composition, component tests
+```
+
+### Current project classification
+
+What lives in each existing project and where it migrates:
+
+| Existing project | Domain types | Application types | Data types | Destination |
+|---|---|---|---|---|
+| `DetectionContent` (10 files) | All | — | — | Domain |
+| `Workbench.Domain` (38 files) | All | — | — | Domain |
+| `Hunting.Application` (18 files) | All (records + interfaces) | — | — | Domain |
+| `Hunting.Schema` (6 files) | All (medallion definitions) | — | — | Domain |
+| `Hunting.Core` (54 files) | QueryModel, Schema, Mapping, Catalog, Policy (~24) | Translation, Planning, Validation, Samples (~20) | DuckDbSql (~11) | Split: Domain / Application / Data |
+| `Hunting.Render` (20 files) | Model types (~10) | Services, Directives, Tabular (~10) | — | Split: Domain / Application |
+| `Workbench.Application` (28 files) | Abstractions/contracts (~12) | Services, ContentPipeline (~16) | — | Split: Domain / Application |
+| `Workbench.Validation` (8 files) | — | All | — | Application |
+| `Workbench.Workflow` (4 files) | — | All | — | Application |
+| `Workbench.HuntingAdapter` (3 files) | — | All | — | Application |
+| `Hunting.Data` (27 files) | — | — | All | Data |
+| `Workbench.Persistence` (12 files) | — | — | All | Data |
+| `Workbench.Infrastructure` (3 files) | — | — | All | Data |
+| `Blazor.Components` (28 files) | — | — | — | Web |
+| `Platform.Web.Abstractions` (4 files) | — | — | — | Web |
+| `Hunting.Web` (55 files) | — | — | — | Web |
+| `Workbench.Web` (25 files) | — | — | — | Web |
+
+---
+
+## Phases (continued)
+
+### C8 -- Create Platform.Domain
+
+**Objective:** Establish the innermost Clean Architecture layer. Absorb all pure-domain projects
+and domain types into one project. Reduce project count by 3 (remove `DetectionContent`,
+`Workbench.Domain`, `Hunting.Application`).
+
+| Step | Work | Outcome |
+|---:|---|---|
+| 1 | Create `src/DeltaZulu.Platform.Domain/DeltaZulu.Platform.Domain.csproj` as a class library. No NuGet dependencies. | Domain project exists. |
+| 2 | Move all files from `DetectionContent` into `Platform.Domain/Detection/`, preserving original namespaces. | Detection contracts consolidated. |
+| 3 | Move all files from `Workbench.Domain` into `Platform.Domain/Workbench/`, preserving subfolder structure and namespaces. | Workbench domain consolidated. |
+| 4 | Move all files from `Hunting.Application` into `Platform.Domain/Hunting/`, preserving subfolder structure and namespaces. | Hunting records and contracts consolidated. |
+| 5 | Update `InternalsVisibleTo` to reference correct assembly names. | Internal access preserved. |
+| 6 | Replace `ProjectReference` to removed projects with `Platform.Domain` in all consuming `.csproj` files. | Build graph updated. |
+| 7 | Remove `DetectionContent`, `Workbench.Domain`, `Hunting.Application` project directories and solution entries. | Old projects deleted. |
+| 8 | Verify build and tests pass. | No regressions. |
+
+**Exit criteria:** Solution builds. All tests pass. Three projects removed. `Platform.Domain`
+exists with zero NuGet dependencies.
+
+### C9 -- Consolidate remaining domain types and create Platform.Application
+
+**Objective:** Split `Hunting.Core` and `Hunting.Render` across the correct layers. Absorb all
+application-layer projects. Reduce project count by 9 (remove `Hunting.Core`, `Hunting.Schema`,
+`Hunting.Render`, `Workbench.Application`, `Workbench.Validation`, `Workbench.Workflow`,
+`Workbench.HuntingAdapter`; create `Platform.Application`; net -8).
+
+| Step | Work | Outcome |
+|---:|---|---|
+| 1 | Move domain types from `Hunting.Core` (QueryModel/, Schema/, Mapping/, Catalog/, Policy/) into `Platform.Domain/Hunting/`. Add Kusto NuGet deps to Platform.Domain. | Domain types centralised. |
+| 2 | Move all `Hunting.Schema` files into `Platform.Domain/Hunting/Schema/Definitions/`. Remove `Hunting.Schema` project. | Schema definitions in Domain. |
+| 3 | Move `Hunting.Render` model types (Model/) into `Platform.Domain/Hunting/Rendering/`. | Render model types in Domain. |
+| 4 | Move `Workbench.Application` contract types (Abstractions/) into `Platform.Domain/Workbench/Contracts/`. | Workbench contracts in Domain. |
+| 5 | Create `src/DeltaZulu.Platform.Application/DeltaZulu.Platform.Application.csproj` referencing `Platform.Domain`. | Application project exists. |
+| 6 | Move remaining `Hunting.Core` types (Translation/, Planning/, Validation/, Samples/) into `Platform.Application/Hunting/`. | KQL pipeline in Application. |
+| 7 | Move remaining `Hunting.Render` types (Services/, Directives/, Tabular/, DI/) into `Platform.Application/Hunting/Rendering/`. | Render services in Application. |
+| 8 | Move remaining `Workbench.Application` types (Services/, ContentPipeline/, ContentLibrary/, DI) into `Platform.Application/Workbench/`. | Workbench services in Application. |
+| 9 | Move all of `Workbench.Validation`, `Workbench.Workflow`, `Workbench.HuntingAdapter` into `Platform.Application/Workbench/`. | Validation, workflow, adapter consolidated. |
+| 10 | Update all project references. Remove 7 old projects. | Build graph updated. |
+
+**Exit criteria:** Solution builds. All tests pass. Seven projects removed. `Platform.Application`
+exists. `Hunting.Core`, `Hunting.Schema`, `Hunting.Render`, `Workbench.Application`,
+`Workbench.Validation`, `Workbench.Workflow`, `Workbench.HuntingAdapter` are gone.
+
+### C10 -- Create Platform.Data
+
+**Objective:** Unify data access into one project with DuckDB, SQLite, and Git adapters. Reduce
+project count by 3 (remove `Hunting.Data`, `Workbench.Persistence`, `Workbench.Infrastructure`).
+
+| Step | Work | Outcome |
+|---:|---|---|
+| 1 | Create `src/DeltaZulu.Platform.Data/DeltaZulu.Platform.Data.csproj` referencing `Platform.Domain` and `Platform.Application`. Add DuckDB, Dapper, Sqlite, LibGit2Sharp NuGet deps. | Data project exists. |
+| 2 | Move `Hunting.Core` DuckDbSql/ into `Platform.Data/DuckDb/Sql/`. Move `Hunting.Data` DuckDB types (DuckDbConnectionFactory, DuckDbValueReader, QueryRuntime) into `Platform.Data/DuckDb/`. | DuckDB adapter consolidated. |
+| 3 | Move `Hunting.Data` SQLite repositories and persistence types into `Platform.Data/Sqlite/Hunting/`. | Hunting SQLite in Data. |
+| 4 | Move `Workbench.Persistence` repositories and schema into `Platform.Data/Sqlite/Workbench/`. | Workbench SQLite in Data. |
+| 5 | Move `Workbench.Infrastructure` Git content store into `Platform.Data/Git/`. | Git adapter in Data. |
+| 6 | Move seeders from `Hunting.Data` and `Workbench.Persistence` into `Platform.Data/Seeding/`. | Seeders consolidated. |
+| 7 | Update all project references. Remove 3 old projects. | Build graph updated. |
+
+**Exit criteria:** Solution builds. All tests pass. Three projects removed. `Platform.Data`
+provides DuckDB, SQLite, and Git access through one project.
+
+### C11 -- Consolidate Web layer
+
+**Objective:** Absorb remaining library projects into `Platform.Web`. Reduce project count by 4
+(remove `Blazor.Components`, `Platform.Web.Abstractions`, `Hunting.Web`, `Workbench.Web`).
+
+| Step | Work | Outcome |
+|---:|---|---|
+| 1 | Move `Blazor.Components` files (Dz* components, theme, CSS, wwwroot) into `Platform.Web/Components/`. Update static asset paths in `App.razor`. | Shared components embedded. |
+| 2 | Move `Platform.Web.Abstractions` types (IPlatformModule, descriptors) into `Platform.Web/Platform/`. | Module contracts inlined. |
+| 3 | Move `Hunting.Web` files (pages, services, dashboards, wwwroot) into `Platform.Web/Hunting/`. | Hunting UI consolidated. |
+| 4 | Move `Workbench.Web` files (pages, shared components, services, wwwroot) into `Platform.Web/Workbench/`. | Workbench UI consolidated. |
+| 5 | Update route discovery, static asset paths, and `_Imports.razor`. | Routing works. |
+| 6 | Remove 4 old projects. Update solution. | Build graph simplified. |
+
+**Exit criteria:** Solution builds. All tests pass. One web project, `Platform.Web`, owns all UI.
+
+### C12 -- Consolidate tests, align namespaces, and clean up
+
+**Objective:** Merge all test projects into one. Align namespaces with project structure. Update
+documentation. Final state: 4 source + 1 test = 5 projects.
+
+| Step | Work | Outcome |
+|---:|---|---|
+| 1 | Create `tests/DeltaZulu.Platform.Tests/` and move all tests into it, organised by layer (Domain/, Application/, Data/, Web/). | One test project. |
+| 2 | Remove 5 old test projects. | Test projects consolidated. |
+| 3 | Rename namespaces across all source files to match the new project structure (`DeltaZulu.Platform.Domain.*`, `DeltaZulu.Platform.Application.*`, `DeltaZulu.Platform.Data.*`). | Namespaces aligned. |
+| 4 | Update `README.md`, `CONSOLIDATION_ROADMAP.md`, module roadmaps, and other documentation. | Docs reflect final state. |
+| 5 | Delete orphaned docs (`PLATFORM_MERGE_PREP.md`, `platform-module-contract-gap.md`, etc.) that are fully resolved. | No stale docs. |
+
+**Exit criteria:** Solution has 5 projects. All namespaces follow `DeltaZulu.Platform.<Layer>.*`
+convention. Documentation is current. CI builds and tests pass.
+
+---
+
 ## Sequencing and dependencies
+
+### C1-C7 (complete)
 
 ```text
 C1 ──> C2 ──> C3 ──────────────────────> C5 ──> C6
@@ -177,18 +408,25 @@ C4 (can run in parallel with C1-C3) ──────┘
 C7 can start after C5 and run in parallel with C6.
 ```
 
-| Phase | Depends on | Can run in parallel with |
-|---|---|---|
-| C1 (tokens) | Nothing | C4 |
-| C2 (components) | C1 | C4 |
-| C3 (theme) | C2 (for visual regression context) | C4 |
-| C4 (module contract) | Nothing | C1, C2, C3 |
-| C5 (unified host) | C3, C4 | -- |
-| C6 (delete legacy) | C5 + stabilisation period | C7 |
-| C7 (shared tests) | C5 | C6 |
+### C8-C12 (project consolidation)
 
-Estimated scope: C1-C3 are each a focused PR. C4 is a medium PR with route refactoring.
-C5 is the largest single effort. C6 and C7 are cleanup.
+```text
+C8 (Domain) ──> C9 (Application) ──> C10 (Data) ──> C11 (Web) ──> C12 (Tests + cleanup)
+```
+
+Each phase depends on the previous. They must run sequentially because each phase changes the
+project graph that the next phase operates on.
+
+| Phase | Depends on | Projects removed | Projects created | Net change |
+|---|---|---|---|---|
+| C8 (Domain) | C7 | 3 | 1 | -2 |
+| C9 (Application) | C8 | 7 | 1 | -6 |
+| C10 (Data) | C9 | 3 | 1 | -2 |
+| C11 (Web) | C10 | 4 | 0 | -4 |
+| C12 (Tests) | C11 | 5 | 1 | -4 |
+| **Total** | | **22** | **4** | **-18** |
+
+Starting from 24 projects (19 src + 5 test), ending at **5 projects** (4 src + 1 test).
 
 ---
 
@@ -198,19 +436,24 @@ Concrete duplications to resolve during the phases above:
 
 | Duplicate | Canonical source | Phase |
 |---|---|---|
-| `colors_and_type.css` brand palette, semantic surfaces, text, typography tokens | `deltazulu-tokens.css` in `DeltaZulu.Blazor.Components` | C1 |
-| `colors_and_type.css` Google Fonts import | `deltazulu-tokens.css` Google Fonts import | C1 |
-| Hunting local panel/card CSS vs `dz-components.css` panel rules | `dz-components.css` | C2 |
-| Hunting local toolbar/header CSS vs `dz-components.css` toolbar rules | `dz-components.css` | C2 |
-| Hunting local empty-state patterns vs `DzEmptyState.razor` | `DzEmptyState.razor` | C2 |
-| Hunting local loading patterns vs `DzLoadingState.razor` | `DzLoadingState.razor` | C2 |
-| Hunting local Markdown rendering vs `DzMarkdownViewer.razor` | `DzMarkdownViewer.razor` | C2 |
-| `WorkbenchTheme.cs` (Workbench-local) | Future `DeltaZuluTheme` in RCL | C3 |
-| Hunting `App.razor` + `Program.cs` host setup | `DeltaZulu.Platform.Web` | C5/C6 |
-| Workbench `App.razor` + `Program.cs` + `MainLayout.razor` host setup | `DeltaZulu.Platform.Web` | C5/C6 |
-| Two `MudThemeProvider` instances | One in `DeltaZulu.Platform.Web` `MainLayout` | C5 |
-| Two `MudDialogProvider` / `MudSnackbarProvider` instances | One in `DeltaZulu.Platform.Web` `MainLayout` | C5 |
-| `WorkbenchShell.cs` transitional metadata | `WorkbenchModule : IPlatformModule` | C4/C6 |
+| `colors_and_type.css` brand palette, semantic surfaces, text, typography tokens | `deltazulu-tokens.css` in `DeltaZulu.Blazor.Components` | C1 ✅ |
+| `colors_and_type.css` Google Fonts import | `deltazulu-tokens.css` Google Fonts import | C1 ✅ |
+| Hunting local panel/card CSS vs `dz-components.css` panel rules | `dz-components.css` | C2 ✅ |
+| Hunting local toolbar/header CSS vs `dz-components.css` toolbar rules | `dz-components.css` | C2 ✅ |
+| Hunting local empty-state patterns vs `DzEmptyState.razor` | `DzEmptyState.razor` | C2 ✅ |
+| Hunting local loading patterns vs `DzLoadingState.razor` | `DzLoadingState.razor` | C2 ✅ |
+| Hunting local Markdown rendering vs `DzMarkdownViewer.razor` | `DzMarkdownViewer.razor` | C2 ✅ |
+| `WorkbenchTheme.cs` (Workbench-local) | `DeltaZuluTheme` in RCL | C3 ✅ |
+| Hunting `App.razor` + `Program.cs` host setup | `DeltaZulu.Platform.Web` | C5/C6 ✅ |
+| Workbench `App.razor` + `Program.cs` + `MainLayout.razor` host setup | `DeltaZulu.Platform.Web` | C5/C6 ✅ |
+| Two `MudThemeProvider` instances | One in `DeltaZulu.Platform.Web` `MainLayout` | C5 ✅ |
+| Two `MudDialogProvider` / `MudSnackbarProvider` instances | One in `DeltaZulu.Platform.Web` `MainLayout` | C5 ✅ |
+| `WorkbenchShell.cs` transitional metadata | `WorkbenchModule : IPlatformModule` | C4/C6 ✅ |
+| `Hunting.Data` + `Workbench.Persistence` — two SQLite persistence layers | `Platform.Data/Sqlite/` | C10 |
+| `Hunting.Data` DuckDB + `Hunting.Core` DuckDbSql — DuckDB code split across two projects | `Platform.Data/DuckDb/` | C10 |
+| `Workbench.Infrastructure` Git store standalone project | `Platform.Data/Git/` | C10 |
+| `Blazor.Components` + `Platform.Web.Abstractions` — two shared UI/contract libraries | `Platform.Web/Components/` + `Platform.Web/Platform/` | C11 |
+| 5 test projects with overlapping domain test coverage | `Platform.Tests/` | C12 |
 
 ---
 
@@ -224,7 +467,7 @@ Each phase should update these documents as it completes:
 | `UI_CONVERGENCE_GUIDE.md` | Update CSS load order if it changes; mark completed migration items. |
 | `platform-module-contract-gap.md` | Close gaps as `IPlatformModule` and route prefixes land. |
 | Module `ROADMAP.md` files | Update platform dependency tables; mark P5/W9 items as resolved. |
-| `README.md` (root) | Update project list and build/run instructions after host merge. |
+| `README.md` (root) | Update project list and build/run instructions after each consolidation phase. |
 | ADRs | Write a new ADR for the unified host decision if the team requires one. |
 
 ---
@@ -238,6 +481,9 @@ Each phase should update these documents as it completes:
 | Module contract is over-engineered for two modules | Keep `IPlatformModule` minimal; add capabilities only when a third module or external plugin needs them. |
 | Deleting legacy hosts too early | C6 requires a stabilisation period and full smoke-test pass before deletion. |
 | Hunting service registration is entangled with `Hunting.Web.Legacy` | MP1 (merge-preparation roadmap) already factors registration into `AddHuntingRuntime`, `AddHuntingApplicationState`, and `AddHuntingWebModule`. Verify these seams work before C5. |
+| Large-scale file moves break git blame | Use `git mv` where possible. Accept that some blame history will be lost; the consolidation benefit outweighs the cost. |
+| Namespace renames cause merge conflicts on in-flight branches | Do C12 namespace alignment as the last phase. Communicate the rename window to the team. |
+| Splitting `Hunting.Core` introduces temporary circular dependencies | C9 moves domain types first, then application types. Each step is independently buildable. |
 
 ---
 

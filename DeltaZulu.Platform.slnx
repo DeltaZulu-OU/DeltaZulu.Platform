@@ -7,10 +7,9 @@
 
   <!-- Shared platform packages -->
   <Project Path="src/DeltaZulu.Blazor.Components/DeltaZulu.Blazor.Components.csproj" />
-  <Project Path="src/DeltaZulu.DetectionContent/DeltaZulu.DetectionContent.csproj" />
+  <Project Path="src/DeltaZulu.Platform.Domain/DeltaZulu.Platform.Domain.csproj" />
 
   <!-- Workbench module -->
-  <Project Path="src/DeltaZulu.Workbench.Domain/DeltaZulu.Workbench.Domain.csproj" />
   <Project Path="src/DeltaZulu.Platform.Web.Abstractions/DeltaZulu.Platform.Web.Abstractions.csproj" />
   <Project Path="src/DeltaZulu.Platform.Web/DeltaZulu.Platform.Web.csproj" />
   <Project Path="src/DeltaZulu.Workbench.Application/DeltaZulu.Workbench.Application.csproj" />
@@ -22,7 +21,6 @@
   <Project Path="src/DeltaZulu.Workbench.Web/DeltaZulu.Workbench.Web.csproj" />
 
   <!-- Hunting module -->
-  <Project Path="src/DeltaZulu.Hunting.Application/DeltaZulu.Hunting.Application.csproj" />
   <Project Path="src/DeltaZulu.Hunting.Core/DeltaZulu.Hunting.Core.csproj" />
   <Project Path="src/DeltaZulu.Hunting.Schema/DeltaZulu.Hunting.Schema.csproj" />
   <Project Path="src/DeltaZulu.Hunting.Data/DeltaZulu.Hunting.Data.csproj" />

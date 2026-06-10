@@ -16,7 +16,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\DeltaZulu.Hunting.Application\DeltaZulu.Hunting.Application.csproj" />
+		<ProjectReference Include="..\..\src\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
 		<ProjectReference Include="..\..\src\DeltaZulu.Hunting.Core\DeltaZulu.Hunting.Core.csproj" />
 		<ProjectReference Include="..\..\src\DeltaZulu.Hunting.Data\DeltaZulu.Hunting.Data.csproj" />
 		<ProjectReference Include="..\..\src\DeltaZulu.Hunting.Schema\DeltaZulu.Hunting.Schema.csproj" />

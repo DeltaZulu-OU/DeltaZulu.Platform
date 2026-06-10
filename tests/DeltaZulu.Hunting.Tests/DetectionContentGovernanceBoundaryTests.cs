@@ -11,11 +11,11 @@ public sealed class DetectionContentGovernanceBoundaryTests
     public void ApplicationProject_DoesNotDefineLocalDetectionContentContracts()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var localContractDirectory = Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Application/DetectionContent");
+        var localContractDirectory = Path.Combine(repositoryRoot, "src/DeltaZulu.Platform.Domain/Hunting/DetectionContent");
 
         Assert.IsFalse(
             Directory.Exists(localContractDirectory),
-            "Hunting.Application must not define local DetectionContent contracts; consume the shared DeltaZulu.DetectionContent package instead.");
+            "Hunting domain must not define local DetectionContent contracts; consume the shared Detection/ namespace in Platform.Domain instead.");
     }
 
     [TestMethod]

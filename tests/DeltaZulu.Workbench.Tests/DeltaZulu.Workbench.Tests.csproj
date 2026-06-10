@@ -10,8 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\DeltaZulu.Blazor.Components\DeltaZulu.Blazor.Components.csproj" />
-    <ProjectReference Include="..\..\src\DeltaZulu.DetectionContent\DeltaZulu.DetectionContent.csproj" />
-    <ProjectReference Include="..\..\src\DeltaZulu.Workbench.Domain\DeltaZulu.Workbench.Domain.csproj" />
+    <ProjectReference Include="..\..\src\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Workbench.Application\DeltaZulu.Workbench.Application.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Workbench.Persistence\DeltaZulu.Workbench.Persistence.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Workbench.Infrastructure\DeltaZulu.Workbench.Infrastructure.csproj" />

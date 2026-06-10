@@ -8,8 +8,8 @@
   <ItemGroup>
     <ProjectReference Include="..\DeltaZulu.Blazor.Components\DeltaZulu.Blazor.Components.csproj" />
     <ProjectReference Include="..\DeltaZulu.Platform.Web.Abstractions\DeltaZulu.Platform.Web.Abstractions.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
     <ProjectReference Include="..\DeltaZulu.Workbench.Application\DeltaZulu.Workbench.Application.csproj" />
-    <ProjectReference Include="..\DeltaZulu.Workbench.Domain\DeltaZulu.Workbench.Domain.csproj" />
     <ProjectReference Include="..\DeltaZulu.Workbench.Persistence\DeltaZulu.Workbench.Persistence.csproj" />
     <ProjectReference Include="..\DeltaZulu.Workbench.Infrastructure\DeltaZulu.Workbench.Infrastructure.csproj" />
     <ProjectReference Include="..\DeltaZulu.Workbench.Workflow\DeltaZulu.Workbench.Workflow.csproj" />

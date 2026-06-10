@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DeltaZulu.Workbench.Domain\DeltaZulu.Workbench.Domain.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
     <ProjectReference Include="..\DeltaZulu.Workbench.Application\DeltaZulu.Workbench.Application.csproj" />
   </ItemGroup>
 

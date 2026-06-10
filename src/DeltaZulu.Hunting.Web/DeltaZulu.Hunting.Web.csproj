@@ -13,7 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DeltaZulu.Blazor.Components\DeltaZulu.Blazor.Components.csproj" />
     <ProjectReference Include="..\DeltaZulu.Platform.Web.Abstractions\DeltaZulu.Platform.Web.Abstractions.csproj" />
-    <ProjectReference Include="..\DeltaZulu.Hunting.Application\DeltaZulu.Hunting.Application.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
     <ProjectReference Include="..\DeltaZulu.Hunting.Core\DeltaZulu.Hunting.Core.csproj" />
     <ProjectReference Include="..\DeltaZulu.Hunting.Data\DeltaZulu.Hunting.Data.csproj" />
     <ProjectReference Include="..\DeltaZulu.Hunting.Render\DeltaZulu.Hunting.Render.csproj" />

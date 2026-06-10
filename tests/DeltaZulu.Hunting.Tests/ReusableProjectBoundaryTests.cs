@@ -5,11 +5,11 @@ public sealed class ReusableProjectBoundaryTests
 {
     private static readonly string[] ReusableProjectFiles =
     [
+        "src/DeltaZulu.Platform.Domain/DeltaZulu.Platform.Domain.csproj",
         "src/DeltaZulu.Hunting.Core/DeltaZulu.Hunting.Core.csproj",
         "src/DeltaZulu.Hunting.Schema/DeltaZulu.Hunting.Schema.csproj",
         "src/DeltaZulu.Hunting.Data/DeltaZulu.Hunting.Data.csproj",
-        "src/DeltaZulu.Hunting.Render/DeltaZulu.Hunting.Render.csproj",
-        "src/DeltaZulu.Hunting.Application/DeltaZulu.Hunting.Application.csproj"
+        "src/DeltaZulu.Hunting.Render/DeltaZulu.Hunting.Render.csproj"
     ];
 
     [TestMethod]
