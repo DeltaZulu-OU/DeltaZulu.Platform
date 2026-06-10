@@ -13,14 +13,14 @@ Prerequisites from the module roadmaps that gate this work are called out inline
 
 | Dimension | Hunting Web Legacy | Workbench Web Legacy | Shared |
 |---|---|---|---|
-| Host type | Standalone Blazor Server | Standalone Blazor Server | -- |
-| Design tokens | `colors_and_type.css` (local copy) | `deltazulu-tokens.css` via RCL | `DeltaZulu.Blazor.Components` RCL |
-| Component library | None; raw MudBlazor + local CSS | `DeltaZulu.Blazor.Components` | 25 Dz* components |
-| CSS load order | MudBlazor, `colors_and_type.css`, `app.css` | MudBlazor, `deltazulu-tokens.css`, `dz-components.css`, `dz-shell.css`, `app.css` | Documented in `UI_CONVERGENCE_GUIDE.md` |
-| Legacy token aliases | `--bg-*`, `--text-*`, `--accent` mapped from `--hunt-*` | None | -- |
-| MudTheme (C#) | `MudThemeProvider` in `App.razor` (default theme) | `WorkbenchTheme.Create()` in `MainLayout.razor` | None; should become shared |
-| Route prefix | `/` (standalone) | `/` (standalone) | Conflict; needs `/hunting` and `/workbench` |
-| Module registration | None | `WorkbenchShell.cs` (transitional) | `IPlatformModule` proposed but not implemented |
+| Host type | RCL (pages served by platform host) | RCL (pages served by platform host) | `DeltaZulu.Platform.Web` unified Blazor Web App (C5) |
+| Design tokens | `deltazulu-tokens.css` via RCL (C1) | `deltazulu-tokens.css` via RCL | `DeltaZulu.Blazor.Components` RCL |
+| Component library | `DeltaZulu.Blazor.Components` (C2) | `DeltaZulu.Blazor.Components` | 25 Dz* components |
+| CSS load order | MudBlazor, `deltazulu-tokens.css`, `dz-components.css`, `dz-shell.css`, `app.css` | MudBlazor, `deltazulu-tokens.css`, `dz-components.css`, `dz-shell.css`, `app.css` | Documented in `UI_CONVERGENCE_GUIDE.md` |
+| Legacy token aliases | `--hunt-*` scoped aliases (minimal) | None | -- |
+| MudTheme (C#) | `DeltaZuluTheme.Create()` (C3) | `DeltaZuluTheme.Create()` via shim (C3) | `DeltaZuluTheme` in RCL |
+| Route prefix | `/hunting` (C4) | `/workbench` (C4) | No conflict |
+| Module registration | `HuntingModule : IPlatformModule` (C4) | `WorkbenchModule : IPlatformModule` (C4) | `IPlatformModule` in `DeltaZulu.Platform.Web.Abstractions` |
 | Shared contracts | -- | -- | `DeltaZulu.DetectionContent` (identity/path/file) |
 | Test project | `DeltaZulu.Hunting.Tests` | `DeltaZulu.Workbench.Tests` | None for shared libraries |
 
@@ -57,7 +57,7 @@ Key pain points:
 **Exit criteria:** `colors_and_type.css` is deleted. Hunting loads `deltazulu-tokens.css` from the
 RCL. The `--hunt-*` alias layer is minimal and justified.
 
-### C2 -- Adopt shared Blazor components in Hunting
+### C2 -- Adopt shared Blazor components in Hunting ✅ COMPLETE
 
 **Objective:** Hunting pages use `Dz*` components instead of local MudBlazor compositions for
 patterns that the RCL already provides.
@@ -89,7 +89,7 @@ before the merge.
 **Exit criteria:** `DeltaZuluTheme` lives in the RCL. Both hosts use it. No visual regressions in
 either product.
 
-### C4 -- Implement shared module contract
+### C4 -- Implement shared module contract ✅ COMPLETE
 
 **Objective:** Both modules expose routes, navigation, and static-asset metadata through a common
 interface so the platform host can compose them without hard-coding knowledge of either module.
@@ -105,7 +105,7 @@ interface so the platform host can compose them without hard-coding knowledge of
 **Exit criteria:** Both modules implement `IPlatformModule`. Routes are prefixed. A host can
 enumerate modules, their routes, and their navigation items through the shared contract.
 
-### C5 -- Create the unified platform web host
+### C5 -- Create the unified platform web host ✅ COMPLETE
 
 **Objective:** One `DeltaZulu.Platform.Web` project replaces both legacy hosts.
 

@@ -22,10 +22,10 @@ public static class WorkbenchShell
     /// <summary>Workbench module navigation items exposed to the current host shell.</summary>
     public static readonly IReadOnlyList<DzNavItem> ModuleNavItems =
     [
-        new("Home", "/", Icons.Material.Outlined.Dashboard, NavLinkMatch.All),
-        new("Detections", "/detections", Icons.Material.Outlined.Radar),
-        new("Changes", "/changes", Icons.Material.Outlined.Assignment),
-        new("History", "/history", Icons.Material.Outlined.History),
-        new("Settings", "/settings", Icons.Material.Outlined.Settings, DividerBefore: true),
+        new("Home", "/workbench", Icons.Material.Outlined.Dashboard, NavLinkMatch.All),
+        new("Detections", "/workbench/detections", Icons.Material.Outlined.Radar),
+        new("Changes", "/workbench/changes", Icons.Material.Outlined.Assignment),
+        new("History", "/workbench/history", Icons.Material.Outlined.History),
+        new("Settings", "/workbench/settings", Icons.Material.Outlined.Settings, DividerBefore: true),
     ];
 }

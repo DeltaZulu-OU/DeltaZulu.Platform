@@ -744,13 +744,6 @@ body.hunt-splitter-active {
     text-overflow: ellipsis;
 }
 
-.hunt-empty {
-    padding: 32px 16px;
-    text-align: center;
-    color: var(--text-dim);
-    font-style: italic;
-}
-
 /* ─── Pagination ────────────────────────────────────────────────────────── */
 .hunt-pagination {
     display: flex;
@@ -844,29 +837,6 @@ body.hunt-splitter-active {
     gap: 16px;
     overflow: auto;
 }
-
-.settings-header h1 {
-    font-size: 24px;
-    color: var(--text-head);
-    margin-bottom: 6px;
-}
-
-.settings-header p {
-    color: var(--text-dim);
-}
-
-.settings-card {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px;
-}
-
-    .settings-card h2 {
-        color: var(--text-head);
-        font-size: 16px;
-        margin-bottom: 6px;
-    }
 
 .settings-help {
     color: var(--text-dim);
@@ -1127,45 +1097,6 @@ body.hunt-splitter-active {
     padding: 32px;
 }
 
-.overview-hero {
-    max-width: 920px;
-    padding: 28px;
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    background: radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 18%, transparent), transparent 40%), var(--bg-panel);
-}
-
-.overview-eyebrow {
-    color: var(--info);
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-}
-
-.overview-hero h1 {
-    color: var(--text-head);
-    font-size: 32px;
-    margin-bottom: 10px;
-}
-
-.overview-hero p {
-    color: var(--text-main);
-    max-width: 720px;
-    line-height: 1.6;
-}
-
-.overview-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-    .overview-actions a {
-        text-decoration: none;
-    }
-
 .overview-card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1173,24 +1104,6 @@ body.hunt-splitter-active {
     max-width: 920px;
     margin-top: 18px;
 }
-
-.overview-card {
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--bg-panel);
-    padding: 18px;
-}
-
-    .overview-card h2 {
-        color: var(--text-head);
-        font-size: 16px;
-        margin-bottom: 8px;
-    }
-
-    .overview-card p {
-        color: var(--text-dim);
-        line-height: 1.5;
-    }
 
 @media (max-width: 920px) {
     .threat-hunting-page {
@@ -1570,7 +1483,6 @@ body.hunt-splitter-active {
 .hunt-results-label,
 .hunt-idle-label,
 .hunt-render-note,
-.hunt-empty,
 .hunt-drawer-subtitle,
 .settings-footer-note {
     color: var(--dz-product-text-muted);
@@ -1737,8 +1649,7 @@ body.hunt-splitter-active {
     border-top: 1px solid var(--dz-product-divider);
 }
 
-.hunt-render-fallback,
-.hunt-empty {
+.hunt-render-fallback {
     padding: var(--space-5);
 }
 
@@ -1863,40 +1774,10 @@ body.hunt-splitter-active {
     color: var(--dz-product-text);
 }
 
-.settings-header {
-    margin-bottom: var(--space-6);
+.settings-help,
+.settings-footer-note {
+    color: var(--dz-product-text-muted);
 }
-
-    .settings-header h1 {
-        margin-bottom: var(--space-2);
-        color: var(--dz-product-text);
-        font-family: var(--font-family-sans);
-        font-size: var(--font-size-h1);
-        font-weight: 700;
-        letter-spacing: var(--letter-spacing-h1);
-    }
-
-    .settings-header p,
-    .settings-help,
-    .settings-footer-note {
-        color: var(--dz-product-text-muted);
-    }
-
-.settings-card {
-    background: var(--dz-product-surface);
-    border: 1px solid var(--dz-product-border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
-    padding: var(--space-5);
-    margin-bottom: var(--space-5);
-}
-
-    .settings-card h2 {
-        color: var(--dz-product-text);
-        font-family: var(--font-family-sans);
-        font-size: var(--font-size-h3);
-        font-weight: 700;
-    }
 
 .settings-grid {
     display: grid;
@@ -2066,12 +1947,6 @@ body.hunt-splitter-active {
     outline-offset: 2px;
 }
 
-.dashboard-empty-actions,
-.dashboard-list-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
 
 .dashboard-list-page,
 .dashboard-detail-page {
@@ -2080,24 +1955,6 @@ body.hunt-splitter-active {
     overflow: auto;
     padding: 28px 32px;
     background: var(--bg-dark);
-}
-
-.dashboard-page-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 24px;
-    margin-bottom: 20px;
-}
-
-.dashboard-list-header {
-    align-items: flex-start;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border);
-}
-
-.dashboard-detail-header {
-    align-items: center;
 }
 
 .dashboard-eyebrow {
@@ -2109,15 +1966,7 @@ body.hunt-splitter-active {
     text-transform: uppercase;
 }
 
-.dashboard-page-header h1,
-.dashboard-empty-state h1,
-.dashboard-empty-state h2 {
-    margin: 0;
-    color: var(--text-head);
-}
-
 .dashboard-page-subtitle,
-.dashboard-empty-state p,
 .dashboard-muted,
 .dashboard-widget-note {
     margin-top: 6px;
@@ -2178,26 +2027,6 @@ body.hunt-splitter-active {
     background: rgba(255, 255, 255, .42);
 }
 
-.dashboard-list-panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 16px;
-}
-
-    .dashboard-list-panel-header h2 {
-        margin: 0;
-        color: var(--text-head);
-        font-size: 16px;
-    }
-
-    .dashboard-list-panel-header p {
-        margin: 4px 0 0;
-        color: var(--text-dim);
-        font-size: 13px;
-    }
-
 .dashboard-pagination {
     display: flex;
     align-items: center;
@@ -2219,7 +2048,6 @@ body.hunt-splitter-active {
 }
 
 .dashboard-list-card,
-.dashboard-empty-state,
 .dashboard-widget-host {
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -2315,32 +2143,14 @@ body.hunt-splitter-active {
     box-shadow: none;
 }
 
-.dashboard-empty-state {
-    padding: 28px;
-}
-
-.dashboard-list-empty {
-    margin-top: 20px;
-}
-
-.dashboard-empty-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 18px;
-}
-
 .dashboard-grid-empty {
     margin: 0;
 }
 
-.dashboard-error,
-.dashboard-error-state {
+.dashboard-error {
     border: 1px solid rgba(248, 81, 73, .45);
     background: rgba(248, 81, 73, .08);
     color: var(--text-main);
-}
-
-.dashboard-error {
     margin-bottom: 16px;
     padding: 12px 14px;
     border-radius: var(--radius);
@@ -2994,11 +2804,6 @@ body.hunt-splitter-active {
 
     .dashboard-list-panel {
         padding: 12px;
-    }
-
-    .dashboard-list-panel-header {
-        flex-direction: column;
-        align-items: flex-start;
     }
 
     .dashboard-pagination {

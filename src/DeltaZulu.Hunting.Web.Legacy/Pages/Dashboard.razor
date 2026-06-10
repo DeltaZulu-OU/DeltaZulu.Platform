@@ -1,4 +1,4 @@
-@page "/dashboards/{DashboardId}"
+@page "/hunting/dashboards/{DashboardId}"
 @namespace DeltaZulu.Hunting.Web.Pages
 @using DeltaZulu.Hunting.Web.Components.Dashboards
 @using DeltaZulu.Hunting.Web.Dashboards.PageState
@@ -10,33 +10,25 @@
 <div class="dashboard-detail-page">
     @if (State.Loading)
     {
-        <section class="dashboard-empty-state">
-            <h1>Loading dashboard…</h1>
-            <p>Reading the dashboard definition from local application persistence.</p>
-        </section>
+        <DzLoadingState Text="Reading the dashboard definition from local application persistence." />
     }
     else if (!string.IsNullOrWhiteSpace(State.Error))
     {
-        <section class="dashboard-empty-state dashboard-error-state">
-            <h1>Dashboard unavailable</h1>
-            <p>@State.Error</p>
-            <button class="hunt-btn" @onclick="BackToDashboards">Back to dashboards</button>
-        </section>
+        <DzEmptyState Title="Dashboard unavailable"
+                      Description="@State.Error"
+                      Icon="@Icons.Material.Filled.ErrorOutline"
+                      Outlined="true">
+            <Actions>
+                <button class="hunt-btn" @onclick="BackToDashboards">Back to dashboards</button>
+            </Actions>
+        </DzEmptyState>
     }
     else if (State.Dashboard is not null)
     {
-        <header class="dashboard-page-header dashboard-detail-header">
-            <div>
-                <p class="dashboard-eyebrow">Dashboard</p>
-                <h1>@State.Dashboard.Name</h1>
-                @if (!string.IsNullOrWhiteSpace(State.Dashboard.Description))
-                {
-                    <p class="dashboard-page-subtitle">@State.Dashboard.Description</p>
-                }
-                else
-                {
-                    <p class="dashboard-page-subtitle">Run and refresh dashboard widgets. Select Edit to change settings, widgets, or layout.</p>
-                }
+        <DzPageHeader Eyebrow="Dashboard"
+                      Title="@State.Dashboard.Name"
+                      Description="@DashboardDescription">
+            <Metadata>
                 @if (State.AutoRefreshEnabled)
                 {
                     <p class="dashboard-page-subtitle">@State.AutoRefreshStatus</p>
@@ -49,41 +41,43 @@
                         <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="Controller.OpenAddWidgetEditor">Add widget</MudButton>
                     </div>
                 }
-            </div>
-            <div class="dashboard-toolbar">
-                <div class="dashboard-toolbar-split" role="group" aria-label="Dashboard actions">
-                    <MudButton Class="dashboard-toolbar-primary"
-                               Variant="Variant.Outlined"
-                               Size="Size.Small"
-                               Disabled="@(!State.CanRunDashboard)"
-                               OnClick="Controller.RunAllWidgetsAsync"
-                               title="Refresh dashboard"
-                               aria-label="Refresh dashboard">
-                        <MudIcon Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" />
-                    </MudButton>
-                    @if (State.EditMode)
-                    {
-                        <MudButton Class="dashboard-toolbar-primary dashboard-mode-button"
-                                   Variant="Variant.Filled"
-                                   Color="Color.Primary"
+            </Metadata>
+            <Actions>
+                <div class="dashboard-toolbar">
+                    <div class="dashboard-toolbar-split" role="group" aria-label="Dashboard actions">
+                        <MudButton Class="dashboard-toolbar-primary"
+                                   Variant="Variant.Outlined"
                                    Size="Size.Small"
-                                   OnClick="Controller.SaveEditModeAsync">
-                            Save
+                                   Disabled="@(!State.CanRunDashboard)"
+                                   OnClick="Controller.RunAllWidgetsAsync"
+                                   title="Refresh dashboard"
+                                   aria-label="Refresh dashboard">
+                            <MudIcon Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" />
                         </MudButton>
-                    }
-                    else
-                    {
-                        <MudButton Class="dashboard-toolbar-primary dashboard-mode-button"
-                                   Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   Size="Size.Small"
-                                   OnClick="Controller.StartEditMode">
-                            Edit
-                        </MudButton>
-                    }
+                        @if (State.EditMode)
+                        {
+                            <MudButton Class="dashboard-toolbar-primary dashboard-mode-button"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       OnClick="Controller.SaveEditModeAsync">
+                                Save
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Class="dashboard-toolbar-primary dashboard-mode-button"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       OnClick="Controller.StartEditMode">
+                                Edit
+                            </MudButton>
+                        }
+                    </div>
                 </div>
-            </div>
-        </header>
+            </Actions>
+        </DzPageHeader>
 
         @if (!string.IsNullOrWhiteSpace(State.SaveError))
         {
@@ -116,6 +110,11 @@
     public string? DashboardId { get; set; }
 
     private DashboardPageState State => Controller.State;
+
+    private string DashboardDescription
+        => !string.IsNullOrWhiteSpace(State.Dashboard?.Description)
+            ? State.Dashboard!.Description
+            : "Run and refresh dashboard widgets. Select Edit to change settings, widgets, or layout.";
 
     public void Dispose()
     {
@@ -154,5 +153,5 @@
         => _ = InvokeAsync(StateHasChanged);
 
     private void BackToDashboards()
-        => Navigation.NavigateTo("/dashboards");
+        => Navigation.NavigateTo("/hunting/dashboards");
 }

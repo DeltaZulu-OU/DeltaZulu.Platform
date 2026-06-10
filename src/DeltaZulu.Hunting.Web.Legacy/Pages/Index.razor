@@ -1,4 +1,4 @@
-@page "/threat-hunting"
+@page "/hunting/threat-hunting"
 @namespace DeltaZulu.Hunting.Web.Pages
 @using DeltaZulu.Hunting.Web.Components
 @inject DeltaZulu.Hunting.Web.Rendering.RenderedQueryRunner RenderedQueryRunner
@@ -276,7 +276,10 @@
                     }
                     else if (_result?.Success == true && _result.RowCount == 0)
                     {
-                        <div class="hunt-empty">Query returned no rows.</div>
+                        <DzEmptyState Title="No results"
+                                      Description="Query returned no rows."
+                                      Icon="@Icons.Material.Filled.SearchOff"
+                                      Elevation="0" />
                     }
                 </section>
             </div>

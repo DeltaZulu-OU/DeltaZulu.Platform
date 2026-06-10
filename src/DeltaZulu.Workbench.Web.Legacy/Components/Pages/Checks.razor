@@ -1,5 +1,5 @@
 @namespace DeltaZulu.Workbench.Web.Components.Pages
-@page "/checks"
+@page "/workbench/checks"
 @using MudBlazor
 @rendermode InteractiveServer
 @using DeltaZulu.Workbench.Application.Services
@@ -90,7 +90,7 @@ else
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Change">
-                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))">
+                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/workbench/changes/{context.Change.Id}"))">
                             <code>@context.Change.Key</code>
                         </DzActionLink>
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>

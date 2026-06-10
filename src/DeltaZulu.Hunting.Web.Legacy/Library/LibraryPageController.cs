@@ -181,6 +181,9 @@ public sealed class LibraryPageController
             ? "hunt-btn hunt-btn-run dashboard-primary-action"
             : "hunt-btn";
 
+    public bool IsFilterActive(LibraryItemKind? kind)
+        => State.KindFilter == kind;
+
     public string DeleteButtonText(LibraryItem item)
         => State.IsDeletePendingFor(item) ? "Confirm delete" : "Delete";
 

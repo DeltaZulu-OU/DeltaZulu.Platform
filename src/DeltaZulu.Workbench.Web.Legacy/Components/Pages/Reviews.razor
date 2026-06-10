@@ -1,5 +1,5 @@
 @namespace DeltaZulu.Workbench.Web.Components.Pages
-@page "/reviews"
+@page "/workbench/reviews"
 @using MudBlazor
 @rendermode InteractiveServer
 @using DeltaZulu.Workbench.Application.Services
@@ -49,7 +49,7 @@ else
             <MudText Typo="Typo.subtitle2" Class="dz-section-title">Awaiting your decision</MudText>
             <DzTableShell Class="mb-4">
                 <MudTable Items="_awaitingChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
-                          OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item!.Id}"))"
+                          OnRowClick="@(args => Nav.NavigateTo($"/workbench/changes/{args.Item!.Id}"))"
                           T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
                     <HeaderContent>
                         <MudTh>Key</MudTh>
@@ -82,7 +82,7 @@ else
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="Change">
-                            <DzActionLink OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))">
+                            <DzActionLink OnClick="@(() => Nav.NavigateTo($"/workbench/changes/{context.Change.Id}"))">
                                 <code>@context.Change.Key</code>
                             </DzActionLink>
                             <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>
@@ -114,7 +114,7 @@ else
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Change">
-                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/changes/{context.Change.Id}"))">
+                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/workbench/changes/{context.Change.Id}"))">
                             <code>@context.Change.Key</code>
                         </DzActionLink>
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>

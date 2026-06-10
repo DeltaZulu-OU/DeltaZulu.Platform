@@ -34,10 +34,11 @@
 
                 @if (Dashboard.Widgets.Count == 0)
                 {
-                    <section class="dashboard-empty-state dashboard-grid-empty">
-                        <h2>No widgets</h2>
-                        <p>This dashboard has no widgets yet. Add a query widget to start building the dashboard.</p>
-                    </section>
+                    <DzEmptyState Title="No widgets"
+                                  Description="This dashboard has no widgets yet. Add a query widget to start building the dashboard."
+                                  Icon="@Icons.Material.Filled.Widgets"
+                                  Elevation="0"
+                                  Class="dashboard-grid-empty" />
                 }
                 else
                 {

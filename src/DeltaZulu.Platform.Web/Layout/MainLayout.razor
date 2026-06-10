@@ -1,0 +1,35 @@
+@inherits LayoutComponentBase
+@using DeltaZulu.Blazor.Components
+@using DeltaZulu.Platform.Web.Abstractions
+@inject IEnumerable<IPlatformModule> Modules
+
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <DzAppBar ProductName="DeltaZulu Platform"
+              OnMenuClick="@ToggleDrawer" />
+
+    <DzSideNav @bind-Open="_drawerOpen" Items="_navItems" Heading="Platform" />
+
+    <DzMainContent>
+        @Body
+    </DzMainContent>
+</MudLayout>
+
+@code {
+    private static readonly MudTheme _theme = DeltaZuluTheme.Create();
+    private bool _drawerOpen = true;
+    private IReadOnlyList<IPlatformModule> _orderedModules = [];
+    private IReadOnlyList<DzNavItem> _navItems = [];
+
+    protected override void OnInitialized()
+    {
+        _orderedModules = Modules.OrderBy(m => m.Descriptor.Order).ToList();
+        _navItems = _orderedModules.SelectMany(m => m.NavigationItems).ToList();
+    }
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+}

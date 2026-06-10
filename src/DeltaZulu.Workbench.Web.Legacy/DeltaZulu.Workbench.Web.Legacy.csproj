@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DeltaZulu.Blazor.Components\DeltaZulu.Blazor.Components.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Web.Abstractions\DeltaZulu.Platform.Web.Abstractions.csproj" />
     <ProjectReference Include="..\DeltaZulu.Workbench.Application\DeltaZulu.Workbench.Application.csproj" />
     <ProjectReference Include="..\DeltaZulu.Workbench.Domain\DeltaZulu.Workbench.Domain.csproj" />
     <ProjectReference Include="..\DeltaZulu.Workbench.Persistence\DeltaZulu.Workbench.Persistence.csproj" />

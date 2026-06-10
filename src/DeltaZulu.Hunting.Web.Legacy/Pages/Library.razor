@@ -1,17 +1,14 @@
-@page "/library"
+@page "/hunting/library"
 @namespace DeltaZulu.Hunting.Web.Pages
 @using DeltaZulu.Hunting.Web.Library
 @using DeltaZulu.Hunting.Web.Services
 @inject LibraryPageController Controller
 
 <div class="dashboard-list-page">
-    <header class="dashboard-page-header dashboard-list-header">
-        <div>
-            <p class="dashboard-eyebrow">Library</p>
-            <h1>Library</h1>
-            <p class="dashboard-page-subtitle">Manage saved queries, reusable visualizations, and dashboards from one place.</p>
-        </div>
-        <div class="dashboard-list-toolbar">
+    <DzPageHeader Eyebrow="Library"
+                  Title="Library"
+                  Description="Manage saved queries, reusable visualizations, and dashboards from one place.">
+        <Actions>
             <div class="dashboard-list-actions-primary">
                 <button class="hunt-btn hunt-btn-run dashboard-primary-action"
                         @onclick="Controller.CreateSavedQuery">
@@ -26,8 +23,8 @@
                     New dashboard
                 </button>
             </div>
-        </div>
-    </header>
+        </Actions>
+    </DzPageHeader>
 
     @if (State.HasError)
     {
@@ -50,32 +47,34 @@
                   RowsPerPage="@LibraryPageState.DefaultRowsPerPage"
                   Class="library-object-table">
             <ToolBarContent>
-                <div class="dashboard-list-panel-header library-table-toolbar">
-                    <div>
-                        <h2>@State.FilterTitle</h2>
-                        <p>@State.RangeText</p>
-                    </div>
+                <DzToolbar Class="library-table-toolbar">
+                    <ChildContent>
+                        <div>
+                            <h2>@State.FilterTitle</h2>
+                            <p>@State.RangeText</p>
+                        </div>
 
-                    <MudSpacer />
+                        <MudTextField T="string"
+                                      Value="@State.SearchText"
+                                      ValueChanged="Controller.SetSearchText"
+                                      Placeholder="Search library"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      Immediate="true"
+                                      Margin="Margin.Dense"
+                                      Variant="Variant.Outlined"
+                                      Class="library-table-search" />
+                    </ChildContent>
 
-                    <MudTextField T="string"
-                                  Value="@State.SearchText"
-                                  ValueChanged="Controller.SetSearchText"
-                                  Placeholder="Search library"
-                                  Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Filled.Search"
-                                  Immediate="true"
-                                  Margin="Margin.Dense"
-                                  Variant="Variant.Outlined"
-                                  Class="library-table-search" />
-
-                    <div class="dashboard-list-actions-primary library-filter-buttons">
-                        <button class="@Controller.FilterButtonClass(null)" @onclick="() => Controller.SetFilter(null)">All</button>
-                        <button class="@Controller.FilterButtonClass(LibraryItemKind.SavedQuery)" @onclick="() => Controller.SetFilter(LibraryItemKind.SavedQuery)">Saved queries</button>
-                        <button class="@Controller.FilterButtonClass(LibraryItemKind.Visualization)" @onclick="() => Controller.SetFilter(LibraryItemKind.Visualization)">Visualizations</button>
-                        <button class="@Controller.FilterButtonClass(LibraryItemKind.Dashboard)" @onclick="() => Controller.SetFilter(LibraryItemKind.Dashboard)">Dashboards</button>
-                    </div>
-                </div>
+                    <Actions>
+                        <div class="library-filter-buttons">
+                            <DzFilterChip Value="all" Selected="@(Controller.IsFilterActive(null))" OnClick="() => Controller.SetFilter(null)">All</DzFilterChip>
+                            <DzFilterChip Value="queries" Selected="@(Controller.IsFilterActive(LibraryItemKind.SavedQuery))" OnClick="() => Controller.SetFilter(LibraryItemKind.SavedQuery)">Saved queries</DzFilterChip>
+                            <DzFilterChip Value="viz" Selected="@(Controller.IsFilterActive(LibraryItemKind.Visualization))" OnClick="() => Controller.SetFilter(LibraryItemKind.Visualization)">Visualizations</DzFilterChip>
+                            <DzFilterChip Value="dashboards" Selected="@(Controller.IsFilterActive(LibraryItemKind.Dashboard))" OnClick="() => Controller.SetFilter(LibraryItemKind.Dashboard)">Dashboards</DzFilterChip>
+                        </div>
+                    </Actions>
+                </DzToolbar>
             </ToolBarContent>
 
             <HeaderContent>
@@ -127,7 +126,7 @@
                 <MudTd DataLabel="Status">
                     @if (context.Status == LibraryItemStatus.MissingDependency)
                     {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">Missing dependency</MudChip>
+                        <DzStatusChip Label="Missing dependency" Tone="warning" />
                     }
                     else
                     {
@@ -152,23 +151,25 @@
             <NoRecordsContent>
                 @if (State.Items.Count == 0)
                 {
-                    <section class="dashboard-empty-state dashboard-list-empty">
-                        <h2>No library items</h2>
-                        <p>Create a saved query, visualization, or dashboard to populate the library.</p>
-                        <div class="dashboard-empty-actions">
+                    <DzEmptyState Title="No library items"
+                                  Description="Create a saved query, visualization, or dashboard to populate the library."
+                                  Icon="@Icons.Material.Filled.LibraryBooks"
+                                  Elevation="0">
+                        <Actions>
                             <button class="hunt-btn hunt-btn-run dashboard-primary-action" @onclick="Controller.CreateSavedQuery">Create saved query</button>
-                        </div>
-                    </section>
+                        </Actions>
+                    </DzEmptyState>
                 }
                 else
                 {
-                    <section class="dashboard-empty-state dashboard-list-empty">
-                        <h2>No matching library items</h2>
-                        <p>Clear the search text or use a different filter.</p>
-                        <div class="dashboard-empty-actions">
+                    <DzEmptyState Title="No matching library items"
+                                  Description="Clear the search text or use a different filter."
+                                  Icon="@Icons.Material.Filled.SearchOff"
+                                  Elevation="0">
+                        <Actions>
                             <button class="hunt-btn" @onclick="Controller.ClearSearch">Clear search</button>
-                        </div>
-                    </section>
+                        </Actions>
+                    </DzEmptyState>
                 }
             </NoRecordsContent>
 

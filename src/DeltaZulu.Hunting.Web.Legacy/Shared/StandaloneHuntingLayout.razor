@@ -3,7 +3,7 @@
 
 <div class="@($"hunt-app {(_globalNavDocked ? "hunt-global-nav-docked" : "hunt-global-nav-undocked")}")">
     <MudAppBar Dense="true" Fixed="false" Elevation="1" Class="hunt-topbar">
-        <NavLink href="/" Match="NavLinkMatch.All" class="hunt-brand" aria-label="Open overview">
+        <NavLink href="/hunting" Match="NavLinkMatch.All" class="hunt-brand" aria-label="Open overview">
             <span class="hunt-brand-text">Hunting Workbench</span>
         </NavLink>
 
@@ -13,23 +13,23 @@
     <div class="hunt-shell">
         <aside class="hunt-global-sidebar" aria-label="Global navigation">
             <nav class="hunt-global-nav">
-                <NavLink href="/" Match="NavLinkMatch.All" class="hunt-global-nav-link">
+                <NavLink href="/hunting" Match="NavLinkMatch.All" class="hunt-global-nav-link">
                     <span class="hunt-global-nav-icon" aria-hidden="true">⌂</span>
                     <span class="hunt-global-nav-text">Overview</span>
                 </NavLink>
-                <NavLink href="/threat-hunting" class="hunt-global-nav-link">
+                <NavLink href="/hunting/threat-hunting" class="hunt-global-nav-link">
                     <span class="hunt-global-nav-icon" aria-hidden="true">⌕</span>
                     <span class="hunt-global-nav-text">Threat Hunting</span>
                 </NavLink>
-                <NavLink href="/library" class="hunt-global-nav-link">
+                <NavLink href="/hunting/library" class="hunt-global-nav-link">
                     <span class="hunt-global-nav-icon" aria-hidden="true">▤</span>
                     <span class="hunt-global-nav-text">Library</span>
                 </NavLink>
-                <NavLink href="/dashboards" class="hunt-global-nav-link">
+                <NavLink href="/hunting/dashboards" class="hunt-global-nav-link">
                     <span class="hunt-global-nav-icon" aria-hidden="true">▦</span>
                     <span class="hunt-global-nav-text">Dashboards</span>
                 </NavLink>
-                <NavLink href="/settings" class="hunt-global-nav-link">
+                <NavLink href="/hunting/settings" class="hunt-global-nav-link">
                     <span class="hunt-global-nav-icon" aria-hidden="true">⚙</span>
                     <span class="hunt-global-nav-text">Settings</span>
                 </NavLink>

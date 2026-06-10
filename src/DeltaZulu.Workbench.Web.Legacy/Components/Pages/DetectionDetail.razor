@@ -1,5 +1,5 @@
 @namespace DeltaZulu.Workbench.Web.Components.Pages
-@page "/detections/{Id}"
+@page "/workbench/detections/{Id}"
 @using MudBlazor
 @rendermode InteractiveServer
 @using DeltaZulu.Workbench.Application.Services
@@ -64,7 +64,7 @@ else
                         {
                             <div class="d-flex align-center gap-2 flex-wrap">
                                 <DzMetaChip Kind="version">@_latestVersion.DisplayVersion</DzMetaChip>
-                                <DzActionLink OnClick="@(() => Nav.NavigateTo($"/history/{_latestVersion.Id}"))">
+                                <DzActionLink OnClick="@(() => Nav.NavigateTo($"/workbench/history/{_latestVersion.Id}"))">
                                     Compare
                                 </DzActionLink>
                             </div>
@@ -118,7 +118,7 @@ else
                                 <MudTd DataLabel="Accepted"><MudText Typo="Typo.caption">@context.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
                                 <MudTd DataLabel="Actions">
                                     <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                                               OnClick="@(() => Nav.NavigateTo($"/history/{context.Id}"))">
+                                               OnClick="@(() => Nav.NavigateTo($"/workbench/history/{context.Id}"))">
                                         Compare / restore
                                     </MudButton>
                                 </MudTd>
@@ -141,7 +141,7 @@ else
                 {
                     <DzTableShell>
                         <MudTable Items="_changes" Dense="true" Hover="true"
-                                  OnRowClick="@(args => Nav.NavigateTo($"/changes/{args.Item!.Id}"))"
+                                  OnRowClick="@(args => Nav.NavigateTo($"/workbench/changes/{args.Item!.Id}"))"
                                   T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
                             <HeaderContent>
                                 <MudTh>Key</MudTh>
@@ -252,7 +252,7 @@ else
         var result = await dialog.Result;
         if (result is not null && !result.Canceled && result.Data is ChangeRequestId changeId)
         {
-            Nav.NavigateTo($"/changes/{changeId}");
+            Nav.NavigateTo($"/workbench/changes/{changeId}");
         }
     }
 }

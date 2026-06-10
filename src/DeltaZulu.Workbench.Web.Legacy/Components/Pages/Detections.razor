@@ -1,5 +1,5 @@
 @namespace DeltaZulu.Workbench.Web.Components.Pages
-@page "/detections"
+@page "/workbench/detections"
 @using MudBlazor
 @rendermode InteractiveServer
 @using DeltaZulu.Workbench.Application.Services
@@ -68,7 +68,7 @@ else
 {
     <DzTableShell>
         <MudTable Items="_filteredDetections" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0"
-                  OnRowClick="@(args => Nav.NavigateTo($"/detections/{args.Item!.Id}"))"
+                  OnRowClick="@(args => Nav.NavigateTo($"/workbench/detections/{args.Item!.Id}"))"
                   T="Detection" RowClass="cursor-pointer">
             <HeaderContent>
                 <MudTh>Slug</MudTh>
@@ -156,7 +156,7 @@ else
         var result = await dialog.Result;
         if (result is not null && !result.Canceled && result.Data is ChangeRequestId changeId)
         {
-            Nav.NavigateTo($"/changes/{changeId}");
+            Nav.NavigateTo($"/workbench/changes/{changeId}");
         }
     }
 }

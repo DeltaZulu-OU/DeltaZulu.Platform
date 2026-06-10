@@ -1,0 +1,24 @@
+@using DeltaZulu.Platform.Web.Layout
+
+<Router AppAssembly="typeof(Routes).Assembly"
+        AdditionalAssemblies="@AdditionalAssemblies">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="typeof(MainLayout)">
+            <DzEmptyState Title="Page not found"
+                          Description="The requested page does not exist."
+                          Icon="@Icons.Material.Outlined.SearchOff" />
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@code {
+    private static readonly System.Reflection.Assembly[] AdditionalAssemblies =
+    [
+        typeof(DeltaZulu.Workbench.Web.Components.Pages.Home).Assembly,
+        typeof(DeltaZulu.Hunting.Web.Pages.Overview).Assembly,
+    ];
+}

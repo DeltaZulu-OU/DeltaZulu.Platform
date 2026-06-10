@@ -1,33 +1,25 @@
-@page "/"
+@page "/hunting"
 @namespace DeltaZulu.Hunting.Web.Pages
 
 <div class="overview-page">
-    <section class="overview-hero">
-        <p class="overview-eyebrow">KQL-on-DuckDB Security Hunting Workbench</p>
-        <h1>Overview</h1>
-        <p>
-            Start with threat hunting when you need the KQL editor, schema browser, sample queries,
-            saved queries, and result inspection. Use dashboards for persistent visual workflows,
-            and settings for default query behavior.
-        </p>
-        <div class="overview-actions">
-            <NavLink href="/threat-hunting" class="hunt-btn hunt-btn-run">Open Threat Hunting</NavLink>
-            <NavLink href="/dashboards" class="hunt-btn">View Dashboards</NavLink>
-        </div>
-    </section>
+    <DzPageHeader Eyebrow="KQL-on-DuckDB Security Hunting Workbench"
+                  Title="Overview"
+                  Description="Start with threat hunting when you need the KQL editor, schema browser, sample queries, saved queries, and result inspection. Use dashboards for persistent visual workflows, and settings for default query behavior.">
+        <Actions>
+            <NavLink href="/hunting/threat-hunting" class="hunt-btn hunt-btn-run">Open Threat Hunting</NavLink>
+            <NavLink href="/hunting/dashboards" class="hunt-btn">View Dashboards</NavLink>
+        </Actions>
+    </DzPageHeader>
 
     <section class="overview-card-grid" aria-label="Primary work areas">
-        <article class="overview-card">
-            <h2>Threat Hunting</h2>
-            <p>Run KQL against approved Golden schema views, inspect generated results, and reuse saved or sample queries.</p>
-        </article>
-        <article class="overview-card">
-            <h2>Dashboards</h2>
-            <p>Compose persisted table and chart widgets on top of the same render-aware query runtime.</p>
-        </article>
-        <article class="overview-card">
-            <h2>Settings</h2>
-            <p>Configure the default time filter and item limit applied to new hunting sessions.</p>
-        </article>
+        <DzPanel Title="Threat Hunting" Elevation="0" Outlined="true">
+            Run KQL against approved Golden schema views, inspect generated results, and reuse saved or sample queries.
+        </DzPanel>
+        <DzPanel Title="Dashboards" Elevation="0" Outlined="true">
+            Compose persisted table and chart widgets on top of the same render-aware query runtime.
+        </DzPanel>
+        <DzPanel Title="Settings" Elevation="0" Outlined="true">
+            Configure the default time filter and item limit applied to new hunting sessions.
+        </DzPanel>
     </section>
 </div>

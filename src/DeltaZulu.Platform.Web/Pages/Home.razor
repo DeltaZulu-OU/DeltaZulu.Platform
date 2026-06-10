@@ -1,0 +1,23 @@
+@page "/"
+@using DeltaZulu.Blazor.Components
+@using DeltaZulu.Platform.Web.Abstractions
+@inject IEnumerable<IPlatformModule> Modules
+
+<PageTitle>DeltaZulu Platform</PageTitle>
+
+<DzPageHeader Title="DeltaZulu Platform"
+              Description="Select a module to get started." />
+
+<div class="platform-module-grid">
+    @foreach (var module in Modules.OrderBy(m => m.Descriptor.Order))
+    {
+        <a href="@module.Descriptor.RoutePrefix" class="platform-module-card">
+            <DzPanel Title="@module.Descriptor.DisplayName" Elevation="0" Outlined="true">
+                @if (!string.IsNullOrWhiteSpace(module.Descriptor.Badge))
+                {
+                    <DzStatusChip Label="@module.Descriptor.Badge" Tone="info" />
+                }
+            </DzPanel>
+        </a>
+    }
+</div>

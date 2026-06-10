@@ -1,6 +1,6 @@
 @namespace DeltaZulu.Workbench.Web.Components.Pages
-@page "/history/{Id}"
-@page "/versions/{Id}"
+@page "/workbench/history/{Id}"
+@page "/workbench/versions/{Id}"
 @using MudBlazor
 @rendermode InteractiveServer
 @using DeltaZulu.Workbench.Application.Services
@@ -40,7 +40,7 @@ else
                         Restore as new change
                     </MudButton>
                     <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small"
-                               OnClick="@(() => Nav.NavigateTo($"/detections/{_comparison.Detection.Id}"))">
+                               OnClick="@(() => Nav.NavigateTo($"/workbench/detections/{_comparison.Detection.Id}"))">
                         Back to detection
                     </MudButton>
                 </Actions>
@@ -66,7 +66,7 @@ else
                     <DzDetailItem Label="Changed files" Value="@_comparison.ChangedFiles.Count.ToString()" />
 
                     <DzDetailItem Label="Source change">
-                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/changes/{_comparison.AfterVersion.SourceChangeRequestId}"))" Class="mt-1">
+                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/workbench/changes/{_comparison.AfterVersion.SourceChangeRequestId}"))" Class="mt-1">
                             View change
                         </DzActionLink>
                     </DzDetailItem>
@@ -74,7 +74,7 @@ else
                     <DzDetailItem Label="Linked issue">
                         @if (_comparison.AfterVersion.LinkedIssueId is not null)
                         {
-                            <DzActionLink OnClick="@(() => Nav.NavigateTo($"/issues/{_comparison.AfterVersion.LinkedIssueId}"))" Class="mt-1">
+                            <DzActionLink OnClick="@(() => Nav.NavigateTo($"/workbench/issues/{_comparison.AfterVersion.LinkedIssueId}"))" Class="mt-1">
                                 View issue
                             </DzActionLink>
                         }
@@ -268,7 +268,7 @@ else
                 UserContext.CurrentUser.Id,
                 WorkflowProfileId.QuickLab);
             Snackbar.Add($"Opened {change.Key} from {_comparison.AfterVersion.DisplayVersion}.", Severity.Success);
-            Nav.NavigateTo($"/changes/{change.Id}");
+            Nav.NavigateTo($"/workbench/changes/{change.Id}");
         }
         catch (DomainException ex)
         {

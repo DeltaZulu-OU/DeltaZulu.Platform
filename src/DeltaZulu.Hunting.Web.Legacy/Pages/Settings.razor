@@ -1,15 +1,12 @@
-@page "/settings"
+@page "/hunting/settings"
 @namespace DeltaZulu.Hunting.Web.Pages
 @inject DeltaZulu.Hunting.Web.Services.UserSettingsState UserSettings
 
 <div class="settings-page">
-    <header class="settings-header">
-        <h1>Settings</h1>
-        <p>Configure default query toolbar behavior. Defaults are applied when opening the hunt page.</p>
-    </header>
+    <DzPageHeader Title="Settings"
+                  Description="Configure default query toolbar behavior. Defaults are applied when opening the hunt page." />
 
-    <section class="settings-card" aria-labelledby="default-time-heading">
-        <h2 id="default-time-heading">Default time filter</h2>
+    <DzPanel Title="Default time filter" Elevation="0" Outlined="true">
         <p class="settings-help">Select the pre-applied time range for new query sessions.</p>
 
         <InputRadioGroup @bind-Value="UserSettings.DefaultTimeFilter" @bind-Value:after="PersistSettingsAsync" Name="default-time" class="settings-grid">
@@ -21,10 +18,9 @@
                 </label>
             }
         </InputRadioGroup>
-    </section>
+    </DzPanel>
 
-    <section class="settings-card" aria-labelledby="default-limit-heading">
-        <h2 id="default-limit-heading">Default item limit</h2>
+    <DzPanel Title="Default item limit" Elevation="0" Outlined="true">
         <p class="settings-help">Choose a result cap that is applied unless your query specifies a limit.</p>
         <div class="settings-field-row">
             <label for="default-limit">Items per query</label>
@@ -35,7 +31,7 @@
                 }
             </select>
         </div>
-    </section>
+    </DzPanel>
 
     <footer class="settings-footer-note">
         <span>These settings are persisted in a local SQLite store for this environment.</span>
