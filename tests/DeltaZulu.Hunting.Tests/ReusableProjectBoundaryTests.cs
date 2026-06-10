@@ -5,11 +5,11 @@ public sealed class ReusableProjectBoundaryTests
 {
     private static readonly string[] ReusableProjectFiles =
     [
-        "src/Hunting.Core/Hunting.Core.csproj",
-        "src/Hunting.Schema/Hunting.Schema.csproj",
-        "src/Hunting.Data/Hunting.Data.csproj",
-        "src/Hunting.Render/Hunting.Render.csproj",
-        "src/Hunting.Application/Hunting.Application.csproj"
+        "src/DeltaZulu.Hunting.Core/DeltaZulu.Hunting.Core.csproj",
+        "src/DeltaZulu.Hunting.Schema/DeltaZulu.Hunting.Schema.csproj",
+        "src/DeltaZulu.Hunting.Data/DeltaZulu.Hunting.Data.csproj",
+        "src/DeltaZulu.Hunting.Render/DeltaZulu.Hunting.Render.csproj",
+        "src/DeltaZulu.Hunting.Application/DeltaZulu.Hunting.Application.csproj"
     ];
 
     [TestMethod]
@@ -35,7 +35,7 @@ public sealed class ReusableProjectBoundaryTests
 
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "Hunting.slnx")))
+            if (File.Exists(Path.Combine(directory.FullName, "DeltaZulu.Platform.slnx")))
             {
                 return directory.FullName;
             }

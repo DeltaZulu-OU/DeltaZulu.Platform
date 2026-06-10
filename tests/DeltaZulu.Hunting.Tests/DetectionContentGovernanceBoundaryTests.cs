@@ -11,7 +11,7 @@ public sealed class DetectionContentGovernanceBoundaryTests
     public void ApplicationProject_DoesNotDefineLocalDetectionContentContracts()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var localContractDirectory = Path.Combine(repositoryRoot, "src/Hunting.Application/DetectionContent");
+        var localContractDirectory = Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Application/DetectionContent");
 
         Assert.IsFalse(
             Directory.Exists(localContractDirectory),
@@ -47,7 +47,7 @@ public sealed class DetectionContentGovernanceBoundaryTests
 
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "Hunting.slnx")))
+            if (File.Exists(Path.Combine(directory.FullName, "DeltaZulu.Platform.slnx")))
             {
                 return directory.FullName;
             }

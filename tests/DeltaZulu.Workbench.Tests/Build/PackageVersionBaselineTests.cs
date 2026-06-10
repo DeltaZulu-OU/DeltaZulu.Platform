@@ -63,7 +63,7 @@ public sealed class PackageVersionBaselineTests
     {
         var repoRoot = FindRepositoryRoot();
         var buildPropsPath = Path.Combine(repoRoot.FullName, "Directory.Build.props");
-        var ciWorkflowPath = Path.Combine(repoRoot.FullName, ".github", "workflows", "workbench-ci.yml");
+        var ciWorkflowPath = Path.Combine(repoRoot.FullName, "docs", "modules", "workbench", "repository", ".github", "workflows", "workbench-ci.yml");
 
         var buildProps = XDocument.Load(buildPropsPath);
         var restorePackagesWithLockFile = buildProps.Descendants("RestorePackagesWithLockFile")
@@ -73,7 +73,7 @@ public sealed class PackageVersionBaselineTests
         Assert.AreEqual("true", restorePackagesWithLockFile, "Directory.Build.props must require package lock files for every Workbench project.");
 
         var ciWorkflow = File.ReadAllText(ciWorkflowPath);
-        StringAssert.Contains(ciWorkflow, "dotnet restore DetectionContentWorkbench.slnx --locked-mode");
+        StringAssert.Contains(ciWorkflow, "dotnet restore DeltaZulu.Platform.slnx --locked-mode");
     }
 
     [TestMethod]
@@ -97,14 +97,14 @@ public sealed class PackageVersionBaselineTests
     public void HuntingCoreAdapter_DoesNotReferenceWorkbenchWeb()
     {
         var repoRoot = FindRepositoryRoot();
-        var adapterProjectPath = Path.Combine(repoRoot.FullName, "src", "Workbench.HuntingCoreAdapter", "Workbench.HuntingCoreAdapter.csproj");
+        var adapterProjectPath = Path.Combine(repoRoot.FullName, "src", "DeltaZulu.Workbench.HuntingAdapter", "DeltaZulu.Workbench.HuntingAdapter.csproj");
         var document = XDocument.Load(adapterProjectPath);
 
         var projectReferences = document.Descendants("ProjectReference")
             .Select(element => (string?)element.Attribute("Include") ?? string.Empty)
             .ToList();
 
-        CollectionAssert.DoesNotContain(projectReferences, @"..\Workbench.Web\Workbench.Web.csproj");
+        CollectionAssert.DoesNotContain(projectReferences, @"..\DeltaZulu.Workbench.Web\DeltaZulu.Workbench.Web.csproj");
         Assert.IsFalse(projectReferences.Any(reference => reference.Contains("Workbench.Web", StringComparison.OrdinalIgnoreCase)),
             "The reusable Hunting.Core validation adapter must not reference Workbench.Web or any future Hunting.Web module.");
     }
@@ -123,7 +123,7 @@ public sealed class PackageVersionBaselineTests
         while (directory is not null)
         {
             if (File.Exists(Path.Combine(directory.FullName, "Directory.Packages.props"))
-                && File.Exists(Path.Combine(directory.FullName, "DetectionContentWorkbench.slnx")))
+                && File.Exists(Path.Combine(directory.FullName, "DeltaZulu.Platform.slnx")))
             {
                 return directory;
             }

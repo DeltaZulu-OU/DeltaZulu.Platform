@@ -8,7 +8,7 @@ public sealed class WebHostBoundaryTests
     public void Program_DelegatesToStandaloneHostExtensions()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var program = File.ReadAllText(Path.Combine(repositoryRoot, "src/Hunting.Web/Program.cs"));
+        var program = File.ReadAllText(Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web.Legacy/Program.cs"));
 
         StringAssert.Contains(program, "builder.AddHuntingStandaloneWeb();");
         StringAssert.Contains(program, "await app.UseHuntingStandaloneWebAsync();");
@@ -21,7 +21,7 @@ public sealed class WebHostBoundaryTests
     public void App_UsesModuleRouterWithStandaloneLayout()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var app = File.ReadAllText(Path.Combine(repositoryRoot, "src/Hunting.Web/App.razor"));
+        var app = File.ReadAllText(Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web.Legacy/App.razor"));
 
         StringAssert.Contains(app, "<HuntingModuleRouter");
         StringAssert.Contains(app, "StandaloneHuntingLayout");
@@ -32,7 +32,7 @@ public sealed class WebHostBoundaryTests
     public void RazorFiles_DoNotExplicitlyUseMainLayout()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var webRoot = Path.Combine(repositoryRoot, "src/Hunting.Web");
+        var webRoot = Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web.Legacy");
         var razorFiles = Directory.EnumerateFiles(webRoot, "*.razor", SearchOption.AllDirectories)
             .Where(path => !path.EndsWith(Path.Combine("Shared", "MainLayout.razor"), StringComparison.OrdinalIgnoreCase))
             .Where(path => !path.EndsWith(Path.Combine("Shared", "StandaloneHuntingLayout.razor"), StringComparison.OrdinalIgnoreCase))
@@ -53,7 +53,7 @@ public sealed class WebHostBoundaryTests
     public void WebModuleRegistration_ExposesSeparateRuntimeAndApplicationStateLayers()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var registration = File.ReadAllText(Path.Combine(repositoryRoot, "src/Hunting.Web/Hosting/HuntingWebModuleServiceCollectionExtensions.cs"));
+        var registration = File.ReadAllText(Path.Combine(repositoryRoot, "src/DeltaZulu.Hunting.Web.Legacy/Hosting/HuntingWebModuleServiceCollectionExtensions.cs"));
 
         StringAssert.Contains(registration, "AddHuntingRuntime(");
         StringAssert.Contains(registration, "AddHuntingApplicationState(");
@@ -77,7 +77,7 @@ public sealed class WebHostBoundaryTests
 
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "Hunting.slnx")))
+            if (File.Exists(Path.Combine(directory.FullName, "DeltaZulu.Platform.slnx")))
             {
                 return directory.FullName;
             }
