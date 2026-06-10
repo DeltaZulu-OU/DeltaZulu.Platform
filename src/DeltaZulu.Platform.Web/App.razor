@@ -25,6 +25,13 @@
     <script src="_content/Vizor.ECharts/js/vizor-echarts-bundle-min.js"></script>
     <script src="_content/DeltaZulu.Hunting.Web/js/monaco.js"></script>
     <script src="_content/DeltaZulu.Hunting.Web/js/kql-helper-editor.js"></script>
+
+    @{
+#if DEBUG
+    <script>window.deltaZuluDebug = true;</script>
+#endif
+    }
+
     <script src="_content/DeltaZulu.Hunting.Web/js/monaco-theme-loader.js"></script>
     <script src="_content/DeltaZulu.Hunting.Web/js/dashboard-widget-editor.js"></script>
     <script src="_content/DeltaZulu.Hunting.Web/js/dashboard-transfer.js"></script>

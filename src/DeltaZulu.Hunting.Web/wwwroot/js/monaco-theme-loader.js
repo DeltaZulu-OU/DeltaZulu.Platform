@@ -1,22 +1,95 @@
 /*
  * DeltaZulu / Atom One Light Monaco theme integration.
  *
- * The source theme is stored as /js/monaco-themes/atom-one-light.json.
- * Monaco does not consume VS Code `tokenColors` directly, so this loader maps the
- * generic TextMate scopes used by the uploaded theme into Monaco token rules used
- * by the local KQL Monarch tokenizer.
+ * The source theme is stored next to this script under:
+ *   ./monaco-themes/atom-one-light.json
+ *
+ * When loaded as a Blazor static web asset, the script usually lives under:
+ *   /_content/DeltaZulu.Hunting.Web/js/monaco-theme-loader.js
+ *
+ * Therefore the theme URL must be resolved relative to the current script,
+ * not from the application root.
  */
 (function () {
-    const themeName = 'atom-one-light';
-    const themeUrl = '/js/monaco-themes/atom-one-light.json';
+    'use strict';
+
+    const customThemeName = 'atom-one-light';
+    const fallbackThemeName = 'vs';
+    const fallbackThemeUrl = '_content/DeltaZulu.Hunting.Web/js/monaco-themes/atom-one-light.json';
+
+    let activeThemeName = customThemeName;
     let registered = false;
     let registerPromise = null;
+    let patchTimer = null;
+
+    const isDebugEnabled = () =>
+        Boolean(window.deltaZuluDebug || window.huntingMonacoDebug);
+
+    const debug = (...args) => {
+        if (isDebugEnabled()) {
+            console.debug('[DeltaZulu Monaco Theme]', ...args);
+        }
+    };
+
+    const warn = (...args) => {
+        if (isDebugEnabled()) {
+            console.warn('[DeltaZulu Monaco Theme]', ...args);
+        }
+    };
+
+    const error = (...args) => {
+        if (isDebugEnabled()) {
+            console.error('[DeltaZulu Monaco Theme]', ...args);
+        }
+    };
+
+    const resolveThemeUrl = () => {
+        try {
+            const scriptUrl = document.currentScript?.src;
+
+            if (scriptUrl) {
+                return new URL('./monaco-themes/atom-one-light.json', scriptUrl).toString();
+            }
+
+            return fallbackThemeUrl;
+        }
+        catch (exception) {
+            warn('Could not resolve theme URL from current script. Falling back to static web asset path.', exception);
+            return fallbackThemeUrl;
+        }
+    };
+
+    const themeUrl = resolveThemeUrl();
+
+    const getMonaco = () => {
+        if (!window.monaco?.editor) {
+            throw new Error('Monaco editor API is not available.');
+        }
+
+        return window.monaco;
+    };
+
+    const ensureMonacoAvailable = async () => {
+        if (typeof window.ensureMonaco !== 'function') {
+            throw new Error('window.ensureMonaco is not available.');
+        }
+
+        await window.ensureMonaco();
+        return getMonaco();
+    };
 
     const readScopeColor = (source, scopeName, fallback) => {
-        const rules = source?.tokenColors ?? [];
+        const rules = Array.isArray(source?.tokenColors)
+            ? source.tokenColors
+            : [];
+
         const found = rules.find((rule) => {
-            const scope = rule.scope;
-            if (Array.isArray(scope)) return scope.includes(scopeName);
+            const scope = rule?.scope;
+
+            if (Array.isArray(scope)) {
+                return scope.includes(scopeName);
+            }
+
             return scope === scopeName;
         });
 
@@ -24,10 +97,17 @@
     };
 
     const readScopeStyle = (source, scopeName, fallback = '') => {
-        const rules = source?.tokenColors ?? [];
+        const rules = Array.isArray(source?.tokenColors)
+            ? source.tokenColors
+            : [];
+
         const found = rules.find((rule) => {
-            const scope = rule.scope;
-            if (Array.isArray(scope)) return scope.includes(scopeName);
+            const scope = rule?.scope;
+
+            if (Array.isArray(scope)) {
+                return scope.includes(scopeName);
+            }
+
             return scope === scopeName;
         });
 
@@ -35,8 +115,13 @@
     };
 
     const normalizeHex = (value) => {
-        if (typeof value !== 'string') return value;
-        return value.startsWith('#') ? value.slice(1) : value;
+        if (typeof value !== 'string') {
+            return value;
+        }
+
+        return value.startsWith('#')
+            ? value.slice(1)
+            : value;
     };
 
     const toRule = (token, foreground, fontStyle) => ({
@@ -46,7 +131,9 @@
     });
 
     const createMonacoTheme = (source) => {
-        const colors = source?.colors ?? {};
+        const colors = source?.colors && typeof source.colors === 'object'
+            ? source.colors
+            : {};
 
         const foreground = colors['editor.foreground'] ?? '#383A42';
         const editorBackground = colors['editor.background'] ?? '#FAFAFA';
@@ -68,7 +155,7 @@
         const commentStyle = readScopeStyle(source, 'comment', 'italic');
 
         return {
-            base: 'vs',
+            base: fallbackThemeName,
             inherit: true,
             colors: {
                 ...colors,
@@ -107,77 +194,172 @@
     };
 
     const loadThemeSource = async () => {
-        const response = await fetch(themeUrl, { cache: 'force-cache' });
-        if (!response.ok) {
-            throw new Error(`Could not load Monaco theme source: ${themeUrl}`);
+        debug('Loading Monaco theme source.', { themeUrl });
+
+        let response;
+
+        try {
+            response = await fetch(themeUrl, {
+                cache: 'force-cache',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+        }
+        catch (exception) {
+            throw new Error(`Could not fetch Monaco theme source: ${themeUrl}`, {
+                cause: exception
+            });
         }
 
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(
+                `Could not load Monaco theme source: ${themeUrl}. HTTP ${response.status} ${response.statusText}`.trim()
+            );
+        }
+
+        try {
+            const source = await response.json();
+
+            if (!source || typeof source !== 'object') {
+                throw new Error('Theme source was not a JSON object.');
+            }
+
+            return source;
+        }
+        catch (exception) {
+            throw new Error(`Could not parse Monaco theme source JSON: ${themeUrl}`, {
+                cause: exception
+            });
+        }
     };
 
     const registerTheme = async () => {
-        if (registered) return;
-        if (registerPromise) return registerPromise;
+        if (registered) {
+            return;
+        }
+
+        if (registerPromise) {
+            return registerPromise;
+        }
 
         registerPromise = (async () => {
-            await window.ensureMonaco();
-            const source = await loadThemeSource();
-            monaco.editor.defineTheme(themeName, createMonacoTheme(source));
+            const monacoInstance = await ensureMonacoAvailable();
+
+            try {
+                const source = await loadThemeSource();
+                monacoInstance.editor.defineTheme(customThemeName, createMonacoTheme(source));
+                activeThemeName = customThemeName;
+                debug('Registered custom Monaco theme.', { themeName: activeThemeName, themeUrl });
+            }
+            catch (exception) {
+                activeThemeName = fallbackThemeName;
+                warn('Custom Monaco theme could not be loaded. Falling back to built-in theme.', exception);
+            }
+
             registered = true;
         })();
 
-        return registerPromise;
+        try {
+            return await registerPromise;
+        }
+        catch (exception) {
+            registerPromise = null;
+            registered = false;
+            error('Monaco theme registration failed before fallback could be applied.', exception);
+            throw exception;
+        }
     };
 
     const applyTheme = async () => {
         await registerTheme();
-        monaco.editor.setTheme(themeName);
+
+        try {
+            getMonaco().editor.setTheme(activeThemeName);
+            debug('Applied Monaco theme.', { themeName: activeThemeName });
+        }
+        catch (exception) {
+            warn('Could not apply Monaco theme.', exception);
+        }
     };
 
     const patchHuntingMonacoInit = () => {
-        if (!window.huntingMonaco || window.huntingMonaco.__atomOneLightThemePatched) {
-            return Boolean(window.huntingMonaco?.__atomOneLightThemePatched);
+        if (!window.huntingMonaco) {
+            return false;
+        }
+
+        if (window.huntingMonaco.__atomOneLightThemePatched) {
+            return true;
+        }
+
+        if (typeof window.huntingMonaco.init !== 'function') {
+            warn('window.huntingMonaco exists, but init is not a function.');
+            return false;
         }
 
         const originalInit = window.huntingMonaco.init;
+
         window.huntingMonaco.init = async function (...args) {
             await registerTheme();
 
-            const originalCreate = monaco.editor.create;
-            monaco.editor.create = function (container, options, ...rest) {
-                return originalCreate.call(monaco.editor, container, {
+            const monacoInstance = getMonaco();
+            const originalCreate = monacoInstance.editor.create;
+
+            monacoInstance.editor.create = function (container, options, ...rest) {
+                return originalCreate.call(monacoInstance.editor, container, {
                     ...(options ?? {}),
-                    theme: themeName
+                    theme: activeThemeName
                 }, ...rest);
             };
 
             try {
+                debug('Initializing KQL Monaco editor with theme wrapper.', { themeName: activeThemeName });
                 return await originalInit.apply(window.huntingMonaco, args);
             }
             finally {
-                monaco.editor.create = originalCreate;
-                monaco.editor.setTheme(themeName);
+                monacoInstance.editor.create = originalCreate;
+
+                try {
+                    monacoInstance.editor.setTheme(activeThemeName);
+                }
+                catch (exception) {
+                    warn('Could not re-apply Monaco theme after editor initialization.', exception);
+                }
             }
         };
 
         window.huntingMonaco.__atomOneLightThemePatched = true;
         window.huntingMonaco.applyEditorTheme = applyTheme;
+
+        debug('Patched huntingMonaco.init for theme application.');
         return true;
     };
 
     window.huntingMonacoTheme = {
-        name: themeName,
+        get name() {
+            return activeThemeName;
+        },
+        get sourceUrl() {
+            return themeUrl;
+        },
         register: registerTheme,
         apply: applyTheme
     };
 
     if (!patchHuntingMonacoInit()) {
-        const patchTimer = window.setInterval(() => {
+        patchTimer = window.setInterval(() => {
             if (patchHuntingMonacoInit()) {
                 window.clearInterval(patchTimer);
+                patchTimer = null;
             }
         }, 25);
 
-        window.setTimeout(() => window.clearInterval(patchTimer), 5000);
+        window.setTimeout(() => {
+            if (patchTimer) {
+                window.clearInterval(patchTimer);
+                patchTimer = null;
+                warn('Timed out while waiting to patch huntingMonaco.init.');
+            }
+        }, 5000);
     }
 })();
