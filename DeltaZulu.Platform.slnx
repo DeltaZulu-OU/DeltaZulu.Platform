@@ -11,9 +11,7 @@
 
   <!-- Workbench module -->
   <Project Path="src/DeltaZulu.Workbench.Domain/DeltaZulu.Workbench.Domain.csproj" />
-  <Project Path="src/DeltaZulu.Platform.Web.Abstractions/DeltaZulu.Platform.Web.Abstractions.csproj">
-    <Build Solution="Debug|*" Project="false" />
-  </Project>
+  <Project Path="src/DeltaZulu.Platform.Web.Abstractions/DeltaZulu.Platform.Web.Abstractions.csproj" />
   <Project Path="src/DeltaZulu.Platform.Web/DeltaZulu.Platform.Web.csproj">
     <Build Solution="Debug|*" Project="false" />
   </Project>
