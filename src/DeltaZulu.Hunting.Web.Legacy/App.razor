@@ -1,6 +1,7 @@
+@using DeltaZulu.Blazor.Components
 @using DeltaZulu.Hunting.Web.Components.Hosting
 
-<MudThemeProvider />
+<MudThemeProvider Theme="_theme" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -10,3 +11,7 @@
         <p>Page not found.</p>
     </NotFound>
 </HuntingModuleRouter>
+
+@code {
+    private readonly MudBlazor.MudTheme _theme = DeltaZuluTheme.Create();
+}

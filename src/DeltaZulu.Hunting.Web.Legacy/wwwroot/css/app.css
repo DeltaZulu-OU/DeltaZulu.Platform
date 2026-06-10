@@ -1,17 +1,19 @@
 /*
  * Hunting consolidated application stylesheet.
  *
- * Load only these local stylesheets after MudBlazor:
- *   1. css/deltazulu/colors_and_type.css
- *   2. css/app.css
+ * Load order (set in _Host.cshtml):
+ *   1. _content/MudBlazor/MudBlazor.min.css
+ *   2. _content/DeltaZulu.Blazor.Components/deltazulu-tokens.css
+ *   3. _content/DeltaZulu.Blazor.Components/dz-components.css
+ *   4. _content/DeltaZulu.Blazor.Components/dz-shell.css
+ *   5. css/app.css  (this file)
  *
- * This file intentionally replaces the previous mix of app.css,
- * dashboard.css, dashboards.css, topbar.css, and query-library-drawer.css.
- * The legacy --bg-*, --text-*, and --accent aliases are mapped in both
- * :root and .hunt-app so scoped variables cannot silently defeat the
- * DeltaZulu product theme.
+ * Design tokens, typography classes, and shared component CSS come from
+ * DeltaZulu.Blazor.Components. This file contains only Hunting product-
+ * specific layout, the --hunt-* scoped alias layer, and legacy --bg-*/
+ * --text-* compatibility aliases.
  */
-@import url("./deltazulu/dz-query-result-table.css");
+@import url("./dz-query-result-table.css");
 
 :root,
 .hunt-app {
@@ -1213,9 +1215,10 @@ body.hunt-splitter-active {
  *
  * Load order:
  *   1. _content/MudBlazor/MudBlazor.min.css
- *   2. css/deltazulu/colors_and_type.css      (canonical DeltaZulu tokens; do not edit locally)
- *   3. css/app.css                            (existing component layout and behaviour)
- *   4. css/deltazulu/dashboard.css            (this file)
+ *   2. _content/DeltaZulu.Blazor.Components/deltazulu-tokens.css  (canonical DeltaZulu tokens)
+ *   3. _content/DeltaZulu.Blazor.Components/dz-components.css   (shared component CSS)
+ *   4. _content/DeltaZulu.Blazor.Components/dz-shell.css        (shared shell/layout CSS)
+ *   5. css/app.css                                              (this file)
  *
  * Purpose:
  *   Keep the upstream DeltaZulu design system intact, then adapt the existing
@@ -1711,7 +1714,7 @@ body.hunt-splitter-active {
    9. Render/chart surfaces
    --------------------------------------------------------------------------
    Brand orange remains action-only. Chart colours use DeltaZulu Spectra
-   tokens from colors_and_type.css.
+   tokens from deltazulu-tokens.css.
    ────────────────────────────────────────────────────────────────────────── */
 
 .hunt-render-panel {

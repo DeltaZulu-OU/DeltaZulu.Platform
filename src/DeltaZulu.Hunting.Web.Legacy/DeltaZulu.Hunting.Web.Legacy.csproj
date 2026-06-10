@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DeltaZulu.Blazor.Components\DeltaZulu.Blazor.Components.csproj" />
     <ProjectReference Include="..\DeltaZulu.Hunting.Application\DeltaZulu.Hunting.Application.csproj" />
     <ProjectReference Include="..\DeltaZulu.Hunting.Core\DeltaZulu.Hunting.Core.csproj" />
     <ProjectReference Include="..\DeltaZulu.Hunting.Data\DeltaZulu.Hunting.Data.csproj" />
