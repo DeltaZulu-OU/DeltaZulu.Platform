@@ -22,7 +22,7 @@ public sealed class GovernanceModule : IPlatformModule
         new("Detections", "/workbench/detections", Icons.Material.Outlined.Radar),
         new("Changes", "/workbench/changes", Icons.Material.Outlined.Assignment),
         new("History", "/workbench/history", Icons.Material.Outlined.History),
-        new("Settings", "/settings", Icons.Material.Outlined.Settings, DividerBefore: true),
+        new("Settings", "/settings", Icons.Material.Outlined.Settings, DividerBefore: true, IsPlatformRoute: true),
     ];
 
     public IReadOnlyList<PlatformRouteGroup> RouteGroups { get; } =

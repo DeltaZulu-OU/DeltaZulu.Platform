@@ -21,7 +21,7 @@ public sealed class AnalyticsModule : IPlatformModule
         new("Threat Analytics", "/hunting/threat-hunting", Icons.Material.Outlined.Search),
         new("Library", "/hunting/library", Icons.Material.Outlined.LibraryBooks),
         new("Dashboards", "/hunting/dashboards", Icons.Material.Outlined.Dashboard),
-        new("Settings", "/settings", Icons.Material.Outlined.Settings, DividerBefore: true),
+        new("Settings", "/settings", Icons.Material.Outlined.Settings, DividerBefore: true, IsPlatformRoute: true),
     ];
 
     public IReadOnlyList<PlatformRouteGroup> RouteGroups { get; } =

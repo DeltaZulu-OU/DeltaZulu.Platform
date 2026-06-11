@@ -10,4 +10,5 @@ public sealed record DzNavItem(
     string Href,
     string Icon,
     NavLinkMatch Match = NavLinkMatch.Prefix,
-    bool DividerBefore = false);
+    bool DividerBefore = false,
+    bool IsPlatformRoute = false);
