@@ -3,7 +3,7 @@ namespace DeltaZulu.Platform.Domain.Workbench.Contracts;
 /// <summary>
 /// Abstraction over the Git-backed accepted content store. The application layer talks to
 /// this interface; <c>Workbench.Infrastructure</c> implements it with LibGit2Sharp.
-/// Tests use <see cref="InMemoryContentStore"/> (in the test project) for isolation.
+/// Tests use <see cref="Platform.Tests.Workbench.Infrastructure.InMemoryContentStore"/> (in the test project) for isolation.
 /// </summary>
 /// <remarks>
 /// <para>Per ADR-0002, the accepted content store is the authoritative source for detection

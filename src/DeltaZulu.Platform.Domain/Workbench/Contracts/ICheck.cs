@@ -8,7 +8,7 @@ namespace DeltaZulu.Platform.Domain.Workbench.Contracts;
 /// </summary>
 /// <remarks>
 /// <para>Each check declares its <see cref="Name"/> (stable identifier used in
-/// <see cref="Domain.Changes.CheckRun"/>), whether it <see cref="IsBlocking"/> under
+/// <see cref="Changes.CheckRun"/>), whether it <see cref="IsBlocking"/> under
 /// profiles that require passing checks, and which <see cref="ApplicableContentTypes"/>
 /// trigger it. The pipeline runner skips checks whose applicable types are not present
 /// in the draft file set.</para>
@@ -19,7 +19,7 @@ public interface ICheck
 {
     /// <summary>
     /// Stable name, e.g. <c>package-schema</c>, <c>query-syntax</c>. Used as the
-    /// <see cref="Domain.Changes.CheckRun.Name"/>.
+    /// <see cref="Changes.CheckRun.Name"/>.
     /// </summary>
     string Name { get; }
 

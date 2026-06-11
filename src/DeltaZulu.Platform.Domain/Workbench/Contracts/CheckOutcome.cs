@@ -4,7 +4,7 @@ namespace DeltaZulu.Platform.Domain.Workbench.Contracts;
 
 /// <summary>
 /// Result of running a single <see cref="ICheck"/>. The pipeline maps this to
-/// <see cref="Domain.Changes.CheckRun.Complete"/>.
+/// <see cref="Changes.CheckRun.Complete"/>.
 /// </summary>
 public sealed record CheckOutcome
 {
