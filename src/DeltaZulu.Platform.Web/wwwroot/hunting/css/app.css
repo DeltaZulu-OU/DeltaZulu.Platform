@@ -1205,9 +1205,11 @@ samp,
     color: var(--brand-ink);
 }
 
-/* MudBlazor colour normalization for the shell. */
-.mud-appbar,
-.mud-toolbar {
+/* MudBlazor colour normalization — scoped to hunting workspace. */
+.hunt-app .mud-appbar,
+.hunt-app .mud-toolbar,
+.hunt-topbar.mud-appbar,
+.hunt-topbar.mud-toolbar {
     background: var(--dz-product-surface) !important;
     color: var(--dz-product-text) !important;
 }

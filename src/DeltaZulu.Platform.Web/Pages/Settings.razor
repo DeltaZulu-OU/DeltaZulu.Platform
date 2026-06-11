@@ -22,7 +22,7 @@
 
 <MudGrid Spacing="3">
 
-    {{-- ── Analytics ── --}}
+    @* ── Analytics ── *@
     <MudItem xs="12" md="6">
         <DzPanel Eyebrow="Analytics" Title="Default time filter" Class="dz-panel--full-height" Elevation="0" Outlined="true">
             <MudRadioGroup @bind-Value="UserSettings.DefaultTimeFilter" @bind-Value:after="PersistSettingsAsync" T="string">
@@ -47,7 +47,7 @@
         </DzPanel>
     </MudItem>
 
-    {{-- ── Governance ── --}}
+    @* ── Governance ── *@
     <MudItem xs="12" md="6">
         <DzPanel Eyebrow="POC user" Title="Current actor" Class="dz-panel--full-height">
             <MudSelect Value="UserContext.CurrentPersona" ValueChanged="SwitchUser"
@@ -78,7 +78,7 @@
         </DzPanel>
     </MudItem>
 
-    {{-- ── Operations ── --}}
+    @* ── Operations ── *@
     <MudItem xs="12">
         <DzPanel Eyebrow="Operations" Title="Merge reconciliation" Class="mb-4">
             <Actions>
