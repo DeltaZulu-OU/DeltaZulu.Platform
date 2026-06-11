@@ -1,9 +1,10 @@
-namespace DeltaZulu.Platform.Tests.Hunting;
 
+using DeltaZulu.Platform.Data.Sqlite.Hunting;
 using DeltaZulu.Platform.Data.Sqlite.Hunting.QueryHistory;
 using Microsoft.Data.Sqlite;
-using AppQueryHistoryRecord = Hunting.Application.QueryHistory.QueryHistoryRecord;
+using AppQueryHistoryRecord = DeltaZulu.Platform.Domain.Hunting.QueryHistory.QueryHistoryRecord;
 
+namespace DeltaZulu.Platform.Tests.Hunting;
 [TestClass]
 public sealed class QueryHistoryRepositoryTests
 {

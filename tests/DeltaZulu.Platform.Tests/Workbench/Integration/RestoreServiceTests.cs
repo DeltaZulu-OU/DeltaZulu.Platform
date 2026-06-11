@@ -178,10 +178,7 @@ public sealed class RestoreServiceTests : IDisposable
     private static string DraftContent(ChangeRequest change, string logicalPath)
         => change.DraftFiles.Single(f => f.Path.Value == logicalPath).Content;
 
-    public void Dispose()
-    {
-        _host.Dispose();
-    }
+    public void Dispose() => _host.Dispose();
 
     public TestContext TestContext { get; set; }
 }

@@ -1,7 +1,9 @@
+
+using DeltaZulu.Platform.Application.Hunting.Catalog;
+using DeltaZulu.Platform.Domain.Hunting.Policy;
+using DeltaZulu.Platform.Domain.Hunting.QueryModel;
+
 namespace DeltaZulu.Platform.Application.Hunting.Translation;
-
-using Catalog;
-
 /// <summary>
 /// Backward-compatible public entry point for KQL-to-<see cref="RelNode"/> translation.
 /// Translation behavior lives in the internal <see cref="KustoQueryTranslator"/> facade so

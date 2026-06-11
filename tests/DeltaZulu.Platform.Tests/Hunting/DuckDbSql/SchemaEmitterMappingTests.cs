@@ -1,11 +1,10 @@
-namespace DeltaZulu.Platform.Tests.Hunting.DuckDbSql;
 
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Hunting.Mapping;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static DeltaZulu.Platform.Domain.Hunting.Mapping.MapDsl;
 
+namespace DeltaZulu.Platform.Tests.Hunting.DuckDbSql;
 [TestClass]
 public sealed class SchemaEmitterMappingTests
 {

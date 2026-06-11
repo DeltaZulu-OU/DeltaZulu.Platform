@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Data.Seeding;
 
 using System.Text;
 using DeltaZulu.Platform.Application.Hunting.Samples;
 using DeltaZulu.Platform.Domain.Hunting.SavedQueries;
 
+namespace DeltaZulu.Platform.Data.Seeding;
 internal static class SampleSavedQuerySeeder
 {
     private static readonly DateTime SeedTimestamp = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);

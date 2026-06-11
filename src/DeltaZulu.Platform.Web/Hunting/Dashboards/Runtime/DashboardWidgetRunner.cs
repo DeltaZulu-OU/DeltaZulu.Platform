@@ -1,15 +1,13 @@
-namespace DeltaZulu.Platform.Web.Hunting.Dashboards.Runtime;
 
 using System.Diagnostics;
-using System.Linq;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
 using DeltaZulu.Platform.Domain.Hunting.Rendering;
 using DeltaZulu.Platform.Domain.Hunting.SavedQueries;
 using DeltaZulu.Platform.Domain.Hunting.Visualizations;
 using DeltaZulu.Platform.Web.Hunting.Rendering;
 using DeltaZulu.Platform.Web.Hunting.Visualizations;
-using Microsoft.Extensions.Logging;
 
+namespace DeltaZulu.Platform.Web.Hunting.Dashboards.Runtime;
 public sealed partial class DashboardWidgetRunner
 {
     private readonly EChartsRenderOptionsBuilder _chartOptionsBuilder;

@@ -1,7 +1,8 @@
-namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 
 using System.Text;
+using DeltaZulu.Platform.Domain.Hunting.QueryModel;
 
+namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 internal sealed partial class DuckDbRelNodeEmitter
 {
     internal string Emit(RelNode node)

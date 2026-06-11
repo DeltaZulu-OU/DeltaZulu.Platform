@@ -1,3 +1,5 @@
+using DeltaZulu.Platform.Application.Hunting.Rendering.Tabular;
+
 namespace DeltaZulu.Platform.Tests.Hunting.Render;
 
 [TestClass]

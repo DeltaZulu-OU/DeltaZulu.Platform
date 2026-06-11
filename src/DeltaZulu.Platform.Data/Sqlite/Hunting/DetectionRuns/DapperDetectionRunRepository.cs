@@ -1,9 +1,8 @@
-namespace DeltaZulu.Platform.Data.Sqlite.Hunting.DetectionRuns;
 
 using Dapper;
-using DeltaZulu.Platform.Data.Sqlite.Hunting;
 using DeltaZulu.Platform.Domain.Hunting.DetectionRuns;
 
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting.DetectionRuns;
 public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IDisposable
 {
     private const string CreateSchemaSql =

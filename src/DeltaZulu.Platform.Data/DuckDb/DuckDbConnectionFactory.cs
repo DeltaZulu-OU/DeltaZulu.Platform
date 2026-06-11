@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Data.DuckDb;
 
 using Dapper;
 using DuckDB.NET.Data;
 
+namespace DeltaZulu.Platform.Data.DuckDb;
 /// <summary>
 /// <para>
 /// Manages DuckDB connection lifecycle. For MVP, provides a single

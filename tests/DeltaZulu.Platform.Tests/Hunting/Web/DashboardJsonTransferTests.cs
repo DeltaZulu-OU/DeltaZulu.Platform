@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Web;
 
 using DeltaZulu.Platform.Web.Hunting.Dashboards;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Web;
 [TestClass]
 public sealed class DashboardJsonTransferTests
 {
@@ -32,7 +32,7 @@ public sealed class DashboardJsonTransferTests
     [TestMethod]
     public void ImportAsCopy_RejectsInvalidDashboard()
     {
-        var json = """
+        const string json = """
 {
   "id": "dashboard",
   "name": "",

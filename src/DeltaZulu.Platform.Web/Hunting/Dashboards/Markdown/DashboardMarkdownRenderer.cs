@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Web.Hunting.Dashboards.Markdown;
 
 using System.Net;
 using System.Text.RegularExpressions;
 using Markdig;
 
+namespace DeltaZulu.Platform.Web.Hunting.Dashboards.Markdown;
 public static partial class DashboardMarkdownRenderer
 {
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
@@ -18,7 +18,7 @@ public static partial class DashboardMarkdownRenderer
             return string.Empty;
         }
 
-        var html = Markdown.ToHtml(markdown, Pipeline);
+        var html = Markdig.Markdown.ToHtml(markdown, Pipeline);
         return SanitizeLinks(html);
     }
 

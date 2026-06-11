@@ -1,7 +1,8 @@
-namespace DeltaZulu.Platform.Tests.Hunting;
 
 using DeltaZulu.Platform.Domain.Hunting.ContentLibrary;
+using DeltaZulu.Platform.Domain.Hunting.SavedQueries;
 
+namespace DeltaZulu.Platform.Tests.Hunting;
 [TestClass]
 public sealed class SavedQueryContentLibraryMapperTests
 {

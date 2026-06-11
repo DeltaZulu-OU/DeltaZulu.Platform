@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Render;
 
 using DeltaZulu.Platform.Application.Hunting.Rendering.Services;
 using DeltaZulu.Platform.Application.Hunting.Rendering.Tabular;
 using DeltaZulu.Platform.Domain.Hunting.Rendering;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Render;
 [TestClass]
 public sealed class RenderChartBuilderTests
 {

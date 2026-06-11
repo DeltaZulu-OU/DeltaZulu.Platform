@@ -66,9 +66,7 @@ public sealed class Issue : Entity<IssueId>
         ExternalCaseRef? externalCase, DateTimeOffset createdAt, DateTimeOffset updatedAt,
         string? description = null, string? acceptanceCriteria = null,
         string? dataSource = null, string? platform = null, string? attackTechniqueId = null,
-        TlpLevel? tlp = null, IReadOnlyList<string>? labels = null)
-    {
-        return new Issue(id, key, title, type, createdAt)
+        TlpLevel? tlp = null, IReadOnlyList<string>? labels = null) => new Issue(id, key, title, type, createdAt)
         {
             Status = status,
             ExternalCase = externalCase,
@@ -81,7 +79,6 @@ public sealed class Issue : Entity<IssueId>
             Labels = labels ?? [],
             UpdatedAt = updatedAt
         };
-    }
 
     // --- classification ---------------------------------------------------------------------
 

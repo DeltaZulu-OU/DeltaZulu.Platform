@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Fixtures;
 
 using System.Globalization;
 using DuckDB.NET.Data;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Fixtures;
 /// <summary>
 /// <para>Test-owned DuckDB setup helpers for medallion execution tests.</para>
 /// <para>

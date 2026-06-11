@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Web;
 
 using DeltaZulu.Platform.Web.Hunting.Services;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Web;
 [TestClass]
 public sealed class EditorBusTests
 {

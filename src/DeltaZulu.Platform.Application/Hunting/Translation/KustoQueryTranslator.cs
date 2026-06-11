@@ -1,8 +1,10 @@
-namespace DeltaZulu.Platform.Application.Hunting.Translation;
 
-using Catalog;
+using DeltaZulu.Platform.Application.Hunting.Catalog;
+using DeltaZulu.Platform.Domain.Hunting.Policy;
+using DeltaZulu.Platform.Domain.Hunting.QueryModel;
 using Kusto.Language.Syntax;
 
+namespace DeltaZulu.Platform.Application.Hunting.Translation;
 /// <summary>
 /// <para>Translates analyzed Kusto AST into a RelNode intermediate query model.</para>
 /// <para>Pipeline: KQL string → Kusto.Language ParseAndAnalyze → this translator → RelNode tree</para>

@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Web.Hunting.Services;
 
 using DeltaZulu.Platform.Domain.Hunting.QueryHistory;
 using DeltaZulu.Platform.Domain.Hunting.SavedQueries;
 using DeltaZulu.Platform.Domain.Hunting.Visualizations;
 
+namespace DeltaZulu.Platform.Web.Hunting.Services;
 /// <summary>
 /// Application-facing service for saved queries and recent query history.
 /// This keeps editor components from depending directly on persistence repositories.

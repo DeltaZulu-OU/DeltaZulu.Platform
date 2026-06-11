@@ -1,10 +1,10 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Web;
 
 using DeltaZulu.Platform.Domain.Hunting.QueryHistory;
 using DeltaZulu.Platform.Domain.Hunting.SavedQueries;
 using DeltaZulu.Platform.Domain.Hunting.Visualizations;
 using DeltaZulu.Platform.Web.Hunting.Services;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Web;
 [TestClass]
 public sealed class QueryLibraryServiceTests
 {

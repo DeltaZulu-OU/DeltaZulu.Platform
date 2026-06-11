@@ -1,4 +1,3 @@
-namespace DeltaZulu.Platform.Data.DuckDb;
 
 using System.Collections;
 using System.Data.Common;
@@ -8,6 +7,7 @@ using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
 
+namespace DeltaZulu.Platform.Data.DuckDb;
 /// <summary>
 /// Normalizes dynamic DuckDB result values before they leave the data layer.
 /// Dapper is used for fixed application persistence. Dynamic KQL output still

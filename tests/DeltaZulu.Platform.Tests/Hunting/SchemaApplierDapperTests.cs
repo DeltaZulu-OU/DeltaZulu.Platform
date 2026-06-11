@@ -1,7 +1,8 @@
-namespace DeltaZulu.Platform.Tests.Hunting;
 
+using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 
+namespace DeltaZulu.Platform.Tests.Hunting;
 [TestClass]
 public sealed class SchemaApplierDapperTests
 {

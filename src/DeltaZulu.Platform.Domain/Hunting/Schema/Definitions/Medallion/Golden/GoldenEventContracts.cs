@@ -1,7 +1,4 @@
 namespace DeltaZulu.Platform.Domain.Hunting.Schema.Definitions.Medallion.Golden;
-
-using DeltaZulu.Platform.Domain.Hunting.Schema;
-
 /// <summary>
 /// <para>Active Phase 1A Golden operator-facing contracts.</para>
 /// <para>These contracts intentionally use singular event-family names.</para>

@@ -1,4 +1,3 @@
-namespace DeltaZulu.Platform.Data.Sqlite.Hunting;
 
 using DeltaZulu.Platform.Data.Seeding;
 using DeltaZulu.Platform.Data.Sqlite.Hunting.Alerts;
@@ -15,8 +14,9 @@ using DeltaZulu.Platform.Domain.Hunting.QueryHistory;
 using DeltaZulu.Platform.Domain.Hunting.SavedQueries;
 using DeltaZulu.Platform.Domain.Hunting.Visualizations;
 using Microsoft.Extensions.DependencyInjection;
-using IUserSettingsRepository = Application.Settings.IUserSettingsRepository;
+using IUserSettingsRepository = DeltaZulu.Platform.Domain.Hunting.Settings.IUserSettingsRepository;
 
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting;
 public static class ApplicationPersistenceServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationPersistence(

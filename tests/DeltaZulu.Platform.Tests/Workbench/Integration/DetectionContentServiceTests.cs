@@ -79,10 +79,7 @@ public sealed class DetectionContentServiceTests : IDisposable
         }
     }
 
-    public void Dispose()
-    {
-        _host.Dispose();
-    }
+    public void Dispose() => _host.Dispose();
 
     public TestContext TestContext { get; set; }
 }

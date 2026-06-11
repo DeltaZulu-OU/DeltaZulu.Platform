@@ -1,4 +1,3 @@
-namespace DeltaZulu.Platform.Web.Hunting.Services;
 
 using System.Text.Json;
 using DeltaZulu.Platform.Application.Hunting.Rendering.Directives;
@@ -7,6 +6,7 @@ using DeltaZulu.Platform.Domain.Hunting.SavedQueries;
 using DeltaZulu.Platform.Domain.Hunting.Visualizations;
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Persistence;
 
+namespace DeltaZulu.Platform.Web.Hunting.Services;
 /// <summary>
 /// Application-facing service for saved visualization definitions.
 /// This keeps UI components from depending directly on visualization persistence rows

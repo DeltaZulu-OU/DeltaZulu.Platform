@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Web.Hunting.Dashboards.PageState;
 
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Persistence;
 
+namespace DeltaZulu.Platform.Web.Hunting.Dashboards.PageState;
 public sealed class DashboardListPageState
 {
     public const int PageSize = 8;

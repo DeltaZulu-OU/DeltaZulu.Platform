@@ -1,7 +1,4 @@
 namespace DeltaZulu.Platform.Domain.Hunting.Schema.Definitions.Internal;
-
-using DeltaZulu.Platform.Domain.Hunting.Schema;
-
 /// <summary>
 /// Internal metadata schema objects used by the hunting database runtime.
 /// These tables are not exposed to KQL users and are not part of the Golden surface.

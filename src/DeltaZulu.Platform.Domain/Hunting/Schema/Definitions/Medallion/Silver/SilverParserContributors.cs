@@ -1,10 +1,9 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Schema.Definitions.Medallion.Silver;
 
 using DeltaZulu.Platform.Domain.Hunting.Mapping;
-using DeltaZulu.Platform.Domain.Hunting.Schema;
 using DeltaZulu.Platform.Domain.Hunting.Schema.Definitions.Medallion.Golden;
 using static DeltaZulu.Platform.Domain.Hunting.Mapping.MapDsl;
 
+namespace DeltaZulu.Platform.Domain.Hunting.Schema.Definitions.Medallion.Silver;
 /// <summary>
 /// <para>Active Phase 1A Silver parser contributors.</para>
 /// <para>

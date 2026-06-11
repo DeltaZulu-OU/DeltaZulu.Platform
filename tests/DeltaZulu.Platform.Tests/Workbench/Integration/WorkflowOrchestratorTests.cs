@@ -169,10 +169,7 @@ public sealed class WorkflowOrchestratorTests : IDisposable
         Assert.IsInstanceOfType<DomainDrivenOrchestrator>(orchestrator);
     }
 
-    public void Dispose()
-    {
-        _host.Dispose();
-    }
+    public void Dispose() => _host.Dispose();
 
     public TestContext TestContext { get; set; }
 }

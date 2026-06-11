@@ -69,10 +69,7 @@ public sealed class HuntingSavedQueryImporter
         return new ImportedContentLibraryRecord(artifact, draftFiles, warnings);
     }
 
-    private static string Require(string value, string parameterName)
-    {
-        return string.IsNullOrWhiteSpace(value) ? throw new ArgumentException($"{parameterName} is required.", parameterName) : value.Trim();
-    }
+    private static string Require(string value, string parameterName) => string.IsNullOrWhiteSpace(value) ? throw new ArgumentException($"{parameterName} is required.", parameterName) : value.Trim();
 
     private static string MakeUniquePath(string prefix, string segment, string extension, ISet<string> usedPaths)
     {

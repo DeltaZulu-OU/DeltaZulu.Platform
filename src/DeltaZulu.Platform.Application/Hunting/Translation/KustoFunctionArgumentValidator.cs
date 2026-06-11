@@ -1,8 +1,9 @@
-namespace DeltaZulu.Platform.Application.Hunting.Translation;
 
+using DeltaZulu.Platform.Domain.Hunting.QueryModel;
 using Kusto.Language.Symbols;
 using Kusto.Language.Syntax;
 
+namespace DeltaZulu.Platform.Application.Hunting.Translation;
 /// <summary>Applies function-specific arity and literal argument rules.</summary>
 internal static class KustoFunctionArgumentValidator
 {

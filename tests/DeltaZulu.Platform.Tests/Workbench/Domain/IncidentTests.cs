@@ -29,11 +29,8 @@ public sealed class IncidentTests
     }
 
     [TestMethod]
-    public void Promote_EmptyTitle_Throws()
-    {
-        Assert.ThrowsExactly<DomainException>(() =>
-            Incident.Promote(IncidentId.New(), "", CandidateId, ApprovalId, Owner, 3, Now));
-    }
+    public void Promote_EmptyTitle_Throws() => Assert.ThrowsExactly<DomainException>(() =>
+                                                        Incident.Promote(IncidentId.New(), "", CandidateId, ApprovalId, Owner, 3, Now));
 
     [TestMethod]
     public void Promote_InvalidSeverity_Throws()

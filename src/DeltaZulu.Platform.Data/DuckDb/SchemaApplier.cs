@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Data.DuckDb;
 
 using Dapper;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 
+namespace DeltaZulu.Platform.Data.DuckDb;
 /// <summary>
 /// <para>
 /// Applies generated DDL to DuckDB and validates the resulting schema

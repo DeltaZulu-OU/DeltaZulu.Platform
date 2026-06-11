@@ -1,8 +1,9 @@
-namespace DeltaZulu.Platform.Application.Hunting.Validation;
 
 using DeltaZulu.Platform.Application.Hunting.Catalog;
+using DeltaZulu.Platform.Application.Hunting.Translation;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
 
+namespace DeltaZulu.Platform.Application.Hunting.Validation;
 /// <summary>
 /// Reusable Hunting.Core-backed KQL validation adapter. It exercises the same
 /// catalog policy and translator path as runtime query execution, but stops at

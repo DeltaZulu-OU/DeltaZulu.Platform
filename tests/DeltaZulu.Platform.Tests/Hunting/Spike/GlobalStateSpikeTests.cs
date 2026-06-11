@@ -1,8 +1,9 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Spike;
 
+using DeltaZulu.Platform.Application.Hunting.Catalog;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 using Kusto.Language;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Spike;
 /// <summary>
 /// Phase 0 spike: prove that Kusto.Language semantic analysis works with the
 /// active medallion catalog exposed to users.

@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 
 using System.Text.RegularExpressions;
 
+namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 internal sealed partial class DuckDbSqlShapeRewriter
 {
     private readonly DuckDbStageRegistry _stages;

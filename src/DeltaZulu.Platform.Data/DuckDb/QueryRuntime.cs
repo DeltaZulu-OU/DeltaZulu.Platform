@@ -1,4 +1,3 @@
-namespace DeltaZulu.Platform.Data.Hunting;
 
 using System.Collections.Concurrent;
 using System.Globalization;
@@ -10,6 +9,7 @@ using DeltaZulu.Platform.Domain.Hunting.Policy;
 using DeltaZulu.Platform.Domain.Hunting.QueryModel;
 using DuckDB.NET.Data;
 
+namespace DeltaZulu.Platform.Data.Hunting;
 /// <summary>
 /// <para>
 /// Orchestrates the full query pipeline:

@@ -1,9 +1,8 @@
-namespace DeltaZulu.Platform.Data.Sqlite.Hunting.Alerts;
 
 using Dapper;
-using DeltaZulu.Platform.Data.Sqlite.Hunting;
 using DeltaZulu.Platform.Domain.Hunting.Alerts;
 
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting.Alerts;
 public sealed class DapperAlertRepository : IAlertRepository, IDisposable
 {
     private const string CreateSchemaSql =

@@ -1,11 +1,12 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Translation;
 
 using DeltaZulu.Platform.Application.Hunting.Catalog;
+using DeltaZulu.Platform.Application.Hunting.Translation;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
 using DeltaZulu.Platform.Domain.Hunting.QueryModel;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Translation;
 /// <summary>
 /// Red-green-refactor harness for KQL → RelNode translation.
 /// Each test specifies a KQL input and asserts the shape of the
@@ -141,7 +142,7 @@ public sealed class KustoToRelationalTests
     public void Extend_SingleColumn()
     {
         var (result, diag) = Translate(
-            """ProcessEvent | extend lower_name = tolower(FileName)""");
+            "ProcessEvent | extend lower_name = tolower(FileName)");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var ext = AssertIs<ExtendNode>(result);
         Assert.HasCount(1, ext.Extensions);
@@ -275,7 +276,7 @@ public sealed class KustoToRelationalTests
     public void Aggregate_MultipleAggregates()
     {
         var (result, diag) = Translate(
-            """ProcessEvent | summarize event_count = count(), earliest = min(Timestamp) by DeviceName""");
+            "ProcessEvent | summarize event_count = count(), earliest = min(Timestamp) by DeviceName");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var agg = AssertIs<AggregateNode>(result);
         Assert.HasCount(2, agg.Aggregates);
@@ -288,7 +289,7 @@ public sealed class KustoToRelationalTests
     public void Let_ScalarBinding()
     {
         var (result, diag) = Translate(
-            """let cutoff = ago(7d); ProcessEvent | where Timestamp > cutoff""");
+            "let cutoff = ago(7d); ProcessEvent | where Timestamp > cutoff");
         Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
         var let_ = AssertIs<LetBindingNode>(result);
         Assert.AreEqual("cutoff", let_.Name);
@@ -863,7 +864,7 @@ public sealed class KustoToRelationalTests
     [Description("Single quote inside KQL string should be accepted as literal data")]
     public void Policy_SingleQuoteInsideStringLiteral_Allowed()
     {
-        var kql = """
+        const string kql = """
         ProcessEvent
         | where ProcessCommandLine contains "O'Reilly"
         | take 1
@@ -879,7 +880,7 @@ public sealed class KustoToRelationalTests
     [Description("Single quote inside string literal must be escaped when relational plan is emitted as SQL")]
     public void SqlEmitter_SingleQuoteInsideStringLiteral_Escaped()
     {
-        var kql = """
+        const string kql = """
         ProcessEvent
         | where ProcessCommandLine contains "O'Reilly"
         | take 1

@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Web.Hunting.Services;
 
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Persistence;
 
+namespace DeltaZulu.Platform.Web.Hunting.Services;
 /// <summary>
 /// Web-facing aggregate over saved queries, visualizations, and dashboards.
 /// This is intentionally a UI/application composition service; it does not move

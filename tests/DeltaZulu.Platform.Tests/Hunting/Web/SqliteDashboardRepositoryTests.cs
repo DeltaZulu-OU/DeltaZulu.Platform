@@ -1,10 +1,11 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Web;
 
 using Dapper;
+using DeltaZulu.Platform.Data.Sqlite.Hunting;
 using DeltaZulu.Platform.Web.Hunting.Dashboards;
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Persistence;
 using Microsoft.Data.Sqlite;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Web;
 [TestClass]
 public sealed class SqliteDashboardRepositoryTests
 {

@@ -1,9 +1,8 @@
-namespace DeltaZulu.Platform.Tests.Hunting.DuckDbSql;
 
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
+namespace DeltaZulu.Platform.Tests.Hunting.DuckDbSql;
 [TestClass]
 public sealed class SchemaEmitterCanonicalViewTests
 {

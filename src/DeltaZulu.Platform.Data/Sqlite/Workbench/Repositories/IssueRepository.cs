@@ -33,9 +33,7 @@ internal sealed class IssueRepository(DapperSession session) : IIssueRepository
         return rows.Select(r => r.ToDomain()).ToList();
     }
 
-    public void Add(Issue issue)
-    {
-        session.Connection.Execute("""
+    public void Add(Issue issue) => session.Connection.Execute("""
             INSERT INTO issues (id, key, title, type, status,
                 ext_case_system, ext_case_external_id, ext_case_url, ext_case_system_type,
                 description, acceptance_criteria, data_source, platform, attack_technique_id,
@@ -47,11 +45,8 @@ internal sealed class IssueRepository(DapperSession session) : IIssueRepository
             """,
             ToParams(issue),
             session.Transaction);
-    }
 
-    public void Save(Issue issue)
-    {
-        session.Connection.Execute("""
+    public void Save(Issue issue) => session.Connection.Execute("""
             UPDATE issues SET title = @Title, status = @Status,
                 ext_case_system = @ExtCaseSystem, ext_case_external_id = @ExtCaseExternalId,
                 ext_case_url = @ExtCaseUrl, ext_case_system_type = @ExtCaseSystemType,
@@ -64,7 +59,6 @@ internal sealed class IssueRepository(DapperSession session) : IIssueRepository
             """,
             ToParams(issue),
             session.Transaction);
-    }
 
     private static object ToParams(Issue i) => new {
         Id = i.Id.Value.ToString(),

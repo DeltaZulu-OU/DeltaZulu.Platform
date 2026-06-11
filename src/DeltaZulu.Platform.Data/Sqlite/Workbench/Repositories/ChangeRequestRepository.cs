@@ -46,9 +46,7 @@ internal sealed class ChangeRequestRepository(DapperSession session) : IChangeRe
             ORDER BY cr.updated_at DESC
             """);
 
-    public void Add(ChangeRequest change)
-    {
-        session.Connection.Execute("""
+    public void Add(ChangeRequest change) => session.Connection.Execute("""
             INSERT INTO change_requests (id, key, title, detection_id, author_id,
                 workflow_profile_id, base_version_id, status, is_stale, stale_reason,
                 linked_issue_id, created_at, updated_at, merged_at, result_version_id, close_reason)
@@ -56,7 +54,6 @@ internal sealed class ChangeRequestRepository(DapperSession session) : IChangeRe
                 @BaseVersionId, @Status, @IsStale, @StaleReason, @LinkedIssueId,
                 @CreatedAt, @UpdatedAt, @MergedAt, @ResultVersionId, @CloseReason)
             """, ToParams(change), session.Transaction);
-    }
 
     public void Save(ChangeRequest change)
     {

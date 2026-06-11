@@ -1,9 +1,10 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Validation;
 
+using DeltaZulu.Platform.Application.Hunting.Catalog;
 using DeltaZulu.Platform.Application.Hunting.Validation;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Validation;
 [TestClass]
 public sealed class KqlQuerySyntaxValidatorTests
 {

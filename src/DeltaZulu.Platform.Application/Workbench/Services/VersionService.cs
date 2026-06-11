@@ -146,20 +146,14 @@ public sealed class VersionService(
         return files.ToDictionary(file => ToLogicalPath(prefix, file.RepositoryPath), StringComparer.Ordinal);
     }
 
-    private static bool IsBefore(DetectionVersion candidate, DetectionVersion afterVersion)
-    {
-        return candidate.Id == afterVersion.Id
+    private static bool IsBefore(DetectionVersion candidate, DetectionVersion afterVersion) => candidate.Id == afterVersion.Id
             ? false
             : candidate.AcceptedAt < afterVersion.AcceptedAt
             || (candidate.AcceptedAt == afterVersion.AcceptedAt && candidate.SequenceNumber < afterVersion.SequenceNumber);
-    }
 
-    private static string ToLogicalPath(string prefix, string repositoryPath)
-    {
-        return !repositoryPath.StartsWith(prefix, StringComparison.Ordinal)
+    private static string ToLogicalPath(string prefix, string repositoryPath) => !repositoryPath.StartsWith(prefix, StringComparison.Ordinal)
             ? throw new DomainException("version.path_outside_detection", $"Accepted content path '{repositoryPath}' is outside the detection package.")
             : repositoryPath[prefix.Length..];
-    }
 
     private static VersionFileDiff CreateDiff(string logicalPath, ContentFile? before, ContentFile? after)
     {
@@ -251,15 +245,12 @@ public sealed class VersionService(
             lines);
     }
 
-    private static string[] SplitLines(string? content)
-    {
-        return string.IsNullOrEmpty(content)
+    private static string[] SplitLines(string? content) => string.IsNullOrEmpty(content)
             ? []
             : content
             .Replace("\r\n", "\n", StringComparison.Ordinal)
             .Replace('\r', '\n')
             .Split('\n');
-    }
 
     private static IReadOnlyList<VersionDiffLine> CreateDiffLines(string[] beforeLines, string[] afterLines)
     {

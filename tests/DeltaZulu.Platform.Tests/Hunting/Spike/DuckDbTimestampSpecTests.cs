@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Spike;
 
 using System.Globalization;
 using DuckDB.NET.Data;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Spike;
 /// <summary>
 /// <para>
 /// Spec verification tests: confirm that every DuckDB function used as a

@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Schema;
 
 using System.Security.Cryptography;
 using System.Text;
 
+namespace DeltaZulu.Platform.Domain.Hunting.Schema;
 /// <summary>
 /// Deterministic fingerprint helpers for schema objects.
 /// Phase 1B uses these fingerprints as the stable basis for provenance and drift detection.

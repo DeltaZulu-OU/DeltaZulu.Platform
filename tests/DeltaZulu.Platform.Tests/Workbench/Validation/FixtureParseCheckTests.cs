@@ -14,7 +14,7 @@ public sealed class FixtureParseCheckTests
     [TestMethod]
     public async Task ValidNdjson_Passes()
     {
-        var ndjson = "{\"user\":\"admin\"}\n{\"user\":\"guest\"}\n";
+        const string ndjson = "{\"user\":\"admin\"}\n{\"user\":\"guest\"}\n";
         var ctx = Ctx(new DraftFileSnapshot("fixtures/sign-in.ndjson", DraftContentType.Fixture, ndjson));
 
         var result = await _check.RunAsync(ctx, TestContext.CancellationToken);
@@ -24,7 +24,7 @@ public sealed class FixtureParseCheckTests
     [TestMethod]
     public async Task InvalidNdjsonLine_Fails()
     {
-        var ndjson = "{\"user\":\"admin\"}\nnot-json\n";
+        const string ndjson = "{\"user\":\"admin\"}\nnot-json\n";
         var ctx = Ctx(new DraftFileSnapshot("fixtures/bad.ndjson", DraftContentType.Fixture, ndjson));
 
         var result = await _check.RunAsync(ctx, TestContext.CancellationToken);
@@ -35,7 +35,7 @@ public sealed class FixtureParseCheckTests
     [TestMethod]
     public async Task ValidCsv_Passes()
     {
-        var csv = "timestamp,user,action\n2026-01-01,admin,login\n";
+        const string csv = "timestamp,user,action\n2026-01-01,admin,login\n";
         var ctx = Ctx(new DraftFileSnapshot("fixtures/events.csv", DraftContentType.Fixture, csv));
 
         var result = await _check.RunAsync(ctx, TestContext.CancellationToken);
@@ -45,7 +45,7 @@ public sealed class FixtureParseCheckTests
     [TestMethod]
     public async Task CsvWithSingleColumn_Warns()
     {
-        var csv = "onlycolumn\nvalue\n";
+        const string csv = "onlycolumn\nvalue\n";
         var ctx = Ctx(new DraftFileSnapshot("fixtures/bad.csv", DraftContentType.Fixture, csv));
 
         var result = await _check.RunAsync(ctx, TestContext.CancellationToken);

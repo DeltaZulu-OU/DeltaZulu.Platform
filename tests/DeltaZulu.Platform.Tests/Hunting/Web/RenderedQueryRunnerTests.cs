@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Web;
+
 
-using DeltaZulu.Platform.Application.Hunting.Render.Directives;using DeltaZulu.Platform.Data.DuckDb;
+using DeltaZulu.Platform.Application.Hunting.Render.Directives;using DeltaZulu.Platform.Application.Hunting.Rendering.Services;using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Hunting;using DeltaZulu.Platform.Domain.Hunting.Policy;using DeltaZulu.Platform.Domain.Hunting.Rendering;
 using DeltaZulu.Platform.Web.Hunting.Rendering;
-[TestClass]public sealed class RenderedQueryRunnerTests
+namespace DeltaZulu.Platform.Tests.Hunting.Web;[TestClass]public sealed class RenderedQueryRunnerTests
 {
     [TestMethod]
     public async Task RunAsync_RenderDirective_ExecutesStrippedDataQueryAndBuildsChart()

@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Web.Hunting.Dashboards;
 
 using DeltaZulu.Platform.Application.Hunting.Render.Directives;
 
+namespace DeltaZulu.Platform.Web.Hunting.Dashboards;
 public static class DashboardModelValidator
 {
     private const int DashboardGridColumnCount = 12;

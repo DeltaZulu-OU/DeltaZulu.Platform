@@ -1,8 +1,9 @@
-namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 
 using System.Text;
 using System.Text.RegularExpressions;
+using DeltaZulu.Platform.Domain.Hunting.QueryModel;
 
+namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 internal sealed partial class DuckDbJoinEmitter
 {
     internal bool TryRenderProjectedLookupSortTake(RelNode node, out string sql)

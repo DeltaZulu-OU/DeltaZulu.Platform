@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Application.Hunting.Planning;
 
 using System.Text.RegularExpressions;
 
+namespace DeltaZulu.Platform.Application.Hunting.Planning;
 /// <summary>
 /// Lightweight emitted-SQL shape metrics used to track whether planner/emitter
 /// changes are reducing avoidable SQL complexity without replacing DuckDB's

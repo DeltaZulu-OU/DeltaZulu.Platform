@@ -1,5 +1,6 @@
 @namespace DeltaZulu.Platform.Web.Workbench.Components.Pages
 @page "/workbench/changes/{Id}"
+@using DeltaZulu.Platform.Web.Workbench.Components.Shared
 @using MudBlazor
 @rendermode InteractiveServer
 @using DeltaZulu.Platform.Application.Workbench.Services
@@ -10,6 +11,7 @@
 @using DeltaZulu.Platform.Domain.Workbench.Identifiers
 @using DeltaZulu.Platform.Domain.Workbench.Workflow
 @using DeltaZulu.Platform.Web.Workbench.Services
+@using Domain.Workbench.Common
 @inject ChangeService ChangeService
 @inject AcceptedContentReadService AcceptedContentReadService
 @inject DetectionContentService DetectionService
@@ -480,7 +482,7 @@
         [
             new("Changes", "/changes"),
             new(_change.Key, null, disabled: true),
-        ];
+    ];
 
         await LoadDraftComparisonsAsync();
     }
@@ -508,7 +510,7 @@
             Snackbar.Add("Draft file saved.", Severity.Success);
             await LoadAsync();
         }
-        catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
         finally { _running = false; }
     }
 
@@ -524,7 +526,7 @@
             Snackbar.Add($"Pipeline complete: {passed} passed, {failed} failed.", failed > 0 ? Severity.Warning : Severity.Success);
             await LoadAsync();
         }
-        catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
         finally { _running = false; }
     }
 
@@ -552,7 +554,7 @@
             Snackbar.Add("Review recorded.", Severity.Success);
             await LoadAsync();
         }
-        catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        catch (Domain.Workbench.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
         finally { _running = false; }
     }
 
@@ -566,7 +568,7 @@
             Snackbar.Add($"Accepted. Version {version.DisplayVersion} created.", Severity.Success);
             await LoadAsync();
         }
-        catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
         finally { _running = false; }
     }
 
@@ -615,7 +617,7 @@
             Snackbar.Add("File deleted.", Severity.Success);
             await LoadAsync();
         }
-        catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
         finally
         {
             _running = false;
@@ -659,7 +661,7 @@
             Snackbar.Add("Change closed.", Severity.Success);
             await LoadAsync();
         }
-        catch (Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
         finally { _running = false; }
     }
 

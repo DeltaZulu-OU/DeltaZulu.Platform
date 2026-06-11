@@ -1,3 +1,4 @@
+using DeltaZulu.Platform.Domain.Detection;
 using DeltaZulu.Platform.Domain.Detection.Files;
 using DeltaZulu.Platform.Domain.Detection.Identity;
 using DeltaZulu.Platform.Domain.Detection.Paths;

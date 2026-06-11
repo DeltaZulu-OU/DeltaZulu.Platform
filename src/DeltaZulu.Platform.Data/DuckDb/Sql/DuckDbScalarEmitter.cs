@@ -1,9 +1,10 @@
-namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using DeltaZulu.Platform.Domain.Hunting.QueryModel;
 
+namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 internal sealed class DuckDbScalarEmitter
 {
     private readonly DuckDbEmitterContext _context;

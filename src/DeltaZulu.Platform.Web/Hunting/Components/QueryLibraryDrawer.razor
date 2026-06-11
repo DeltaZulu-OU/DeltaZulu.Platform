@@ -1,7 +1,7 @@
 @namespace DeltaZulu.Platform.Web.Hunting.Components
-@using DeltaZulu.Platform.Application.Hunting.SavedQueries
-@using DeltaZulu.Platform.Application.Hunting.Visualizations
-@using DeltaZulu.Platform.Application.Hunting.QueryHistory
+@using DeltaZulu.Platform.Domain.Hunting.SavedQueries
+@using DeltaZulu.Platform.Domain.Hunting.Visualizations
+@using DeltaZulu.Platform.Domain.Hunting.QueryHistory
 
 @inject DeltaZulu.Platform.Web.Hunting.Services.QueryLibraryService QueryLibrary
 @inject DeltaZulu.Platform.Web.Hunting.Services.VisualizationLibraryService VisualizationLibrary
@@ -323,7 +323,7 @@
     }
 
     private async Task UpdateVisualizationFromCurrentAsync(
-        Hunting.Application.Visualizations.VisualizationRecord visualization)
+        Domain.Hunting.Visualizations.VisualizationRecord visualization)
     {
         if (!CanUpdateVisualizationFromCurrent)
         {

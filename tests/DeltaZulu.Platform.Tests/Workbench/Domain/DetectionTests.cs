@@ -1,3 +1,5 @@
+using static DeltaZulu.Platform.Domain.Workbench.Detections.Detection;
+
 namespace DeltaZulu.Platform.Tests.Workbench.Domain;
 
 [TestClass]
@@ -11,7 +13,7 @@ public sealed class DetectionTests
     [DataRow("aws-iam-root-login")]
     public void CreateDraft_AcceptsValidSlugs(string slug)
     {
-        var d = Detection.CreateDraft(DetectionId.New(), slug, "title", "summary", Now);
+        var d = CreateDraft(DetectionId.New(), slug, "title", "summary", Now);
         Assert.AreEqual(slug, d.Slug);
         Assert.AreEqual(DetectionLifecycle.Draft, d.Lifecycle);
         Assert.IsNull(d.CurrentVersionId);
@@ -27,14 +29,14 @@ public sealed class DetectionTests
     public void CreateDraft_RejectsInvalidSlugs(string slug)
     {
         var ex = Assert.ThrowsExactly<DomainException>(
-            () => Detection.CreateDraft(DetectionId.New(), slug, "title", "summary", Now));
+            () => CreateDraft(DetectionId.New(), slug, "title", "summary", Now));
         Assert.AreEqual("detection.slug_invalid", ex.Code);
     }
 
     [TestMethod]
     public void MarkAccepted_PromotesLifecycleAndRecordsVersion()
     {
-        var d = Detection.CreateDraft(DetectionId.New(), "demo", "Title", "Summary", Now);
+        var d = CreateDraft(DetectionId.New(), "demo", "Title", "Summary", Now);
         var v = VersionId.New();
 
         d.MarkAccepted(v, Now.AddMinutes(5));
@@ -46,7 +48,7 @@ public sealed class DetectionTests
     [TestMethod]
     public void MarkAccepted_OnDeprecatedDetection_Throws()
     {
-        var d = Detection.CreateDraft(DetectionId.New(), "demo", "Title", "Summary", Now);
+        var d = CreateDraft(DetectionId.New(), "demo", "Title", "Summary", Now);
         d.Deprecate(Now);
 
         var ex = Assert.ThrowsExactly<DomainException>(() => d.MarkAccepted(VersionId.New(), Now));

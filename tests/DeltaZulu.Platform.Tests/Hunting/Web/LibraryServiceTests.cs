@@ -1,4 +1,3 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Web;
 
 using DeltaZulu.Platform.Application.Hunting.Rendering.Directives;
 using DeltaZulu.Platform.Domain.Hunting.QueryHistory;
@@ -9,6 +8,7 @@ using DeltaZulu.Platform.Web.Hunting.Dashboards;
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Persistence;
 using DeltaZulu.Platform.Web.Hunting.Services;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Web;
 [TestClass]
 public sealed class LibraryServiceTests
 {

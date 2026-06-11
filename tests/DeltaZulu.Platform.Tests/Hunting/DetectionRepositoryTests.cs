@@ -1,9 +1,10 @@
-namespace DeltaZulu.Platform.Tests.Hunting;
 
+using DeltaZulu.Platform.Data.Sqlite.Hunting;
 using DeltaZulu.Platform.Data.Sqlite.Hunting.Detections;
 using DeltaZulu.Platform.Domain.Hunting.Detections;
 using Microsoft.Data.Sqlite;
 
+namespace DeltaZulu.Platform.Tests.Hunting;
 [TestClass]
 public sealed class DetectionRepositoryTests
 {

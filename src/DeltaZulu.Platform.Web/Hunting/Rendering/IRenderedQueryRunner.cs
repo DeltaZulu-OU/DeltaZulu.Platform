@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Web.Hunting.Rendering;
 
 using DeltaZulu.Platform.Domain.Hunting.Rendering;
 
+namespace DeltaZulu.Platform.Web.Hunting.Rendering;
 public interface IRenderedQueryRunner
 {
     Task<RenderedQueryResult> RunAsync(

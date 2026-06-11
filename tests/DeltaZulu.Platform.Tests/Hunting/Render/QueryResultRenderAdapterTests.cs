@@ -1,8 +1,9 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Render;
 
+using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Hunting;
 using DeltaZulu.Platform.Web.Hunting.Rendering;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Render;
 [TestClass]
 public sealed class QueryResultRenderAdapterTests
 {

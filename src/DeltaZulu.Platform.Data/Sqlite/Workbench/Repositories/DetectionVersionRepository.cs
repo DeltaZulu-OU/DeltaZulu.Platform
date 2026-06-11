@@ -40,9 +40,7 @@ internal sealed class DetectionVersionRepository(DapperSession session) : IDetec
         return rows.Select(r => r.ToDomain()).ToList();
     }
 
-    public void Add(DetectionVersion version)
-    {
-        session.Connection.Execute("""
+    public void Add(DetectionVersion version) => session.Connection.Execute("""
             INSERT INTO detection_versions (id, detection_id, sequence_number, display_version,
                 title, change_summary, author_id, workflow_profile, source_change_request_id,
                 linked_issue_id, accepted_at, changed_sections, git_commit_sha,
@@ -51,23 +49,22 @@ internal sealed class DetectionVersionRepository(DapperSession session) : IDetec
                 @AuthorId, @WorkflowProfile, @SourceChangeRequestId, @LinkedIssueId,
                 @AcceptedAt, @ChangedSections, @GitCommitSha, @ChecksSummary, @ReviewSummary)
             """, new {
-            Id = version.Id.Value.ToString(),
-            DetectionId = version.DetectionId.Value.ToString(),
-            version.SequenceNumber,
-            version.DisplayVersion,
-            version.Title,
-            version.ChangeSummary,
-            AuthorId = version.AuthorId.Value.ToString(),
-            WorkflowProfile = version.WorkflowProfile.ToString(),
-            SourceChangeRequestId = version.SourceChangeRequestId.Value.ToString(),
-            LinkedIssueId = version.LinkedIssueId?.Value.ToString(),
-            AcceptedAt = version.AcceptedAt.ToString("O"),
-            ChangedSections = string.Join(';', version.ChangedSections.Select(p => p.Value)),
-            version.GitCommitSha,
-            version.ChecksSummary,
-            version.ReviewSummary,
-        }, session.Transaction);
-    }
+        Id = version.Id.Value.ToString(),
+        DetectionId = version.DetectionId.Value.ToString(),
+        version.SequenceNumber,
+        version.DisplayVersion,
+        version.Title,
+        version.ChangeSummary,
+        AuthorId = version.AuthorId.Value.ToString(),
+        WorkflowProfile = version.WorkflowProfile.ToString(),
+        SourceChangeRequestId = version.SourceChangeRequestId.Value.ToString(),
+        LinkedIssueId = version.LinkedIssueId?.Value.ToString(),
+        AcceptedAt = version.AcceptedAt.ToString("O"),
+        ChangedSections = string.Join(';', version.ChangedSections.Select(p => p.Value)),
+        version.GitCommitSha,
+        version.ChecksSummary,
+        version.ReviewSummary,
+    }, session.Transaction);
 
     internal sealed class VersionRow
     {

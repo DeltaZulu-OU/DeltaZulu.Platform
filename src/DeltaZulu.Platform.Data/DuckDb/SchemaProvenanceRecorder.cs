@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Data.DuckDb;
 
 using Dapper;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 
+namespace DeltaZulu.Platform.Data.DuckDb;
 /// <summary>
 /// Records applied schema-object fingerprints into internal.schema_provenance.
 /// This component records the current state only; it does not classify or block drift.

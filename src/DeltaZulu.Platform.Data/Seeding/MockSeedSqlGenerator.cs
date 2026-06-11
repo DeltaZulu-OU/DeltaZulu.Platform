@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Data.Seeding;
 
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
+namespace DeltaZulu.Platform.Data.Seeding;
 /// <summary>
 /// <para>Builds compact deterministic seed SQL for development and test fixtures.</para>
 /// <para>

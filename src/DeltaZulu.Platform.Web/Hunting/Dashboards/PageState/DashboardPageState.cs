@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Web.Hunting.Dashboards.PageState;
 
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Runtime;
 
+namespace DeltaZulu.Platform.Web.Hunting.Dashboards.PageState;
 public sealed class DashboardPageState
 {
     public Dictionary<string, DashboardWidgetRunResult> WidgetResults { get; } =

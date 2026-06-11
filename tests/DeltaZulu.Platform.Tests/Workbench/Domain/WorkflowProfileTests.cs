@@ -38,8 +38,5 @@ public sealed class WorkflowProfileTests
     [DataRow(WorkflowProfileId.SoloValidated)]
     [DataRow(WorkflowProfileId.StandardReview)]
     [DataRow(WorkflowProfileId.EmergencyFix)]
-    public void ReservedProfiles_ThrowUntilImplemented(WorkflowProfileId id)
-    {
-        Assert.ThrowsExactly<NotSupportedException>(() => WorkflowProfile.For(id));
-    }
+    public void ReservedProfiles_ThrowUntilImplemented(WorkflowProfileId id) => Assert.ThrowsExactly<NotSupportedException>(() => WorkflowProfile.For(id));
 }

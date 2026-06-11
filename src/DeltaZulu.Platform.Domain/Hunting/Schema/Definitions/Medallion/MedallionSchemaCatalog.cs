@@ -1,10 +1,8 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Schema.Definitions.Medallion;
-
-using DeltaZulu.Platform.Domain.Hunting.Schema;
 using DeltaZulu.Platform.Domain.Hunting.Schema.Definitions.Medallion.Bronze;
 using DeltaZulu.Platform.Domain.Hunting.Schema.Definitions.Medallion.Golden;
 using DeltaZulu.Platform.Domain.Hunting.Schema.Definitions.Medallion.Silver;
 
+namespace DeltaZulu.Platform.Domain.Hunting.Schema.Definitions.Medallion;
 /// <summary>
 /// <para>C#-first catalog for the medallion schema path.</para>
 /// <para>

@@ -1,4 +1,3 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Web;
 
 using DeltaZulu.Platform.Application.Hunting.Catalog;
 using DeltaZulu.Platform.Data.DuckDb;
@@ -10,6 +9,7 @@ using DeltaZulu.Platform.Tests.Hunting.Fixtures;
 using DeltaZulu.Platform.Web.Hunting.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Web;
 [TestClass]
 public sealed class QueryServiceDataOnlyTests
 {

@@ -1,10 +1,9 @@
-namespace DeltaZulu.Platform.Data.Sqlite.Hunting.SavedQueries;
 
 using Dapper;
-using DeltaZulu.Platform.Data.Sqlite.Hunting;
-using AppISavedQueryRepository = Hunting.Application.SavedQueries.ISavedQueryRepository;
-using AppSavedQueryRecord = Hunting.Application.SavedQueries.SavedQueryRecord;
+using AppISavedQueryRepository = DeltaZulu.Platform.Domain.Hunting.SavedQueries.ISavedQueryRepository;
+using AppSavedQueryRecord = DeltaZulu.Platform.Domain.Hunting.SavedQueries.SavedQueryRecord;
 
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting.SavedQueries;
 public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisposable
 {
     private const string CreateSchemaSql =

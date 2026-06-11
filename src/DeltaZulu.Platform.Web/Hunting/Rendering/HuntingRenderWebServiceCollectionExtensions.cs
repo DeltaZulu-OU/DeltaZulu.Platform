@@ -1,9 +1,8 @@
-namespace DeltaZulu.Platform.Web.Hunting.Rendering;
 
 using DeltaZulu.Platform.Application.Hunting.Rendering;
 using DeltaZulu.Platform.Web.Hunting.Services;
-using Microsoft.Extensions.DependencyInjection;
 
+namespace DeltaZulu.Platform.Web.Hunting.Rendering;
 public static class HuntingRenderWebServiceCollectionExtensions
 {
     public static IServiceCollection AddHuntingRenderWeb(this IServiceCollection services)

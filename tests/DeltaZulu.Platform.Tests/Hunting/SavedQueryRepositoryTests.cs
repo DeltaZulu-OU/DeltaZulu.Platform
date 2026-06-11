@@ -1,9 +1,10 @@
-namespace DeltaZulu.Platform.Tests.Hunting;
 
+using DeltaZulu.Platform.Data.Sqlite.Hunting;
 using DeltaZulu.Platform.Data.Sqlite.Hunting.SavedQueries;
 using Microsoft.Data.Sqlite;
-using AppSavedQueryRecord = Hunting.Application.SavedQueries.SavedQueryRecord;
+using AppSavedQueryRecord = DeltaZulu.Platform.Domain.Hunting.SavedQueries.SavedQueryRecord;
 
+namespace DeltaZulu.Platform.Tests.Hunting;
 [TestClass]
 public sealed class SavedQueryRepositoryTests
 {

@@ -8,11 +8,8 @@ namespace DeltaZulu.Platform.Application.Workbench.Validation.Checks;
 /// </summary>
 public sealed class NonEmptyQuerySyntaxValidator : IQuerySyntaxValidator
 {
-    public QuerySyntaxValidationResult Validate(QuerySyntaxValidationRequest request)
-    {
-        return string.IsNullOrWhiteSpace(request.Content)
+    public QuerySyntaxValidationResult Validate(QuerySyntaxValidationRequest request) => string.IsNullOrWhiteSpace(request.Content)
             ? QuerySyntaxValidationResult.Fail(
                 new QuerySyntaxDiagnostic("query content is empty."))
             : QuerySyntaxValidationResult.Pass();
-    }
 }

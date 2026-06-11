@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Application.Hunting.Validation;
 
 using DeltaZulu.Platform.Domain.Hunting.Policy;
 
+namespace DeltaZulu.Platform.Application.Hunting.Validation;
 public sealed record QuerySyntaxValidationResult(
     bool IsValid,
     IReadOnlyList<QueryDiagnostic> Diagnostics)

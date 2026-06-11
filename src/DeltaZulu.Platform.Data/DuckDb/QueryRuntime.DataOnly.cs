@@ -1,14 +1,15 @@
-namespace DeltaZulu.Platform.Data.Hunting;
 
 using System.Globalization;
 using System.Text.Json;
 using DeltaZulu.Platform.Application.Hunting.Planning;
+using DeltaZulu.Platform.Application.Hunting.Translation;
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Hunting.Planning;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
 using DuckDB.NET.Data;
 
+namespace DeltaZulu.Platform.Data.Hunting;
 public sealed partial class QueryRuntime
 {
     public QueryResult ExecuteDataOnly(string kql) => ExecuteDataOnly(kql, maxRows: null);

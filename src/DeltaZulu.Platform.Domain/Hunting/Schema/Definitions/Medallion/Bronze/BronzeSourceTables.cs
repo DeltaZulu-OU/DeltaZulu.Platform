@@ -1,7 +1,4 @@
 namespace DeltaZulu.Platform.Domain.Hunting.Schema.Definitions.Medallion.Bronze;
-
-using DeltaZulu.Platform.Domain.Hunting.Schema;
-
 /// <summary>
 /// <para>Active Phase 1A source-family Bronze table definitions.</para>
 /// <para>

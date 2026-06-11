@@ -1,3 +1,4 @@
+using DeltaZulu.Platform.Application.Hunting.Catalog;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 
 namespace DeltaZulu.Platform.Tests.Hunting.Schema;

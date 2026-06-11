@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Web.Hunting.Dashboards.PageState;
 
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Persistence;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
+namespace DeltaZulu.Platform.Web.Hunting.Dashboards.PageState;
 public sealed class DashboardListPageController
 {
     private readonly IDashboardRepository _dashboardRepository;

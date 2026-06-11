@@ -34,26 +34,20 @@ internal sealed class DetectionRepository(DapperSession session) : IDetectionRep
         return rows.Select(r => r.ToDomain()).ToList();
     }
 
-    public void Add(Detection detection)
-    {
-        session.Connection.Execute("""
+    public void Add(Detection detection) => session.Connection.Execute("""
             INSERT INTO detections (id, slug, title, summary, lifecycle, current_version_id, created_at, updated_at)
             VALUES (@Id, @Slug, @Title, @Summary, @Lifecycle, @CurrentVersionId, @CreatedAt, @UpdatedAt)
             """,
             ToParams(detection),
             session.Transaction);
-    }
 
-    public void Save(Detection detection)
-    {
-        session.Connection.Execute("""
+    public void Save(Detection detection) => session.Connection.Execute("""
             UPDATE detections SET title = @Title, summary = @Summary, lifecycle = @Lifecycle,
                 current_version_id = @CurrentVersionId, updated_at = @UpdatedAt
             WHERE id = @Id
             """,
             ToParams(detection),
             session.Transaction);
-    }
 
     private static object ToParams(Detection d) => new {
         Id = d.Id.Value.ToString(),

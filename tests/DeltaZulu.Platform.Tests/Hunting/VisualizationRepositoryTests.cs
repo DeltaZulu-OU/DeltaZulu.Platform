@@ -1,8 +1,10 @@
-namespace DeltaZulu.Platform.Tests.Hunting;
 
+using DeltaZulu.Platform.Data.Sqlite.Hunting;
 using DeltaZulu.Platform.Data.Sqlite.Hunting.Visualizations;
+using DeltaZulu.Platform.Domain.Hunting.Visualizations;
 using Microsoft.Data.Sqlite;
 
+namespace DeltaZulu.Platform.Tests.Hunting;
 [TestClass]
 public sealed class VisualizationRepositoryTests
 {

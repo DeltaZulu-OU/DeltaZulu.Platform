@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Planning;
 
 using DeltaZulu.Platform.Domain.Hunting.Planning;
 using DeltaZulu.Platform.Domain.Hunting.QueryModel;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Planning;
 [TestClass]
 public sealed class RelationalPlannerTests
 {

@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Web.Hunting.Rendering;
 
 using DeltaZulu.Platform.Application.Hunting.Rendering.Services;
 using DeltaZulu.Platform.Application.Hunting.Rendering.Tabular;
 using DeltaZulu.Platform.Data.DuckDb;
 
+namespace DeltaZulu.Platform.Web.Hunting.Rendering;
 public sealed class QueryResultRenderAdapter : IRenderTabularResult
 {
     private readonly QueryResult _result;

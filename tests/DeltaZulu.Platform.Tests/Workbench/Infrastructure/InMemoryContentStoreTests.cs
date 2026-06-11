@@ -1,3 +1,5 @@
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
+
 namespace DeltaZulu.Platform.Tests.Workbench.Infrastructure;
 
 [TestClass]

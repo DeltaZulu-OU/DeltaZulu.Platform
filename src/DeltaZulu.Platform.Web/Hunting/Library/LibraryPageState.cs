@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Web.Hunting.Library;
 
 using System.Globalization;
 using DeltaZulu.Platform.Web.Hunting.Services;
 
+namespace DeltaZulu.Platform.Web.Hunting.Library;
 public sealed class LibraryPageState
 {
     public const int PageSize = 12;

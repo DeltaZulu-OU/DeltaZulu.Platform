@@ -6,9 +6,7 @@ namespace DeltaZulu.Platform.Data.Sqlite.Workbench.Repositories;
 
 internal sealed class MergeIntentRepository(DapperSession session) : IMergeIntentRepository
 {
-    public async Task CreatePendingAsync(MergeIntent intent, CancellationToken ct = default)
-    {
-        await session.Connection.ExecuteAsync("""
+    public async Task CreatePendingAsync(MergeIntent intent, CancellationToken ct = default) => await session.Connection.ExecuteAsync("""
             INSERT INTO merge_intents (change_request_id, detection_id, detection_slug,
                 requested_at, author_name, author_email, commit_message, state)
             VALUES (@ChangeId, @DetectionId, @DetectionSlug, @RequestedAt, @AuthorName,
@@ -26,7 +24,6 @@ internal sealed class MergeIntentRepository(DapperSession session) : IMergeInten
                 version_id = NULL,
                 completed_at = NULL
             """, ToParameters(intent), session.Transaction);
-    }
 
     public async Task MarkCommittedAsync(
         ChangeRequestId changeId,
@@ -54,9 +51,7 @@ internal sealed class MergeIntentRepository(DapperSession session) : IMergeInten
         ChangeRequestId changeId,
         VersionId versionId,
         DateTimeOffset completedAt,
-        CancellationToken ct = default)
-    {
-        await session.Connection.ExecuteAsync("""
+        CancellationToken ct = default) => await session.Connection.ExecuteAsync("""
             UPDATE merge_intents
             SET state = @State,
                 version_id = @VersionId,
@@ -68,7 +63,6 @@ internal sealed class MergeIntentRepository(DapperSession session) : IMergeInten
             VersionId = versionId.Value.ToString(),
             CompletedAt = completedAt.ToString("O"),
         }, session.Transaction);
-    }
 
     public async Task<IReadOnlyList<MergeIntent>> ListUnresolvedAsync(CancellationToken ct = default)
     {

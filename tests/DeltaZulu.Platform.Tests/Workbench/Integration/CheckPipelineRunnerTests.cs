@@ -319,10 +319,7 @@ public sealed class CheckPipelineRunnerTests : IDisposable
         }
     }
 
-    public void Dispose()
-    {
-        _host.Dispose();
-    }
+    public void Dispose() => _host.Dispose();
 
     public TestContext TestContext { get; set; }
 }

@@ -1,4 +1,3 @@
-namespace DeltaZulu.Platform.Web.Hunting.Hosting;
 
 using DeltaZulu.Platform.Application.Hunting.Catalog;
 using DeltaZulu.Platform.Data.DuckDb;
@@ -10,9 +9,9 @@ using DeltaZulu.Platform.Web.Hunting.Dashboards.PageState;
 using DeltaZulu.Platform.Web.Hunting.Library;
 using DeltaZulu.Platform.Web.Hunting.Rendering;
 using DeltaZulu.Platform.Web.Hunting.Services;
-using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 
+namespace DeltaZulu.Platform.Web.Hunting.Hosting;
 public static class HuntingWebModuleServiceCollectionExtensions
 {
     /// <summary>

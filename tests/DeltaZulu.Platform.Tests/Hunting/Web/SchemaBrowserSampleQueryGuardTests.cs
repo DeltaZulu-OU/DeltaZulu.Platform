@@ -1,8 +1,7 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Web;
 
 using DeltaZulu.Platform.Application.Hunting.Samples;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Web;
 [TestClass]
 public sealed class SchemaBrowserSampleQueryGuardTests
 {

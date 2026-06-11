@@ -39,12 +39,9 @@ public sealed class CandidateDecision : Entity<CandidateDecisionId>
         CandidateDecisionType type,
         UserId analystId,
         string reason,
-        DateTimeOffset now)
-    {
-        return reason?.Length > 4000
+        DateTimeOffset now) => reason?.Length > 4000
             ? throw new DomainException("decision.reason_too_long", "Decision reason exceeds 4000 characters.")
             : new CandidateDecision(id, candidateId, type, analystId, reason ?? string.Empty, now);
-    }
 
     public void LinkIncident(IncidentId incidentId)
     {
@@ -63,11 +60,8 @@ public sealed class CandidateDecision : Entity<CandidateDecisionId>
         UserId analystId,
         string reason,
         IncidentId? resultingIncidentId,
-        DateTimeOffset createdAt)
-    {
-        return new CandidateDecision(id, candidateId, type, analystId, reason, createdAt)
+        DateTimeOffset createdAt) => new CandidateDecision(id, candidateId, type, analystId, reason, createdAt)
         {
             ResultingIncidentId = resultingIncidentId
         };
-    }
 }

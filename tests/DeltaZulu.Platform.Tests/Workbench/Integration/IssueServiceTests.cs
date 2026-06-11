@@ -182,10 +182,7 @@ public sealed class IssueServiceTests : IDisposable
         command.ExecuteNonQuery();
     }
 
-    public void Dispose()
-    {
-        _host.Dispose();
-    }
+    public void Dispose() => _host.Dispose();
 
     public TestContext TestContext { get; set; }
 }

@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Schema;
 
 using DeltaZulu.Platform.Domain.Hunting.Schema.Definitions.Internal;
 using DeltaZulu.Platform.Domain.Hunting.Schema.Definitions.Medallion;
 
+namespace DeltaZulu.Platform.Domain.Hunting.Schema;
 /// <summary>
 /// Central schema conventions and bootstrap contracts for the hunting model.
 /// This keeps schema-surface ownership in Hunting.Schema instead of UI composition code.

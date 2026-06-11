@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Web.Hunting.Visualizations;
 
 using System.Text.Json;
 using DeltaZulu.Platform.Domain.Hunting.Rendering;
 using DeltaZulu.Platform.Domain.Hunting.Visualizations;
 
+namespace DeltaZulu.Platform.Web.Hunting.Visualizations;
 public static class VisualizationDirectiveMapper
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);

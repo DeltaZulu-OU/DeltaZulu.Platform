@@ -392,10 +392,7 @@ public sealed class VersionServiceTests : IDisposable
         Assert.AreEqual(expectedStatus, file.Status);
     }
 
-    public void Dispose()
-    {
-        _host.Dispose();
-    }
+    public void Dispose() => _host.Dispose();
 
     public TestContext TestContext { get; set; }
 }

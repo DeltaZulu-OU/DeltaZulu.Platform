@@ -97,9 +97,7 @@ public sealed class RestoreService(
             : repositoryPath[prefix.Length..];
     }
 
-    private static DraftContentType InferContentType(string logicalPath, ContentFile file)
-    {
-        return file.IsBinary
+    private static DraftContentType InferContentType(string logicalPath, ContentFile file) => file.IsBinary
             ? DraftContentType.StaticAsset
             : logicalPath switch
             {
@@ -111,5 +109,4 @@ public sealed class RestoreService(
                     && logicalPath.EndsWith(".md", StringComparison.OrdinalIgnoreCase) => DraftContentType.InvestigationNote,
                 _ => DraftContentType.DetectionMetadata,
             };
-    }
 }

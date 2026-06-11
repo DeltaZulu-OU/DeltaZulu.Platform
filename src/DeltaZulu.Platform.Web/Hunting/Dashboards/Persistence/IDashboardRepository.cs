@@ -1,7 +1,4 @@
 namespace DeltaZulu.Platform.Web.Hunting.Dashboards.Persistence;
-
-using DeltaZulu.Platform.Web.Hunting.Dashboards;
-
 public interface IDashboardRepository
 {
     Task<IReadOnlyList<DashboardSummary>> ListAsync(CancellationToken ct = default);

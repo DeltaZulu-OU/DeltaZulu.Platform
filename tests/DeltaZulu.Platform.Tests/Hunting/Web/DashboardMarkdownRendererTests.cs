@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Web;
 
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Markdown;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Web;
 [TestClass]
 public sealed class DashboardMarkdownRendererTests
 {

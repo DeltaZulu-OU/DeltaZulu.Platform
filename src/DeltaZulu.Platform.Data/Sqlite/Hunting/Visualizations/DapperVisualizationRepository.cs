@@ -1,10 +1,9 @@
-namespace DeltaZulu.Platform.Data.Sqlite.Hunting.Visualizations;
 
 using Dapper;
-using DeltaZulu.Platform.Data.Sqlite.Hunting;
-using AppIVisualizationRepository = Hunting.Application.Visualizations.IVisualizationRepository;
-using AppVisualizationRecord = Hunting.Application.Visualizations.VisualizationRecord;
+using AppIVisualizationRepository = DeltaZulu.Platform.Domain.Hunting.Visualizations.IVisualizationRepository;
+using AppVisualizationRecord = DeltaZulu.Platform.Domain.Hunting.Visualizations.VisualizationRecord;
 
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting.Visualizations;
 public sealed class DapperVisualizationRepository : AppIVisualizationRepository, IDisposable
 {
     private const string CreateSchemaSql =

@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Application.Hunting.Rendering.Services;
 
 using System.Globalization;
 using DeltaZulu.Platform.Application.Hunting.Rendering.Tabular;
 using DeltaZulu.Platform.Domain.Hunting.Rendering;
 
+namespace DeltaZulu.Platform.Application.Hunting.Rendering.Services;
 public sealed class RenderChartBuilder : IRenderChartBuilder
 {
     private const int MaxChartPoints = 500;

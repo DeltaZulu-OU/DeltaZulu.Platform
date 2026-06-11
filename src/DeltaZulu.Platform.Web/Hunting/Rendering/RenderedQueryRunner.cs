@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Web.Hunting.Rendering;
 
 using DeltaZulu.Platform.Application.Hunting.Rendering.Directives;
 using DeltaZulu.Platform.Application.Hunting.Rendering.Services;
 using DeltaZulu.Platform.Domain.Hunting.Rendering;
 
+namespace DeltaZulu.Platform.Web.Hunting.Rendering;
 public sealed class RenderedQueryRunner : IRenderedQueryRunner
 {
     private readonly IRenderChartBuilder _chartBuilder;

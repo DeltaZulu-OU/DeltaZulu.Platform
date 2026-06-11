@@ -1,4 +1,3 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Web;
 
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Hunting;
@@ -11,6 +10,7 @@ using DeltaZulu.Platform.Web.Hunting.Dashboards.Runtime;
 using DeltaZulu.Platform.Web.Hunting.Rendering;
 using Microsoft.Extensions.Logging;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Web;
 [TestClass]
 public sealed class DashboardWidgetRunnerTests
 {

@@ -1,12 +1,14 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Emitter;
 
 using System.Globalization;
 using System.Text.RegularExpressions;
+using DeltaZulu.Platform.Application.Hunting.Catalog;
+using DeltaZulu.Platform.Application.Hunting.Translation;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
 using DeltaZulu.Platform.Domain.Hunting.QueryModel;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Emitter;
 /// <summary>
 /// <para>
 /// Red-green-refactor harness for RelNode → DuckDB SQL emission.

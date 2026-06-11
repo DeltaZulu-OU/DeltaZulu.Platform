@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Planning;
 
 using DeltaZulu.Platform.Application.Hunting.Planning;
 using DeltaZulu.Platform.Domain.Hunting.QueryModel;
 
+namespace DeltaZulu.Platform.Domain.Hunting.Planning;
 public sealed partial class RelationalPlanner
 {
     private sealed class FilterPushdownPass : IPlannerPass

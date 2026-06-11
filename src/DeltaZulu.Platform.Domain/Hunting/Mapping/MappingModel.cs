@@ -1,7 +1,7 @@
+
+using DeltaZulu.Platform.Domain.Hunting.Schema;
+
 namespace DeltaZulu.Platform.Domain.Hunting.Mapping;
-
-using Schema;
-
 #region Expression tree for parser view mappings
 
 public abstract record ExprDef;

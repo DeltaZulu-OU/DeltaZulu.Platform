@@ -34,29 +34,17 @@ public sealed class CanonicalPathResolverTests
     }
 
     [TestMethod]
-    public void DetectionPrefix_ReturnsExpectedDirectoryPath()
-    {
-        Assert.AreEqual("detections/anomalous-sign-in",
+    public void DetectionPrefix_ReturnsExpectedDirectoryPath() => Assert.AreEqual("detections/anomalous-sign-in",
             CanonicalPathResolver.DetectionPrefix("anomalous-sign-in"));
-    }
 
     [TestMethod]
-    public void ExtractDetectionSlug_FromValidPath_ReturnsSlug()
-    {
-        Assert.AreEqual("anomalous-sign-in",
+    public void ExtractDetectionSlug_FromValidPath_ReturnsSlug() => Assert.AreEqual("anomalous-sign-in",
             CanonicalPathResolver.ExtractDetectionSlug("detections/anomalous-sign-in/rule.kql"));
-    }
 
     [TestMethod]
-    public void ExtractDetectionSlug_FromNestedPath_ReturnsSlug()
-    {
-        Assert.AreEqual("brute-force-spray",
+    public void ExtractDetectionSlug_FromNestedPath_ReturnsSlug() => Assert.AreEqual("brute-force-spray",
             CanonicalPathResolver.ExtractDetectionSlug("detections/brute-force-spray/notes/assets/img.png"));
-    }
 
     [TestMethod]
-    public void ExtractDetectionSlug_FromNonDetectionPath_ReturnsNull()
-    {
-        Assert.IsNull(CanonicalPathResolver.ExtractDetectionSlug("README.md"));
-    }
+    public void ExtractDetectionSlug_FromNonDetectionPath_ReturnsNull() => Assert.IsNull(CanonicalPathResolver.ExtractDetectionSlug("README.md"));
 }

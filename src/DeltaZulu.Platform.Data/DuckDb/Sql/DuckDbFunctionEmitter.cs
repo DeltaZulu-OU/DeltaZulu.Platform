@@ -1,3 +1,5 @@
+using DeltaZulu.Platform.Domain.Hunting.QueryModel;
+
 namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 
 internal sealed class DuckDbFunctionEmitter
@@ -184,6 +186,7 @@ to_json(
         };
     }
 
+    /// <summary>
     /// DuckDB official docs do NOT list ago() as a function.
     /// The documented pattern is current_timestamp - INTERVAL.
     /// Source: https://duckdb.org/docs/current/sql/functions/timestamp

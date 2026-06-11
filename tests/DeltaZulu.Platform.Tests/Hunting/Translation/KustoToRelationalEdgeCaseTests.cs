@@ -1,10 +1,11 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Translation;
 
 using DeltaZulu.Platform.Application.Hunting.Catalog;
+using DeltaZulu.Platform.Application.Hunting.Translation;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
 using DeltaZulu.Platform.Domain.Hunting.QueryModel;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Translation;
 /// <summary>
 /// Edge case, error path, and adversarial tests for the KQL-to-RelNode translator.
 /// These verify that the translator rejects malformed, blocked, or adversarial KQL

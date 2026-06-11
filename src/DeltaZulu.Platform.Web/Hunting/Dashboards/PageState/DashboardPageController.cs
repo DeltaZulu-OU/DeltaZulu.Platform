@@ -1,9 +1,8 @@
-namespace DeltaZulu.Platform.Web.Hunting.Dashboards.PageState;
 
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Persistence;
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Runtime;
-using Microsoft.Extensions.Logging;
 
+namespace DeltaZulu.Platform.Web.Hunting.Dashboards.PageState;
 public sealed partial class DashboardPageController : IDisposable
 {
     private readonly IDashboardRepository _dashboardRepository;

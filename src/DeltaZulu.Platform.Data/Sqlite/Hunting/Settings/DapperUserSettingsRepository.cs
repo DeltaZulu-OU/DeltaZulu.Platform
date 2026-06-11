@@ -1,11 +1,10 @@
-namespace DeltaZulu.Platform.Data.Sqlite.Hunting.Settings;
 
 using Dapper;
-using DeltaZulu.Platform.Data.Sqlite.Hunting;
-using AppIUserSettingsRepository = Hunting.Application.Settings.IUserSettingsRepository;
-using AppUserSettingsDefaults = Hunting.Application.Settings.UserSettingsDefaults;
-using AppUserSettingsRecord = Hunting.Application.Settings.UserSettingsRecord;
+using AppIUserSettingsRepository = DeltaZulu.Platform.Domain.Hunting.Settings.IUserSettingsRepository;
+using AppUserSettingsDefaults = DeltaZulu.Platform.Domain.Hunting.Settings.UserSettingsDefaults;
+using AppUserSettingsRecord = DeltaZulu.Platform.Domain.Hunting.Settings.UserSettingsRecord;
 
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting.Settings;
 public sealed class DapperUserSettingsRepository : AppIUserSettingsRepository, IDisposable
 {
     private const string CreateSchemaSql =

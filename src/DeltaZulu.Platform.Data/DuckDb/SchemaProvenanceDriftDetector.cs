@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Data.DuckDb;
 
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 
+namespace DeltaZulu.Platform.Data.DuckDb;
 /// <summary>
 /// Compares expected schema-object fingerprints with recorded provenance rows.
 /// This detector reports drift only; it does not classify migration safety or block apply.

@@ -1,5 +1,6 @@
 using Bunit;
 using MudBlazor.Services;
+using DeltaZulu.Platform.Web.Components;
 
 namespace DeltaZulu.Platform.Tests.Components;
 

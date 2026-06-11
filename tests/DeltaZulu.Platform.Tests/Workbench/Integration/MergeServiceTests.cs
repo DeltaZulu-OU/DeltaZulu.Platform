@@ -453,10 +453,7 @@ public sealed class MergeServiceTests : IDisposable
         }
     }
 
-    public void Dispose()
-    {
-        _host.Dispose();
-    }
+    public void Dispose() => _host.Dispose();
 
     public TestContext TestContext { get; set; }
 }

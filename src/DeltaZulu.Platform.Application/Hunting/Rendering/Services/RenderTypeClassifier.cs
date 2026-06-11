@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Application.Hunting.Rendering.Services;
 
 using DeltaZulu.Platform.Application.Hunting.Rendering.Tabular;
 
+namespace DeltaZulu.Platform.Application.Hunting.Rendering.Services;
 public static class RenderTypeClassifier
 {
     private static readonly HashSet<string> NumericTypeNames = new(StringComparer.OrdinalIgnoreCase)

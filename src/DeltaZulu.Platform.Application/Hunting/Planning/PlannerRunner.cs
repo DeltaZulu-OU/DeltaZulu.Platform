@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Application.Hunting.Planning;
 
 using DeltaZulu.Platform.Domain.Hunting.Planning;
 using DeltaZulu.Platform.Domain.Hunting.QueryModel;
 
+namespace DeltaZulu.Platform.Application.Hunting.Planning;
 internal static class PlannerRunner
 {
     internal static PlannerRunResult Run(

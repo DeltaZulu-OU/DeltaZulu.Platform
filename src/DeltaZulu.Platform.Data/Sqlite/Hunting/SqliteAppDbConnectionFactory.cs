@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Data.Sqlite.Hunting;
 
 using System.Data.Common;
 using Microsoft.Data.Sqlite;
 
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting;
 public sealed class SqliteAppDbConnectionFactory : IAppDbConnectionFactory
 {
     private readonly string _connectionString;

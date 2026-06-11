@@ -87,10 +87,7 @@ public sealed class DetectionVersion : Entity<VersionId>
         WorkflowProfileId workflowProfile, ChangeRequestId sourceChangeRequestId,
         IssueId? linkedIssueId, DateTimeOffset acceptedAt,
         IReadOnlyList<LogicalPath> changedSections, string gitCommitSha,
-        string checksSummary, string reviewSummary)
-    {
-        return new DetectionVersion(id, detectionId, sequenceNumber, title, changeSummary,
+        string checksSummary, string reviewSummary) => new DetectionVersion(id, detectionId, sequenceNumber, title, changeSummary,
             authorId, workflowProfile, sourceChangeRequestId, linkedIssueId, acceptedAt,
             changedSections, gitCommitSha, checksSummary, reviewSummary);
-    }
 }

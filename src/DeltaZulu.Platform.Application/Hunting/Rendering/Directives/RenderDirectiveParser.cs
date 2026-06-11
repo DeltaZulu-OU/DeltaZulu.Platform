@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Application.Hunting.Render.Directives;
 
 using System.Text.RegularExpressions;
 using DeltaZulu.Platform.Application.Hunting.Rendering.Directives;
 using DeltaZulu.Platform.Domain.Hunting.Rendering;
 
+namespace DeltaZulu.Platform.Application.Hunting.Render.Directives;
 public sealed partial class RenderDirectiveParser : IRenderDirectiveParser
 {
     private static readonly HashSet<string> SupportedKinds = new(StringComparer.OrdinalIgnoreCase)

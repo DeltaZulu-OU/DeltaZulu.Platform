@@ -1,13 +1,10 @@
-namespace DeltaZulu.Platform.Web.Hunting.Hosting;
 
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Seeding;
 using DeltaZulu.Platform.Data.Sqlite.Hunting;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
+namespace DeltaZulu.Platform.Web.Hunting.Hosting;
 public static partial class HuntingModuleBootstrapExtensions
 {
     public static async Task BootstrapHuntingModuleAsync(

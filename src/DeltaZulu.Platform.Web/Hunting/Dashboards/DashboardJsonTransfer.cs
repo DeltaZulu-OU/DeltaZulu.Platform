@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Web.Hunting.Dashboards;
 
 using System.Text.Json;
 
+namespace DeltaZulu.Platform.Web.Hunting.Dashboards;
 public static class DashboardJsonTransfer
 {
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)

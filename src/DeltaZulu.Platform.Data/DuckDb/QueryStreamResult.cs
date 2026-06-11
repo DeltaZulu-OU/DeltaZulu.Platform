@@ -1,8 +1,7 @@
-namespace DeltaZulu.Platform.Data.DuckDb;
 
 using DeltaZulu.Platform.Data.Hunting;
-using DeltaZulu.Platform.Domain.Hunting.Policy;
-
+using DeltaZulu.Platform.Domain.Hunting.Policy;
+namespace DeltaZulu.Platform.Data.DuckDb;
 public sealed class QueryStreamResult
 {
     public IReadOnlyList<ResultColumn> Columns { get; init; } = [];

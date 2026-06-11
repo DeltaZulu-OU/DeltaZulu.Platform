@@ -1,10 +1,10 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Spike;
 
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 using DeltaZulu.Platform.Tests.Hunting.Fixtures;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Spike;
 /// <summary>
 /// Integration tests for the active Phase 1A medallion schema pipeline:
 /// C# models → SchemaEmitter → DDL → SchemaApplier → DuckDB → seeded Golden views.

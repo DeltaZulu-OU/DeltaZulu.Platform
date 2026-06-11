@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Render;
 
 using DeltaZulu.Platform.Domain.Hunting.Rendering;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Render;
 [TestClass]
 public sealed class RenderModelContractTests
 {

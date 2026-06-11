@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Application.Hunting.Translation;
 
 using Kusto.Language.Syntax;
 
+namespace DeltaZulu.Platform.Application.Hunting.Translation;
 /// <summary>Blocks executable Kusto management dot-commands before translation.</summary>
 internal static class KustoManagementCommandGuard
 {

@@ -1,10 +1,9 @@
-namespace DeltaZulu.Platform.Data.Sqlite.Hunting.QueryHistory;
 
 using Dapper;
-using DeltaZulu.Platform.Data.Sqlite.Hunting;
-using AppIQueryHistoryRepository = Hunting.Application.QueryHistory.IQueryHistoryRepository;
-using AppQueryHistoryRecord = Hunting.Application.QueryHistory.QueryHistoryRecord;
+using AppIQueryHistoryRepository = DeltaZulu.Platform.Domain.Hunting.QueryHistory.IQueryHistoryRepository;
+using AppQueryHistoryRecord = DeltaZulu.Platform.Domain.Hunting.QueryHistory.QueryHistoryRecord;
 
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting.QueryHistory;
 public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, IDisposable
 {
     private const string CreateSchemaSql =

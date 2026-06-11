@@ -261,10 +261,7 @@ public sealed class MergeReconciliationServiceTests : IDisposable
             commitSha,
             commitSha is null ? null : new DateTimeOffset(2026, 2, 1, 10, 0, 5, TimeSpan.Zero));
 
-    public void Dispose()
-    {
-        _host.Dispose();
-    }
+    public void Dispose() => _host.Dispose();
 
     public TestContext TestContext { get; set; }
 }

@@ -43,9 +43,7 @@ public sealed class CheckRun : Entity<CheckRunId>
     public static CheckRun Reconstitute(
         CheckRunId id, ChangeRequestId changeRequestId, string name, bool isBlocking,
         CheckStatus status, DateTimeOffset? startedAt, DateTimeOffset? completedAt,
-        string summary, string detailsJson, string logsExcerpt)
-    {
-        return new CheckRun(id, changeRequestId, name, isBlocking, skip: true)
+        string summary, string detailsJson, string logsExcerpt) => new CheckRun(id, changeRequestId, name, isBlocking, skip: true)
         {
             Status = status,
             StartedAt = startedAt,
@@ -54,7 +52,6 @@ public sealed class CheckRun : Entity<CheckRunId>
             DetailsJson = detailsJson,
             LogsExcerpt = logsExcerpt
         };
-    }
 
     // Validation-free path for Reconstitute only.
     private CheckRun(CheckRunId id, ChangeRequestId changeRequestId, string name, bool isBlocking, bool skip)

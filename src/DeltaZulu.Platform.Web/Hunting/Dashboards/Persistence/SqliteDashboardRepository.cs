@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Web.Hunting.Dashboards.Persistence;
 
 using System.Text.Json;
 using Dapper;
 using DeltaZulu.Platform.Data.Sqlite.Hunting;
 
+namespace DeltaZulu.Platform.Web.Hunting.Dashboards.Persistence;
 public sealed class SqliteDashboardRepository : IDashboardRepository, IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)

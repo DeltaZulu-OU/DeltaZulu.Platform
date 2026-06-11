@@ -1,9 +1,9 @@
-namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 
 using System.Text;
-using Mapping;
-using Schema;
+using DeltaZulu.Platform.Domain.Hunting.Mapping;
+using DeltaZulu.Platform.Domain.Hunting.Schema;
 
+namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 /// <summary>
 /// <para>
 /// Generates transient DuckDB DDL (CREATE SCHEMA, CREATE TABLE, CREATE VIEW)

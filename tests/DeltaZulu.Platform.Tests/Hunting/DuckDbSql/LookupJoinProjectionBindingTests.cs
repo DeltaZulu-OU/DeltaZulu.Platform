@@ -1,10 +1,11 @@
-namespace DeltaZulu.Platform.Tests.Hunting.DuckDbSql;
 
+using DeltaZulu.Platform.Application.Hunting.Catalog;
+using DeltaZulu.Platform.Application.Hunting.Translation;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
+namespace DeltaZulu.Platform.Tests.Hunting.DuckDbSql;
 [TestClass]
 public sealed class LookupJoinProjectionBindingTests
 {

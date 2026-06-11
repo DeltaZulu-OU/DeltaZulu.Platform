@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Schema;
 
 using DeltaZulu.Platform.Domain.Hunting.Mapping;
 
+namespace DeltaZulu.Platform.Domain.Hunting.Schema;
 /// <summary>
 /// A single column in a schema object. Carries both the Kusto type
 /// (for editor and semantic analysis) and the DuckDB type (for SQL emission).

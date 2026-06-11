@@ -144,8 +144,5 @@ public sealed class AcceptedContentReadServiceTests : IDisposable
         Assert.AreEqual(expected, comparison.Status);
     }
 
-    public void Dispose()
-    {
-        _host.Dispose();
-    }
+    public void Dispose() => _host.Dispose();
 }

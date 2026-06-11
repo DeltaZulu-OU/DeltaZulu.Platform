@@ -1,4 +1,3 @@
-namespace DeltaZulu.Platform.Tests.Hunting;
 
 using DeltaZulu.Platform.Application.Hunting.Samples;
 using DeltaZulu.Platform.Data.Sqlite.Hunting;
@@ -9,6 +8,7 @@ using DeltaZulu.Platform.Domain.Hunting.Visualizations;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 
+namespace DeltaZulu.Platform.Tests.Hunting;
 [TestClass]
 public sealed class ApplicationPersistenceBootstrapTests
 {

@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Web.Hunting.Library;
 
 using DeltaZulu.Platform.Web.Hunting.Services;
 using Microsoft.AspNetCore.Components;
 
+namespace DeltaZulu.Platform.Web.Hunting.Library;
 public sealed class LibraryPageController
 {
     private readonly EditorBus _editorBus;

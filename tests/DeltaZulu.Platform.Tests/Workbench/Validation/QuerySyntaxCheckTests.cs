@@ -77,10 +77,7 @@ public sealed class QuerySyntaxCheckTests
     }
 
     [TestMethod]
-    public void FailingValidationResult_RequiresAtLeastOneDiagnostic()
-    {
-        Assert.ThrowsExactly<ArgumentException>(() => QuerySyntaxValidationResult.Fail());
-    }
+    public void FailingValidationResult_RequiresAtLeastOneDiagnostic() => Assert.ThrowsExactly<ArgumentException>(() => QuerySyntaxValidationResult.Fail());
 
     public TestContext TestContext { get; set; }
 

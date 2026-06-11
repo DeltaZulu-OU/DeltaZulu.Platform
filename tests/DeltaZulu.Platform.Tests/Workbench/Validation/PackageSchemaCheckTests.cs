@@ -14,7 +14,7 @@ public sealed class PackageSchemaCheckTests
     [TestMethod]
     public async Task ValidMetadata_Passes()
     {
-        var yaml = "id: test-det\ntitle: Test Detection\ndescription: Detects things\nseverity: high\n";
+        const string yaml = "id: test-det\ntitle: Test Detection\ndescription: Detects things\nseverity: high\n";
         var ctx = Ctx(new DraftFileSnapshot("detection.yaml", DraftContentType.DetectionMetadata, yaml));
 
         var result = await _check.RunAsync(ctx, TestContext.CancellationToken);
@@ -25,7 +25,7 @@ public sealed class PackageSchemaCheckTests
     [TestMethod]
     public async Task MissingRequiredField_Fails()
     {
-        var yaml = "id: test-det\ntitle: Test Detection\n"; // missing description and severity
+        const string yaml = "id: test-det\ntitle: Test Detection\n"; // missing description and severity
         var ctx = Ctx(new DraftFileSnapshot("detection.yaml", DraftContentType.DetectionMetadata, yaml));
 
         var result = await _check.RunAsync(ctx, TestContext.CancellationToken);

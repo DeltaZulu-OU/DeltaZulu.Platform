@@ -1,10 +1,9 @@
-namespace DeltaZulu.Platform.Web.Hunting.Dashboards.DependencyInjection;
 
 using DeltaZulu.Platform.Web.Hunting.Dashboards.PageState;
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Persistence;
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Runtime;
-using Microsoft.Extensions.DependencyInjection;
 
+namespace DeltaZulu.Platform.Web.Hunting.Dashboards.DependencyInjection;
 public static class DashboardServiceCollectionExtensions
 {
     public static IServiceCollection AddDashboards(this IServiceCollection services)

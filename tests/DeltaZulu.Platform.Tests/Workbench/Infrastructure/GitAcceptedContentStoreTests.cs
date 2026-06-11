@@ -1,4 +1,5 @@
 using DeltaZulu.Platform.Data.Git;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using LibGit2Sharp;
 using Microsoft.Extensions.Options;
 

@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Application.Hunting.Translation;
 
 using Kusto.Language.Syntax;
 
+namespace DeltaZulu.Platform.Application.Hunting.Translation;
 /// <summary>Adapts Kusto.Language SDK list and path syntax shapes for translators.</summary>
 internal static class KustoSyntaxHelpers
 {

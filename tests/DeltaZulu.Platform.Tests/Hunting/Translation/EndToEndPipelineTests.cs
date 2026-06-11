@@ -1,4 +1,3 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Translation;
 
 using DeltaZulu.Platform.Application.Hunting.Catalog;
 using DeltaZulu.Platform.Application.Hunting.Planning;
@@ -10,6 +9,7 @@ using DeltaZulu.Platform.Domain.Hunting.QueryModel;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 using DeltaZulu.Platform.Tests.Hunting.Fixtures;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Translation;
 [TestClass]
 public sealed class EndToEndPipelineTests
 {

@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Tests.Hunting.Render;
 
 using DeltaZulu.Platform.Application.Hunting.Render.Directives;
 using DeltaZulu.Platform.Domain.Hunting.Rendering;
 
+namespace DeltaZulu.Platform.Tests.Hunting.Render;
 [TestClass]
 public sealed class RenderDirectiveParserTests
 {
@@ -97,7 +97,7 @@ public sealed class RenderDirectiveParserTests
     [TestMethod]
     public void Parse_NonTerminalRenderToken_ReturnsOriginalQueryAndFallbackTableWithRenderIntent()
     {
-        var query = "ProcessEvent | render barchart | take 10";
+        const string query = "ProcessEvent | render barchart | take 10";
 
         var result = _parser.Parse(query);
 

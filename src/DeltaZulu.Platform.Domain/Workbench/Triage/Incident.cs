@@ -165,9 +165,7 @@ public sealed class Incident : Entity<IncidentId>
         ExternalCaseRef? externalCase,
         string? closeReason,
         DateTimeOffset createdAt,
-        DateTimeOffset updatedAt)
-    {
-        return new Incident(id, title, sourceCandidateId, approvalDecisionId, ownerId, severity, createdAt)
+        DateTimeOffset updatedAt) => new Incident(id, title, sourceCandidateId, approvalDecisionId, ownerId, severity, createdAt)
         {
             Status = status,
             Tlp = tlp,
@@ -175,7 +173,6 @@ public sealed class Incident : Entity<IncidentId>
             CloseReason = closeReason,
             UpdatedAt = updatedAt
         };
-    }
 
     // --- helpers --------------------------------------------------------------------------------
 
