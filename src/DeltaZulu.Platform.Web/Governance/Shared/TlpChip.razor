@@ -1,0 +1,28 @@
+@namespace DeltaZulu.Platform.Web.Governance.Components.Shared
+@using DeltaZulu.Platform.Domain.Governance.Enums
+
+<DzStatusChip Label="@Label" Tone="@Tone" />
+
+@code {
+    [Parameter, EditorRequired] public TlpLevel Level { get; set; }
+
+    private string Label => Level switch
+    {
+        TlpLevel.Clear => "TLP:CLEAR",
+        TlpLevel.Green => "TLP:GREEN",
+        TlpLevel.Amber => "TLP:AMBER",
+        TlpLevel.AmberStrict => "TLP:AMBER+STRICT",
+        TlpLevel.Red => "TLP:RED",
+        _ => Level.ToString(),
+    };
+
+    private string Tone => Level switch
+    {
+        TlpLevel.Clear => "neutral",
+        TlpLevel.Green => "success",
+        TlpLevel.Amber => "warning",
+        TlpLevel.AmberStrict => "warning",
+        TlpLevel.Red => "error",
+        _ => "neutral",
+    };
+}

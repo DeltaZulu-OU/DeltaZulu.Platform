@@ -1,6 +1,6 @@
 
 using System.Text.RegularExpressions;
-using DeltaZulu.Platform.Domain.Hunting.QueryModel;
+using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 /// <summary>

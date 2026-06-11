@@ -1,7 +1,7 @@
 using System.Reflection;
-using DeltaZulu.Platform.Web.Hunting;
+using DeltaZulu.Platform.Web.Analytics;
 using DeltaZulu.Platform.Web.Platform;
-using DeltaZulu.Platform.Web.Workbench;
+using DeltaZulu.Platform.Web.Governance;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 
@@ -12,8 +12,8 @@ public sealed class PlatformCompositionTests
 {
     private static readonly IPlatformModule[] Modules =
     [
-        new HuntingModule(),
-        new WorkbenchModule(),
+        new AnalyticsModule(),
+        new GovernanceModule(),
     ];
 
     [TestMethod]

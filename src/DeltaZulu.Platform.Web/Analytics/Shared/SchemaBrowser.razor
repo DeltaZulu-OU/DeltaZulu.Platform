@@ -1,0 +1,100 @@
+@namespace DeltaZulu.Platform.Web.Analytics.Shared
+@using DeltaZulu.Platform.Domain.Analytics.SavedQueries
+@using DeltaZulu.Platform.Domain.Analytics.Schema
+@inject DeltaZulu.Platform.Application.Analytics.Catalog.ApprovedViewCatalog Catalog
+@inject DeltaZulu.Platform.Web.Analytics.Services.EditorBus EditorBus
+@inject DeltaZulu.Platform.Web.Analytics.Services.QueryLibraryService QueryLibrary
+
+<nav class="schema-browser" aria-label="Schema browser navigation">
+    <MudNavMenu Dense="true" Color="Color.Info" Class="schema-nav-menu">
+        <MudNavGroup Title="Schema" Expanded="true">
+            @foreach (var (name, view) in Catalog.Views.OrderBy(kv => kv.Key))
+            {
+                <MudNavGroup Title="@name" Expanded="false">
+                    <MudNavLink OnClick="@(() => OnTableClick(name))">
+                        Insert table name
+                    </MudNavLink>
+
+                    @foreach (var col in view.Columns)
+                    {
+                        <MudNavLink OnClick="@(() => OnColumnClick(col.Name))">
+                            <span class="schema-column-nav-item">
+                                <span class="schema-col-name">@col.Name</span>
+                                <span class="schema-col-type">@col.KustoType.ToKustoName()</span>
+                            </span>
+                        </MudNavLink>
+                    }
+                </MudNavGroup>
+            }
+
+            @if (!Catalog.Views.Any())
+            {
+                <MudText Typo="Typo.body2" Class="schema-empty">No tables registered.</MudText>
+            }
+        </MudNavGroup>
+
+        <MudNavGroup Title="Saved queries" Expanded="false">
+            <MudNavLink OnClick="RefreshSavedQueriesAsync" Disabled="@_loadingSavedQueries">
+                @(_loadingSavedQueries ? "Refreshing…" : "Refresh saved queries")
+            </MudNavLink>
+
+            @if (_savedQueries.Count == 0 && !_loadingSavedQueries)
+            {
+                <MudText Typo="Typo.body2" Class="schema-empty">No saved queries yet.</MudText>
+            }
+
+            @foreach (var query in _savedQueries)
+            {
+                <MudNavLink OnClick="@(() => OnSavedQueryClickAsync(query.Id))">
+                    <span class="schema-saved-query-nav-item">
+                        <span class="schema-saved-query-name">@query.Name</span>
+                        @if (!string.IsNullOrWhiteSpace(query.Description))
+                        {
+                            <span class="schema-saved-query-description">@query.Description</span>
+                        }
+                    </span>
+                </MudNavLink>
+            }
+        </MudNavGroup>
+    </MudNavMenu>
+</nav>
+
+@code {
+    private IReadOnlyList<SavedQueryRecord> _savedQueries = [];
+    private bool _loadingSavedQueries;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshSavedQueriesAsync();
+    }
+
+    private void OnTableClick(string table)
+        => EditorBus.RequestInsert(table);
+
+    private void OnColumnClick(string col)
+        => EditorBus.RequestInsert(col);
+
+    private async Task RefreshSavedQueriesAsync()
+    {
+        _loadingSavedQueries = true;
+
+        try
+        {
+            _savedQueries = await QueryLibrary.ListSavedQueriesAsync();
+        }
+        finally
+        {
+            _loadingSavedQueries = false;
+        }
+    }
+
+    private async Task OnSavedQueryClickAsync(string id)
+    {
+        var queryText = await QueryLibrary.LoadSavedQueryTextAsync(id);
+
+        if (!string.IsNullOrWhiteSpace(queryText))
+        {
+            EditorBus.RequestInsert(queryText);
+        }
+    }
+}
