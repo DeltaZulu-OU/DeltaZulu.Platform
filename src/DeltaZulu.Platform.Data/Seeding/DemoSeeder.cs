@@ -329,12 +329,12 @@ public static class DemoSeeder
         var files = new[]
         {
             new { CrId = cr1, Path = "detection.yml", ContentType = "DetectionMetadata", Content = DemoYaml.PsExecMetadata, By = AnalystId },
-            new { CrId = cr1, Path = "query.kql", ContentType = "HuntingQuery", Content = DemoYaml.PsExecQuery, By = AnalystId },
+            new { CrId = cr1, Path = "query.kql", ContentType = "AnalyticsQuery", Content = DemoYaml.PsExecQuery, By = AnalystId },
             new { CrId = cr2, Path = "tests/mimikatz-lsass.yml", ContentType = "TestDefinition", Content = DemoYaml.LsassTestDef, By = AnalystId },
             new { CrId = cr2, Path = "fixtures/mimikatz-dump.ndjson", ContentType = "Fixture", Content = DemoYaml.MimikatzFixture, By = AnalystId },
-            new { CrId = cr3, Path = "query.kql", ContentType = "HuntingQuery", Content = DemoYaml.SchtasksQuery, By = ReviewerId },
+            new { CrId = cr3, Path = "query.kql", ContentType = "AnalyticsQuery", Content = DemoYaml.SchtasksQuery, By = ReviewerId },
             new { CrId = cr4, Path = "detection.yml", ContentType = "DetectionMetadata", Content = DemoYaml.DnsTunnelMetadata, By = AnalystId },
-            new { CrId = cr4, Path = "query.kql", ContentType = "HuntingQuery", Content = DemoYaml.DnsTunnelQuery, By = AnalystId },
+            new { CrId = cr4, Path = "query.kql", ContentType = "AnalyticsQuery", Content = DemoYaml.DnsTunnelQuery, By = AnalystId },
         };
 
         const string sql = """

@@ -53,7 +53,7 @@ public static class DeltaZuluTheme
 
             Background = Paper,
             Surface = SurfacePrimary,
-            AppbarBackground = Ink,
+            AppbarBackground = Slate,
             AppbarText = "#FFFFFF",
             DrawerBackground = SurfacePrimary,
             DrawerText = Ink,

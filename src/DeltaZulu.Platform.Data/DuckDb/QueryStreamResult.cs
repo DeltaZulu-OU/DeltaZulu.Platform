@@ -1,6 +1,6 @@
 
-using DeltaZulu.Platform.Data.Hunting;
-using DeltaZulu.Platform.Domain.Hunting.Policy;
+using DeltaZulu.Platform.Data.Analytics;
+using DeltaZulu.Platform.Domain.Analytics.Policy;
 namespace DeltaZulu.Platform.Data.DuckDb;
 public sealed class QueryStreamResult
 {

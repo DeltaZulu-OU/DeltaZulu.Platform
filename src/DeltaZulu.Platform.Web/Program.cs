@@ -1,14 +1,14 @@
-using DeltaZulu.Platform.Application.Workbench;
-using DeltaZulu.Platform.Application.Workbench.Validation;
-using DeltaZulu.Platform.Application.Workbench.Workflow;
+using DeltaZulu.Platform.Application.Governance;
+using DeltaZulu.Platform.Application.Governance.Validation;
+using DeltaZulu.Platform.Application.Governance.Workflow;
 using DeltaZulu.Platform.Data.Git;
 using DeltaZulu.Platform.Data.Seeding;
-using DeltaZulu.Platform.Data.Sqlite.Workbench;
-using DeltaZulu.Platform.Web.Hunting;
-using DeltaZulu.Platform.Web.Hunting.Hosting;
+using DeltaZulu.Platform.Data.Sqlite.Governance;
+using DeltaZulu.Platform.Web.Analytics;
+using DeltaZulu.Platform.Web.Analytics.Hosting;
 using DeltaZulu.Platform.Web.Platform;
-using DeltaZulu.Platform.Web.Workbench;
-using DeltaZulu.Platform.Web.Workbench.Services;
+using DeltaZulu.Platform.Web.Governance;
+using DeltaZulu.Platform.Web.Governance.Services;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,44 +21,44 @@ builder.Services.AddMudServices();
 builder.Services.AddSingleton(TimeProvider.System);
 
 // --- Platform module registry ---
-builder.Services.AddSingleton<IPlatformModule, HuntingModule>();
-builder.Services.AddSingleton<IPlatformModule, WorkbenchModule>();
+builder.Services.AddSingleton<IPlatformModule, AnalyticsModule>();
+builder.Services.AddSingleton<IPlatformModule, GovernanceModule>();
 
-// --- Workbench module services ---
+// --- Governance module services ---
 builder.Services.AddScoped<PocUserContext>();
 
-var connectionString = builder.Configuration.GetConnectionString("Workbench")
-    ?? "Data Source=workbench.db";
-builder.Services.AddWorkbenchPersistence(connectionString);
+var connectionString = builder.Configuration.GetConnectionString("Governance")
+    ?? "Data Source=governance.db";
+builder.Services.AddGovernancePersistence(connectionString);
 
 if (builder.Configuration.GetValue<bool>("DemoSeed:Enabled"))
     DemoSeeder.Seed(connectionString);
 
-builder.Services.AddWorkbenchApplication();
-builder.Services.AddWorkbenchValidation();
+builder.Services.AddGovernanceApplication();
+builder.Services.AddGovernanceValidation();
 
 var useElsa = builder.Configuration.GetValue<bool>("Workflow:UseElsa");
 if (useElsa)
-    builder.Services.AddWorkbenchElsaWorkflows();
+    builder.Services.AddGovernanceElsaWorkflows();
 else
-    builder.Services.AddWorkbenchDomainOrchestrator();
+    builder.Services.AddGovernanceDomainOrchestrator();
 
 var acceptedContentRepositoryPath = builder.Configuration.GetValue<string>("AcceptedContent:RepositoryPath")
     ?? Path.Combine(builder.Environment.ContentRootPath, "accepted-content");
-builder.Services.AddWorkbenchGitAcceptedContentStore(options =>
+builder.Services.AddGovernanceGitAcceptedContentStore(options =>
     options.RepositoryPath = Path.IsPathRooted(acceptedContentRepositoryPath)
         ? acceptedContentRepositoryPath
         : Path.Combine(builder.Environment.ContentRootPath, acceptedContentRepositoryPath));
 
-// --- Hunting module services ---
-builder.Services.AddHuntingWebModule(new HuntingWebModuleOptions
+// --- Analytics module services ---
+builder.Services.AddAnalyticsWebModule(new AnalyticsModuleOptions
 {
     DuckDbPath = ResolveConfiguredPath(
-        builder.Configuration["Hunting:DuckDbPath"],
+        builder.Configuration["Analytics:DuckDbPath"],
         builder.Environment.ContentRootPath,
-        "hunting.db"),
+        "analytics.db"),
     AppDbPath = ResolveConfiguredPath(
-        builder.Configuration["Hunting:AppDbPath"],
+        builder.Configuration["Analytics:AppDbPath"],
         builder.Environment.ContentRootPath,
         "settings.db"),
     PlannerMaxIterations = builder.Configuration.GetValue("Planner:MaxIterations", 3),
@@ -79,8 +79,8 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAntiforgery();
 
-// Bootstrap Hunting module (DuckDB schema, application persistence)
-await app.BootstrapHuntingModuleAsync(new HuntingWebModuleOptions
+// Bootstrap Analytics module (DuckDB schema, application persistence)
+await app.BootstrapAnalyticsModuleAsync(new AnalyticsModuleOptions
 {
     BootstrapDuckDbSchema = true,
     BootstrapApplicationPersistence = true,

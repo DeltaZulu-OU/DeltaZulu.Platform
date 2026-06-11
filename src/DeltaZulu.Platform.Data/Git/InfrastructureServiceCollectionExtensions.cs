@@ -1,4 +1,4 @@
-using DeltaZulu.Platform.Domain.Workbench.Contracts;
+using DeltaZulu.Platform.Domain.Governance.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -8,7 +8,7 @@ namespace DeltaZulu.Platform.Data.Git;
 public static class InfrastructureServiceCollectionExtensions
 {
     /// <summary>Registers the Git-backed accepted content store.</summary>
-    public static IServiceCollection AddWorkbenchGitAcceptedContentStore(
+    public static IServiceCollection AddGovernanceGitAcceptedContentStore(
         this IServiceCollection services,
         Action<GitAcceptedContentStoreOptions> configure)
     {

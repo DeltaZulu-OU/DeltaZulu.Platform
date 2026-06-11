@@ -1,0 +1,329 @@
+@namespace DeltaZulu.Platform.Web.Analytics.Components.Dashboards
+@using DeltaZulu.Platform.Web.Analytics.Dashboards
+@using DeltaZulu.Platform.Web.Analytics.Dashboards.Runtime
+@inject IJSRuntime JS
+@inject ILogger<DashboardGrid> Logger
+@implements IAsyncDisposable
+
+<section id="@_gridElementId"
+         class="@GridShellClass"
+         aria-label="Dashboard widget layout"
+         data-dashboard-edit-mode="@IsEditMode.ToString().ToLowerInvariant()">
+    <MudDropContainer T="DashboardWidgetDefinition"
+                      Items="DropZoneItems"
+                      ItemsSelector="IsWidgetInDashboardDropZone"
+                      ItemDropped="OnWidgetDroppedAsync"
+                      Class="dashboard-drop-container"
+                      ItemDraggingClass="dashboard-drop-item-dragging">
+        <ChildContent>
+            <MudDropZone T="DashboardWidgetDefinition"
+                         Identifier="@DashboardDropZoneId"
+                         AllowReorder="false"
+                         OnlyZone="false"
+                         Class="dashboard-drop-zone">
+                <div class="dashboard-drop-sentinel" aria-hidden="true">
+                    <MudDynamicDropItem T="DashboardWidgetDefinition"
+                                        Item="_dropSentinel"
+                                        ZoneIdentifier="@DashboardDropZoneId"
+                                        Index="-1"
+                                        Disabled="true"
+                                        Class="dashboard-drop-sentinel-item">
+                        <span></span>
+                    </MudDynamicDropItem>
+                </div>
+
+                @if (Dashboard.Widgets.Count == 0)
+                {
+                    <DzEmptyState Title="No widgets"
+                                  Description="This dashboard has no widgets yet. Add a query widget to start building the dashboard."
+                                  Icon="@Icons.Material.Filled.Widgets"
+                                  Elevation="0"
+                                  Class="dashboard-grid-empty" />
+                }
+                else
+                {
+                    <div class="dashboard-coordinate-grid">
+                        @foreach (var widget in OrderedWidgets)
+                        {
+                            <div class="dashboard-layout-item"
+                                 style="@GetGridStyle(widget)"
+                                 data-dashboard-layout-item="@widget.Id"
+                                 data-layout-x="@widget.Layout.X"
+                                 data-layout-y="@widget.Layout.Y"
+                                 data-layout-width="@widget.Layout.Width"
+                                 data-layout-height="@widget.Layout.Height"
+                                 data-layout-min-width="@widget.Layout.MinimumWidth"
+                                 data-layout-min-height="@widget.Layout.MinimumHeight">
+                                <DashboardWidgetHost Widget="widget"
+                                                     Result="GetResult(widget)"
+                                                     IsEditMode="IsEditMode"
+                                                     RunWidget="RunWidget"
+                                                     EditWidget="EditWidget"
+                                                     DeleteWidget="DeleteWidget" />
+                            </div>
+                        }
+                    </div>
+                }
+            </MudDropZone>
+        </ChildContent>
+    </MudDropContainer>
+</section>
+
+@code {
+    private const string DashboardDropZoneId = "dashboard-main";
+
+    private readonly DashboardWidgetDefinition _dropSentinel = new()
+    {
+        Id = "__dashboard_drop_sentinel",
+        Title = "Drop sentinel",
+        Kind = DashboardWidgetKind.Markdown
+    };
+
+    [Parameter, EditorRequired]
+    public DashboardDefinition Dashboard { get; set; } = new();
+
+    [Parameter]
+    public IReadOnlyDictionary<string, DashboardWidgetRunResult> Results { get; set; } =
+        new Dictionary<string, DashboardWidgetRunResult>(StringComparer.OrdinalIgnoreCase);
+
+    [Parameter]
+    public bool IsEditMode { get; set; }
+
+    [Parameter]
+    public EventCallback<DashboardWidgetDefinition> RunWidget { get; set; }
+
+    [Parameter]
+    public EventCallback<DashboardWidgetDefinition> EditWidget { get; set; }
+
+    [Parameter]
+    public EventCallback<DashboardWidgetDefinition> DeleteWidget { get; set; }
+
+    [Parameter]
+    public EventCallback<DashboardWidgetLayoutChange> LayoutChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<IReadOnlyList<DashboardWidgetLayoutChange>> LayoutsChanged { get; set; }
+
+    private readonly string _gridElementId = $"dashboard-grid-{Guid.NewGuid():N}";
+    private DotNetObjectReference<DashboardGrid>? _dotNetReference;
+    private bool _layoutInteropInitialized;
+
+    private IReadOnlyList<DashboardWidgetDefinition> DropZoneItems
+        => [_dropSentinel];
+
+    private string GridShellClass
+        => IsEditMode
+            ? "dashboard-grid-shell dashboard-grid-edit-mode"
+            : "dashboard-grid-shell";
+
+    private IReadOnlyList<DashboardWidgetDefinition> OrderedWidgets
+        => Dashboard.Widgets
+            .OrderBy(widget => widget.Layout.Y)
+            .ThenBy(widget => widget.Layout.X)
+            .ThenBy(widget => widget.Title, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_layoutInteropInitialized)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("huntingDashboardGridLayout.dispose", _gridElementId);
+            }
+            catch (JSDisconnectedException ex)
+            {
+                LogGridInteropLifecycleDebug(ex, "dispose");
+            }
+            catch (TaskCanceledException ex)
+            {
+                LogGridInteropLifecycleDebug(ex, "dispose");
+            }
+            catch (OperationCanceledException ex)
+            {
+                LogGridInteropLifecycleDebug(ex, "dispose");
+            }
+            catch (JSException ex)
+            {
+                LogGridInteropLifecycleDebug(ex, "dispose");
+            }
+            catch (InvalidOperationException ex)
+            {
+                LogGridInteropLifecycleDebug(ex, "dispose");
+            }
+            finally
+            {
+                _layoutInteropInitialized = false;
+            }
+        }
+
+        _dotNetReference?.Dispose();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_layoutInteropInitialized)
+        {
+            return;
+        }
+
+        _dotNetReference ??= DotNetObjectReference.Create(this);
+
+        try
+        {
+            await JS.InvokeVoidAsync(
+                "huntingDashboardGridLayout.initialize",
+                _gridElementId,
+                _dotNetReference);
+            _layoutInteropInitialized = true;
+        }
+        catch (JSDisconnectedException ex)
+        {
+            _layoutInteropInitialized = false;
+            LogGridInteropLifecycleDebug(ex, "initialize");
+        }
+        catch (TaskCanceledException ex)
+        {
+            _layoutInteropInitialized = false;
+            LogGridInteropLifecycleDebug(ex, "initialize");
+        }
+        catch (OperationCanceledException ex)
+        {
+            _layoutInteropInitialized = false;
+            LogGridInteropLifecycleDebug(ex, "initialize");
+        }
+        catch (JSException ex)
+        {
+            _layoutInteropInitialized = false;
+            LogGridInteropLifecycleDebug(ex, "initialize");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _layoutInteropInitialized = false;
+            LogGridInteropLifecycleDebug(ex, "initialize");
+        }
+    }
+
+    [JSInvokable]
+    public Task UpdateWidgetLayoutAsync(string widgetId, int x, int y, int width, int height)
+    {
+        var change = new DashboardWidgetLayoutInteropChange
+        {
+            WidgetId = widgetId,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height
+        };
+
+        return UpdateWidgetLayoutsAsync([change]);
+    }
+
+    [JSInvokable]
+    public async Task UpdateWidgetLayoutsAsync(DashboardWidgetLayoutInteropChange[] changes)
+    {
+        var layoutChanges = changes
+            .Select(ToLayoutChange)
+            .OfType<DashboardWidgetLayoutChange>()
+            .ToArray();
+
+        if (layoutChanges.Length == 0)
+        {
+            return;
+        }
+
+        if (LayoutsChanged.HasDelegate)
+        {
+            await LayoutsChanged.InvokeAsync(layoutChanges);
+            return;
+        }
+
+        foreach (var change in layoutChanges)
+        {
+            await LayoutChanged.InvokeAsync(change);
+        }
+    }
+
+    private DashboardWidgetLayoutChange? ToLayoutChange(DashboardWidgetLayoutInteropChange change)
+    {
+        var widgetId = change.WidgetId;
+        if (string.IsNullOrWhiteSpace(widgetId))
+        {
+            return null;
+        }
+
+        var existing = Dashboard.Widgets.FirstOrDefault(widget => string.Equals(widget.Id, widgetId, StringComparison.OrdinalIgnoreCase));
+        if (existing is null)
+        {
+            return null;
+        }
+
+        var layout = new DashboardLayout
+        {
+            X = Math.Max(0, change.X),
+            Y = Math.Max(0, change.Y),
+            Width = Math.Max(existing.Layout.MinimumWidth, change.Width),
+            Height = Math.Max(existing.Layout.MinimumHeight, change.Height),
+            MinimumWidth = existing.Layout.MinimumWidth,
+            MinimumHeight = existing.Layout.MinimumHeight
+        };
+
+        if (SameLayout(existing.Layout, layout))
+        {
+            return null;
+        }
+
+        return new DashboardWidgetLayoutChange(widgetId, layout);
+    }
+
+    private static bool SameLayout(DashboardLayout first, DashboardLayout second)
+        => first.X == second.X
+            && first.Y == second.Y
+            && first.Width == second.Width
+            && first.Height == second.Height
+            && first.MinimumWidth == second.MinimumWidth
+            && first.MinimumHeight == second.MinimumHeight;
+
+    public sealed class DashboardWidgetLayoutInteropChange
+    {
+        public string? WidgetId { get; set; }
+
+        public int X { get; set; }
+
+        public int Y { get; set; }
+
+        public int Width { get; set; }
+
+        public int Height { get; set; }
+    }
+
+    private Task OnWidgetDroppedAsync(MudItemDropInfo<DashboardWidgetDefinition> dropInfo)
+    {
+        return Task.CompletedTask;
+    }
+
+    private bool IsWidgetInDashboardDropZone(DashboardWidgetDefinition widget, string dropZoneIdentifier)
+        => string.Equals(widget.Id, _dropSentinel.Id, StringComparison.Ordinal)
+            && string.Equals(dropZoneIdentifier, DashboardDropZoneId, StringComparison.Ordinal);
+
+    private string GetGridStyle(DashboardWidgetDefinition widget)
+    {
+        var layout = widget.Layout;
+        var columnStart = Math.Max(0, layout.X) + 1;
+        var rowStart = Math.Max(0, layout.Y) + 1;
+        var width = Math.Max(1, layout.Width);
+        var height = Math.Max(1, layout.Height);
+
+        return $"grid-column: {columnStart} / span {width}; grid-row: {rowStart} / span {height}; min-height: {height * 96}px;";
+    }
+
+    private DashboardWidgetRunResult? GetResult(DashboardWidgetDefinition widget)
+        => Results.TryGetValue(widget.Id, out var result) ? result : null;
+
+    private void LogGridInteropLifecycleDebug(Exception exception, string operation)
+        => Logger.LogDebug(
+            exception,
+            "Dashboard grid JS interop {Operation} was skipped or cancelled for {GridElementId}.",
+            operation,
+            _gridElementId);
+}

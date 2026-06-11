@@ -1,15 +1,15 @@
 
 using System.Globalization;
 using System.Text.Json;
-using DeltaZulu.Platform.Application.Hunting.Planning;
-using DeltaZulu.Platform.Application.Hunting.Translation;
+using DeltaZulu.Platform.Application.Analytics.Planning;
+using DeltaZulu.Platform.Application.Analytics.Translation;
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
-using DeltaZulu.Platform.Domain.Hunting.Planning;
-using DeltaZulu.Platform.Domain.Hunting.Policy;
+using DeltaZulu.Platform.Domain.Analytics.Planning;
+using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DuckDB.NET.Data;
 
-namespace DeltaZulu.Platform.Data.Hunting;
+namespace DeltaZulu.Platform.Data.Analytics;
 public sealed partial class QueryRuntime
 {
     public QueryResult ExecuteDataOnly(string kql) => ExecuteDataOnly(kql, maxRows: null);

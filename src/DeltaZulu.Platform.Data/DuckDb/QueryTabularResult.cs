@@ -1,5 +1,5 @@
 
-using DeltaZulu.Platform.Domain.Hunting.Policy;
+using DeltaZulu.Platform.Domain.Analytics.Policy;
 namespace DeltaZulu.Platform.Data.DuckDb;
 public sealed class QueryTabularResult
 {

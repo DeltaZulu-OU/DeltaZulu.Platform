@@ -1,0 +1,22 @@
+namespace DeltaZulu.Platform.Domain.Analytics.Detections;
+
+public sealed record DetectionRecord(
+    string Id,
+    string DetectionId,
+    int Version,
+    string RuleHash,
+    string Name,
+    string? Description,
+    string QueryText,
+    string Severity,
+    string Confidence,
+    int RiskScore,
+    string? MitreTactics,
+    string? MitreTechniques,
+    string? EntityMappingHints,
+    string? ScheduleCron,
+    string? SuppressionPolicyJson,
+    bool IsEnabled,
+    string? TestMetadataJson,
+    DateTime CreatedAtUtc,
+    DateTime UpdatedAtUtc);

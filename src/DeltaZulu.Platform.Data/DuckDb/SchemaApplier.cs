@@ -1,6 +1,6 @@
 
 using Dapper;
-using DeltaZulu.Platform.Domain.Hunting.Schema;
+using DeltaZulu.Platform.Domain.Analytics.Schema;
 
 namespace DeltaZulu.Platform.Data.DuckDb;
 /// <summary>

@@ -67,8 +67,10 @@ pre {
 
 /* --- Shared shell --- */
 
-.dz-app-bar.mud-appbar {
-    background: var(--brand-ink) !important;
+.dz-app-bar.mud-appbar,
+.dz-app-bar.mud-appbar .mud-toolbar {
+    background: var(--brand-slate) !important;
+    color: #FFFFFF !important;
 }
 
 .dz-app-bar__actions {

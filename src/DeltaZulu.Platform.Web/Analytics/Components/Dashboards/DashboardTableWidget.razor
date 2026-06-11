@@ -1,0 +1,75 @@
+@namespace DeltaZulu.Platform.Web.Analytics.Components.Dashboards
+@using DeltaZulu.Platform.Web.Analytics.Dashboards.Runtime
+
+<div class="dashboard-table-widget">
+    @if (Result is null)
+    {
+        <div class="dashboard-widget-state dashboard-widget-state-muted">
+            No run result is available.
+        </div>
+    }
+    else if (Result.Status == DashboardWidgetRunStatus.NotRun)
+    {
+        <div class="dashboard-widget-state dashboard-widget-state-muted">
+            Widget has not run yet.
+        </div>
+    }
+    else if (Result.Status == DashboardWidgetRunStatus.Running)
+    {
+        <div class="dashboard-widget-state dashboard-widget-state-muted">
+            Running query…
+        </div>
+    }
+    else if (Result.Status == DashboardWidgetRunStatus.Cancelled)
+    {
+        <div class="dashboard-widget-state dashboard-widget-state-warning">
+            Query was cancelled.
+        </div>
+    }
+    else if (Result.Status == DashboardWidgetRunStatus.Failed || Result.QueryResult?.Success == false)
+    {
+        <div class="dashboard-widget-state dashboard-widget-state-error">
+            <strong>Query failed.</strong>
+            @if (Result.Diagnostics.Count > 0)
+            {
+                <ul class="dashboard-widget-diagnostics">
+                    @foreach (var diagnostic in Result.Diagnostics.Take(MaxDiagnostics))
+                    {
+                        <li><span>[@diagnostic.Phase]</span> @diagnostic.Message</li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+    else if (Result.QueryResult is null)
+    {
+        <div class="dashboard-widget-state dashboard-widget-state-error">
+            Query result is missing.
+        </div>
+    }
+    else
+    {
+        <DzQueryResultTable Result="Result.QueryResult"
+                            Duration="Result.Duration"
+                            MaxColumns="MaxColumns"
+                            RowsPerPage="RowsPerPage"
+                            Height="@Height" />
+    }
+</div>
+
+@code {
+    [Parameter]
+    public DashboardWidgetRunResult? Result { get; set; }
+
+    [Parameter]
+    public int MaxColumns { get; set; } = 30;
+
+    [Parameter]
+    public int RowsPerPage { get; set; } = 25;
+
+    [Parameter]
+    public int MaxDiagnostics { get; set; } = 5;
+
+    [Parameter]
+    public string Height { get; set; } = "100%";
+}

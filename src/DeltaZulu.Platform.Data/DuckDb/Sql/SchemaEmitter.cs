@@ -1,7 +1,7 @@
 
 using System.Text;
-using DeltaZulu.Platform.Domain.Hunting.Mapping;
-using DeltaZulu.Platform.Domain.Hunting.Schema;
+using DeltaZulu.Platform.Domain.Analytics.Mapping;
+using DeltaZulu.Platform.Domain.Analytics.Schema;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 /// <summary>

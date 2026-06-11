@@ -1,0 +1,143 @@
+@namespace DeltaZulu.Platform.Web.Governance.Components.Pages
+@page "/workbench/changes"
+@page "/workbench/work"
+@using DeltaZulu.Platform.Web.Governance.Components.Shared
+@using MudBlazor
+@rendermode InteractiveServer
+@using DeltaZulu.Platform.Application.Governance.Services
+@using DeltaZulu.Platform.Domain.Governance.Changes
+@using DeltaZulu.Platform.Domain.Governance.Enums
+@using DeltaZulu.Platform.Web.Governance.Services
+@inject ChangeService ChangeService
+@inject IDialogService DialogService
+@inject NavigationManager Nav
+@inject PocUserContext UserContext
+
+<PageTitle>Changes</PageTitle>
+
+<DzPageHeader Title="Changes"
+              Description="Proposed detection content changes. Each change carries its draft content, checks, reviews, and acceptance state.">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenNewChangeDialog">
+            New change
+        </MudButton>
+    </Actions>
+</DzPageHeader>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+    return;
+}
+
+<DzToolbar>
+    <DzFilterRow>
+        <DzFilterChip Value="all" Selected="@(_changeFilter == "all")" OnClick="@(() => OnChangeFilterChanged("all"))">
+            All (@_allChanges.Count)
+        </DzFilterChip>
+        <DzFilterChip Value="mine" Selected="@(_changeFilter == "mine")" OnClick="@(() => OnChangeFilterChanged("mine"))">
+            My changes
+        </DzFilterChip>
+        <DzFilterChip Value="review" Selected="@(_changeFilter == "review")" OnClick="@(() => OnChangeFilterChanged("review"))">
+            Awaiting review
+        </DzFilterChip>
+        <DzFilterChip Value="stale" Selected="@(_changeFilter == "stale")" OnClick="@(() => OnChangeFilterChanged("stale"))">
+            Stale
+        </DzFilterChip>
+    </DzFilterRow>
+</DzToolbar>
+
+@if (_filteredChanges.Count == 0)
+{
+    <DzEmptyState Title="No changes match the current filter."
+                  Description="Create a new change or adjust the current filter."
+                  Icon="@Icons.Material.Outlined.FilterAltOff">
+        <Actions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="OpenNewChangeDialog">
+                New change
+            </MudButton>
+        </Actions>
+    </DzEmptyState>
+}
+else
+{
+    <DzTableShell>
+        <MudTable Items="_filteredChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
+                  OnRowClick="@(args => Nav.NavigateTo($"/workbench/changes/{args.Item!.Id}"))"
+                  T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
+            <HeaderContent>
+                <MudTh>Key</MudTh>
+                <MudTh>Title</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Files</MudTh>
+                <MudTh>Checks</MudTh>
+                <MudTh>Stale</MudTh>
+                <MudTh>Updated</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Key"><code>@context.Key</code></MudTd>
+                <MudTd DataLabel="Title">@context.Title</MudTd>
+                <MudTd DataLabel="Status"><StatusChip ChangeStatus="context.Status" /></MudTd>
+                <MudTd DataLabel="Files">@context.DraftFiles.Count</MudTd>
+                <MudTd DataLabel="Checks">@context.Checks.Count</MudTd>
+                <MudTd DataLabel="Stale">
+                    @if (context.IsStale)
+                    {
+                        <DzStatusChip Label="Stale" Tone="warning" Icon="@Icons.Material.Filled.Warning" />
+                    }
+                </MudTd>
+                <MudTd DataLabel="Updated"><MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
+            </RowTemplate>
+        </MudTable>
+    </DzTableShell>
+}
+
+@code {
+    private List<ChangeRequest> _allChanges = [];
+    private List<ChangeRequest> _filteredChanges = [];
+    private bool _loading = true;
+    private string _changeFilter = "all";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _allChanges = (await ChangeService.ListAsync()).ToList();
+        ApplyChangeFilter();
+        _loading = false;
+    }
+
+    private void OnChangeFilterChanged(string filter)
+    {
+        _changeFilter = filter ?? "all";
+        ApplyChangeFilter();
+    }
+
+    private void ApplyChangeFilter()
+    {
+        var userId = UserContext.CurrentUser.Id;
+        _filteredChanges = _changeFilter switch
+        {
+            "mine" => _allChanges.Where(c => c.AuthorId == userId && c.Status is not ChangeStatus.Merged and not ChangeStatus.Closed).ToList(),
+            "review" => _allChanges.Where(c => c.Status == ChangeStatus.ReviewRequired && c.AuthorId != userId).ToList(),
+            "stale" => _allChanges.Where(c => c.IsStale && c.Status is not ChangeStatus.Merged and not ChangeStatus.Closed).ToList(),
+            _ => _allChanges,
+        };
+    }
+
+    private async Task OpenNewChangeDialog()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<OpenChangeDialog>("New change", options);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled) await LoadAsync();
+    }
+}

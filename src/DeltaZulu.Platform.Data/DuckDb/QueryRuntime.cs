@@ -1,15 +1,15 @@
 
 using System.Collections.Concurrent;
 using System.Globalization;
-using DeltaZulu.Platform.Application.Hunting.Catalog;
-using DeltaZulu.Platform.Application.Hunting.Planning;
+using DeltaZulu.Platform.Application.Analytics.Catalog;
+using DeltaZulu.Platform.Application.Analytics.Planning;
 using DeltaZulu.Platform.Data.DuckDb;
-using DeltaZulu.Platform.Domain.Hunting.Planning;
-using DeltaZulu.Platform.Domain.Hunting.Policy;
-using DeltaZulu.Platform.Domain.Hunting.QueryModel;
+using DeltaZulu.Platform.Domain.Analytics.Planning;
+using DeltaZulu.Platform.Domain.Analytics.Policy;
+using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using DuckDB.NET.Data;
 
-namespace DeltaZulu.Platform.Data.Hunting;
+namespace DeltaZulu.Platform.Data.Analytics;
 /// <summary>
 /// <para>
 /// Orchestrates the full query pipeline:

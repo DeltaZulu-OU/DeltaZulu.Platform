@@ -10,6 +10,7 @@
 
 <MudLayout>
     <DzAppBar ProductName="DeltaZulu Platform"
+              LogoSrc="img/logo-dark.png"
               OnMenuClick="@ToggleDrawer" />
 
     <DzSideNav @bind-Open="_drawerOpen" Items="_navItems" Heading="Platform" />
@@ -28,7 +29,11 @@
     protected override void OnInitialized()
     {
         _orderedModules = Modules.OrderBy(m => m.Descriptor.Order).ToList();
-        _navItems = _orderedModules.SelectMany(m => m.NavigationItems).ToList();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        _navItems = _orderedModules
+            .SelectMany(m => m.NavigationItems)
+            .Where(item => !item.IsPlatformRoute || seen.Add(item.Href))
+            .ToList();
     }
 
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
