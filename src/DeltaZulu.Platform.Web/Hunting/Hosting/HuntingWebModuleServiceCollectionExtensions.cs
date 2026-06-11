@@ -1,8 +1,9 @@
 namespace DeltaZulu.Platform.Web.Hunting.Hosting;
 
-using DeltaZulu.Platform.Domain.Hunting.Catalog;
+using DeltaZulu.Platform.Application.Hunting.Catalog;
+using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Hunting;
-using DeltaZulu.Platform.Data.Hunting.Persistence;
+using DeltaZulu.Platform.Data.Sqlite.Hunting;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 using DeltaZulu.Platform.Web.Hunting.Dashboards.DependencyInjection;
 using DeltaZulu.Platform.Web.Hunting.Dashboards.PageState;

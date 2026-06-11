@@ -1,7 +1,6 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Translation;
+namespace DeltaZulu.Platform.Application.Hunting.Translation;
 
 using Kusto.Language.Syntax;
-using Policy;
 
 /// <summary>Reads operator literals while preserving translator diagnostics.</summary>
 internal static class KustoLiteralReader

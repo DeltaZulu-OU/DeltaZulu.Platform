@@ -1,5 +1,5 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
 using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using DeltaZulu.Platform.Domain.Workbench.Detections;
 using DeltaZulu.Platform.Domain.Workbench.Enums;
 using DeltaZulu.Platform.Domain.Workbench.Identifiers;
@@ -145,7 +145,7 @@ public sealed class MergeReconciliationService(
         return MergeRepairResult.Repaired(changeId, version.Id, intent.CommitSha);
     }
 
-    private static string BuildChecksSummary(Domain.Changes.ChangeRequest change)
+    private static string BuildChecksSummary(Domain.Workbench.Changes.ChangeRequest change)
     {
         if (change.Checks.Count == 0) return "No checks.";
         var passed = change.Checks.Count(c => c.Status == CheckStatus.Passed);
@@ -153,11 +153,11 @@ public sealed class MergeReconciliationService(
         return $"{passed} passed, {failed} failed (of {change.Checks.Count} total).";
     }
 
-    private static string BuildReviewSummary(Domain.Changes.ChangeRequest change)
+    private static string BuildReviewSummary(Domain.Workbench.Changes.ChangeRequest change)
     {
         if (change.Reviews.Count == 0) return "No reviews.";
         var effective = change.Reviews.Where(r => !r.IsSuperseded).ToList();
-        var approved = effective.Count(r => r.Decision == Domain.Enums.ReviewDecision.Approved);
+        var approved = effective.Count(r => r.Decision == Domain.Workbench.Enums.ReviewDecision.Approved);
         return $"{approved} approved (of {effective.Count} effective reviews).";
     }
 }

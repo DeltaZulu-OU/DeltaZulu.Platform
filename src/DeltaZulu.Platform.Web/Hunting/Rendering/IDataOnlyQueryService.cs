@@ -1,6 +1,6 @@
 namespace DeltaZulu.Platform.Web.Hunting.Rendering;
 
-using DeltaZulu.Platform.Data.Hunting;
+using DeltaZulu.Platform.Data.DuckDb;
 
 public interface IDataOnlyQueryService
 {

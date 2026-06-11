@@ -1,7 +1,7 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Spike;
 
 using System.Globalization;
-using DeltaZulu.Platform.Data.Hunting;
+using DeltaZulu.Platform.Data.DuckDb;
 using DuckDB.NET.Data;
 
 /// <summary>

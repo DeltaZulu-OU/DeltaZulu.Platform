@@ -1,4 +1,6 @@
-namespace DeltaZulu.Platform.Data.Hunting;
+using DeltaZulu.Platform.Data.DuckDb;
+
+namespace DeltaZulu.Platform.Data.Seeding;
 
 public enum SeedFixtureBatchApplyPolicy
 {

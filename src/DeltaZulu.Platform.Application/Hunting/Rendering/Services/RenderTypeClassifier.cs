@@ -1,6 +1,6 @@
-namespace DeltaZulu.Platform.Application.Hunting.Render.Services;
+namespace DeltaZulu.Platform.Application.Hunting.Rendering.Services;
 
-using DeltaZulu.Platform.Application.Hunting.Render.Tabular;
+using DeltaZulu.Platform.Application.Hunting.Rendering.Tabular;
 
 public static class RenderTypeClassifier
 {

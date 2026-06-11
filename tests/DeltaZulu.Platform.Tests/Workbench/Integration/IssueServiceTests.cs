@@ -1,5 +1,5 @@
 using DeltaZulu.Platform.Application.Workbench.Services;
-using DeltaZulu.Platform.Data.Workbench;
+using DeltaZulu.Platform.Data.Sqlite.Workbench;
 
 namespace DeltaZulu.Platform.Tests.Workbench.Integration;
 

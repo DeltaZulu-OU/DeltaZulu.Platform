@@ -1,6 +1,6 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Render;
 
-using DeltaZulu.Platform.Application.Hunting.Render.Services;
+using DeltaZulu.Platform.Application.Hunting.Rendering.Services;
 
 [TestClass]
 public sealed class RenderTypeClassifierTests

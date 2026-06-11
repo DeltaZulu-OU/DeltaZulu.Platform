@@ -1,6 +1,6 @@
 namespace DeltaZulu.Platform.Web.Hunting.Rendering;
 
-using DeltaZulu.Platform.Application.Hunting.Render.Model;
+using DeltaZulu.Platform.Domain.Hunting.Rendering;
 using Vizor.ECharts;
 
 public sealed class EChartsRenderOptionsBuilder

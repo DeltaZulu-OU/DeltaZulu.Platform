@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Data.Hunting;
+namespace DeltaZulu.Platform.Data.DuckDb;
 
 using System.Collections;
 using System.Data.Common;

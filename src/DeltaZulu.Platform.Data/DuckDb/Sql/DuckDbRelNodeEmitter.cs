@@ -1,7 +1,6 @@
 namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 
 using System.Text;
-using QueryModel;
 
 internal sealed partial class DuckDbRelNodeEmitter
 {

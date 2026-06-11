@@ -1,6 +1,6 @@
 namespace DeltaZulu.Platform.Web.Hunting.Rendering;
 
-using DeltaZulu.Platform.Application.Hunting.Render.DependencyInjection;
+using DeltaZulu.Platform.Application.Hunting.Rendering;
 using DeltaZulu.Platform.Web.Hunting.Services;
 using Microsoft.Extensions.DependencyInjection;
 

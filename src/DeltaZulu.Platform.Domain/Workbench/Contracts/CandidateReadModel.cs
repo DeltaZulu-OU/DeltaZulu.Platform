@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Workbench.Abstractions;
+namespace DeltaZulu.Platform.Domain.Workbench.Contracts;
 
 /// <summary>
 /// Read model for an incident candidate produced by Hunting. Workbench consumes this

@@ -1,5 +1,5 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
 using DeltaZulu.Platform.Domain.Workbench.Changes;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using DeltaZulu.Platform.Domain.Workbench.Enums;
 
 namespace DeltaZulu.Platform.Application.Workbench.ContentPipeline;

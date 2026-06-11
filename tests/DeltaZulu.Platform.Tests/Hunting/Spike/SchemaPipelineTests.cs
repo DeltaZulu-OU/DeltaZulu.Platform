@@ -1,7 +1,7 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Spike;
 
+using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
-using DeltaZulu.Platform.Data.Hunting;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 using DeltaZulu.Platform.Tests.Hunting.Fixtures;
 

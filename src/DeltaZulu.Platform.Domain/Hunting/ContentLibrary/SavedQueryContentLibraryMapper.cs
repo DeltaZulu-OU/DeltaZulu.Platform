@@ -1,6 +1,6 @@
-namespace DeltaZulu.Platform.Application.Hunting.ContentLibrary;
+namespace DeltaZulu.Platform.Domain.Hunting.ContentLibrary;
 
-using DeltaZulu.Platform.Application.Hunting.SavedQueries;
+using DeltaZulu.Platform.Domain.Hunting.SavedQueries;
 
 public static class SavedQueryContentLibraryMapper
 {

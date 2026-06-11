@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Workbench.Abstractions;
+namespace DeltaZulu.Platform.Domain.Workbench.Contracts;
 
 /// <summary>
 /// Coordinates persistence across repositories. Implemented by the persistence layer

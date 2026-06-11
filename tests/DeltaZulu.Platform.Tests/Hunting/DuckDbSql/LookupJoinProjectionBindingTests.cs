@@ -1,9 +1,7 @@
 namespace DeltaZulu.Platform.Tests.Hunting.DuckDbSql;
 
-using DeltaZulu.Platform.Domain.Hunting.Catalog;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
-using DeltaZulu.Platform.Domain.Hunting.Translation;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

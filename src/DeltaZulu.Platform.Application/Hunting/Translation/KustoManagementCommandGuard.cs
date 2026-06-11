@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Translation;
+namespace DeltaZulu.Platform.Application.Hunting.Translation;
 
 using Kusto.Language.Syntax;
 

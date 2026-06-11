@@ -1,7 +1,6 @@
-using DeltaZulu.Platform.Domain.Workbench.Detections;
 using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
-namespace DeltaZulu.Platform.Application.Workbench.Abstractions;
+namespace DeltaZulu.Platform.Domain.Workbench.Contracts;
 
 public interface IDetectionRepository
 {

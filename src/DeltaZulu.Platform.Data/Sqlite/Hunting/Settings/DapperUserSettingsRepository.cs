@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Data.Hunting.Settings;
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting.Settings;
 
 using Dapper;
-using DeltaZulu.Platform.Data.Hunting.Persistence;
+using DeltaZulu.Platform.Data.Sqlite.Hunting;
 using AppIUserSettingsRepository = Hunting.Application.Settings.IUserSettingsRepository;
 using AppUserSettingsDefaults = Hunting.Application.Settings.UserSettingsDefaults;
 using AppUserSettingsRecord = Hunting.Application.Settings.UserSettingsRecord;

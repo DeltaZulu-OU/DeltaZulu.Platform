@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Data.Hunting;
+namespace DeltaZulu.Platform.Data.DuckDb;
 
 /// <summary>
 /// Classifies provenance drift into conservative migration-safety outcomes.

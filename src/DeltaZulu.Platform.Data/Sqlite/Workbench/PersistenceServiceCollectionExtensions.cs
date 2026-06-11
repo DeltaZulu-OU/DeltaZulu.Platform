@@ -1,8 +1,8 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
-using DeltaZulu.Platform.Data.Workbench.Repositories;
+using DeltaZulu.Platform.Data.Sqlite.Workbench.Repositories;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DeltaZulu.Platform.Data.Workbench;
+namespace DeltaZulu.Platform.Data.Sqlite.Workbench;
 
 public static class PersistenceServiceCollectionExtensions
 {

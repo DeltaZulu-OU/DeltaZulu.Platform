@@ -1,8 +1,9 @@
 namespace DeltaZulu.Platform.Web.Hunting.Services;
 
-using DeltaZulu.Platform.Application.Hunting.QueryHistory;
-using DeltaZulu.Platform.Domain.Hunting.Policy;
+using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Hunting;
+using DeltaZulu.Platform.Domain.Hunting.Policy;
+using DeltaZulu.Platform.Domain.Hunting.QueryHistory;
 using DeltaZulu.Platform.Web.Hunting.Rendering;
 using DuckDB.NET.Data;
 using Microsoft.Extensions.Logging;

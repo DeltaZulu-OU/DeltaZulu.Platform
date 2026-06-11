@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Data.Hunting;
+namespace DeltaZulu.Platform.Data.Seeding;
 
 using System.Globalization;
 using System.Text;

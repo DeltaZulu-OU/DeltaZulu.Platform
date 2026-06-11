@@ -1,7 +1,7 @@
 using Dapper;
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
 using DeltaZulu.Platform.Application.Workbench.Services;
-using DeltaZulu.Platform.Data.Workbench;
+using DeltaZulu.Platform.Data.Sqlite.Workbench;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 
 namespace DeltaZulu.Platform.Tests.Workbench.Integration;
 

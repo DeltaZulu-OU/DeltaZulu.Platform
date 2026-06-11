@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Hunting.Settings;
+namespace DeltaZulu.Platform.Domain.Hunting.Settings;
 
 public static class UserSettingsDefaults
 {

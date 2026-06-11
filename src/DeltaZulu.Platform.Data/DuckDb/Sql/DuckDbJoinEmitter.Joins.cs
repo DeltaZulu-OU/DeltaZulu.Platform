@@ -1,7 +1,5 @@
 namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 
-using QueryModel;
-
 internal sealed partial class DuckDbJoinEmitter
 {
     private readonly DuckDbEmitterContext _context;

@@ -1,9 +1,8 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Translation;
+namespace DeltaZulu.Platform.Application.Hunting.Translation;
 
 using Catalog;
 using Kusto.Language;
 using Kusto.Language.Syntax;
-using Policy;
 
 /// <summary>Parses KQL, imports diagnostics, and validates document-level policy boundaries.</summary>
 internal sealed class KustoQueryDocumentAnalyzer

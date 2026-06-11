@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Data.Hunting;
+namespace DeltaZulu.Platform.Data.DuckDb;
 
 /// <summary>
 /// Enforces conservative schema migration safety based on provenance drift assessments.

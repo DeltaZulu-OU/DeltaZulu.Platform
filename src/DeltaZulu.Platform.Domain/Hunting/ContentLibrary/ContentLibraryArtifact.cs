@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Hunting.ContentLibrary;
+namespace DeltaZulu.Platform.Domain.Hunting.ContentLibrary;
 
 public sealed record ContentLibraryArtifact(
     string Id,

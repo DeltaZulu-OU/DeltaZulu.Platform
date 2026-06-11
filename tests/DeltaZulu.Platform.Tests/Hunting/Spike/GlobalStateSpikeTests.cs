@@ -1,6 +1,5 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Spike;
 
-using DeltaZulu.Platform.Domain.Hunting.Catalog;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 using Kusto.Language;
 

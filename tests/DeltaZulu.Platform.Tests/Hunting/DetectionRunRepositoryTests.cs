@@ -1,8 +1,6 @@
 namespace DeltaZulu.Platform.Tests.Hunting;
 
-using DeltaZulu.Platform.Application.Hunting.DetectionRuns;
-using DeltaZulu.Platform.Data.Hunting.DetectionRuns;
-using DeltaZulu.Platform.Data.Hunting.Persistence;
+using DeltaZulu.Platform.Data.Sqlite.Hunting.DetectionRuns;
 using Microsoft.Data.Sqlite;
 
 [TestClass]

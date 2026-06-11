@@ -2,7 +2,7 @@ using DeltaZulu.Platform.Domain.Workbench.Changes;
 using DeltaZulu.Platform.Domain.Workbench.Enums;
 using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
-namespace DeltaZulu.Platform.Application.Workbench.Abstractions;
+namespace DeltaZulu.Platform.Domain.Workbench.Contracts;
 
 /// <summary>
 /// Context passed to an <see cref="ICheck"/> implementation. Contains the draft file

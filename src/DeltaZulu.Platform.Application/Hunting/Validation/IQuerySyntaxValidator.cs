@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Validation;
+namespace DeltaZulu.Platform.Application.Hunting.Validation;
 
 /// <summary>
 /// Host-agnostic query syntax validation seam for consumers such as Workbench.

@@ -1,8 +1,8 @@
 namespace DeltaZulu.Platform.Web.Hunting.Dashboards.Runtime;
 
+using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
-using DeltaZulu.Platform.Data.Hunting;
-using DeltaZulu.Platform.Application.Hunting.Render.Model;
+using DeltaZulu.Platform.Domain.Hunting.Rendering;
 using Vizor.ECharts;
 
 public sealed record DashboardWidgetRunResult

@@ -1,11 +1,8 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Web;
 
-using DeltaZulu.Platform.Domain.Hunting.Policy;
-using DeltaZulu.Platform.Data.Hunting;
-using DeltaZulu.Platform.Application.Hunting.Render.Directives;
-using DeltaZulu.Platform.Application.Hunting.Render.Services;
+using DeltaZulu.Platform.Application.Hunting.Render.Directives;using DeltaZulu.Platform.Data.DuckDb;
+using DeltaZulu.Platform.Data.Hunting;using DeltaZulu.Platform.Domain.Hunting.Policy;using DeltaZulu.Platform.Domain.Hunting.Rendering;
 using DeltaZulu.Platform.Web.Hunting.Rendering;
-
 [TestClass]public sealed class RenderedQueryRunnerTests
 {
     [TestMethod]
@@ -21,7 +18,7 @@ using DeltaZulu.Platform.Web.Hunting.Rendering;
             "ProcessEvent | summarize LaunchCount = count() by AccountName | render barchart xcolumn=AccountName ycolumns=LaunchCount", TestContext.CancellationToken);
 
         Assert.AreEqual("ProcessEvent | summarize LaunchCount = count() by AccountName", queryService.LastQuery);
-        Assert.AreEqual(DeltaZulu.Platform.Application.Hunting.Render.Model.RenderKind.Barchart, rendered.Directive.Kind);
+        Assert.AreEqual(RenderKind.Barchart, rendered.Directive.Kind);
         Assert.IsTrue(rendered.Chart.CanRender);
         Assert.AreEqual("AccountName", rendered.Chart.XColumn);
         Assert.HasCount(1, rendered.Chart.Series);
@@ -40,7 +37,7 @@ using DeltaZulu.Platform.Web.Hunting.Rendering;
         var rendered = await runner.RunAsync("ProcessEvent | take 10", TestContext.CancellationToken);
 
         Assert.AreEqual("ProcessEvent | take 10", queryService.LastQuery);
-        Assert.AreEqual(DeltaZulu.Platform.Application.Hunting.Render.Model.RenderKind.Table, rendered.Directive.Kind);
+        Assert.AreEqual(RenderKind.Table, rendered.Directive.Kind);
         Assert.IsFalse(rendered.Chart.CanRender);
         Assert.AreEqual("Render fell back to table.", rendered.Chart.Message);
     }

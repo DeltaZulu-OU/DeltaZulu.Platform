@@ -1,8 +1,7 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Validation;
 
-using DeltaZulu.Platform.Domain.Hunting.Catalog;
+using DeltaZulu.Platform.Application.Hunting.Validation;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
-using DeltaZulu.Platform.Domain.Hunting.Validation;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 
 [TestClass]

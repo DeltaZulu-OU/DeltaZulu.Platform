@@ -1,5 +1,5 @@
-namespace DeltaZulu.Platform.Data.Hunting;
-
+namespace DeltaZulu.Platform.Data.DuckDb;
+
 using DeltaZulu.Platform.Domain.Hunting.Policy;
 
 public sealed class QueryTabularResult

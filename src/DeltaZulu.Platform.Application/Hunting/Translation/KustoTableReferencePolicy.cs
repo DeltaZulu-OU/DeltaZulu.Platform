@@ -1,8 +1,7 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Translation;
+namespace DeltaZulu.Platform.Application.Hunting.Translation;
 
 using Catalog;
 using Kusto.Language.Syntax;
-using Policy;
 
 /// <summary>Enforces the approved, unqualified KQL table-reference boundary.</summary>
 internal sealed class KustoTableReferencePolicy

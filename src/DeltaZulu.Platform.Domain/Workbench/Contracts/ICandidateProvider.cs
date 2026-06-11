@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Workbench.Abstractions;
+namespace DeltaZulu.Platform.Domain.Workbench.Contracts;
 
 /// <summary>
 /// Port through which Workbench reads incident candidates from Hunting.

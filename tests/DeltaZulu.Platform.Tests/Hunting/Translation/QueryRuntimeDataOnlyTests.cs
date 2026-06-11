@@ -1,11 +1,8 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Translation;
 
-using DeltaZulu.Platform.Domain.Hunting.Catalog;
-using DeltaZulu.Platform.Data.DuckDb.Sql;
-using DeltaZulu.Platform.Data.Hunting;
-using DeltaZulu.Platform.Domain.Hunting.Schema;
-using DeltaZulu.Platform.Tests.Hunting.Fixtures;
-
+using DeltaZulu.Platform.Application.Hunting.Catalog;
+using DeltaZulu.Platform.Data.DuckDb;
+using DeltaZulu.Platform.Data.DuckDb.Sql;using DeltaZulu.Platform.Data.Hunting;using DeltaZulu.Platform.Domain.Hunting.Schema;using DeltaZulu.Platform.Tests.Hunting.Fixtures;
 [TestClass]public sealed class QueryRuntimeDataOnlyTests
 {
     private static DuckDbConnectionFactory _factory = null!;

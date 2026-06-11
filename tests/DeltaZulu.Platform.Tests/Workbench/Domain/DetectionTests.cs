@@ -1,5 +1,3 @@
-using DeltaZulu.Platform.Domain.Workbench.Detections;
-
 namespace DeltaZulu.Platform.Tests.Workbench.Domain;
 
 [TestClass]

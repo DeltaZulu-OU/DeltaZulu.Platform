@@ -1,6 +1,6 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Render;
 
-using DeltaZulu.Platform.Application.Hunting.Render.Model;
+using DeltaZulu.Platform.Domain.Hunting.Rendering;
 
 [TestClass]
 public sealed class RenderModelContractTests

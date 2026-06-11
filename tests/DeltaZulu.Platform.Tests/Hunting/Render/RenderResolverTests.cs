@@ -1,8 +1,8 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Render;
 
-using DeltaZulu.Platform.Application.Hunting.Render.Model;
-using DeltaZulu.Platform.Application.Hunting.Render.Services;
-using DeltaZulu.Platform.Application.Hunting.Render.Tabular;
+using DeltaZulu.Platform.Application.Hunting.Rendering.Services;
+using DeltaZulu.Platform.Application.Hunting.Rendering.Tabular;
+using DeltaZulu.Platform.Domain.Hunting.Rendering;
 
 [TestClass]
 public sealed class RenderResolverTests

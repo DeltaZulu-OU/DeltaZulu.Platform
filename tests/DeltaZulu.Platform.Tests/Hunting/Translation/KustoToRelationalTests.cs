@@ -1,10 +1,9 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Translation;
 
-using DeltaZulu.Platform.Domain.Hunting.Catalog;
+using DeltaZulu.Platform.Application.Hunting.Catalog;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
 using DeltaZulu.Platform.Domain.Hunting.QueryModel;
-using DeltaZulu.Platform.Domain.Hunting.Translation;
 using DeltaZulu.Platform.Domain.Hunting.Schema;
 
 /// <summary>

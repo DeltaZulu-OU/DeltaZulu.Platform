@@ -1,7 +1,6 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Web;
 
 using Dapper;
-using DeltaZulu.Platform.Data.Hunting.Persistence;
 using DeltaZulu.Platform.Web.Hunting.Dashboards;
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Persistence;
 using Microsoft.Data.Sqlite;

@@ -1,5 +1,4 @@
 using DeltaZulu.Platform.Domain.Hunting.Schema;
-using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 namespace DeltaZulu.Platform.Web.Hunting.Services;

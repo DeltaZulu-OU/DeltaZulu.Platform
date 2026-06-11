@@ -1,7 +1,7 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using Microsoft.Data.Sqlite;
 
-namespace DeltaZulu.Platform.Data.Workbench;
+namespace DeltaZulu.Platform.Data.Sqlite.Workbench;
 
 /// <summary>
 /// Scoped database session backed by a single <see cref="SqliteConnection"/>. Repositories

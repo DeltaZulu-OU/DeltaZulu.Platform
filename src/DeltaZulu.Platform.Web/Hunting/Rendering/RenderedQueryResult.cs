@@ -1,7 +1,7 @@
 namespace DeltaZulu.Platform.Web.Hunting.Rendering;
 
-using DeltaZulu.Platform.Data.Hunting;
-using DeltaZulu.Platform.Application.Hunting.Render.Model;
+using DeltaZulu.Platform.Data.DuckDb;
+using DeltaZulu.Platform.Domain.Hunting.Rendering;
 
 public sealed record RenderedQueryResult(
     QueryResult QueryResult,

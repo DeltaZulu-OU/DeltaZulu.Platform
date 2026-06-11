@@ -1,11 +1,11 @@
 using Dapper;
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
 using DeltaZulu.Platform.Domain.Workbench.Changes;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using DeltaZulu.Platform.Domain.Workbench.Enums;
 using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 using DeltaZulu.Platform.Domain.Workbench.Reviews;
 
-namespace DeltaZulu.Platform.Data.Workbench.Repositories;
+namespace DeltaZulu.Platform.Data.Sqlite.Workbench.Repositories;
 
 internal sealed class ChangeRequestRepository(DapperSession session) : IChangeRequestRepository
 {

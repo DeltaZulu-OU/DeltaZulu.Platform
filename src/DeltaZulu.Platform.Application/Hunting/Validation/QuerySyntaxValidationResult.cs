@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Validation;
+namespace DeltaZulu.Platform.Application.Hunting.Validation;
 
 using DeltaZulu.Platform.Domain.Hunting.Policy;
 

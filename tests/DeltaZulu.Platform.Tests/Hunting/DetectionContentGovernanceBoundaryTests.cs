@@ -1,7 +1,6 @@
 namespace DeltaZulu.Platform.Tests.Hunting;
 
-using DeltaZulu.Platform.Application.Hunting.ContentLibrary;
-using DeltaZulu.Platform.Application.Hunting.SavedQueries;
+using DeltaZulu.Platform.Domain.Hunting.ContentLibrary;
 
 [TestClass]
 public sealed class DetectionContentGovernanceBoundaryTests

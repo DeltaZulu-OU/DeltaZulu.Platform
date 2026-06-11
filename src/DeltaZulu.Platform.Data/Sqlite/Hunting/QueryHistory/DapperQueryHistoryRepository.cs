@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Data.Hunting.QueryHistory;
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting.QueryHistory;
 
 using Dapper;
-using DeltaZulu.Platform.Data.Hunting.Persistence;
+using DeltaZulu.Platform.Data.Sqlite.Hunting;
 using AppIQueryHistoryRepository = Hunting.Application.QueryHistory.IQueryHistoryRepository;
 using AppQueryHistoryRecord = Hunting.Application.QueryHistory.QueryHistoryRecord;
 

@@ -1,5 +1,5 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
 using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 using Microsoft.Extensions.Logging;
 
@@ -27,7 +27,7 @@ public sealed partial class CheckPipelineRunner(
             .ToList();
 
         var context = new CheckContext(change.Id, detection.Slug, change.WorkflowProfileId, drafts);
-        var presentTypes = new HashSet<Domain.Enums.DraftContentType>(drafts.Select(d => d.ContentType));
+        var presentTypes = new HashSet<Domain.Workbench.Enums.DraftContentType>(drafts.Select(d => d.ContentType));
 
         var now = time.GetUtcNow();
         var results = new List<PipelineCheckResult>();

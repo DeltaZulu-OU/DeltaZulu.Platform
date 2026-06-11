@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Data.Workbench.AcceptedContent;
+namespace DeltaZulu.Platform.Data.Git;
 
 /// <summary>Configuration for the Git-backed accepted content store.</summary>
 public sealed class GitAcceptedContentStoreOptions

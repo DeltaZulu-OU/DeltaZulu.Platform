@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Data.Hunting.Alerts;
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting.Alerts;
 
 using Dapper;
-using DeltaZulu.Platform.Application.Hunting.Alerts;
-using DeltaZulu.Platform.Data.Hunting.Persistence;
+using DeltaZulu.Platform.Data.Sqlite.Hunting;
+using DeltaZulu.Platform.Domain.Hunting.Alerts;
 
 public sealed class DapperAlertRepository : IAlertRepository, IDisposable
 {

@@ -1,6 +1,6 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 
-namespace DeltaZulu.Platform.Application.Workbench.HuntingAdapter;
+namespace DeltaZulu.Platform.Application.Workbench.Adapter;
 
 /// <summary>
 /// Adapts a reusable Hunting.Core parser/translator boundary to Workbench's query validation seam.

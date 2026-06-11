@@ -1,6 +1,6 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Render;
 
-using DeltaZulu.Platform.Application.Hunting.Render.Model;
+using DeltaZulu.Platform.Domain.Hunting.Rendering;
 using DeltaZulu.Platform.Web.Hunting.Rendering;
 
 [TestClass]

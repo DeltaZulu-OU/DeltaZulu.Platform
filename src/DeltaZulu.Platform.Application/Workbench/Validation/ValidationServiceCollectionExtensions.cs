@@ -1,5 +1,5 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
 using DeltaZulu.Platform.Application.Workbench.Validation.Checks;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 

@@ -1,9 +1,8 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
-using DeltaZulu.Platform.Data.Workbench.AcceptedContent;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace DeltaZulu.Platform.Data.Workbench.Infrastructure;
+namespace DeltaZulu.Platform.Data.Git;
 
 /// <summary>Dependency injection registration for infrastructure adapters.</summary>
 public static class InfrastructureServiceCollectionExtensions

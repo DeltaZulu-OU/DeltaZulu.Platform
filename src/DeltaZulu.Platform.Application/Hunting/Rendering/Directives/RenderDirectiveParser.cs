@@ -1,7 +1,8 @@
 namespace DeltaZulu.Platform.Application.Hunting.Render.Directives;
 
 using System.Text.RegularExpressions;
-using DeltaZulu.Platform.Application.Hunting.Render.Model;
+using DeltaZulu.Platform.Application.Hunting.Rendering.Directives;
+using DeltaZulu.Platform.Domain.Hunting.Rendering;
 
 public sealed partial class RenderDirectiveParser : IRenderDirectiveParser
 {

@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Hunting.QueryHistory;
+namespace DeltaZulu.Platform.Domain.Hunting.QueryHistory;
 
 public sealed record QueryHistoryRecord(
     string Id,

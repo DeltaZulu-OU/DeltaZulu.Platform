@@ -1,7 +1,7 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
 using DeltaZulu.Platform.Application.Workbench.ContentPipeline;
 using DeltaZulu.Platform.Domain.Workbench.Changes;
 using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using DeltaZulu.Platform.Domain.Workbench.Detections;
 using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
@@ -103,7 +103,7 @@ public sealed class MergeService(
         foreach (var sibling in siblings)
         {
             if (sibling.Id.Equals(change.Id)) continue;
-            if (sibling.Status is Domain.Enums.ChangeStatus.Merged or Domain.Enums.ChangeStatus.Closed) continue;
+            if (sibling.Status is Domain.Workbench.Enums.ChangeStatus.Merged or Domain.Workbench.Enums.ChangeStatus.Closed) continue;
             sibling.MarkStale($"Change {change.Key} merged at version {version.DisplayVersion}.", now);
             changes.Save(sibling);
         }
@@ -117,8 +117,8 @@ public sealed class MergeService(
     private static string BuildChecksSummary(ChangeRequest change)
     {
         if (change.Checks.Count == 0) return "No checks.";
-        var passed = change.Checks.Count(c => c.Status == Domain.Enums.CheckStatus.Passed);
-        var failed = change.Checks.Count(c => c.Status == Domain.Enums.CheckStatus.Failed);
+        var passed = change.Checks.Count(c => c.Status == Domain.Workbench.Enums.CheckStatus.Passed);
+        var failed = change.Checks.Count(c => c.Status == Domain.Workbench.Enums.CheckStatus.Failed);
         return $"{passed} passed, {failed} failed (of {change.Checks.Count} total).";
     }
 
@@ -126,7 +126,7 @@ public sealed class MergeService(
     {
         if (change.Reviews.Count == 0) return "No reviews.";
         var effective = change.Reviews.Where(r => !r.IsSuperseded).ToList();
-        var approved = effective.Count(r => r.Decision == Domain.Enums.ReviewDecision.Approved);
+        var approved = effective.Count(r => r.Decision == Domain.Workbench.Enums.ReviewDecision.Approved);
         return $"{approved} approved (of {effective.Count} effective reviews).";
     }
 }

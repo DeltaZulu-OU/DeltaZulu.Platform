@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Hunting.Render.Tabular;
+namespace DeltaZulu.Platform.Application.Hunting.Rendering.Tabular;
 
 public sealed record RenderColumn
 {

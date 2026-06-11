@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Planning;
+namespace DeltaZulu.Platform.Application.Hunting.Planning;
 
 using System.Text.RegularExpressions;
 

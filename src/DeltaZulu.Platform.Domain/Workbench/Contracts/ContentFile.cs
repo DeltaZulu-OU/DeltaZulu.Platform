@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Workbench.Abstractions;
+namespace DeltaZulu.Platform.Domain.Workbench.Contracts;
 
 /// <summary>
 /// A file read from the accepted content store (Git). Carries the repository-relative path,

@@ -1,7 +1,7 @@
 using DeltaZulu.Platform.Application.Workbench;
 using DeltaZulu.Platform.Application.Workbench.Services;
+using DeltaZulu.Platform.Data.Sqlite.Workbench;
 using DeltaZulu.Platform.Domain.Workbench.Issues;
-using DeltaZulu.Platform.Data.Workbench;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 

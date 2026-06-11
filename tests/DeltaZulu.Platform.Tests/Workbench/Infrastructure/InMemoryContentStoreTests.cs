@@ -1,7 +1,4 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
-using DeltaZulu.Platform.Tests.Workbench.Infrastructure;
-
-namespace DeltaZulu.Platform.Tests.Workbench.Integration;
+namespace DeltaZulu.Platform.Tests.Workbench.Infrastructure;
 
 [TestClass]
 public sealed class InMemoryContentStoreTests

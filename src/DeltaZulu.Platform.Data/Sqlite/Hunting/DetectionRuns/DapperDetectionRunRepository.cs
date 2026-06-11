@@ -1,8 +1,8 @@
-namespace DeltaZulu.Platform.Data.Hunting.DetectionRuns;
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting.DetectionRuns;
 
 using Dapper;
-using DeltaZulu.Platform.Application.Hunting.DetectionRuns;
-using DeltaZulu.Platform.Data.Hunting.Persistence;
+using DeltaZulu.Platform.Data.Sqlite.Hunting;
+using DeltaZulu.Platform.Domain.Hunting.DetectionRuns;
 
 public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IDisposable
 {

@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Samples;
+namespace DeltaZulu.Platform.Application.Hunting.Samples;
 
 public static class SampleQueryCatalog
 {

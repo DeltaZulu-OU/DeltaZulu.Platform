@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Hunting.Detections;
+namespace DeltaZulu.Platform.Domain.Hunting.Detections;
 
 public interface IDetectionRepository
 {

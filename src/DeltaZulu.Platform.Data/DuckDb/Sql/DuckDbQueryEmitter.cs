@@ -1,7 +1,6 @@
 namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 
 using System.Text.RegularExpressions;
-using QueryModel;
 
 /// <summary>
 /// <para>Emits DuckDB SQL from a RelNode query tree.</para>

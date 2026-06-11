@@ -1,5 +1,6 @@
-namespace DeltaZulu.Platform.Data.Hunting;
-
+namespace DeltaZulu.Platform.Data.DuckDb;
+
+using DeltaZulu.Platform.Data.Hunting;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
 
 /// <summary>

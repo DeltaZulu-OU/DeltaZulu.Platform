@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Data.Hunting;
+namespace DeltaZulu.Platform.Data.Seeding;
 
 /// <summary>
 /// Seeds deterministic Phase 1A medallion development data into the active Bronze

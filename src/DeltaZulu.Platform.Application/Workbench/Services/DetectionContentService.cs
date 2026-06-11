@@ -1,5 +1,5 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
 using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using DeltaZulu.Platform.Domain.Workbench.Detections;
 using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 

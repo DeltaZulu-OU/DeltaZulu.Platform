@@ -2,7 +2,6 @@ namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 
 using System.Text;
 using System.Text.RegularExpressions;
-using QueryModel;
 
 internal sealed partial class DuckDbJoinEmitter
 {

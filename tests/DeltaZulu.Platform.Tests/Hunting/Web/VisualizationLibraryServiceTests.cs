@@ -1,10 +1,10 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Web;
 
 using System.Text.Json;
-using DeltaZulu.Platform.Application.Hunting.SavedQueries;
-using DeltaZulu.Platform.Application.Hunting.Visualizations;
 using DeltaZulu.Platform.Application.Hunting.Render.Directives;
-using DeltaZulu.Platform.Application.Hunting.Render.Model;
+using DeltaZulu.Platform.Domain.Hunting.Rendering;
+using DeltaZulu.Platform.Domain.Hunting.SavedQueries;
+using DeltaZulu.Platform.Domain.Hunting.Visualizations;
 using DeltaZulu.Platform.Web.Hunting.Dashboards;
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Persistence;
 using DeltaZulu.Platform.Web.Hunting.Services;

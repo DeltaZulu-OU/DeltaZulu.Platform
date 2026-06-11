@@ -1,7 +1,8 @@
-namespace DeltaZulu.Platform.Application.Hunting.Render.DependencyInjection;
+namespace DeltaZulu.Platform.Application.Hunting.Rendering;
 
 using DeltaZulu.Platform.Application.Hunting.Render.Directives;
-using DeltaZulu.Platform.Application.Hunting.Render.Services;
+using DeltaZulu.Platform.Application.Hunting.Rendering.Directives;
+using DeltaZulu.Platform.Application.Hunting.Rendering.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 public static class RenderServiceCollectionExtensions

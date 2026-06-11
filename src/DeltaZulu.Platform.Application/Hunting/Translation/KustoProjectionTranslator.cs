@@ -1,7 +1,6 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Translation;
+namespace DeltaZulu.Platform.Application.Hunting.Translation;
 
 using Kusto.Language.Syntax;
-using QueryModel;
 
 /// <summary>Translates projection aliases and ordered expressions using scalar translation.</summary>
 internal sealed class KustoProjectionTranslator

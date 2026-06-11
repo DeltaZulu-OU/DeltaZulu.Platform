@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Data.Hunting.Persistence;
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting;
 
 using System.Data.Common;
 using Microsoft.Data.Sqlite;

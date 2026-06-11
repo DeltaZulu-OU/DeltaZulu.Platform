@@ -1,4 +1,6 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Planning;
+using DeltaZulu.Platform.Domain.Hunting.Planning;
+
+namespace DeltaZulu.Platform.Application.Hunting.Planning;
 
 using DeltaZulu.Platform.Domain.Hunting.QueryModel;
 

@@ -1,6 +1,6 @@
 using DeltaZulu.Platform.Domain.Workbench.Enums;
 
-namespace DeltaZulu.Platform.Application.Workbench.Abstractions;
+namespace DeltaZulu.Platform.Domain.Workbench.Contracts;
 
 /// <summary>
 /// A validation check that runs against a change request's draft file set. Implementations

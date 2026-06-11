@@ -1,5 +1,4 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
-using DeltaZulu.Platform.Data.Workbench.AcceptedContent;
+using DeltaZulu.Platform.Data.Git;
 using LibGit2Sharp;
 using Microsoft.Extensions.Options;
 

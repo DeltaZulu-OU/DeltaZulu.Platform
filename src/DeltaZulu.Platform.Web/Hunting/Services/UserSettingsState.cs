@@ -1,6 +1,6 @@
 namespace DeltaZulu.Platform.Web.Hunting.Services;
 
-using DeltaZulu.Platform.Application.Hunting.Settings;
+using DeltaZulu.Platform.Domain.Hunting.Settings;
 
 public sealed class UserSettingsState
 {

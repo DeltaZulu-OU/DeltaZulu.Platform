@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Data.Hunting.SavedQueries;
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting.SavedQueries;
 
 using Dapper;
-using DeltaZulu.Platform.Data.Hunting.Persistence;
+using DeltaZulu.Platform.Data.Sqlite.Hunting;
 using AppISavedQueryRepository = Hunting.Application.SavedQueries.ISavedQueryRepository;
 using AppSavedQueryRecord = Hunting.Application.SavedQueries.SavedQueryRecord;
 

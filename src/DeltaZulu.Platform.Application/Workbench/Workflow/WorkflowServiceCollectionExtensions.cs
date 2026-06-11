@@ -1,6 +1,6 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
 using DeltaZulu.Platform.Application.Workbench.Services;
 using DeltaZulu.Platform.Application.Workbench.Workflow.Workflows;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using Elsa.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -1,11 +1,12 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Web;
 
 using System.Diagnostics;
-using DeltaZulu.Platform.Application.Hunting.SavedQueries;
-using DeltaZulu.Platform.Application.Hunting.Visualizations;
-using DeltaZulu.Platform.Domain.Hunting.Policy;
+using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Hunting;
-using DeltaZulu.Platform.Application.Hunting.Render.Model;
+using DeltaZulu.Platform.Domain.Hunting.Policy;
+using DeltaZulu.Platform.Domain.Hunting.Rendering;
+using DeltaZulu.Platform.Domain.Hunting.SavedQueries;
+using DeltaZulu.Platform.Domain.Hunting.Visualizations;
 using DeltaZulu.Platform.Web.Hunting.Dashboards;
 using DeltaZulu.Platform.Web.Hunting.Dashboards.PageState;
 using DeltaZulu.Platform.Web.Hunting.Dashboards.Persistence;

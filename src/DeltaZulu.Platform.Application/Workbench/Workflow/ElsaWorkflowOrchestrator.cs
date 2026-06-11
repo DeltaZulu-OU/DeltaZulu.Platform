@@ -1,7 +1,7 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
+using DeltaZulu.Platform.Application.Workbench.Workflow.Workflows;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using DeltaZulu.Platform.Domain.Workbench.Enums;
 using DeltaZulu.Platform.Domain.Workbench.Identifiers;
-using DeltaZulu.Platform.Application.Workbench.Workflow.Workflows;
 using Elsa.Common.Models;
 using Elsa.Workflows.Models;
 using Elsa.Workflows.Runtime;

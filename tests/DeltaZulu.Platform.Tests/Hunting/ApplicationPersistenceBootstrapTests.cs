@@ -1,11 +1,11 @@
 namespace DeltaZulu.Platform.Tests.Hunting;
 
-using DeltaZulu.Platform.Application.Hunting.QueryHistory;
-using DeltaZulu.Platform.Application.Hunting.SavedQueries;
-using DeltaZulu.Platform.Application.Hunting.Settings;
-using DeltaZulu.Platform.Application.Hunting.Visualizations;
-using DeltaZulu.Platform.Domain.Hunting.Samples;
-using DeltaZulu.Platform.Data.Hunting.Persistence;
+using DeltaZulu.Platform.Application.Hunting.Samples;
+using DeltaZulu.Platform.Data.Sqlite.Hunting;
+using DeltaZulu.Platform.Domain.Hunting.QueryHistory;
+using DeltaZulu.Platform.Domain.Hunting.SavedQueries;
+using DeltaZulu.Platform.Domain.Hunting.Settings;
+using DeltaZulu.Platform.Domain.Hunting.Visualizations;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 

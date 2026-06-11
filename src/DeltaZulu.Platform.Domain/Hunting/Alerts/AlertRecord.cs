@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Hunting.Alerts;
+namespace DeltaZulu.Platform.Domain.Hunting.Alerts;
 
 public sealed record AlertRecord(
     string Id,

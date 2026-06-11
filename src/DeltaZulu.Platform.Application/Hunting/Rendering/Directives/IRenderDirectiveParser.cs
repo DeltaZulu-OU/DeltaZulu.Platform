@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Hunting.Render.Directives;
+namespace DeltaZulu.Platform.Application.Hunting.Rendering.Directives;
 
 public interface IRenderDirectiveParser
 {

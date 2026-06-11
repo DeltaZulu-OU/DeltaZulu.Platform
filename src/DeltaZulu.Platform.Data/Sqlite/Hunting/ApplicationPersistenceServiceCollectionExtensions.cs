@@ -1,18 +1,19 @@
-namespace DeltaZulu.Platform.Data.Hunting.Persistence;
+namespace DeltaZulu.Platform.Data.Sqlite.Hunting;
 
-using DeltaZulu.Platform.Application.Hunting.Alerts;
-using DeltaZulu.Platform.Application.Hunting.DetectionRuns;
-using DeltaZulu.Platform.Application.Hunting.Detections;
-using DeltaZulu.Platform.Application.Hunting.QueryHistory;
-using DeltaZulu.Platform.Application.Hunting.SavedQueries;
-using DeltaZulu.Platform.Application.Hunting.Visualizations;
-using DeltaZulu.Platform.Data.Hunting.Alerts;
-using DeltaZulu.Platform.Data.Hunting.DetectionRuns;
-using DeltaZulu.Platform.Data.Hunting.Detections;
-using DeltaZulu.Platform.Data.Hunting.QueryHistory;
-using DeltaZulu.Platform.Data.Hunting.SavedQueries;
-using DeltaZulu.Platform.Data.Hunting.Settings;
-using DeltaZulu.Platform.Data.Hunting.Visualizations;
+using DeltaZulu.Platform.Data.Seeding;
+using DeltaZulu.Platform.Data.Sqlite.Hunting.Alerts;
+using DeltaZulu.Platform.Data.Sqlite.Hunting.DetectionRuns;
+using DeltaZulu.Platform.Data.Sqlite.Hunting.Detections;
+using DeltaZulu.Platform.Data.Sqlite.Hunting.QueryHistory;
+using DeltaZulu.Platform.Data.Sqlite.Hunting.SavedQueries;
+using DeltaZulu.Platform.Data.Sqlite.Hunting.Settings;
+using DeltaZulu.Platform.Data.Sqlite.Hunting.Visualizations;
+using DeltaZulu.Platform.Domain.Hunting.Alerts;
+using DeltaZulu.Platform.Domain.Hunting.DetectionRuns;
+using DeltaZulu.Platform.Domain.Hunting.Detections;
+using DeltaZulu.Platform.Domain.Hunting.QueryHistory;
+using DeltaZulu.Platform.Domain.Hunting.SavedQueries;
+using DeltaZulu.Platform.Domain.Hunting.Visualizations;
 using Microsoft.Extensions.DependencyInjection;
 using IUserSettingsRepository = Application.Settings.IUserSettingsRepository;
 

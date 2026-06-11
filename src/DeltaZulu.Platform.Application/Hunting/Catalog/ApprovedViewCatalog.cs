@@ -1,8 +1,7 @@
-namespace DeltaZulu.Platform.Domain.Hunting.Catalog;
+namespace DeltaZulu.Platform.Application.Hunting.Catalog;
 
 using Kusto.Language;
 using Kusto.Language.Symbols;
-using Schema;
 
 /// <summary>
 /// Builds and maintains the approved public hunting view catalog.

@@ -1,7 +1,7 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
 using DeltaZulu.Platform.Application.Workbench.ContentPipeline;
 using DeltaZulu.Platform.Domain.Workbench.Changes;
 using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using DeltaZulu.Platform.Domain.Workbench.Enums;
 using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 

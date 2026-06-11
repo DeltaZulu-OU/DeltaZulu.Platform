@@ -1,6 +1,6 @@
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
 using DeltaZulu.Platform.Domain.Workbench.Changes;
 using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using DeltaZulu.Platform.Domain.Workbench.Enums;
 using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
@@ -65,7 +65,7 @@ public sealed class ChangeService(
         changes.Save(change);
     }
 
-    public async Task<Domain.Reviews.Review> RecordReviewAsync(
+    public async Task<Domain.Workbench.Reviews.Review> RecordReviewAsync(
         ChangeRequestId changeId, UserId reviewerId, ReviewDecision decision,
         string comment, CancellationToken ct = default)
     {

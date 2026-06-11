@@ -1,8 +1,8 @@
 using Dapper;
-using DeltaZulu.Platform.Application.Workbench.Abstractions;
+using DeltaZulu.Platform.Domain.Workbench.Contracts;
 using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
-namespace DeltaZulu.Platform.Data.Workbench.Repositories;
+namespace DeltaZulu.Platform.Data.Sqlite.Workbench.Repositories;
 
 internal sealed class MergeIntentRepository(DapperSession session) : IMergeIntentRepository
 {

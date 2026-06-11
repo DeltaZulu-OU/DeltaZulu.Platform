@@ -1,6 +1,7 @@
-namespace DeltaZulu.Platform.Data.Hunting;
+namespace DeltaZulu.Platform.Data.Seeding;
 
 using Dapper;
+using DeltaZulu.Platform.Data.DuckDb;
 
 /// <summary>
 /// Records governed seed fixture batch metadata into internal.seed_batches.

@@ -1,7 +1,7 @@
 using Dapper;
 using Microsoft.Data.Sqlite;
 
-namespace DeltaZulu.Platform.Data.Workbench;
+namespace DeltaZulu.Platform.Data.Seeding;
 
 public static class DemoSeeder
 {

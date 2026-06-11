@@ -1,7 +1,7 @@
 namespace DeltaZulu.Platform.Tests.Hunting;
 
 using System.Globalization;
-using DeltaZulu.Platform.Data.Hunting;
+using DeltaZulu.Platform.Data.Seeding;
 using DuckDB.NET.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

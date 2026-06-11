@@ -1,6 +1,6 @@
 namespace DeltaZulu.Platform.Tests.Hunting.Web;
 
-using DeltaZulu.Platform.Domain.Hunting.Samples;
+using DeltaZulu.Platform.Application.Hunting.Samples;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 [TestClass]

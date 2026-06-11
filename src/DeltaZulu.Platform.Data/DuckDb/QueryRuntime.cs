@@ -2,7 +2,9 @@ namespace DeltaZulu.Platform.Data.Hunting;
 
 using System.Collections.Concurrent;
 using System.Globalization;
-using DeltaZulu.Platform.Domain.Hunting.Catalog;
+using DeltaZulu.Platform.Application.Hunting.Catalog;
+using DeltaZulu.Platform.Application.Hunting.Planning;
+using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Domain.Hunting.Planning;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
 using DeltaZulu.Platform.Domain.Hunting.QueryModel;

@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Hunting.DetectionRuns;
+namespace DeltaZulu.Platform.Domain.Hunting.DetectionRuns;
 
 public sealed record DetectionRunRecord(
     string Id,

@@ -4,7 +4,6 @@ using DeltaZulu.Platform.Web.Platform;
 using DeltaZulu.Platform.Web.Workbench;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DeltaZulu.Platform.Tests.Web;
 

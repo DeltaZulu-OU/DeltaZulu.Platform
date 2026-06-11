@@ -1,9 +1,9 @@
+using DeltaZulu.Platform.Application.Workbench.ContentPipeline;
 using DeltaZulu.Platform.Domain.Detection;
 using DeltaZulu.Platform.Domain.Detection.Files;
 using DeltaZulu.Platform.Domain.Detection.Identity;
 using DeltaZulu.Platform.Domain.Detection.Paths;
 using DeltaZulu.Platform.Domain.Detection.References;
-using DeltaZulu.Platform.Application.Workbench.ContentPipeline;
 
 namespace DeltaZulu.Platform.Tests.Workbench.DetectionContent;
 

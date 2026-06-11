@@ -2,10 +2,11 @@ namespace DeltaZulu.Platform.Data.Hunting;
 
 using System.Globalization;
 using System.Text.Json;
+using DeltaZulu.Platform.Application.Hunting.Planning;
+using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Hunting.Planning;
 using DeltaZulu.Platform.Domain.Hunting.Policy;
-using DeltaZulu.Platform.Domain.Hunting.Translation;
 using DuckDB.NET.Data;
 
 public sealed partial class QueryRuntime
