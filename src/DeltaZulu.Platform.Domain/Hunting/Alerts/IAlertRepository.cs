@@ -1,4 +1,4 @@
-namespace DeltaZulu.Hunting.Application.Alerts;
+namespace DeltaZulu.Platform.Application.Hunting.Alerts;
 
 public interface IAlertRepository
 {

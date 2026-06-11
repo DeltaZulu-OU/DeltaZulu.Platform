@@ -1,4 +1,4 @@
-namespace DeltaZulu.DetectionContent.Identity;
+namespace DeltaZulu.Platform.Domain.Detection.Identity;
 
 /// <summary>Stable cross-product identity for an accepted detection-content version projection.</summary>
 public sealed record DetectionContentVersionId

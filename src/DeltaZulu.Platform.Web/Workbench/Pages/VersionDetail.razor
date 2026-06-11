@@ -1,0 +1,315 @@
+@namespace DeltaZulu.Platform.Web.Workbench.Components.Pages
+@page "/workbench/history/{Id}"
+@page "/workbench/versions/{Id}"
+@using MudBlazor
+@rendermode InteractiveServer
+@using DeltaZulu.Platform.Application.Workbench.Services
+@using DeltaZulu.Platform.Domain.Workbench.Common
+@using DeltaZulu.Platform.Domain.Workbench.Detections
+@using DeltaZulu.Platform.Domain.Workbench.Enums
+@using DeltaZulu.Platform.Domain.Workbench.Identifiers
+@using DeltaZulu.Platform.Web.Workbench.Services
+@inject VersionService VersionService
+@inject RestoreService RestoreService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject PocUserContext UserContext
+
+<PageTitle>Version — @(_comparison?.AfterVersion.DisplayVersion ?? "Loading")</PageTitle>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (_comparison is null)
+{
+    <MudAlert Severity="Severity.Error">Version not found.</MudAlert>
+}
+else
+{
+    <MudBreadcrumbs Items="_breadcrumbs" Class="mb-2" />
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="8">
+            <DzPageHeader Eyebrow="Accepted version"
+                          Title="@($"{_comparison.AfterVersion.DisplayVersion} — {_comparison.Detection.Title}")"
+                          Description="@_comparison.AfterVersion.ChangeSummary">
+                <Actions>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               StartIcon="@Icons.Material.Outlined.Restore" Disabled="_restoring" OnClick="RestoreVersion">
+                        Restore as new change
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small"
+                               OnClick="@(() => Nav.NavigateTo($"/workbench/detections/{_comparison.Detection.Id}"))">
+                        Back to detection
+                    </MudButton>
+                </Actions>
+            </DzPageHeader>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <DzPanel Eyebrow="Comparison">
+                <DzDetailList>
+                    <DzDetailItem Label="Compare from" Value="@(_comparison.BeforeVersion?.DisplayVersion ?? "No earlier version")" />
+                    <DzDetailItem Label="Compare to" Value="@_comparison.AfterVersion.DisplayVersion" />
+
+                    <DzDetailItem>
+                        <MudSelect Value="_selectedBeforeVersionValue" ValueChanged="OnBeforeVersionChanged"
+                                   Label="Choose comparison baseline" T="string" Dense="true">
+                            <MudSelectItem Value="@PreviousVersionValue">Previous accepted version</MudSelectItem>
+                            @foreach (var version in _availableBeforeVersions)
+                            {
+                                <MudSelectItem Value="@version.Id.ToString()">@version.DisplayVersion — @version.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </DzDetailItem>
+
+                    <DzDetailItem Label="Changed files" Value="@_comparison.ChangedFiles.Count.ToString()" />
+
+                    <DzDetailItem Label="Source change">
+                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/workbench/changes/{_comparison.AfterVersion.SourceChangeRequestId}"))" Class="mt-1">
+                            View change
+                        </DzActionLink>
+                    </DzDetailItem>
+
+                    <DzDetailItem Label="Linked issue">
+                        @if (_comparison.AfterVersion.LinkedIssueId is not null)
+                        {
+                            <DzActionLink OnClick="@(() => Nav.NavigateTo($"/workbench/issues/{_comparison.AfterVersion.LinkedIssueId}"))" Class="mt-1">
+                                View issue
+                            </DzActionLink>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Class="text-secondary">None</MudText>
+                        }
+                    </DzDetailItem>
+
+                    <DzDetailItem Label="Workflow profile">
+                        <DzMetaChip Kind="workflow">@_comparison.AfterVersion.WorkflowProfile</DzMetaChip>
+                    </DzDetailItem>
+
+                    <DzDetailItem Label="Checks" Value="@_comparison.AfterVersion.ChecksSummary" />
+                    <DzDetailItem Label="Reviews" Value="@_comparison.AfterVersion.ReviewSummary" />
+                    <DzDetailItem Label="Accepted" Value="@_comparison.AfterVersion.AcceptedAt.ToString("yyyy-MM-dd HH:mm")" />
+                </DzDetailList>
+            </DzPanel>
+        </MudItem>
+    </MudGrid>
+
+    <DzPanel Title="File comparison" Class="dz-version-comparison-panel">
+        @if (_comparison.Files.Count == 0)
+        {
+            <DzEmptyState Title="This accepted version has no files to compare."
+                          Description="File comparison data will appear when accepted content contains files."
+                          Icon="@Icons.Material.Outlined.Difference" />
+        }
+        else
+        {
+            <DzTableShell>
+                <MudTable Items="_comparison.Files" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="VersionFileDiff" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>File</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Before</MudTh>
+                        <MudTh>After</MudTh>
+                        <MudTh>Inline hunks</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="File"><code>@context.LogicalPath</code></MudTd>
+                        <MudTd DataLabel="Status">
+                            <DzStatusChip Label="@context.Status.ToString()" Tone="@StatusTone(context.Status)" />
+                        </MudTd>
+                        <MudTd DataLabel="Before">@Preview(context.BeforeContent, context.BeforeIsBinary)</MudTd>
+                        <MudTd DataLabel="After">@Preview(context.AfterContent, context.AfterIsBinary)</MudTd>
+                        <MudTd DataLabel="Inline hunks">
+                            @if (context.IsBinary)
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Binary file</MudText>
+                            }
+                            else if (context.Hunks.Count == 0)
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">No line changes</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption">@context.Hunks.Sum(hunk => hunk.Lines.Count(line => line.Type is not VersionDiffLineType.Context)) changed lines</MudText>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </DzTableShell>
+
+            @if (_comparison.ChangedFiles.Any(file => file.Hunks.Count > 0))
+            {
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.subtitle1" Class="mb-3">Inline diff hunks</MudText>
+                <MudStack Spacing="3">
+                    @foreach (var file in _comparison.ChangedFiles.Where(file => file.Hunks.Count > 0))
+                    {
+                        <div class="dz-diff-file">
+                            <div class="dz-diff-file__header">
+                                <code>@file.LogicalPath</code>
+                                <DzStatusChip Label="@file.Status.ToString()" Tone="@StatusTone(file.Status)" />
+                            </div>
+                            @foreach (var hunk in file.Hunks)
+                            {
+                                <div class="dz-diff-hunk__header">
+                                    @@ -@hunk.BeforeStartLine,@hunk.BeforeLineCount +@hunk.AfterStartLine,@hunk.AfterLineCount
+                                </div>
+                                <div class="dz-diff-hunk__body">
+                                    @foreach (var line in hunk.Lines)
+                                    {
+                                        <div class="@DiffLineClass(line.Type)">
+                                            <span class="dz-diff-line__number">@LineNumber(line.BeforeLineNumber)</span>
+                                            <span class="dz-diff-line__number">@LineNumber(line.AfterLineNumber)</span>
+                                            <span class="dz-diff-line__marker">@LineMarker(line.Type)</span>
+                                            <span class="dz-diff-line__text">@line.Text</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </MudStack>
+            }
+        }
+    </DzPanel>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = null!;
+
+    private const string PreviousVersionValue = "__previous__";
+
+    private VersionComparison? _comparison;
+    private List<DetectionVersion> _availableBeforeVersions = [];
+    private List<BreadcrumbItem> _breadcrumbs = [];
+    private string _selectedBeforeVersionValue = PreviousVersionValue;
+    private bool _loading = true;
+    private bool _restoring;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _comparison = null;
+        _availableBeforeVersions = [];
+        _selectedBeforeVersionValue = PreviousVersionValue;
+
+        if (Guid.TryParse(Id, out var guid))
+        {
+            try
+            {
+                var versionId = new VersionId(guid);
+                _comparison = await VersionService.CompareWithPreviousAsync(versionId);
+                await LoadAvailableBeforeVersionsAsync();
+                SetBreadcrumbs();
+            }
+            catch (DomainException ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
+        }
+
+        _loading = false;
+    }
+
+    private async Task LoadAvailableBeforeVersionsAsync()
+    {
+        if (_comparison is null) return;
+
+        var versions = await VersionService.ListComparisonBaselinesAsync(_comparison.AfterVersion.Id);
+        _availableBeforeVersions = versions.ToList();
+    }
+
+    private void SetBreadcrumbs()
+    {
+        if (_comparison is null) return;
+
+        _breadcrumbs =
+        [
+            new("History", "/history"),
+            new(_comparison.Detection.Slug, $"/detections/{_comparison.Detection.Id}"),
+            new(_comparison.AfterVersion.DisplayVersion, null, disabled: true),
+        ];
+    }
+
+    private async Task OnBeforeVersionChanged(string value)
+    {
+        if (_comparison is null) return;
+
+        _selectedBeforeVersionValue = value;
+        try
+        {
+            _comparison = value == PreviousVersionValue
+                ? await VersionService.CompareWithPreviousAsync(_comparison.AfterVersion.Id)
+                : await VersionService.CompareAsync(new VersionId(Guid.Parse(value)), _comparison.AfterVersion.Id);
+            await LoadAvailableBeforeVersionsAsync();
+            SetBreadcrumbs();
+        }
+        catch (DomainException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        catch (FormatException)
+        {
+            Snackbar.Add("The selected comparison baseline is invalid.", Severity.Error);
+        }
+    }
+
+    private async Task RestoreVersion()
+    {
+        if (_comparison is null) return;
+
+        _restoring = true;
+        try
+        {
+            var change = await RestoreService.RestoreVersionAsChangeAsync(
+                _comparison.AfterVersion.Id,
+                UserContext.CurrentUser.Id,
+                WorkflowProfileId.QuickLab);
+            Snackbar.Add($"Opened {change.Key} from {_comparison.AfterVersion.DisplayVersion}.", Severity.Success);
+            Nav.NavigateTo($"/workbench/changes/{change.Id}");
+        }
+        catch (DomainException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _restoring = false;
+        }
+    }
+
+    private static string StatusTone(VersionFileDiffStatus status) => status switch
+    {
+        VersionFileDiffStatus.Added => "success",
+        VersionFileDiffStatus.Modified => "warning",
+        VersionFileDiffStatus.Removed => "error",
+        _ => "neutral",
+    };
+
+    private static string Preview(string? content, bool isBinary)
+    {
+        if (content is null) return "—";
+        if (isBinary) return $"Binary content ({content.Length} encoded chars)";
+
+        var singleLine = content.Replace("\r", "", StringComparison.Ordinal).Replace("\n", " ⏎ ", StringComparison.Ordinal);
+        return singleLine.Length <= 120 ? singleLine : singleLine[..120] + "…";
+    }
+
+    private static string LineNumber(int? lineNumber) => lineNumber?.ToString() ?? "";
+
+    private static string LineMarker(VersionDiffLineType type) => type switch
+    {
+        VersionDiffLineType.Added => "+",
+        VersionDiffLineType.Removed => "-",
+        _ => " "
+    };
+
+    private static string DiffLineClass(VersionDiffLineType type) => type switch
+    {
+        VersionDiffLineType.Added => "dz-diff-line dz-diff-line--added",
+        VersionDiffLineType.Removed => "dz-diff-line dz-diff-line--removed",
+        _ => "dz-diff-line",
+    };
+}

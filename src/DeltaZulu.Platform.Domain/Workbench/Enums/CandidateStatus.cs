@@ -1,4 +1,4 @@
-namespace DeltaZulu.Workbench.Domain.Enums;
+namespace DeltaZulu.Platform.Domain.Workbench.Enums;
 
 public enum CandidateStatus
 {

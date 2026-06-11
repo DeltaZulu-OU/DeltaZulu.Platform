@@ -1,0 +1,1037 @@
+@page "/hunting/threat-hunting"
+@namespace DeltaZulu.Platform.Web.Hunting.Pages
+@using DeltaZulu.Platform.Web.Hunting.Components
+@inject DeltaZulu.Platform.Web.Hunting.Rendering.RenderedQueryRunner RenderedQueryRunner
+@inject DeltaZulu.Platform.Domain.Hunting.Catalog.ApprovedViewCatalog Catalog
+@inject DeltaZulu.Platform.Web.Hunting.Services.EditorBus EditorBus
+@inject DeltaZulu.Platform.Web.Hunting.Services.LanguageService LanguageService
+@inject IJSRuntime JS
+@inject DeltaZulu.Platform.Web.Hunting.Services.UserSettingsState UserSettings
+@inject DeltaZulu.Platform.Web.Hunting.Services.QueryLibraryService QueryLibrary
+@inject DeltaZulu.Platform.Web.Hunting.Services.VisualizationLibraryService VisualizationLibrary
+@inject DeltaZulu.Platform.Web.Hunting.Rendering.EChartsRenderOptionsBuilder EChartsOptionsBuilder
+@inject ISnackbar Snackbar
+@implements IAsyncDisposable
+
+<div class="threat-hunting-page">
+    <aside class="threat-hunting-secondary-nav" aria-label="Threat hunting navigation">
+        <div class="threat-hunting-secondary-header">Threat Hunting</div>
+
+        <section class="threat-hunting-secondary-section" aria-labelledby="threat-hunting-schemas-heading">
+            <h2 id="threat-hunting-schemas-heading" class="threat-hunting-secondary-title">Schemas, saved queries, and samples</h2>
+            <SchemaBrowser />
+        </section>
+
+        <section class="threat-hunting-secondary-section threat-hunting-saved-section" aria-labelledby="threat-hunting-library-heading">
+            <h2 id="threat-hunting-library-heading" class="threat-hunting-secondary-title">Query history</h2>
+            <p class="threat-hunting-secondary-help">Save the current editor contents or open recent executions without leaving the hunting page.</p>
+            <QueryLibraryDrawer CurrentQueryText="@_cachedEditorText" QuerySelected="LoadQueryIntoEditor" ButtonText="Open query history" />
+        </section>
+    </aside>
+
+    <main class="threat-hunting-workbench">
+        <div class="hunt-page">
+            <div class="hunt-page-content" id="hunt-page-content">
+                <section class="hunt-editor-panel" id="hunt-editor-panel">
+                    <div class="hunt-editor-toolbar">
+                        <span class="hunt-editor-label">KQL Query</span>
+                        <div class="hunt-toolbar-actions">
+                            <KqlHelperDrawer InsertRequested="InsertHelperQueryAsync" AppendRequested="AppendHelperQueryAsync" />
+
+                            <button class="hunt-btn hunt-btn-run"
+                                    disabled="@_running"
+                                    @onclick="RunQuery">
+                                @(_running ? "Running…" : "▶ Run (Shift+Enter)")
+                            </button>
+
+                            <button class="hunt-btn hunt-btn-clear"
+                                    @onclick="Clear">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="hunt-timefilter-toolbar">
+                        <label class="hunt-timefilter-label" for="time-range">Time filter</label>
+                        <select id="time-range" class="hunt-timefilter-select" @bind="_toolbar.SelectedTimeFilter">
+                            @foreach (var preset in DeltaZulu.Platform.Web.Hunting.Services.QueryToolbarState.TimeFilterPresets)
+                            {
+                                <option value="@preset.Key">@preset.Label</option>
+                            }
+                        </select>
+
+                        @if (_toolbar.SelectedTimeFilter == "custom")
+                        {
+                            <input type="date" class="hunt-timefilter-date" @bind="_toolbar.CustomFrom" />
+                            <span class="hunt-timefilter-sep">→</span>
+                            <input type="date" class="hunt-timefilter-date" @bind="_toolbar.CustomTo" />
+                        }
+
+                        <span class="hunt-timefilter-status">@_toolbar.TimeFilterCaption</span>
+
+                        <label class="hunt-timefilter-label" for="result-limit">Limit</label>
+                        <select id="result-limit" class="hunt-timefilter-select" @bind="SelectedResultLimitValue">
+                            @foreach (var opt in DeltaZulu.Platform.Web.Hunting.Services.QueryToolbarState.ResultLimitOptions)
+                            {
+                                <option value="@(opt?.ToString() ?? string.Empty)">@(opt is null ? "None" : opt.Value.ToString())</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="hunt-editor-container">
+                        <div id="kql-editor" class="hunt-editor-textarea"></div>
+                    </div>
+
+                    @if (_diagnostics.Any())
+                    {
+                        <div class="hunt-diagnostics">
+                            @foreach (var d in _diagnostics)
+                            {
+                                <div class="hunt-diagnostic hunt-diagnostic-@d.Severity.ToString().ToLower()">
+                                    <span class="hunt-diag-phase">[@d.Phase]</span>
+                                    @d.Message
+                                </div>
+                            }
+                        </div>
+                    }
+                </section>
+
+                <div class="hunt-panel-splitter" id="hunt-panel-splitter" role="separator" aria-orientation="horizontal" aria-label="Resize editor and results panels"></div>
+
+                <section class="hunt-results-panel" id="hunt-results-panel">
+                    <div class="hunt-results-toolbar">
+                        <span class="hunt-results-label">
+                            @if (_result is not null && _result.Success)
+                            {
+                                <span>@_result.RowCount rows · @_elapsed.TotalMilliseconds.ToString("F0") ms</span>
+                            }
+                            else if (_result is not null && !_result.Success)
+                            {
+                                <span class="hunt-error-label">Query failed</span>
+                            }
+                            else
+                            {
+                                <span class="hunt-idle-label">No results yet</span>
+                            }
+                        </span>
+
+                        <div class="hunt-results-toolbar-actions">
+                            @if (_result?.Success == true)
+                            {
+                                <button class="hunt-btn"
+                                        disabled="@IsSaveActionDisabled"
+                                        @onclick="SaveActiveResultArtifactAsync">
+                                    @SaveActionText
+                                </button>
+                            }
+
+                            @if (IsDebugBuild && _result?.GeneratedSql is string)
+                            {
+                                <button class="hunt-btn hunt-btn-sql"
+                                        @onclick="OpenSqlDrawer">
+                                    Show SQL
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    @if (IsDebugBuild && _showSql && _result?.GeneratedSql is string sql)
+                    {
+                        <pre class="hunt-sql-preview">@sql</pre>
+                    }
+
+                    @if (_result?.Success == true && _result.RowCount > 0)
+                    {
+                        <div class="hunt-results-tabs" role="tablist" aria-label="Result views">
+                            <button class="hunt-btn hunt-tab-button @GetTabButtonClass(ResultTab.Table)"
+                                    role="tab"
+                                    aria-selected="@(_activeTab == ResultTab.Table)"
+                                    aria-controls="results-table-panel"
+                                    id="results-table-tab"
+                                    @onclick="() => SelectTab(ResultTab.Table)">
+                                Table
+                            </button>
+
+                            <button class="hunt-btn hunt-tab-button @GetTabButtonClass(ResultTab.Render)"
+                                    role="tab"
+                                    aria-selected="@(_activeTab == ResultTab.Render)"
+                                    aria-controls="results-render-panel"
+                                    id="results-render-tab"
+                                    disabled="@(!HasRenderOutput)"
+                                    @onclick="() => SelectTab(ResultTab.Render)">
+                                Render
+                            </button>
+                        </div>
+
+                        <div class="hunt-results-content">
+                            @if (_activeTab == ResultTab.Table)
+                            {
+                                <div id="results-table-panel" role="tabpanel" aria-labelledby="results-table-tab" class="hunt-tab-content hunt-tab-active-content">
+                                    <div class="hunt-table-wrapper">
+                                        <table class="hunt-table">
+                                            <thead>
+                                                <tr>
+                                                    @foreach (var col in _result.Columns)
+                                                    {
+                                                        <th class="hunt-th" @onclick="() => SortBy(col.Name)">
+                                                            @col.Name
+                                                            @if (_sortColumn == col.Name)
+                                                            {
+                                                                @(_sortAsc ? " ▲" : " ▼")
+                                                            }
+                                                        </th>
+                                                    }
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var rowIndex in VisibleRows())
+                                                {
+                                                    <tr class="hunt-tr">
+                                                        @for (int i = 0; i < _result.Columns.Count; i++)
+                                                        {
+                                                            var cellIndex = i;
+                                                            var cellValue = _result.GetValue(rowIndex, cellIndex);
+                                                            var hasDrawer = ShouldShowCellDrawerButton(cellValue);
+                                                            <td class="hunt-td">
+                                                                <div class="hunt-cell-content">
+                                                                    @if (hasDrawer)
+                                                                    {
+                                                                        <button class="hunt-cell-chevron"
+                                                                                @onclick:stopPropagation="true"
+                                                                                @onclick="() => OpenCellDrawer(_result.Columns[cellIndex].Name, cellValue, true)"
+                                                                                aria-label="Open full cell content">
+                                                                            &gt;
+                                                                        </button>
+                                                                    }
+                                                                    <span class="hunt-cell-text">@FormatCell(cellValue)</span>
+                                                                </div>
+                                                            </td>
+                                                        }
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    @if (_result.RowCount > _pageSize)
+                                    {
+                                        <div class="hunt-pagination">
+                                            <button class="hunt-btn" disabled="@(_page == 0)"
+                                                    @onclick="() => _page--">
+                                                ◀ Prev
+                                            </button>
+                                            <span>Page @(_page + 1) of @TotalPages</span>
+                                            <button class="hunt-btn" disabled="@(_page >= TotalPages - 1)"
+                                                    @onclick="() => _page++">
+                                                Next ▶
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            @if (_activeTab == ResultTab.Render)
+                            {
+                                <div id="results-render-panel" role="tabpanel" aria-labelledby="results-render-tab" class="hunt-tab-content hunt-tab-active-content">
+                                    <div class="hunt-render-panel">
+                                        @{
+                                            var chart = _chart;
+                                            var chartOptions = _chartOptions;
+                                        }
+                                        <div class="hunt-render-content">
+                                            @if (!(chart?.CanRender ?? false))
+                                            {
+                                                <div class="hunt-render-fallback">@chart?.Message ?? "No render data."</div>
+                                                <p class="hunt-render-note">Falling back to table output.</p>
+                                            }
+                                            else
+                                            {
+                                                <div class="hunt-chart-wrapper">
+                                                    @if (chartOptions is not null)
+                                                    {
+                                                        <div class="hunt-echart" @ref="_chartHost">
+                                                            <Vizor.ECharts.EChart @key="_chartRenderKey" Width="@_chartWidth" Height="@_chartHeight" Options="@chartOptions" />
+                                                        </div>
+                                                    }
+                                                </div>
+                                                @if (!string.IsNullOrWhiteSpace(chart?.Warning))
+                                                {
+                                                    <p class="hunt-render-note">@chart.Warning</p>
+                                                }
+                                            }
+                                        </div>
+                                        @if ((chart?.CanRender ?? false) && EChartsRenderOptionsBuilder.ShouldShowLegend(chart))
+                                        {
+                                            <div class="hunt-render-legend">
+                                                @foreach (var series in chart?.Series ?? [])
+                                                {
+                                                    <span>@series.Name</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else if (_result?.Success == true && _result.RowCount == 0)
+                    {
+                        <DzEmptyState Title="No results"
+                                      Description="Query returned no rows."
+                                      Icon="@Icons.Material.Filled.SearchOff"
+                                      Elevation="0" />
+                    }
+                </section>
+            </div>
+        </div>
+    </main>
+</div>
+
+@if (_showDrawer)
+{
+    <button class="hunt-drawer-backdrop" @onclick="CloseDrawer" aria-label="Close details drawer"></button>
+    <aside class="hunt-drawer" role="dialog" aria-modal="true" aria-label="@_drawerTitle">
+        <div class="hunt-drawer-header">
+            <div>
+                <div class="hunt-drawer-title">@_drawerTitle</div>
+                <div class="hunt-drawer-subtitle">@_drawerTypeLabel</div>
+            </div>
+            <button class="hunt-drawer-close"
+                    @onclick="CloseDrawer"
+                    aria-label="Close details drawer">
+                ×
+            </button>
+        </div>
+        <div class="hunt-drawer-body">
+            @if (_drawerMode == DrawerMode.Sql || _drawerMode == DrawerMode.Json)
+            {
+                <div class="hunt-sql-snippet">
+                    <button class="hunt-btn hunt-btn-copy" @onclick="CopyDrawerContentToClipboard">Copy</button>
+                    <pre class="hunt-sql-highlight">@((MarkupString)_drawerSqlHtml)</pre>
+                </div>
+            }
+            else
+            {
+                <pre class="hunt-drawer-content">@_drawerContent</pre>
+            }
+        </div>
+    </aside>
+}
+
+@code {
+    private string _kql = string.Empty;
+    private readonly DeltaZulu.Platform.Web.Hunting.Services.QueryToolbarState _toolbar = new();
+
+#if DEBUG
+    private const bool IsDebugBuild = true;
+#else
+    private const bool IsDebugBuild = false;
+#endif
+
+    private bool _running;
+    private bool _savingQuery;
+    private bool _savingVisualization;
+    private Hunting.Data.QueryResult? _result;
+    private RenderedQueryResult? _renderedResult;
+    private DeltaZulu.Platform.Application.Hunting.Render.Model.RenderChartModel? _chart;
+    private Vizor.ECharts.ChartOptions? _chartOptions;
+    private DeltaZulu.Platform.Application.Hunting.Render.Model.RenderDirective _renderDirective = DeltaZulu.Platform.Application.Hunting.Render.Model.RenderDirective.Table();
+    private TimeSpan _elapsed;
+    private List<QueryDiagnostic> _diagnostics = [];
+    private bool _showDrawer;
+    private DrawerMode _drawerMode = DrawerMode.None;
+    private string _drawerTitle = "Details";
+    private string _drawerTypeLabel = "You can copy this snippet to your clipboard.";
+    private string _drawerContent = "";
+    private string _drawerSqlHtml = "";
+    private bool _showSql;
+    private string? _sortColumn;
+    private bool _sortAsc = true;
+    private int _page;
+    private ResultTab _activeTab = ResultTab.Table;
+    private const int _pageSize = 100;
+    private int TotalPages => ((_result?.RowCount ?? 0) + _pageSize - 1) / _pageSize;
+    private CancellationTokenSource _cts = new();
+    private readonly Queue<string> _snackbarKeys = new();
+    private int _chartRenderKey;
+    private ElementReference _chartHost;
+    private string _chartWidth = "320px";
+    private string _chartHeight = "320px";
+    private int _lastMeasuredChartWidthPx;
+    private int _lastMeasuredChartHeightPx;
+    private bool _editorInitialized;
+    private string _cachedEditorText = string.Empty;
+
+    private string SelectedResultLimitValue
+    {
+        get => _toolbar.SelectedResultLimit?.ToString() ?? string.Empty;
+        set => _toolbar.SelectedResultLimit = int.TryParse(value, out var parsed) ? parsed : null;
+    }
+
+    private async Task RunQuery()
+    {
+        _kql = await LanguageService.GetEditorValueAsync();
+        _cachedEditorText = _kql;
+        if (_running || string.IsNullOrWhiteSpace(_kql)) return;
+
+        _cts.Cancel();
+        _cts = new CancellationTokenSource();
+
+        _running = true;
+        _result = null;
+        _renderedResult = null;
+        _chart = null;
+        _chartOptions = null;
+        _renderDirective = DeltaZulu.Platform.Application.Hunting.Render.Model.RenderDirective.Table();
+        _diagnostics = [];
+        _showDrawer = false;
+        _drawerMode = DrawerMode.None;
+        _showSql = false;
+        _page = 0;
+        _sortColumn = null;
+        _activeTab = ResultTab.Table;
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            if (_toolbar.TryBuildEffectiveQuery(_kql, out var effectiveQuery, out var warning))
+            {
+                _renderedResult = await RenderedQueryRunner.RunAsync(effectiveQuery, _cts.Token);
+                _result = _renderedResult.QueryResult;
+                _renderDirective = _renderedResult.Directive;
+                _chart = _renderedResult.Chart;
+                _diagnostics = _result.Diagnostics.All.ToList();
+
+                try
+                {
+                    _chartOptions = _chart.CanRender ? EChartsOptionsBuilder.Build(_chart) : null;
+                }
+                catch (Exception ex)
+                {
+                    _chartOptions = null;
+                    _diagnostics.Add(new QueryDiagnostic(
+                        DiagnosticSeverity.Error,
+                        DiagnosticPhase.Policy,
+                        QueryDiagnosticCodes.Unspecified,
+                        ex.Message));
+                }
+
+                _chartRenderKey++;
+
+                if (!HasRenderOutput)
+                {
+                    _activeTab = ResultTab.Table;
+                }
+                else if (_result.Success && _result.RowCount > 0 && _chart?.CanRender == true)
+                {
+                    _activeTab = ResultTab.Render;
+                }
+            }
+            else
+            {
+                _result = null;
+                _diagnostics =
+                [
+                    new QueryDiagnostic(
+                        DiagnosticSeverity.Warning,
+                        DiagnosticPhase.Policy,
+                        QueryDiagnosticCodes.ExecuteDuckDbFailed,
+                        warning)
+                ];
+            }
+        }
+        finally
+        {
+            sw.Stop();
+            _elapsed = sw.Elapsed;
+            _running = false;
+        }
+    }
+
+    private async Task RunQueryFromEditor()
+    {
+        await InvokeAsync(async () =>
+        {
+            await RunQuery();
+            StateHasChanged();
+        });
+    }
+
+    private async Task SaveCurrentQueryAsync()
+    {
+        if (_savingQuery)
+        {
+            return;
+        }
+
+        _savingQuery = true;
+
+        try
+        {
+            var queryText = await GetCurrentEditorTextAsync();
+            if (string.IsNullOrWhiteSpace(queryText))
+            {
+                Snackbar.Add("Cannot save an empty query.", Severity.Warning);
+                return;
+            }
+
+            var savedQuery = await QueryLibrary.SaveQueryAsync(
+                id: null,
+                name: BuildSavedQueryName(queryText),
+                description: null,
+                queryText: queryText);
+
+            _kql = queryText;
+            _cachedEditorText = queryText;
+
+            Snackbar.Add($"Saved query '{savedQuery.Name}'.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Could not save query. {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _savingQuery = false;
+        }
+    }
+
+    private async Task SaveCurrentVisualizationAsync()
+    {
+        if (_savingVisualization)
+        {
+            return;
+        }
+
+        if (!HasRenderOutput)
+        {
+            Snackbar.Add("There is no render output to save as a visualization.", Severity.Warning);
+            return;
+        }
+
+        _savingVisualization = true;
+
+        try
+        {
+            var queryText = await GetCurrentEditorTextAsync();
+            if (string.IsNullOrWhiteSpace(queryText))
+            {
+                Snackbar.Add("Cannot save a visualization from an empty query.", Severity.Warning);
+                return;
+            }
+
+            var visualization = await VisualizationLibrary.SaveVisualizationFromRenderedQueryAsync(
+                queryId: null,
+                visualizationId: null,
+                name: BuildVisualizationName(queryText),
+                description: null,
+                queryText: queryText);
+
+            _kql = queryText;
+            _cachedEditorText = queryText;
+
+            Snackbar.Add($"Saved visualization '{visualization.Visualization.Name}'.", Severity.Success);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Warning);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Could not save visualization. {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _savingVisualization = false;
+        }
+    }
+
+    private async Task<string> GetCurrentEditorTextAsync()
+    {
+        try
+        {
+            return await LanguageService.GetEditorValueAsync();
+        }
+        catch
+        {
+            return string.IsNullOrEmpty(_cachedEditorText) ? _kql : _cachedEditorText;
+        }
+    }
+
+    private static string BuildSavedQueryName(string queryText)
+        => BuildArtifactName(queryText, "Saved query");
+
+    private string BuildVisualizationName(string queryText)
+        => !string.IsNullOrWhiteSpace(_renderDirective.Title)
+            ? _renderDirective.Title.Trim()
+            : BuildArtifactName(queryText, "Visualization");
+
+
+    private void OpenSqlDrawer()
+    {
+#if DEBUG
+        if (_result?.GeneratedSql is not string sql) return;
+        _drawerMode = DrawerMode.Sql;
+        _drawerTitle = "Generated SQL";
+        _drawerSqlHtml = HighlightSql(BeautifySql(sql));
+        _showDrawer = true;
+#endif
+    }
+
+    private async Task CopyDrawerContentToClipboard()
+    {
+        string? text = _drawerMode switch
+        {
+#if DEBUG
+            DrawerMode.Sql => _result?.GeneratedSql,
+#endif
+            DrawerMode.Json => _drawerContent,
+            _ => null
+        };
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+    }
+
+    private void OpenCellDrawer(string columnName, object? value, bool forceOpen = false)
+    {
+        if (!forceOpen) return;
+
+        var text = value?.ToString() ?? "";
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        _drawerTitle = $"{columnName} details";
+        _drawerTypeLabel = DetectDataTypeLabel(text);
+        if (TryBeautifyJson(text, out var beautifiedJson))
+        {
+            _drawerMode = DrawerMode.Json;
+            _drawerContent = beautifiedJson;
+            _drawerSqlHtml = HighlightJson(beautifiedJson);
+        }
+        else
+        {
+            _drawerMode = DrawerMode.Content;
+            _drawerContent = text;
+            _drawerSqlHtml = "";
+        }
+
+        _showDrawer = true;
+    }
+
+    private void CloseDrawer() => _showDrawer = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await UserSettings.EnsureLoadedAsync();
+        _toolbar.SelectedTimeFilter = UserSettings.DefaultTimeFilter;
+        _toolbar.SelectedResultLimit = UserSettings.DefaultResultLimit;
+        EditorBus.InsertRequested += HandleInsertRequested;
+    }
+
+    private void HandleInsertRequested(string text)
+    {
+        _kql = text;
+        _cachedEditorText = text;
+        _ = InvokeAsync(async () =>
+        {
+            await LanguageService.SetEditorValueAsync(text);
+            StateHasChanged();
+        });
+    }
+
+    private void SortBy(string colName)
+    {
+        if (_sortColumn == colName)
+            _sortAsc = !_sortAsc;
+        else
+        {
+            _sortColumn = colName;
+            _sortAsc = true;
+        }
+        _page = 0;
+    }
+
+    private IEnumerable<int> VisibleRows()
+    {
+        if (_result is null) return [];
+
+        var rowIndexes = Enumerable.Range(0, _result.RowCount);
+
+        if (_sortColumn is not null)
+        {
+            var colIdx = _result.Columns
+                .Select((c, i) => (c.Name, i))
+                .FirstOrDefault(t => t.Name == _sortColumn).i;
+
+            rowIndexes = _sortAsc
+                ? rowIndexes.OrderBy(r => _result.GetValue(r, colIdx))
+                : rowIndexes.OrderByDescending(r => _result.GetValue(r, colIdx));
+        }
+
+        return rowIndexes.Skip(_page * _pageSize).Take(_pageSize);
+    }
+
+    private bool HasRenderOutput
+        => _result is not null
+           && _result.Success
+           && _renderDirective.Kind != DeltaZulu.Platform.Application.Hunting.Render.Model.RenderKind.Table
+           && !_renderDirective.IsFallback
+           && _chart?.CanRender == true
+           && _chartOptions is not null;
+
+    private bool IsSaveActionDisabled
+        => _activeTab == ResultTab.Render
+         ? _savingVisualization || !HasRenderOutput
+         : _savingQuery;
+
+    private string SaveActionText
+        => _activeTab == ResultTab.Render
+            ? (_savingVisualization ? "Saving…" : "Save visualization")
+            : (_savingQuery ? "Saving…" : "Save query");
+
+    private Task SaveActiveResultArtifactAsync()
+        => _activeTab == ResultTab.Render
+            ? SaveCurrentVisualizationAsync()
+            : SaveCurrentQueryAsync();
+
+    private void SelectTab(ResultTab tab)
+    {
+        if (tab == ResultTab.Render && !HasRenderOutput)
+        {
+            return;
+        }
+
+        _activeTab = tab;
+    }
+
+    private string GetTabButtonClass(ResultTab tab) => _activeTab == tab ? "hunt-tab-active" : string.Empty;
+    private string GetTabVisibilityClass(ResultTab tab) => _activeTab == tab ? "hunt-tab-active-content" : "hunt-tab-hidden";
+
+    private enum ResultTab
+    {
+        Table,
+        Render
+    }
+
+    private static string FormatCell(object? value)
+    {
+        if (value is null) return "";
+        if (value is DateTimeOffset dto) return dto.ToString("yyyy-MM-dd HH:mm:ss");
+        if (value is DateTime dt) return dt.ToString("yyyy-MM-dd HH:mm:ss");
+        var s = value.ToString() ?? "";
+        return s.Length > 200 ? s[..200] + "…" : s;
+    }
+
+    private static bool ShouldShowCellDrawerButton(object? value)
+    {
+        var text = value?.ToString() ?? "";
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var trimmed = text.TrimStart();
+        var looksStructured = (trimmed.StartsWith("{") && trimmed.EndsWith("}")) ||
+                              (trimmed.StartsWith("[") && trimmed.EndsWith("]"));
+
+        return looksStructured || text.Length > 160;
+    }
+
+    private async Task Clear()
+    {
+        _kql = string.Empty;
+        _cachedEditorText = string.Empty;
+        _result = null;
+        _renderedResult = null;
+        _chart = null;
+        _chartOptions = null;
+        _renderDirective = DeltaZulu.Platform.Application.Hunting.Render.Model.RenderDirective.Table();
+        _diagnostics = [];
+        _showDrawer = false;
+        _chartRenderKey++;
+        await LanguageService.SetEditorValueAsync(_kql);
+    }
+
+    private static string BuildArtifactName(string queryText, string fallbackPrefix)
+    {
+        var firstLine = queryText
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .FirstOrDefault(line => !string.IsNullOrWhiteSpace(line));
+
+        return string.IsNullOrWhiteSpace(firstLine)
+            ? $"{fallbackPrefix} {DateTime.Now:yyyy-MM-dd HH:mm}"
+            : firstLine.Length <= 60 ? firstLine : firstLine[..60];
+    }
+
+#if DEBUG
+    private static string BeautifySql(string sql)
+    {
+        string[] keywords = ["select", "from", "where", "group by", "order by", "having", "limit", "join", "left join", "right join", "inner join", "outer join", "on", "and", "or", "union", "with", "as"];
+        var normalized = sql.Replace("\r\n", "\n");
+        foreach (var keyword in keywords.OrderByDescending(x => x.Length))
+        {
+            normalized = System.Text.RegularExpressions.Regex.Replace(
+                normalized,
+                $@"\b{System.Text.RegularExpressions.Regex.Escape(keyword)}\b",
+                m => m.Value.ToUpperInvariant(),
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+
+        var lineBroken = normalized
+            .Replace(" FROM ", "\nFROM ")
+            .Replace(" WHERE ", "\nWHERE ")
+            .Replace(" GROUP BY ", "\nGROUP BY ")
+            .Replace(" ORDER BY ", "\nORDER BY ")
+            .Replace(" HAVING ", "\nHAVING ")
+            .Replace(" LIMIT ", "\nLIMIT ")
+            .Replace(" JOIN ", "\nJOIN ")
+            .Replace(" LEFT JOIN ", "\nLEFT JOIN ")
+            .Replace(" RIGHT JOIN ", "\nRIGHT JOIN ")
+            .Replace(" INNER JOIN ", "\nINNER JOIN ")
+            .Replace(" ON ", "\n  ON ")
+            .Replace(",", ",\n  ");
+
+        return lineBroken.Trim();
+    }
+
+    private static string HighlightSql(string sql)
+    {
+        var placeholders = new List<string>();
+        var withPlaceholders = System.Text.RegularExpressions.Regex.Replace(
+            sql,
+            "'([^']|'')*'",
+            m =>
+            {
+                placeholders.Add(m.Value);
+                return $"__SQL_STRING_{placeholders.Count - 1}__";
+            });
+
+        var encoded = System.Net.WebUtility.HtmlEncode(withPlaceholders);
+        encoded = System.Text.RegularExpressions.Regex.Replace(encoded, "(--.*)$", "<span class=\"sql-comment\">$1</span>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        encoded = System.Text.RegularExpressions.Regex.Replace(encoded, "\\b(SELECT|FROM|WHERE|GROUP BY|ORDER BY|HAVING|LIMIT|JOIN|LEFT JOIN|RIGHT JOIN|INNER JOIN|OUTER JOIN|ON|AND|OR|AS|UNION|WITH)\\b", "<span class=\"sql-keyword\">$1</span>");
+        encoded = System.Text.RegularExpressions.Regex.Replace(encoded, "\\b([0-9]+)\\b", "<span class=\"sql-number\">$1</span>");
+
+        for (var i = 0; i < placeholders.Count; i++)
+        {
+            var token = $"__SQL_STRING_{i}__";
+            var encodedLiteral = System.Net.WebUtility.HtmlEncode(placeholders[i]);
+            encoded = encoded.Replace(token, $"<span class=\"sql-string\">{encodedLiteral}</span>", StringComparison.Ordinal);
+        }
+
+        return encoded;
+    }
+#endif
+
+    private static bool TryBeautifyJson(string text, out string beautified)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(text);
+            beautified = System.Text.Json.JsonSerializer.Serialize(doc.RootElement, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+            return true;
+        }
+        catch
+        {
+            beautified = string.Empty;
+            return false;
+        }
+    }
+
+    private static string HighlightJson(string json)
+    {
+        var encoded = System.Net.WebUtility.HtmlEncode(json);
+        encoded = System.Text.RegularExpressions.Regex.Replace(
+            encoded,
+            "\"([^\"\\\\]|\\\\.)*\"(?=\\s*:)",
+            "<span class=\"json-key\">$0</span>");
+        encoded = System.Text.RegularExpressions.Regex.Replace(
+            encoded,
+            ":\\s*\"([^\"\\\\]|\\\\.)*\"",
+            m => $": <span class=\"json-string\">{m.Value[2..]}</span>");
+        encoded = System.Text.RegularExpressions.Regex.Replace(
+            encoded,
+            "\\b(-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b",
+            "<span class=\"json-number\">$1</span>");
+        encoded = System.Text.RegularExpressions.Regex.Replace(
+            encoded,
+            "\\b(true|false|null)\\b",
+            "<span class=\"json-literal\">$1</span>");
+        return encoded;
+    }
+
+    private static string DetectDataTypeLabel(string text)
+    {
+        var trimmed = text.TrimStart();
+        if (trimmed.StartsWith("{") || trimmed.StartsWith("[")) return "JSON / structured content";
+        return "Long text";
+    }
+
+    private enum DrawerMode
+    {
+        None,
+        Sql,
+        Json,
+        Content
+    }
+
+    private const int EditorInitializationMaxAttempts = 3;
+    private static readonly TimeSpan EditorInitializationRetryDelay = TimeSpan.FromMilliseconds(250);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync(
+            "huntingLayout.initVerticalSplitter",
+            "hunt-page-content",
+            "hunt-editor-panel",
+            "hunt-results-panel",
+            "hunt-panel-splitter");
+
+        if (!_editorInitialized)
+        {
+            var schema = Catalog.BuildEditorSchemaMetadata();
+            var editorSeed = await GetCachedEditorTextForInitializationAsync();
+            var initialized = await TryInitializeEditorAsync(schema, editorSeed);
+            if (!initialized)
+            {
+                return;
+            }
+
+            _editorInitialized = true;
+        }
+
+        if (_activeTab != ResultTab.Render || !HasRenderOutput || _chartOptions is null)
+        {
+            return;
+        }
+
+        var size = await JS.InvokeAsync<DeltaZulu.Platform.Web.Hunting.Services.ChartHostSize>("huntingCharts.getElementSize", _chartHost);
+        var width = size.Width;
+        var height = size.Height;
+        var widthPx = Math.Max(320, (int)Math.Round(width, MidpointRounding.AwayFromZero));
+        var heightPx = Math.Max(320, (int)Math.Round(height, MidpointRounding.AwayFromZero));
+        if (widthPx == _lastMeasuredChartWidthPx && heightPx == _lastMeasuredChartHeightPx)
+        {
+            return;
+        }
+
+        _lastMeasuredChartWidthPx = widthPx;
+        _lastMeasuredChartHeightPx = heightPx;
+        _chartWidth = $"{widthPx}px";
+        _chartHeight = $"{heightPx}px";
+        _chartRenderKey++;
+        StateHasChanged();
+    }
+
+    private async Task<string> GetCachedEditorTextForInitializationAsync()
+    {
+        if (_editorInitialized)
+        {
+            try
+            {
+                var currentValue = await LanguageService.GetEditorValueAsync();
+                if (!string.IsNullOrEmpty(currentValue))
+                {
+                    _cachedEditorText = currentValue;
+                    _kql = currentValue;
+                }
+            }
+            catch
+            {
+                // Keep existing cache if interop is unavailable; init retry path handles surfacing failures.
+            }
+        }
+
+        return string.IsNullOrEmpty(_cachedEditorText) ? _kql : _cachedEditorText;
+    }
+
+    private async Task<bool> TryInitializeEditorAsync(
+       DeltaZulu.Platform.Domain.Hunting.Schema.EditorSchemaMetadata schema,
+       string initialValue)
+    {
+        Exception? lastException = null;
+
+        for (var attempt = 1; attempt <= EditorInitializationMaxAttempts; attempt++)
+        {
+            try
+            {
+                await LanguageService.InitializeKqlEditorAsync(
+                    "kql-editor",
+                    initialValue,
+                    RunQueryFromEditor,
+                    schema);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                if (attempt < EditorInitializationMaxAttempts)
+                {
+                    await Task.Delay(EditorInitializationRetryDelay);
+                }
+            }
+        }
+
+        Snackbar.Add(
+            $"Could not initialize the KQL editor after {EditorInitializationMaxAttempts} attempts. {lastException?.Message}",
+            Severity.Error);
+
+        return false;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        EditorBus.InsertRequested -= HandleInsertRequested;
+        _cts.Cancel();
+        _cts.Dispose();
+        await LanguageService.DisposeAsync();
+    }
+
+    private async Task InsertHelperQueryAsync(string queryText)
+    {
+        if (string.IsNullOrWhiteSpace(queryText))
+        {
+            return;
+        }
+
+        if (_editorInitialized)
+        {
+            var inserted = await LanguageService.InsertTextAtCursorAsync(queryText);
+            if (inserted)
+            {
+                _cachedEditorText = await GetCurrentEditorTextAsync();
+                _kql = _cachedEditorText;
+                return;
+            }
+        }
+
+        await AppendHelperQueryAsync(queryText);
+    }
+
+    private async Task AppendHelperQueryAsync(string queryText)
+    {
+        if (string.IsNullOrWhiteSpace(queryText))
+        {
+            return;
+        }
+
+        var current = await GetCurrentEditorTextAsync();
+        var updated = string.IsNullOrWhiteSpace(current)
+            ? queryText.Trim()
+            : $"{current.TrimEnd()}{Environment.NewLine}{Environment.NewLine}{queryText.Trim()}";
+
+        _kql = updated;
+        _cachedEditorText = updated;
+        await LanguageService.SetEditorValueAsync(updated);
+    }
+    private async Task LoadQueryIntoEditor(string queryText)
+    {
+        _kql = queryText;
+        _cachedEditorText = queryText;
+        await LanguageService.SetEditorValueAsync(queryText);
+    }
+}

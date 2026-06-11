@@ -1,4 +1,4 @@
-namespace DeltaZulu.Workbench.Domain.Enums;
+namespace DeltaZulu.Platform.Domain.Workbench.Enums;
 
 /// <summary>
 /// Lifecycle states for a detection-content issue. Mirrors the SIEM Detection Content

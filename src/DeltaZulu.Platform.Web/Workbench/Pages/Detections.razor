@@ -1,0 +1,162 @@
+@namespace DeltaZulu.Platform.Web.Workbench.Components.Pages
+@page "/workbench/detections"
+@using MudBlazor
+@rendermode InteractiveServer
+@using DeltaZulu.Platform.Application.Workbench.Services
+@using DeltaZulu.Platform.Domain.Workbench.Detections
+@using DeltaZulu.Platform.Domain.Workbench.Enums
+@using DeltaZulu.Platform.Domain.Workbench.Identifiers
+@using DeltaZulu.Platform.Web.Workbench.Services
+@inject DetectionContentService DetectionService
+@inject IDialogService DialogService
+@inject NavigationManager Nav
+@inject PocUserContext UserContext
+
+<PageTitle>Detections</PageTitle>
+
+<DzPageHeader Title="Detections"
+              Description="Detection content packages and their accepted versions.">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Outlined.Add"
+                   OnClick="OpenNewDetectionDialog">
+            New detection
+        </MudButton>
+    </Actions>
+</DzPageHeader>
+
+<DzToolbar>
+    <MudTextField Value="_searchText" ValueChanged="OnSearchChanged" Placeholder="Search by slug or title"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                  Immediate="true" DebounceInterval="200" Class="dz-search-field"
+                  T="string" />
+    <DzFilterRow>
+        <DzFilterChip Value="all" Selected="@(_lifecycleFilter == "all")" OnClick="@(() => OnLifecycleFilterChanged("all"))">
+            All (@_detections.Count)
+        </DzFilterChip>
+        <DzFilterChip Value="Draft" Selected="@(_lifecycleFilter == "Draft")" OnClick="@(() => OnLifecycleFilterChanged("Draft"))">
+            Draft (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Draft))
+        </DzFilterChip>
+        <DzFilterChip Value="Accepted" Selected="@(_lifecycleFilter == "Accepted")" OnClick="@(() => OnLifecycleFilterChanged("Accepted"))">
+            Accepted (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Accepted))
+        </DzFilterChip>
+        <DzFilterChip Value="Deprecated" Selected="@(_lifecycleFilter == "Deprecated")" OnClick="@(() => OnLifecycleFilterChanged("Deprecated"))">
+            Deprecated (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Deprecated))
+        </DzFilterChip>
+    </DzFilterRow>
+</DzToolbar>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Secondary" />
+}
+else if (_filteredDetections.Count == 0)
+{
+    <DzEmptyState Title="No detections match the current filter."
+                  Description="Create a new detection or adjust the current search and status filters."
+                  Icon="@Icons.Material.Outlined.SearchOff">
+        <Actions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Outlined.Add"
+                       OnClick="OpenNewDetectionDialog">
+                New detection
+            </MudButton>
+        </Actions>
+    </DzEmptyState>
+}
+else
+{
+    <DzTableShell>
+        <MudTable Items="_filteredDetections" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0"
+                  OnRowClick="@(args => Nav.NavigateTo($"/workbench/detections/{args.Item!.Id}"))"
+                  T="Detection" RowClass="cursor-pointer">
+            <HeaderContent>
+                <MudTh>Slug</MudTh>
+                <MudTh>Title</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Updated</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Slug"><code>@context.Slug</code></MudTd>
+                <MudTd DataLabel="Title">@context.Title</MudTd>
+                <MudTd DataLabel="Status"><StatusChip Lifecycle="context.Lifecycle" /></MudTd>
+                <MudTd DataLabel="Updated">
+                    <MudText Typo="Typo.caption" Class="text-muted">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Actions" @onclick:stopPropagation="true">
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Outlined.Add"
+                               OnClick="@(() => OpenChangeForDetection(context.Id))">
+                        Open change
+                    </MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </DzTableShell>
+}
+
+@code {
+    private List<Detection> _detections = [];
+    private List<Detection> _filteredDetections = [];
+    private string _searchText = "";
+    private string _lifecycleFilter = "all";
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _detections = (await DetectionService.ListAsync()).ToList();
+        ApplyFilter();
+        _loading = false;
+    }
+
+    private void OnSearchChanged(string text)
+    {
+        _searchText = text ?? "";
+        ApplyFilter();
+    }
+
+    private void OnLifecycleFilterChanged(string filter)
+    {
+        _lifecycleFilter = filter ?? "all";
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        var query = _searchText?.Trim() ?? "";
+        _filteredDetections = _detections
+            .Where(d => _lifecycleFilter == "all" || d.Lifecycle.ToString() == _lifecycleFilter)
+            .Where(d => string.IsNullOrEmpty(query)
+                || d.Slug.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || d.Title.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private async Task OpenNewDetectionDialog()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<NewDetectionDialog>("New detection", options);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled) await LoadAsync();
+    }
+
+    private async Task OpenChangeForDetection(DetectionId detectionId)
+    {
+        var parameters = new DialogParameters<OpenChangeDialog>
+        {
+            { x => x.DetectionId, detectionId },
+            { x => x.AuthorId, UserContext.CurrentUser.Id },
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<OpenChangeDialog>("Open Change", parameters, options);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled && result.Data is ChangeRequestId changeId)
+        {
+            Nav.NavigateTo($"/workbench/changes/{changeId}");
+        }
+    }
+}

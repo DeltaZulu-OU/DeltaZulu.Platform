@@ -6,14 +6,20 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DeltaZulu.Platform.Web.Abstractions\DeltaZulu.Platform.Web.Abstractions.csproj" />
-    <ProjectReference Include="..\DeltaZulu.Blazor.Components\DeltaZulu.Blazor.Components.csproj" />
-    <ProjectReference Include="..\DeltaZulu.Hunting.Web\DeltaZulu.Hunting.Web.csproj" />
-    <ProjectReference Include="..\DeltaZulu.Workbench.Web\DeltaZulu.Workbench.Web.csproj" />
+    <None Remove="hunting.db" />
+    <None Remove="hunting.db.wal" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Application\DeltaZulu.Platform.Application.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Data\DeltaZulu.Platform.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Markdig" />
     <PackageReference Include="MudBlazor" />
+    <PackageReference Include="Vizor.ECharts" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,4 @@
-namespace DeltaZulu.Workbench.Domain.Enums;
+namespace DeltaZulu.Platform.Domain.Workbench.Enums;
 
 /// <summary>
 /// Traffic Light Protocol 2.0 classification levels (FIRST/CISA standard).

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>DeltaZulu.Platform.Application</RootNamespace>
+    <AssemblyName>DeltaZulu.Platform.Application</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Elsa" />
+    <PackageReference Include="Kusto.Toolkit" />
+    <PackageReference Include="Microsoft.Azure.Kusto.Language" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

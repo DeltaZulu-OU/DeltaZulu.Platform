@@ -1,7 +1,7 @@
-using DeltaZulu.DetectionContent.Identity;
-using DeltaZulu.DetectionContent.Paths;
+using DeltaZulu.Platform.Domain.Detection.Identity;
+using DeltaZulu.Platform.Domain.Detection.Paths;
 
-namespace DeltaZulu.DetectionContent.References;
+namespace DeltaZulu.Platform.Domain.Detection.References;
 
 /// <summary>Stable reference to accepted canonical detection content.</summary>
 public sealed record AcceptedDetectionContentRef

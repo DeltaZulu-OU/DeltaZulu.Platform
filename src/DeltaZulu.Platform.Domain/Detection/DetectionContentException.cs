@@ -1,4 +1,4 @@
-namespace DeltaZulu.DetectionContent;
+namespace DeltaZulu.Platform.Domain.Detection;
 
 /// <summary>Exception raised when shared detection-content contracts reject invalid input.</summary>
 public sealed class DetectionContentException : Exception

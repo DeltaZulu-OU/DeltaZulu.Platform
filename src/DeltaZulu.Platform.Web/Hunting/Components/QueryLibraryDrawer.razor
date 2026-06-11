@@ -1,0 +1,459 @@
+@namespace DeltaZulu.Platform.Web.Hunting.Components
+@using DeltaZulu.Platform.Application.Hunting.SavedQueries
+@using DeltaZulu.Platform.Application.Hunting.Visualizations
+@using DeltaZulu.Platform.Application.Hunting.QueryHistory
+
+@inject DeltaZulu.Platform.Web.Hunting.Services.QueryLibraryService QueryLibrary
+@inject DeltaZulu.Platform.Web.Hunting.Services.VisualizationLibraryService VisualizationLibrary
+
+<button class="hunt-btn hunt-btn-history"
+        @onclick="OpenAsync"
+        disabled="@_loading">
+    @ButtonText
+</button>
+
+@if (_open)
+{
+    <button class="hunt-drawer-backdrop"
+            @onclick="Close"
+            aria-label="Close query history drawer"></button>
+
+    <aside class="hunt-drawer"
+           role="dialog"
+           aria-modal="true"
+           aria-label="Query history and saved queries">
+        <div class="hunt-drawer-header">
+            <div>
+                <div class="hunt-drawer-title">Query History</div>
+                <div class="hunt-drawer-subtitle">Recent executions, saved queries, and reusable visualizations</div>
+            </div>
+            <button class="hunt-drawer-close"
+                    @onclick="Close"
+                    aria-label="Close query history drawer">
+                ×
+            </button>
+        </div>
+
+        <div class="hunt-drawer-body hunt-drawer-body-padded hunt-query-library-body">
+            <div class="hunt-query-library-save">
+                <input class="hunt-query-library-input"
+                       placeholder="Saved query name"
+                       @bind="_saveName"
+                       disabled="@IsSaving" />
+                <input class="hunt-query-library-input"
+                       placeholder="Description (optional)"
+                       @bind="_saveDescription"
+                       disabled="@IsSaving" />
+                <button class="hunt-btn hunt-btn-run"
+                        @onclick="SaveCurrentQueryAsync"
+                        disabled="@(!CanSaveCurrentQuery)">
+                    @(_saving ? "Saving…" : "Save current")
+                </button>
+                <button class="hunt-btn"
+                        @onclick="SaveCurrentVisualizationAsync"
+                        disabled="@(!CanSaveCurrentVisualization)">
+                    @(_savingVisualization ? "Saving visualization…" : "Save visualization")
+                </button>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="hunt-query-library-message">@_message</div>
+            }
+
+            <section class="hunt-query-library-section">
+                <div class="hunt-query-library-section-title">Saved queries</div>
+                @if (_savedQueries.Count == 0)
+                {
+                    <div class="hunt-query-library-empty">No saved queries yet.</div>
+                }
+                else
+                {
+                    <div class="hunt-query-library-list">
+                        @foreach (var query in _savedQueries)
+                        {
+                            <div class="hunt-query-library-item">
+                                <div class="hunt-query-library-item-main">
+                                    <button class="hunt-query-library-link"
+                                            @onclick="() => SelectSavedQueryAsync(query.Id)">
+                                        @query.Name
+                                    </button>
+                                    @if (!string.IsNullOrWhiteSpace(query.Description))
+                                    {
+                                        <div class="hunt-query-library-description">@query.Description</div>
+                                    }
+                                    <div class="hunt-query-library-meta">
+                                        Updated @FormatTimestamp(query.UpdatedAt)
+                                        @if (query.LastRunAt is not null)
+                                        {
+                                            <span> · Last run @FormatTimestamp(query.LastRunAt.Value)</span>
+                                        }
+                                    </div>
+                                </div>
+                                <button class="hunt-btn hunt-btn-clear"
+                                        @onclick="() => DeleteSavedQueryAsync(query.Id)">
+                                    Delete
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+
+            <section class="hunt-query-library-section">
+                <div class="hunt-query-library-section-title">Saved visualizations</div>
+                @if (_savedVisualizations.Count == 0)
+                {
+                    <div class="hunt-query-library-empty">No saved visualizations yet.</div>
+                }
+                else
+                {
+                    <div class="hunt-query-library-list">
+                        @foreach (var visualization in _savedVisualizations)
+                        {
+                            <div class="hunt-query-library-item">
+                                <div class="hunt-query-library-item-main">
+                                    <button class="hunt-query-library-link"
+                                            @onclick="() => SelectVisualizationAsync(visualization.Id)">
+                                        @visualization.Name
+                                    </button>
+                                    @if (!string.IsNullOrWhiteSpace(visualization.Description))
+                                    {
+                                        <div class="hunt-query-library-description">@visualization.Description</div>
+                                    }
+                                    <div class="hunt-query-library-meta">
+                                        @visualization.Kind · Query @GetSavedQueryDisplayName(visualization.QueryId) · Updated @FormatTimestamp(visualization.UpdatedAt)
+                                    </div>
+                                </div>
+                                <button class="hunt-btn"
+                                        @onclick="() => UpdateVisualizationFromCurrentAsync(visualization)"
+                                        disabled="@(!CanUpdateVisualizationFromCurrent)">
+                                    @(IsUpdatingVisualization(visualization.Id) ? "Updating…" : "Update from editor")
+                                </button>
+                                <button class="hunt-btn hunt-btn-clear"
+                                        @onclick="() => DeleteVisualizationAsync(visualization.Id)"
+                                        disabled="@IsSaving">
+                                    Delete
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+
+            <section class="hunt-query-library-section">
+                <div class="hunt-query-library-section-title">Recent history</div>
+                @if (_recentHistory.Count == 0)
+                {
+                    <div class="hunt-query-library-empty">No recent query history yet.</div>
+                }
+                else
+                {
+                    <div class="hunt-query-library-list">
+                        @foreach (var history in _recentHistory)
+                        {
+                            <div class="hunt-query-library-item">
+                                <div class="hunt-query-library-item-main">
+                                    <button class="hunt-query-library-link"
+                                            @onclick="() => SelectHistoryQueryAsync(history.Id)">
+                                        @TrimQuery(history.QueryText)
+                                    </button>
+                                    <div class="hunt-query-library-meta">
+                                        @FormatTimestamp(history.ExecutedAt)
+                                        · @(history.Succeeded ? "Succeeded" : "Failed")
+                                        @if (history.RowCount is not null)
+                                        {
+                                            <span> · @history.RowCount rows</span>
+                                        }
+                                        @if (history.DurationMs is not null)
+                                        {
+                                            <span> · @history.DurationMs ms</span>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(history.DiagnosticSummary))
+                                    {
+                                        <div class="hunt-query-library-description">@history.DiagnosticSummary</div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        </div>
+    </aside>
+}
+
+@code {
+    [Parameter]
+    public string ButtonText { get; set; } = "History";
+
+    private bool _open;
+    private bool _loading;
+    private bool _saving;
+    private bool _savingVisualization;
+    private string? _updatingVisualizationId;
+    private string _saveName = "";
+    private string? _saveDescription;
+    private string? _message;
+    private IReadOnlyList<SavedQueryRecord> _savedQueries = [];
+    private IReadOnlyDictionary<string, string> _savedQueryNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<VisualizationRecord> _savedVisualizations = [];
+    private IReadOnlyList<QueryHistoryRecord> _recentHistory = [];
+
+    [Parameter]
+    public string CurrentQueryText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> QuerySelected { get; set; }
+
+    [Parameter]
+    public int RecentHistoryLimit { get; set; } = 25;
+
+    [Parameter]
+    public bool CloseAfterSelection { get; set; } = true;
+
+    private bool IsSaving => _saving || _savingVisualization || !string.IsNullOrWhiteSpace(_updatingVisualizationId);
+
+    private bool CanSaveCurrentQuery =>
+        !IsSaving
+        && !string.IsNullOrWhiteSpace(CurrentQueryText)
+        && !string.IsNullOrWhiteSpace(_saveName);
+
+    private bool CanSaveCurrentVisualization => CanSaveCurrentQuery;
+
+    private bool CanUpdateVisualizationFromCurrent =>
+        !IsSaving
+        && !string.IsNullOrWhiteSpace(CurrentQueryText);
+
+    private async Task OpenAsync()
+    {
+        _open = true;
+        await RefreshAsync();
+    }
+
+    private void Close()
+    {
+        _open = false;
+        _message = null;
+    }
+
+    private async Task RefreshAsync()
+    {
+        _loading = true;
+        _message = null;
+
+        try
+        {
+            _savedQueries = await QueryLibrary.ListSavedQueriesAsync();
+            _savedQueryNames = _savedQueries.ToDictionary(
+                query => query.Id,
+                query => string.IsNullOrWhiteSpace(query.Name) ? query.Id : query.Name,
+                StringComparer.OrdinalIgnoreCase);
+            _savedVisualizations = await VisualizationLibrary.ListVisualizationsAsync();
+            _recentHistory = await QueryLibrary.ListRecentHistoryAsync(RecentHistoryLimit);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SaveCurrentQueryAsync()
+    {
+        if (!CanSaveCurrentQuery)
+        {
+            return;
+        }
+
+        _saving = true;
+        _message = null;
+
+        try
+        {
+            await QueryLibrary.SaveQueryAsync(
+                id: null,
+                name: _saveName,
+                description: _saveDescription,
+                queryText: CurrentQueryText);
+
+            _saveName = "";
+            _saveDescription = null;
+            _message = "Query saved.";
+            await RefreshAsync();
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task SaveCurrentVisualizationAsync()
+    {
+        if (!CanSaveCurrentVisualization)
+        {
+            return;
+        }
+
+        _savingVisualization = true;
+        _message = null;
+
+        try
+        {
+            await VisualizationLibrary.SaveVisualizationFromRenderedQueryAsync(
+                queryId: null,
+                visualizationId: null,
+                name: _saveName,
+                description: _saveDescription,
+                queryText: CurrentQueryText);
+
+            _saveName = "";
+            _saveDescription = null;
+            _message = "Visualization saved. It can now be selected from dashboard widgets.";
+            await RefreshAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _message = ex.Message;
+        }
+        finally
+        {
+            _savingVisualization = false;
+        }
+    }
+
+    private async Task UpdateVisualizationFromCurrentAsync(
+        Hunting.Application.Visualizations.VisualizationRecord visualization)
+    {
+        if (!CanUpdateVisualizationFromCurrent)
+        {
+            return;
+        }
+
+        _updatingVisualizationId = visualization.Id;
+        _message = null;
+
+        try
+        {
+            await VisualizationLibrary.SaveVisualizationFromRenderedQueryAsync(
+                queryId: visualization.QueryId,
+                visualizationId: visualization.Id,
+                name: visualization.Name,
+                description: visualization.Description,
+                queryText: CurrentQueryText);
+
+            _message = $"Visualization '{visualization.Name}' updated from the current editor content.";
+            await RefreshAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _message = ex.Message;
+        }
+        finally
+        {
+            _updatingVisualizationId = null;
+        }
+    }
+
+    private async Task SelectSavedQueryAsync(string id)
+    {
+        var queryText = await QueryLibrary.LoadSavedQueryTextAsync(id);
+        await SelectQueryTextAsync(queryText);
+    }
+
+    private async Task SelectVisualizationAsync(string id)
+    {
+        var queryText = await VisualizationLibrary.LoadVisualizationQueryTextAsync(id);
+        await SelectQueryTextAsync(queryText);
+    }
+
+    private async Task SelectHistoryQueryAsync(string id)
+    {
+        var queryText = await QueryLibrary.LoadHistoryQueryTextAsync(id);
+        await SelectQueryTextAsync(queryText);
+    }
+
+    private async Task SelectQueryTextAsync(string? queryText)
+    {
+        if (string.IsNullOrWhiteSpace(queryText))
+        {
+            return;
+        }
+
+        await QuerySelected.InvokeAsync(queryText);
+
+        if (CloseAfterSelection)
+        {
+            Close();
+        }
+    }
+
+    private async Task DeleteSavedQueryAsync(string id)
+    {
+        try
+        {
+            await QueryLibrary.DeleteSavedQueryAsync(id);
+            _message = "Saved query deleted.";
+            await RefreshAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _message = ex.Message;
+        }
+    }
+
+    private async Task DeleteVisualizationAsync(string id)
+    {
+        try
+        {
+            await VisualizationLibrary.DeleteVisualizationAsync(id);
+            _message = "Saved visualization deleted.";
+            await RefreshAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _message = ex.Message;
+        }
+    }
+
+    private string GetSavedQueryDisplayName(string queryId)
+    {
+        if (string.IsNullOrWhiteSpace(queryId))
+        {
+            return "(none)";
+        }
+
+        return _savedQueryNames.TryGetValue(queryId, out var name)
+            ? name
+            : ShortId(queryId);
+    }
+
+    private bool IsUpdatingVisualization(string id)
+        => string.Equals(_updatingVisualizationId, id, StringComparison.OrdinalIgnoreCase);
+
+    private static string FormatTimestamp(DateTime value)
+    {
+        return value.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+    }
+
+    private static string TrimQuery(string queryText)
+    {
+        var compact = string.Join(
+            " ",
+            queryText.Split(
+                ['\r', '\n', '\t', ' '],
+                StringSplitOptions.RemoveEmptyEntries));
+
+        return compact.Length <= 120 ? compact : $"{compact[..120]}…";
+    }
+
+    private static string ShortId(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return "(none)";
+        }
+
+        return id.Length <= 8 ? id : id[..8];
+    }
+}

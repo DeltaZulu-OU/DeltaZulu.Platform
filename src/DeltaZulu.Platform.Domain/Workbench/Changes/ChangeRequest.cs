@@ -1,10 +1,10 @@
-using DeltaZulu.Workbench.Domain.Common;
-using DeltaZulu.Workbench.Domain.Enums;
-using DeltaZulu.Workbench.Domain.Identifiers;
-using DeltaZulu.Workbench.Domain.Reviews;
-using DeltaZulu.Workbench.Domain.Workflow;
+using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Enums;
+using DeltaZulu.Platform.Domain.Workbench.Identifiers;
+using DeltaZulu.Platform.Domain.Workbench.Reviews;
+using DeltaZulu.Platform.Domain.Workbench.Workflow;
 
-namespace DeltaZulu.Workbench.Domain.Changes;
+namespace DeltaZulu.Platform.Domain.Workbench.Changes;
 
 /// <summary>
 /// PR-like change against a detection. Carries proposed content, workflow profile, checks,

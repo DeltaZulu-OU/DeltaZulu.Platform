@@ -1,13 +1,13 @@
-using DeltaZulu.Hunting.Web;
-using DeltaZulu.Hunting.Web.Hosting;
-using DeltaZulu.Platform.Web.Abstractions;
-using DeltaZulu.Workbench.Application;
-using DeltaZulu.Workbench.Infrastructure;
-using DeltaZulu.Workbench.Persistence;
-using DeltaZulu.Workbench.Validation;
-using DeltaZulu.Workbench.Web;
-using DeltaZulu.Workbench.Web.Services;
-using DeltaZulu.Workbench.Workflow;
+using DeltaZulu.Platform.Web.Hunting;
+using DeltaZulu.Platform.Web.Hunting.Hosting;
+using DeltaZulu.Platform.Web.Platform;
+using DeltaZulu.Platform.Application.Workbench;
+using DeltaZulu.Platform.Data.Workbench.Infrastructure;
+using DeltaZulu.Platform.Data.Workbench;
+using DeltaZulu.Platform.Application.Workbench.Validation;
+using DeltaZulu.Platform.Web.Workbench;
+using DeltaZulu.Platform.Web.Workbench.Services;
+using DeltaZulu.Platform.Application.Workbench.Workflow;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -87,10 +87,7 @@ await app.BootstrapHuntingModuleAsync(new HuntingWebModuleOptions
 });
 
 app.MapRazorComponents<DeltaZulu.Platform.Web.App>()
-    .AddInteractiveServerRenderMode()
-    .AddAdditionalAssemblies(
-        typeof(DeltaZulu.Workbench.Web.Components.Pages.Home).Assembly,
-        typeof(DeltaZulu.Hunting.Web.Pages.Overview).Assembly);
+    .AddInteractiveServerRenderMode();
 
 app.Run();
 

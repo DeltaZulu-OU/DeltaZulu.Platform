@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace DeltaZulu.DetectionContent.Paths;
+namespace DeltaZulu.Platform.Domain.Detection.Paths;
 
 /// <summary>Validated logical path inside a detection-content package.</summary>
 public sealed partial class DetectionLogicalPath : IEquatable<DetectionLogicalPath>

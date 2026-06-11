@@ -1,8 +1,8 @@
-using DeltaZulu.Workbench.Domain.Common;
-using DeltaZulu.Workbench.Domain.Enums;
-using DeltaZulu.Workbench.Domain.Identifiers;
+using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Enums;
+using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
-namespace DeltaZulu.Workbench.Domain.Triage;
+namespace DeltaZulu.Platform.Domain.Workbench.Triage;
 
 /// <summary>
 /// Records an analyst's triage decision on an incident candidate produced by Hunting.

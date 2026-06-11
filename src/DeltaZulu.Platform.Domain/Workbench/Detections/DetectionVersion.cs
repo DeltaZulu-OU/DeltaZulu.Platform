@@ -1,8 +1,8 @@
-using DeltaZulu.Workbench.Domain.Common;
-using DeltaZulu.Workbench.Domain.Enums;
-using DeltaZulu.Workbench.Domain.Identifiers;
+using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Enums;
+using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
-namespace DeltaZulu.Workbench.Domain.Detections;
+namespace DeltaZulu.Platform.Domain.Workbench.Detections;
 
 /// <summary>
 /// A user-facing projection of a Git commit, per ADR-0011. Immutable after creation.

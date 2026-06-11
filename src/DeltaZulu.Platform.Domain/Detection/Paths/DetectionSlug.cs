@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace DeltaZulu.DetectionContent.Paths;
+namespace DeltaZulu.Platform.Domain.Detection.Paths;
 
 /// <summary>Stable, URL- and path-safe key for accepted detection content.</summary>
 public sealed partial class DetectionSlug : IEquatable<DetectionSlug>

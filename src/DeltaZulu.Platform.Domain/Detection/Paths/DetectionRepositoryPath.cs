@@ -1,4 +1,4 @@
-namespace DeltaZulu.DetectionContent.Paths;
+namespace DeltaZulu.Platform.Domain.Detection.Paths;
 
 /// <summary>Validated repository-relative accepted-content path for a detection package file.</summary>
 public sealed class DetectionRepositoryPath : IEquatable<DetectionRepositoryPath>

@@ -1,8 +1,8 @@
-using DeltaZulu.Workbench.Domain.Common;
-using DeltaZulu.Workbench.Domain.Enums;
-using DeltaZulu.Workbench.Domain.Identifiers;
+using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Enums;
+using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
-namespace DeltaZulu.Workbench.Domain.Issues;
+namespace DeltaZulu.Platform.Domain.Workbench.Issues;
 
 /// <summary>
 /// Detection-content issue aggregate. Implements the SIEM Detection Content Issue

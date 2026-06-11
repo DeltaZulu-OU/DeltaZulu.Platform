@@ -1,6 +1,6 @@
-using DeltaZulu.DetectionContent.Paths;
+using DeltaZulu.Platform.Domain.Detection.Paths;
 
-namespace DeltaZulu.DetectionContent.Files;
+namespace DeltaZulu.Platform.Domain.Detection.Files;
 
 /// <summary>Logical accepted-content file payload that is independent of any store implementation.</summary>
 public sealed record DetectionContentFile

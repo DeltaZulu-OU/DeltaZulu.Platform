@@ -1,8 +1,8 @@
-using DeltaZulu.Workbench.Domain.Common;
-using DeltaZulu.Workbench.Domain.Enums;
-using DeltaZulu.Workbench.Domain.Identifiers;
+using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Enums;
+using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
-namespace DeltaZulu.Workbench.Domain.Changes;
+namespace DeltaZulu.Platform.Domain.Workbench.Changes;
 
 /// <summary>
 /// A single check execution against a change request. Lifecycle: Queued → Running → terminal.

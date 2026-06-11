@@ -1,4 +1,4 @@
-namespace DeltaZulu.Hunting.Application.Settings;
+namespace DeltaZulu.Platform.Application.Hunting.Settings;
 
 public interface IUserSettingsRepository
 {

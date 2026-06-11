@@ -8,12 +8,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="_content/MudBlazor/MudBlazor.min.css" />
-    <link rel="stylesheet" href="_content/DeltaZulu.Blazor.Components/deltazulu-tokens.css" />
-    <link rel="stylesheet" href="_content/DeltaZulu.Blazor.Components/dz-components.css" />
-    <link rel="stylesheet" href="_content/DeltaZulu.Blazor.Components/dz-shell.css" />
-    <link rel="stylesheet" href="_content/DeltaZulu.Hunting.Web/css/app.css" />
-    <link rel="stylesheet" href="_content/DeltaZulu.Hunting.Web/css/kql-helper-drawer.css" />
-    <link rel="stylesheet" href="_content/DeltaZulu.Workbench.Web/app.css" />
+    <link rel="stylesheet" href="deltazulu-tokens.css" />
+    <link rel="stylesheet" href="dz-components.css" />
+    <link rel="stylesheet" href="dz-shell.css" />
+    <link rel="stylesheet" href="hunting/css/app.css" />
+    <link rel="stylesheet" href="hunting/css/kql-helper-drawer.css" />
+    <link rel="stylesheet" href="workbench/app.css" />
     <link rel="stylesheet" href="platform.css" />
     <HeadOutlet @rendermode="InteractiveServer" />
     <title>DeltaZulu Platform</title>
@@ -23,8 +23,8 @@
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="_content/Vizor.ECharts/js/vizor-echarts-bundle-min.js"></script>
-    <script src="_content/DeltaZulu.Hunting.Web/js/monaco.js"></script>
-    <script src="_content/DeltaZulu.Hunting.Web/js/kql-helper-editor.js"></script>
+    <script src="hunting/js/monaco.js"></script>
+    <script src="hunting/js/kql-helper-editor.js"></script>
 
     @{
 #if DEBUG
@@ -32,12 +32,12 @@
 #endif
     }
 
-    <script src="_content/DeltaZulu.Hunting.Web/js/monaco-theme-loader.js"></script>
-    <script src="_content/DeltaZulu.Hunting.Web/js/dashboard-widget-editor.js"></script>
-    <script src="_content/DeltaZulu.Hunting.Web/js/dashboard-transfer.js"></script>
-    <script src="_content/DeltaZulu.Hunting.Web/js/dashboard-grid-layout.js"></script>
-    <script src="_content/DeltaZulu.Hunting.Web/js/dashboard-chart-resize.js"></script>
-    <script src="_content/DeltaZulu.Hunting.Web/js/charts.js"></script>
-    <script src="_content/DeltaZulu.Hunting.Web/js/splitter.js"></script>
+    <script src="hunting/js/monaco-theme-loader.js"></script>
+    <script src="hunting/js/dashboard-widget-editor.js"></script>
+    <script src="hunting/js/dashboard-transfer.js"></script>
+    <script src="hunting/js/dashboard-grid-layout.js"></script>
+    <script src="hunting/js/dashboard-chart-resize.js"></script>
+    <script src="hunting/js/charts.js"></script>
+    <script src="hunting/js/splitter.js"></script>
 </body>
 </html>

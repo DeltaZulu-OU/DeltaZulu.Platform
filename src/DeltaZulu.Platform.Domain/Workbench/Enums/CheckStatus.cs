@@ -1,4 +1,4 @@
-namespace DeltaZulu.Workbench.Domain.Enums;
+namespace DeltaZulu.Platform.Domain.Workbench.Enums;
 
 /// <summary>
 /// Status of an individual <see cref="Changes.CheckRun"/>. Values mirror AGENTS.md §"Required check model".
