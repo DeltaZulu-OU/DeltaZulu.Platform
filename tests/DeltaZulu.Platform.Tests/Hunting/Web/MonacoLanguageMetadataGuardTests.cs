@@ -6,7 +6,7 @@ public sealed class MonacoLanguageMetadataGuardTests
     [TestMethod]
     public void MonacoLanguage_ConsumesGeneratedTermsAndHandlesHyphenatedCompletionFragments()
     {
-        var source = ReadRepositorySource("src", "DeltaZulu.Platform.Web.Hunting", "wwwroot", "js", "monaco.js");
+        var source = ReadRepositorySource("src", "DeltaZulu.Platform.Web", "wwwroot", "hunting", "js", "monaco.js");
         Assert.Contains("const keywords = language.keywords ?? [];", source);
         Assert.Contains("const operators = language.operators ?? [];", source);
         Assert.Contains("const renderKinds = language.renderKinds ?? [];", source);
@@ -20,7 +20,7 @@ public sealed class MonacoLanguageMetadataGuardTests
     [TestMethod]
     public void LanguageService_SetsGeneratedMetadataBeforeRegisteringMonacoLanguage()
     {
-        var source = ReadRepositorySource("src", "DeltaZulu.Platform.Web.Hunting", "Services", "LanguageService.cs");
+        var source = ReadRepositorySource("src", "DeltaZulu.Platform.Web", "Hunting", "Services", "LanguageService.cs");
         var setSchema = source.IndexOf("await SetSchemaAsync(schema);", StringComparison.Ordinal);
         var registerLanguage = source.IndexOf(
             "await _jsRuntime.InvokeVoidAsync(\"huntingMonaco.registerKqlLanguage\");",

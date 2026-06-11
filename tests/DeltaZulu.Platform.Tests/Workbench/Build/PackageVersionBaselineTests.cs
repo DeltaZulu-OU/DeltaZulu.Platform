@@ -92,19 +92,19 @@ public sealed class PackageVersionBaselineTests
     }
 
     [TestMethod]
-    public void HuntingCoreAdapter_DoesNotReferenceWorkbenchWeb()
+    public void ApplicationLayer_DoesNotReferenceWebLayer()
     {
         var repoRoot = FindRepositoryRoot();
-        var adapterProjectPath = Path.Combine(repoRoot.FullName, "src", "DeltaZulu.Platform.Application.Workbench.HuntingAdapter", "DeltaZulu.Platform.Application.Workbench.HuntingAdapter.csproj");
-        var document = XDocument.Load(adapterProjectPath);
+        var applicationProjectPath = Path.Combine(repoRoot.FullName, "src", "DeltaZulu.Platform.Application", "DeltaZulu.Platform.Application.csproj");
+        var document = XDocument.Load(applicationProjectPath);
 
         var projectReferences = document.Descendants("ProjectReference")
             .Select(element => (string?)element.Attribute("Include") ?? string.Empty)
             .ToList();
 
-        CollectionAssert.DoesNotContain(projectReferences, @"..\DeltaZulu.Platform.Web.Workbench\DeltaZulu.Platform.Web.Workbench.csproj");
-        Assert.DoesNotContain(reference => reference.Contains("Workbench.Web", StringComparison.OrdinalIgnoreCase), projectReferences,
-            "The reusable Hunting.Core validation adapter must not reference Workbench.Web or any future Hunting.Web module.");
+        Assert.DoesNotContain(reference => reference.Contains("Platform.Web", StringComparison.OrdinalIgnoreCase), projectReferences,
+            "The Application layer must not reference the Web layer.");
+
     }
 
     private static bool IsFloatingVersion(string version) =>
