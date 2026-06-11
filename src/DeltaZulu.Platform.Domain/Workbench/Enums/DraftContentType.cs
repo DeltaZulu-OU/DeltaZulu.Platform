@@ -1,4 +1,4 @@
-namespace DeltaZulu.Workbench.Domain.Enums;
+namespace DeltaZulu.Platform.Domain.Workbench.Enums;
 
 /// <summary>
 /// Kind of draft content stored against a <see cref="Changes.ChangeRequest"/>. Drives

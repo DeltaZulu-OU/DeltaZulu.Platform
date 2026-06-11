@@ -1,8 +1,8 @@
-using DeltaZulu.Workbench.Domain.Common;
-using DeltaZulu.Workbench.Domain.Enums;
-using DeltaZulu.Workbench.Domain.Identifiers;
+using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Enums;
+using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
-namespace DeltaZulu.Workbench.Domain.Issues;
+namespace DeltaZulu.Platform.Domain.Workbench.Issues;
 
 /// <summary>
 /// Detection-content issue aggregate. Implements the SIEM Detection Content Issue
@@ -66,9 +66,7 @@ public sealed class Issue : Entity<IssueId>
         ExternalCaseRef? externalCase, DateTimeOffset createdAt, DateTimeOffset updatedAt,
         string? description = null, string? acceptanceCriteria = null,
         string? dataSource = null, string? platform = null, string? attackTechniqueId = null,
-        TlpLevel? tlp = null, IReadOnlyList<string>? labels = null)
-    {
-        return new Issue(id, key, title, type, createdAt)
+        TlpLevel? tlp = null, IReadOnlyList<string>? labels = null) => new Issue(id, key, title, type, createdAt)
         {
             Status = status,
             ExternalCase = externalCase,
@@ -81,7 +79,6 @@ public sealed class Issue : Entity<IssueId>
             Labels = labels ?? [],
             UpdatedAt = updatedAt
         };
-    }
 
     // --- classification ---------------------------------------------------------------------
 

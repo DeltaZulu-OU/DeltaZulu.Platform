@@ -1,8 +1,8 @@
-using DeltaZulu.Workbench.Domain.Common;
-using DeltaZulu.Workbench.Domain.Enums;
-using DeltaZulu.Workbench.Domain.Identifiers;
+using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Enums;
+using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
-namespace DeltaZulu.Workbench.Domain.Reviews;
+namespace DeltaZulu.Platform.Domain.Workbench.Reviews;
 
 /// <summary>
 /// A reviewer's decision on a change request. Append-only; may be marked superseded
@@ -38,14 +38,11 @@ public sealed class Review : Entity<ReviewId>
     public static Review Reconstitute(
         ReviewId id, ChangeRequestId changeRequestId, UserId reviewerId,
         ReviewDecision decision, string comment, DateTimeOffset createdAt,
-        bool isSuperseded, DateTimeOffset? supersededAt)
-    {
-        return new Review(id, changeRequestId, reviewerId, decision, comment, createdAt, skip: true)
+        bool isSuperseded, DateTimeOffset? supersededAt) => new Review(id, changeRequestId, reviewerId, decision, comment, createdAt, skip: true)
         {
             IsSuperseded = isSuperseded,
             SupersededAt = supersededAt
         };
-    }
 
     // Validation-free path for Reconstitute only.
     private Review(

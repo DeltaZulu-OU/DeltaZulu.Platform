@@ -1,4 +1,4 @@
-namespace DeltaZulu.Workbench.Domain.Identifiers;
+namespace DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
 public readonly record struct IncidentId(Guid Value)
 {

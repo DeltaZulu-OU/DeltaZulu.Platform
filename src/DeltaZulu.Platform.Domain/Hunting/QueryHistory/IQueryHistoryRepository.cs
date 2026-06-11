@@ -1,4 +1,4 @@
-namespace DeltaZulu.Hunting.Application.QueryHistory;
+namespace DeltaZulu.Platform.Domain.Hunting.QueryHistory;
 
 public interface IQueryHistoryRepository
 {

@@ -10,7 +10,7 @@
     color: inherit;
 }
 
-.platform-module-card:hover .dz-panel {
-    border-color: var(--color-border-strong);
-    box-shadow: var(--shadow-md);
-}
+    .platform-module-card:hover .dz-panel {
+        border-color: var(--color-border-strong);
+        box-shadow: var(--shadow-md);
+    }

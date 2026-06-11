@@ -1,8 +1,8 @@
-using DeltaZulu.Workbench.Domain.Common;
-using DeltaZulu.Workbench.Domain.Enums;
-using DeltaZulu.Workbench.Domain.Identifiers;
+using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Enums;
+using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
-namespace DeltaZulu.Workbench.Domain.Detections;
+namespace DeltaZulu.Platform.Domain.Workbench.Detections;
 
 /// <summary>
 /// A user-facing projection of a Git commit, per ADR-0011. Immutable after creation.
@@ -87,10 +87,7 @@ public sealed class DetectionVersion : Entity<VersionId>
         WorkflowProfileId workflowProfile, ChangeRequestId sourceChangeRequestId,
         IssueId? linkedIssueId, DateTimeOffset acceptedAt,
         IReadOnlyList<LogicalPath> changedSections, string gitCommitSha,
-        string checksSummary, string reviewSummary)
-    {
-        return new DetectionVersion(id, detectionId, sequenceNumber, title, changeSummary,
+        string checksSummary, string reviewSummary) => new DetectionVersion(id, detectionId, sequenceNumber, title, changeSummary,
             authorId, workflowProfile, sourceChangeRequestId, linkedIssueId, acceptedAt,
             changedSections, gitCommitSha, checksSummary, reviewSummary);
-    }
 }

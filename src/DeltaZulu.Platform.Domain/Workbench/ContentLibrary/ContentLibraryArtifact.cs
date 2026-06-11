@@ -1,4 +1,4 @@
-namespace DeltaZulu.Workbench.Domain.ContentLibrary;
+namespace DeltaZulu.Platform.Domain.Workbench.ContentLibrary;
 
 /// <summary>
 /// Immutable description of a governed content-library object. Workbench stores draft

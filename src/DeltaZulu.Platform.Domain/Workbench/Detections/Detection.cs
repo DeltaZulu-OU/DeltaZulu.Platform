@@ -1,9 +1,9 @@
 using System.Text.RegularExpressions;
-using DeltaZulu.Workbench.Domain.Common;
-using DeltaZulu.Workbench.Domain.Enums;
-using DeltaZulu.Workbench.Domain.Identifiers;
+using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Enums;
+using DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
-namespace DeltaZulu.Workbench.Domain.Detections;
+namespace DeltaZulu.Platform.Domain.Workbench.Detections;
 
 /// <summary>
 /// A detection is the identity object for a piece of detection content. It can exist before
@@ -65,15 +65,12 @@ public sealed partial class Detection : Entity<DetectionId>
     public static Detection Reconstitute(
         DetectionId id, string slug, string title, string summary,
         DetectionLifecycle lifecycle, VersionId? currentVersionId,
-        DateTimeOffset createdAt, DateTimeOffset updatedAt)
-    {
-        return new Detection(id, slug, title, summary, createdAt)
+        DateTimeOffset createdAt, DateTimeOffset updatedAt) => new Detection(id, slug, title, summary, createdAt)
         {
             Lifecycle = lifecycle,
             CurrentVersionId = currentVersionId,
             UpdatedAt = updatedAt
         };
-    }
 
     public void Rename(string newTitle, DateTimeOffset now)
     {

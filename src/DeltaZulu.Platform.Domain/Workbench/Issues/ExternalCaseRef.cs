@@ -1,6 +1,6 @@
-using DeltaZulu.Workbench.Domain.Common;
+using DeltaZulu.Platform.Domain.Workbench.Common;
 
-namespace DeltaZulu.Workbench.Domain.Issues;
+namespace DeltaZulu.Platform.Domain.Workbench.Issues;
 
 /// <summary>Discriminates between external system categories for UI display and connector routing.</summary>
 public enum ExternalSystemType

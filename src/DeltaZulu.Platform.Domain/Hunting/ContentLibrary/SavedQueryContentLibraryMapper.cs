@@ -1,7 +1,7 @@
-namespace DeltaZulu.Hunting.Application.ContentLibrary;
 
-using DeltaZulu.Hunting.Application.SavedQueries;
+using DeltaZulu.Platform.Domain.Hunting.SavedQueries;
 
+namespace DeltaZulu.Platform.Domain.Hunting.ContentLibrary;
 public static class SavedQueryContentLibraryMapper
 {
     public static ContentLibraryArtifact ToDraftArtifact(SavedQueryRecord savedQuery)

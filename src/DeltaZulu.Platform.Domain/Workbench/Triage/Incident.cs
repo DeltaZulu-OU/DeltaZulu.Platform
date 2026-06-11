@@ -1,9 +1,9 @@
-using DeltaZulu.Workbench.Domain.Common;
-using DeltaZulu.Workbench.Domain.Enums;
-using DeltaZulu.Workbench.Domain.Identifiers;
-using DeltaZulu.Workbench.Domain.Issues;
+using DeltaZulu.Platform.Domain.Workbench.Common;
+using DeltaZulu.Platform.Domain.Workbench.Enums;
+using DeltaZulu.Platform.Domain.Workbench.Identifiers;
+using DeltaZulu.Platform.Domain.Workbench.Issues;
 
-namespace DeltaZulu.Workbench.Domain.Triage;
+namespace DeltaZulu.Platform.Domain.Workbench.Triage;
 
 /// <summary>
 /// An incident promoted from an approved candidate. Workbench owns the investigation
@@ -165,9 +165,7 @@ public sealed class Incident : Entity<IncidentId>
         ExternalCaseRef? externalCase,
         string? closeReason,
         DateTimeOffset createdAt,
-        DateTimeOffset updatedAt)
-    {
-        return new Incident(id, title, sourceCandidateId, approvalDecisionId, ownerId, severity, createdAt)
+        DateTimeOffset updatedAt) => new Incident(id, title, sourceCandidateId, approvalDecisionId, ownerId, severity, createdAt)
         {
             Status = status,
             Tlp = tlp,
@@ -175,7 +173,6 @@ public sealed class Incident : Entity<IncidentId>
             CloseReason = closeReason,
             UpdatedAt = updatedAt
         };
-    }
 
     // --- helpers --------------------------------------------------------------------------------
 

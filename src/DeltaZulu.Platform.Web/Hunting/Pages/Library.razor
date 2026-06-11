@@ -1,0 +1,199 @@
+@page "/hunting/library"
+@namespace DeltaZulu.Platform.Web.Hunting.Pages
+@using DeltaZulu.Platform.Web.Hunting.Library
+@using DeltaZulu.Platform.Web.Hunting.Services
+@inject LibraryPageController Controller
+
+<div class="dashboard-list-page">
+    <DzPageHeader Eyebrow="Library"
+                  Title="Library"
+                  Description="Manage saved queries, reusable visualizations, and dashboards from one place.">
+        <Actions>
+            <div class="dashboard-list-actions-primary">
+                <button class="hunt-btn hunt-btn-run dashboard-primary-action"
+                        @onclick="Controller.CreateSavedQuery">
+                    New saved query
+                </button>
+                <button class="hunt-btn"
+                        @onclick="Controller.CreateVisualization">
+                    New visualization
+                </button>
+                <button class="hunt-btn"
+                        @onclick="Controller.CreateDashboard">
+                    New dashboard
+                </button>
+            </div>
+        </Actions>
+    </DzPageHeader>
+
+    @if (State.HasError)
+    {
+        <div class="dashboard-error">@State.Error</div>
+    }
+
+    @if (State.HasMessage)
+    {
+        <div class="hunt-query-library-message">@State.Message</div>
+    }
+
+    <section class="dashboard-list-panel" aria-label="Library panel">
+        <MudTable T="LibraryItem"
+                  Items="@State.Items"
+                  Dense="true"
+                  Hover="true"
+                  Elevation="0"
+                  Loading="@State.Loading"
+                  Filter="State.FilterItem"
+                  RowsPerPage="@LibraryPageState.DefaultRowsPerPage"
+                  Class="library-object-table">
+            <ToolBarContent>
+                <DzToolbar Class="library-table-toolbar">
+                    <ChildContent>
+                        <div>
+                            <h2>@State.FilterTitle</h2>
+                            <p>@State.RangeText</p>
+                        </div>
+
+                        <MudTextField T="string"
+                                      Value="@State.SearchText"
+                                      ValueChanged="Controller.SetSearchText"
+                                      Placeholder="Search library"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      Immediate="true"
+                                      Margin="Margin.Dense"
+                                      Variant="Variant.Outlined"
+                                      Class="library-table-search" />
+                    </ChildContent>
+
+                    <Actions>
+                        <div class="library-filter-buttons">
+                            <DzFilterChip Value="all" Selected="@(Controller.IsFilterActive(null))" OnClick="() => Controller.SetFilter(null)">All</DzFilterChip>
+                            <DzFilterChip Value="queries" Selected="@(Controller.IsFilterActive(LibraryItemKind.SavedQuery))" OnClick="() => Controller.SetFilter(LibraryItemKind.SavedQuery)">Saved queries</DzFilterChip>
+                            <DzFilterChip Value="viz" Selected="@(Controller.IsFilterActive(LibraryItemKind.Visualization))" OnClick="() => Controller.SetFilter(LibraryItemKind.Visualization)">Visualizations</DzFilterChip>
+                            <DzFilterChip Value="dashboards" Selected="@(Controller.IsFilterActive(LibraryItemKind.Dashboard))" OnClick="() => Controller.SetFilter(LibraryItemKind.Dashboard)">Dashboards</DzFilterChip>
+                        </div>
+                    </Actions>
+                </DzToolbar>
+            </ToolBarContent>
+
+            <HeaderContent>
+                <MudTh Style="width: 48px;"></MudTh>
+                <MudTh>
+                    <MudTableSortLabel T="LibraryItem" SortBy="item => LibraryLabels.KindLabel(item.Kind)">
+                        Type
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel T="LibraryItem" InitialDirection="SortDirection.Ascending" SortBy="item => item.Name">
+                        Title
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel T="LibraryItem" SortBy="item => item.DependencyLabel">
+                        Source
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel T="LibraryItem" SortBy="item => LibraryLabels.StatusLabel(item.Status)">
+                        Status
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh>
+                    <MudTableSortLabel T="LibraryItem" SortBy="item => item.UpdatedAtUtc">
+                        Updated
+                    </MudTableSortLabel>
+                </MudTh>
+                <MudTh Style="text-align: right;">Actions</MudTh>
+            </HeaderContent>
+
+            <RowTemplate>
+                <MudTd DataLabel="">
+                    <MudIcon Icon="@GetKindIcon(context.Kind)" Size="Size.Small" />
+                </MudTd>
+                <MudTd DataLabel="Type">@LibraryLabels.KindLabel(context.Kind)</MudTd>
+                <MudTd DataLabel="Title">
+                    <button class="hunt-link-button library-object-title"
+                            @onclick="() => Controller.OpenItemAsync(context)">
+                        @context.Name
+                    </button>
+                    @if (!string.IsNullOrWhiteSpace(context.Description))
+                    {
+                        <div class="dashboard-muted">@context.Description</div>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Source">@context.DependencyLabel</MudTd>
+                <MudTd DataLabel="Status">
+                    @if (context.Status == LibraryItemStatus.MissingDependency)
+                    {
+                        <DzStatusChip Label="Missing dependency" Tone="warning" />
+                    }
+                    else
+                    {
+                        <span class="dashboard-muted">OK</span>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Updated">@LibraryLabels.UpdatedLabel(context.UpdatedAtUtc)</MudTd>
+                <MudTd DataLabel="Actions" Style="text-align: right;">
+                    <button class="hunt-btn"
+                            @onclick="() => Controller.OpenItemAsync(context)">
+                        Open
+                    </button>
+                    <button class="@Controller.DeleteButtonClass(context)"
+                            disabled="@State.Deleting"
+                            title="@Controller.DeleteButtonTitle(context)"
+                            @onclick="() => Controller.DeleteItemAsync(context)">
+                        @Controller.DeleteButtonText(context)
+                    </button>
+                </MudTd>
+            </RowTemplate>
+
+            <NoRecordsContent>
+                @if (State.Items.Count == 0)
+                {
+                    <DzEmptyState Title="No library items"
+                                  Description="Create a saved query, visualization, or dashboard to populate the library."
+                                  Icon="@Icons.Material.Filled.LibraryBooks"
+                                  Elevation="0">
+                        <Actions>
+                            <button class="hunt-btn hunt-btn-run dashboard-primary-action" @onclick="Controller.CreateSavedQuery">Create saved query</button>
+                        </Actions>
+                    </DzEmptyState>
+                }
+                else
+                {
+                    <DzEmptyState Title="No matching library items"
+                                  Description="Clear the search text or use a different filter."
+                                  Icon="@Icons.Material.Filled.SearchOff"
+                                  Elevation="0">
+                        <Actions>
+                            <button class="hunt-btn" @onclick="Controller.ClearSearch">Clear search</button>
+                        </Actions>
+                    </DzEmptyState>
+                }
+            </NoRecordsContent>
+
+            <PagerContent>
+                <MudTablePager PageSizeOptions="@LibraryPageState.PageSizeOptions" />
+            </PagerContent>
+        </MudTable>
+    </section>
+</div>
+
+@code {
+    private LibraryPageState State => Controller.State;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Controller.LoadAsync();
+    }
+
+    private static string GetKindIcon(LibraryItemKind kind)
+        => kind switch
+        {
+            LibraryItemKind.SavedQuery => Icons.Material.Filled.Search,
+            LibraryItemKind.Visualization => Icons.Material.Filled.InsertChart,
+            LibraryItemKind.Dashboard => Icons.Material.Filled.Dashboard,
+            _ => Icons.Material.Filled.Description
+        };
+}

@@ -1,0 +1,48 @@
+@namespace DeltaZulu.Platform.Web.Workbench.Components.Shared
+
+<DzMarkdownText Content="@Content" CurrentDocumentPath="@CurrentFilePath" LinkMapper="@MapToRoute" />
+
+@code {
+    /// <summary>Raw markdown content to render.</summary>
+    [Parameter, EditorRequired]
+    public string Content { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Repository-relative path of the current file, used to resolve relative links.
+    /// E.g. <c>detections/anomalous-sign-in/notes/investigation.md</c>.
+    /// </summary>
+    [Parameter]
+    public string? CurrentFilePath { get; set; }
+
+    private static string MapToRoute(string repoPath)
+    {
+        // detections/<slug>/... → /detections/<slug>/file/<rest>
+        if (repoPath.StartsWith("detections/", StringComparison.Ordinal))
+        {
+            var afterDetections = repoPath["detections/".Length..];
+            var slashIdx = afterDetections.IndexOf('/');
+            if (slashIdx > 0)
+            {
+                var slug = afterDetections[..slashIdx];
+                var rest = afterDetections[(slashIdx + 1)..];
+                return $"/detections/{slug}/file/{rest}";
+            }
+        }
+
+        // investigations/<slug>/... → /investigations/<slug>/file/<rest>
+        if (repoPath.StartsWith("investigations/", StringComparison.Ordinal))
+        {
+            var afterInv = repoPath["investigations/".Length..];
+            var slashIdx = afterInv.IndexOf('/');
+            if (slashIdx > 0)
+            {
+                var slug = afterInv[..slashIdx];
+                var rest = afterInv[(slashIdx + 1)..];
+                return $"/investigations/{slug}/file/{rest}";
+            }
+        }
+
+        // Fallback: link as-is.
+        return repoPath;
+    }
+}

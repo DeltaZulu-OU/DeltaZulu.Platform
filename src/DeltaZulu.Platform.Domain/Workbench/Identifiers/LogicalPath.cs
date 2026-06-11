@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
-using DeltaZulu.Workbench.Domain.Common;
+using DeltaZulu.Platform.Domain.Workbench.Common;
 
-namespace DeltaZulu.Workbench.Domain.Identifiers;
+namespace DeltaZulu.Platform.Domain.Workbench.Identifiers;
 
 /// <summary>
 /// A validated logical path inside a detection package, used as the key for draft files.

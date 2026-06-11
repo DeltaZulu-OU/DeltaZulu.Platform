@@ -1,4 +1,4 @@
-namespace DeltaZulu.Workbench.Domain.Common;
+namespace DeltaZulu.Platform.Domain.Workbench.Common;
 
 /// <summary>
 /// Thrown when a domain invariant is violated. Application services translate this into
@@ -17,5 +17,17 @@ public sealed class DomainException : Exception
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
         Code = code;
+    }
+
+    public DomainException() : base()
+    {
+    }
+
+    public DomainException(string? message) : base(message)
+    {
+    }
+
+    public DomainException(string? message, Exception? innerException) : base(message, innerException)
+    {
     }
 }

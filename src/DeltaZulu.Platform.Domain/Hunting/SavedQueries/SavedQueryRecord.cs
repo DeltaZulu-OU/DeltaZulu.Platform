@@ -1,4 +1,4 @@
-namespace DeltaZulu.Hunting.Application.SavedQueries;
+namespace DeltaZulu.Platform.Domain.Hunting.SavedQueries;
 
 public sealed record SavedQueryRecord(
     string Id,

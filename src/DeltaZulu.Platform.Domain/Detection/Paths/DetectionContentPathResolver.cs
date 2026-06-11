@@ -1,4 +1,4 @@
-namespace DeltaZulu.DetectionContent.Paths;
+namespace DeltaZulu.Platform.Domain.Detection.Paths;
 
 /// <summary>Shared accepted-content repository path convention for detection packages.</summary>
 public static class DetectionContentPathResolver

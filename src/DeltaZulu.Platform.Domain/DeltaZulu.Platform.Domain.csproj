@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="DeltaZulu.Workbench.Persistence" />
+    <InternalsVisibleTo Include="DeltaZulu.Platform.Data" />
   </ItemGroup>
 
 </Project>
