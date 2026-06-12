@@ -58,18 +58,19 @@
         Navigation.LocationChanged += OnLocationChanged;
     }
 
-    private bool IsThreatAnalyticsRoute
+    private bool IsAnalyticsWorkbenchRoute
     {
         get
         {
             var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/');
-            return string.Equals(relativePath, "analytics/threat-hunting", StringComparison.OrdinalIgnoreCase);
+            return string.Equals(relativePath, "analytics/workbench", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(relativePath, "analytics/threat-hunting", StringComparison.OrdinalIgnoreCase);
         }
     }
 
-    private string? ShellMainClass => IsThreatAnalyticsRoute ? "dz-shell-main--full-bleed" : null;
+    private string? ShellMainClass => IsAnalyticsWorkbenchRoute ? "dz-shell-main--full-bleed" : null;
 
-    private string? MainContentClass => IsThreatAnalyticsRoute ? "dz-main-content--full-height" : null;
+    private string? MainContentClass => IsAnalyticsWorkbenchRoute ? "dz-main-content--full-height" : null;
 
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
 

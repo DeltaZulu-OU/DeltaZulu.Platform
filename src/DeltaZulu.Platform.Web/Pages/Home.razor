@@ -3,12 +3,12 @@
 
 <PageTitle>DeltaZulu Platform Overview</PageTitle>
 
-<DzPageHeader Eyebrow="Unified workbench"
+<DzPageHeader Eyebrow="Full-cycle security analytics"
               Title="Overview"
-              Description="Start threat analytics, manage detection content, and review operational work from one place.">
+              Description="Start analytics, manage detection content, and review operational work from one place.">
     <Actions>
-        <MudButton Href="/analytics/threat-hunting" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Search">
-            Open Threat Analytics
+        <MudButton Href="/analytics/workbench" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Search">
+            Open Analytics Workbench
         </MudButton>
         <MudButton Href="/governance/detections" Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" Class="ml-2" StartIcon="@Icons.Material.Outlined.Radar">
             Manage Detections
@@ -18,16 +18,16 @@
 
 <MudGrid Spacing="3">
     <MudItem xs="12" md="4">
-        <DzPanel Eyebrow="Analytics" Title="Threat Analytics" Elevation="0" Outlined="true" Class="dz-panel--full-height">
+        <DzPanel Eyebrow="Analytics" Title="Analytics" Elevation="0" Outlined="true" Class="dz-panel--full-height">
             <MudText Typo="Typo.body2" Class="text-secondary">
-                Run KQL against approved Golden schema views, inspect generated results, and reuse saved or sample queries.
+                Run KQL against approved Golden schema views, inspect results, build dashboards, and reuse saved queries.
             </MudText>
-            <MudButton Href="/analytics/threat-hunting"
+            <MudButton Href="/analytics"
                        Variant="Variant.Outlined"
                        Color="Color.Secondary"
                        Size="Size.Small"
                        Class="mt-3"
-                       StartIcon="@Icons.Material.Outlined.Search">
+                       StartIcon="@Icons.Material.Outlined.Insights">
                 Open analytics
             </MudButton>
         </DzPanel>

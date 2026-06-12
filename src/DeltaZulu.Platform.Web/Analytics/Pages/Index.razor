@@ -1,3 +1,4 @@
+@page "/analytics/workbench"
 @page "/analytics/threat-hunting"
 @namespace DeltaZulu.Platform.Web.Analytics.Pages
 @using DeltaZulu.Platform.Web.Analytics.Components
@@ -15,8 +16,8 @@
 @implements IAsyncDisposable
 
 <div class="threat-hunting-page">
-    <aside class="threat-hunting-secondary-nav" aria-label="Threat hunting navigation">
-        <div class="threat-hunting-secondary-header">Threat Analytics</div>
+    <aside class="threat-hunting-secondary-nav" aria-label="Analytics workbench navigation">
+        <div class="threat-hunting-secondary-header">Analytics Workbench</div>
 
         <section class="threat-hunting-secondary-section" aria-labelledby="threat-hunting-schemas-heading">
             <h2 id="threat-hunting-schemas-heading" class="threat-hunting-secondary-title">Schemas, saved queries, and samples</h2>
@@ -25,7 +26,7 @@
 
         <section class="threat-hunting-secondary-section threat-hunting-saved-section" aria-labelledby="threat-hunting-library-heading">
             <h2 id="threat-hunting-library-heading" class="threat-hunting-secondary-title">Query history</h2>
-            <p class="threat-hunting-secondary-help">Save the current editor contents or open recent executions without leaving the hunting page.</p>
+            <p class="threat-hunting-secondary-help">Save the current editor contents or open recent executions without leaving the workbench.</p>
             <QueryLibraryDrawer CurrentQueryText="@_cachedEditorText" QuerySelected="LoadQueryIntoEditor" ButtonText="Open query history" />
         </section>
     </aside>

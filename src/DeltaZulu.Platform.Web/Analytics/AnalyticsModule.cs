@@ -1,5 +1,6 @@
 using DeltaZulu.Platform.Web.Components;
 using DeltaZulu.Platform.Web.Platform;
+using Microsoft.AspNetCore.Components.Routing;
 using MudBlazor;
 
 namespace DeltaZulu.Platform.Web.Analytics;
@@ -16,7 +17,9 @@ public sealed class AnalyticsModule : IPlatformModule
 
     public IReadOnlyList<DzNavItem> NavigationItems { get; } =
     [
-        new("Threat Analytics", "/analytics/threat-hunting", Icons.Material.Outlined.Search),
+        new("Overview", "/analytics", Icons.Material.Outlined.Insights, NavLinkMatch.All),
+        new("Analytics Workbench", "/analytics/workbench", Icons.Material.Outlined.Search),
+        new("Threat Hunting", "/analytics/threat-hunting", Icons.Material.Outlined.TravelExplore),
         new("Library", "/analytics/library", Icons.Material.Outlined.LibraryBooks),
         new("Dashboards", "/analytics/dashboards", Icons.Material.Outlined.Dashboard),
     ];

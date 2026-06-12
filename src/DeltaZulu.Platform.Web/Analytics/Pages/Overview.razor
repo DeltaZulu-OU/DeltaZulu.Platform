@@ -1,7 +1,81 @@
 @page "/analytics"
 @namespace DeltaZulu.Platform.Web.Analytics.Pages
-@inject NavigationManager Navigation
+@using MudBlazor
 
-@code {
-    protected override void OnInitialized() => Navigation.NavigateTo("/", replace: true);
-}
+<PageTitle>Analytics — DeltaZulu Platform</PageTitle>
+
+<DzPageHeader Eyebrow="Analytics"
+              Title="Analytics Overview"
+              Description="Query approved security data, explore schemas, build dashboards, reuse analytical artifacts, and run threat-hunting workflows.">
+    <Actions>
+        <MudButton Href="/analytics/workbench" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Search">
+            Open Workbench
+        </MudButton>
+    </Actions>
+</DzPageHeader>
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="Analytics" Title="Analytics Workbench" Elevation="0" Outlined="true" Class="dz-panel--full-height">
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                Run KQL queries against approved Golden schema views, inspect results, and save reusable queries.
+            </MudText>
+            <MudButton Href="/analytics/workbench"
+                       Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Size="Size.Small"
+                       Class="mt-3"
+                       StartIcon="@Icons.Material.Outlined.Search">
+                Open workbench
+            </MudButton>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="Analytics" Title="Threat Hunting" Elevation="0" Outlined="true" Class="dz-panel--full-height">
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                Run hypothesis-driven investigations using the analytics workbench with structured hunting workflows.
+            </MudText>
+            <MudButton Href="/analytics/threat-hunting"
+                       Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Size="Size.Small"
+                       Class="mt-3"
+                       StartIcon="@Icons.Material.Outlined.TravelExplore">
+                Start a hunt
+            </MudButton>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="Analytics" Title="Library" Elevation="0" Outlined="true" Class="dz-panel--full-height">
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                Browse saved queries, visualizations, and reusable analytical artifacts.
+            </MudText>
+            <MudButton Href="/analytics/library"
+                       Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Size="Size.Small"
+                       Class="mt-3"
+                       StartIcon="@Icons.Material.Outlined.LibraryBooks">
+                Open library
+            </MudButton>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="Analytics" Title="Dashboards" Elevation="0" Outlined="true" Class="dz-panel--full-height">
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                Compose persisted table and chart widgets on top of the same query runtime.
+            </MudText>
+            <MudButton Href="/analytics/dashboards"
+                       Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Size="Size.Small"
+                       Class="mt-3"
+                       StartIcon="@Icons.Material.Outlined.Dashboard">
+                View dashboards
+            </MudButton>
+        </DzPanel>
+    </MudItem>
+</MudGrid>
