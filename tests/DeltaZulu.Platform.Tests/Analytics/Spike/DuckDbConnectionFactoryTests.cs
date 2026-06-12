@@ -97,7 +97,7 @@ public sealed class DuckDbConnectionFactoryTests
                 new DuckDbAttachedDatabase("APP", "/tmp/app-b.db")
             ]));
 
-        StringAssert.Contains(ex.Message, "Duplicate attached DuckDB database alias 'APP'.");
+        Assert.Contains("Duplicate attached DuckDB database alias 'APP'.", ex.Message);
     }
 
     [TestMethod]
@@ -115,6 +115,6 @@ public sealed class DuckDbConnectionFactoryTests
                         new DuckDbAttachedView("SAVED_QUERIES", "saved_queries_archive", "APP_STATE")])
             ]));
 
-        StringAssert.Contains(ex.Message, "Duplicate attached DuckDB view target 'APP_STATE.SAVED_QUERIES'.");
+        Assert.Contains("Duplicate attached DuckDB view target 'APP_STATE.SAVED_QUERIES'.", ex.Message);
     }
 }

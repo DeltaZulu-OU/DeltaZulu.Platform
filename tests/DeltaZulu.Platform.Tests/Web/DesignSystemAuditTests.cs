@@ -4,21 +4,17 @@ using DeltaZulu.Platform.Web.Components;
 namespace DeltaZulu.Platform.Tests.Web;
 
 [TestClass]
-public sealed class DesignSystemAuditTests
+public sealed partial class DesignSystemAuditTests
 {
-    private static readonly Regex MediumRadiusLiteralPattern = new(
-        @"^[^\S\r\n]*--radius-(?:xs|sm|md|lg|xl|2xl):(?![^\S\r\n]*var\(--radius-structure\);)[^\r\n;]+;",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.Multiline);
-
     [TestMethod]
     public void ProductIdentityDocument_DefinesDeltaZuluPlatformAsApplicationIdentity()
     {
         var repositoryRoot = FindRepositoryRoot();
         var identity = File.ReadAllText(Path.Combine(repositoryRoot, "docs", "design", "PRODUCT_IDENTITY.md"));
 
-        StringAssert.Contains(identity, "DeltaZulu Platform is the product name");
-        StringAssert.Contains(identity, "Use **Analytics**, **Detection Content Governance**, and **Operations** as the three module names.");
-        StringAssert.Contains(identity, "Do not use DZNS as the application name inside the product shell.");
+        Assert.Contains("DeltaZulu Platform is the product name", identity);
+        Assert.Contains("Use **Analytics**, **Detection Content Governance**, and **Operations** as the three module names.", identity);
+        Assert.Contains("Do not use DZNS as the application name inside the product shell.", identity);
     }
 
     [TestMethod]
@@ -28,7 +24,7 @@ public sealed class DesignSystemAuditTests
         var fontFamily = string.Join(" ", theme.Typography.H1.FontFamily ?? []);
 
         Assert.AreEqual("0px", theme.LayoutProperties.DefaultBorderRadius);
-        StringAssert.Contains(fontFamily, "IBM Plex Sans");
+        Assert.Contains("IBM Plex Sans", fontFamily);
         Assert.IsFalse(fontFamily.Contains("Newsreader", StringComparison.Ordinal), "Product heading typography must not use Newsreader.");
     }
 
@@ -38,16 +34,16 @@ public sealed class DesignSystemAuditTests
         var repositoryRoot = FindRepositoryRoot();
         var tokens = File.ReadAllText(Path.Combine(repositoryRoot, "src", "DeltaZulu.Platform.Web", "wwwroot", "deltazulu-tokens.css"));
 
-        StringAssert.Contains(tokens, "--radius-structure: 0;");
-        StringAssert.Contains(tokens, "--radius-input: 4px;");
-        StringAssert.Contains(tokens, "--radius-pill: 999px;");
+        Assert.Contains("--radius-structure: 0;", tokens);
+        Assert.Contains("--radius-input: 4px;", tokens);
+        Assert.Contains("--radius-pill: 999px;", tokens);
 
         foreach (var alias in new[] { "xs", "sm", "md", "lg", "xl", "2xl" })
         {
-            StringAssert.Contains(tokens, $"--radius-{alias}: var(--radius-structure);");
+            Assert.Contains($"--radius-{alias}: var(--radius-structure);", tokens);
         }
 
-        var disallowedMediumAlias = MediumRadiusLiteralPattern.Match(tokens);
+        var disallowedMediumAlias = MediumRadiusLiteralRegex().Match(tokens);
         Assert.IsFalse(disallowedMediumAlias.Success, $"Structural radius aliases must resolve to --radius-structure, found '{disallowedMediumAlias.Value}'.");
     }
 
@@ -57,7 +53,7 @@ public sealed class DesignSystemAuditTests
         var repositoryRoot = FindRepositoryRoot();
         var tokens = File.ReadAllText(Path.Combine(repositoryRoot, "src", "DeltaZulu.Platform.Web", "wwwroot", "deltazulu-tokens.css"));
 
-        StringAssert.Contains(tokens, ".text-display");
+        Assert.Contains(".text-display", tokens);
         AssertCssRuleContains(tokens, ".text-h1,\nh1", "font-family: var(--font-family-sans);");
         AssertCssRuleDoesNotContain(tokens, ".text-h1,\nh1", "font-family: var(--font-family-display);");
     }
@@ -84,7 +80,7 @@ public sealed class DesignSystemAuditTests
     private static void AssertCssRuleContains(string css, string selector, string expected)
     {
         var rule = ExtractRule(css, selector);
-        StringAssert.Contains(rule, expected);
+        Assert.Contains(expected, rule);
     }
 
     private static void AssertCssRuleDoesNotContain(string css, string selector, string disallowed)
@@ -110,12 +106,9 @@ public sealed class DesignSystemAuditTests
         return css[selectorIndex..(closeBraceIndex + 1)];
     }
 
-    private static void AssertNoLegacyAlias(string path, string text, string aliasPrefix)
-    {
-        Assert.IsFalse(
+    private static void AssertNoLegacyAlias(string path, string text, string aliasPrefix) => Assert.IsFalse(
             text.Contains(aliasPrefix, StringComparison.Ordinal),
             $"Shared stylesheet '{Path.GetFileName(path)}' must not contain legacy alias prefix '{aliasPrefix}'.");
-    }
 
     private static string FindRepositoryRoot()
     {
@@ -134,4 +127,7 @@ public sealed class DesignSystemAuditTests
         Assert.Fail("Could not locate repository root from test base directory.");
         return string.Empty;
     }
+
+    [GeneratedRegex(@"^[^\S\r\n]*--radius-(?:xs|sm|md|lg|xl|2xl):(?![^\S\r\n]*var\(--radius-structure\);)[^\r\n;]+;", RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    private static partial Regex MediumRadiusLiteralRegex();
 }
