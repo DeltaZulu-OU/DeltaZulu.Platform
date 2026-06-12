@@ -28,7 +28,7 @@ Evidence from the retained documentation and current tree:
 
 The target is a full-cycle security analytics platform that keeps Clean Architecture boundaries while connecting interactive analytics, detection governance, scheduled execution, alerting, correlation, triage, and feedback into one coherent product:
 
-1. **Analytics** provides governed KQL querying, schema exploration, query history, curated analytics, visualizations, dashboards, evidence capture, threat-hunting workflows, and a shared execution ubstrate used by all modules.
+1. **Analytics** provides governed KQL querying, schema exploration, query history, curated analytics, visualizations, dashboards, evidence capture, threat-hunting workflows, and a shared execution substrate used by all modules.
 2. **Detection Content Governance** provides detection content change control: draft, validate, review, accept into Git history, compare, restore, inspect versions, and project executable detection metadata.
 3. **Operations** provides executable detections, scheduled detection runs, alert materialization, alert entities, enrichment, suppression, incident-candidate correlation, triage, and recovery.
 4. **Shared platform shell** provides one navigation model, one design system, one host lifecycle, one settings surface, and one test suite.
@@ -72,6 +72,29 @@ Last assessed: 2026-06-12.
 | 10 | **Not started** | `SuppressionPolicyJson` field only; no enrichment or suppression processing pipeline. |
 | 11 | **Not started** | `IncidentCandidateRecord` scoring fields exist; no correlation algorithm or service. |
 | 12 | **Not started** | Governance triage models (`Incident`, `CandidateDecision`) exist; no feedback loop to detection tuning. |
+
+## Defined next phases
+
+The current roadmap position makes **Phase 2 the immediate next phase**. Phases 4 and 5 already have partial scaffolding, but they should not be completed ahead of Phase 2 because scheduled execution, validation dry-runs, dashboards, and future recovery all need one shared analytics execution boundary before Operations begins to rely on it.
+
+| Order | Phase | Phase definition | Entry condition | Exit criteria |
+|---:|---:|---|---|---|
+| 1 | 2 | Establish a shared application-layer analytics execution service and policy model. Introduce execution purposes for interactive queries, dashboards, validation dry-runs, scheduled detections, and recovery. Move current direct DuckDB callers behind that service without changing user-visible semantics. | Consolidation and Phase 1 complete. Existing interactive analytics, dashboards, and validation paths still pass their current tests. | One execution contract is used by the UI query path, dashboard widget runner, and governance validation dry-run path; purpose-specific limits and diagnostics are explicit; tests prove UI/data layers do not create parallel execution semantics. |
+| 2 | 3 | Promote knowledge reuse from saved queries into curated analytics. Keep query history lightweight, add curated analytic metadata, and define promotion metadata needed by governance. | Phase 2 execution contract exists, so curated analytics can reference expected result shape and execution purpose consistently. | Curated analytics have purpose, owner/notes, expected shape, entity mappings, severity/confidence or equivalent tuning hints, persistence, list/detail UI, and a promote-to-proposal handoff that does not bypass governance. |
+| 3 | 4 | Complete executable detection projection from accepted governance content. The projection should turn accepted detection versions into operations-ready detection definitions with schedule, lookback, entity mapping, materialization mode, suppression policy, and accepted-version traceability. | Phase 2 exists; Phase 3 promotion metadata is either complete or the projection contract is written to accept it later without schema churn. | Governance acceptance writes or refreshes executable detection definitions; each definition records accepted version, rule hash, schedule, lookback, entity mapping, materialization mode, and suppression policy; stale or invalid projections surface diagnostics. |
+| 4 | 5 | Harden the Operations persistence model before building runners. Finish detection-run, alert, alert-entity, enrichment, suppression, incident-candidate, candidate-evidence, and triage persistence contracts with audit and evidence-integrity fields. | Phase 4 projection contract defines the executable detection input shape. | SQLite repositories and migrations cover the complete Operations schema; alert evidence hash/materialization key/rule hash/suppression fields and detection-run alert counts/lookback windows are present; incident/candidate decision repositories have concrete implementations and tests. |
+| 5 | 6 | Build the first scheduled-detection runner as manual execution plus recoverable orchestration seams. Add timer/Elsa scheduling only after manual execution has deterministic run windows and recorded metadata. | Phase 5 persistence is complete and Phase 2 execution supports scheduled detection purpose. | A detection can be run on demand through the scheduled-detection execution purpose; `DetectionRun` records inputs, window, status, diagnostics, counts, duration, and failure state; Elsa/timer hooks can enqueue the same runner without duplicating execution logic. |
+| 6 | 7 | Materialize alert records from detection-run results using `PerResultRow` as the default. Add aggregate materialization modes only after row-level evidence identity is deterministic. | Phase 6 runner produces repeatable result rows and Phase 5 alert persistence is complete. | Result rows create immutable or append-only alert evidence with materialization keys, extracted entities, status, and audit data; duplicate/retry behavior is deterministic; tests cover empty, successful, duplicate, and failed materialization runs. |
+| 7 | 8 and 9 | Expose Operations state both analytically and operationally. Phase 8 publishes approved read-only KQL views; Phase 9 adds the first Operations module pages for run and alert inspection. These can proceed in parallel after Phase 7. | Alert records, entities, and runs exist and have stable read models. | Approved `DetectionRun`, `AlertEvent`, `AlertEntity`, enrichment, and candidate views are queryable through KQL; `/operations` navigation, run list, alert queue, alert detail, entity views, and diagnostics exist without direct database access from UI components. |
+| 8 | 10-12 | Add higher-order operations workflows: enrichment/suppression, candidate correlation, and triage feedback into detection tuning. These remain deferred until core run and alert loops are stable. | Phases 8 and 9 expose stable views and UI affordances. | Suppression and enrichment are deterministic and auditable; candidates are explainable with scoring rationale; triage decisions feed new governance proposals or curated analytics follow-ups. |
+
+### Immediate execution backlog
+
+1. Add an `ExecutionPurpose` model and shared analytics execution service interface in the application layer.
+2. Replace direct UI/dashboard/validation DuckDB calls with adapters over the shared execution service.
+3. Add architecture-boundary tests proving callers use the shared service and that the UI remains behind application contracts.
+4. Split saved query history from curated analytic definitions with an explicit migration and persistence tests.
+5. Draft the executable detection projection contract before adding any scheduled runner code.
 
 ### Module readiness
 
