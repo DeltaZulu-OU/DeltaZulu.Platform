@@ -1,5 +1,7 @@
 # Executable Detection Content Boundary
 
+<!-- Retention note: Retained boundary analysis. Central platform docs and newer ADRs supersede old project-location references in this file. -->
+
 ## Purpose
 
 This note records what Hunting needs from the future shared `DeltaZulu.DetectionContent` package before it

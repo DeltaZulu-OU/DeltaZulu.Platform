@@ -1,5 +1,7 @@
 # Dashboard Architecture
 
+<!-- Retention note: Retained dashboard reference. Central platform docs supersede any old Hunting project or standalone-host references in this file. -->
+
 ## Status
 
 The dashboard foundation is implemented on the `dashboard-rewrite` branch.

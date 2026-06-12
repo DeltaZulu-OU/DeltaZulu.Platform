@@ -5,9 +5,10 @@ platform: interactive Analytics, detection-content Governance, target Operations
 persistence adapters, and the unified Blazor web application.
 
 The repository preserves history from the original Hunting and Workbench repositories, but the current
-codebase is no longer organized as separate Hunting/Workbench applications. The old module docs and
-ADRs are retained for provenance and deep domain detail; the central docs under `docs/` are the source
-of truth for current architecture and target state.
+codebase is no longer organized as separate Hunting/Workbench applications. The old `docs/modules`
+tree has been retired after file-by-file review; retained domain-specific references now live under
+central `docs/` paths, and the central docs are the source of truth for current architecture and
+target state.
 
 ## Current status
 
@@ -58,5 +59,5 @@ Start with the centralized docs:
 - [Current roadmap](docs/ROADMAP.md) — includes the active design-system remediation track and Operations sequence.
 - [Completed consolidation record](docs/CONSOLIDATION_ROADMAP.md)
 
-Imported module docs under `docs/modules/` are subordinate to the central docs whenever they describe
-old repository layout, old project names, or standalone hosts.
+The retired module-docs disposition record is available at
+[docs/imports/modules-retirement-analysis.md](docs/imports/modules-retirement-analysis.md).

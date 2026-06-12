@@ -1,5 +1,7 @@
 # KQL Syntax Coverage Checklist
 
+<!-- Retention note: Retained analytics reference. Central platform docs supersede any old Hunting project or standalone-host references in this file. -->
+
 Authoritative translation reference: `docs/KQL-to-DuckDB-translation-spec.md`
 
 ## Status labels

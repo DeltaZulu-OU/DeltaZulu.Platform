@@ -1,5 +1,7 @@
 # Dashboard QA Checklist
 
+<!-- Retention note: Retained dashboard QA reference. Use platform solution commands unless this checklist is deliberately being replayed against an archived source checkout. -->
+
 This checklist records the build, automated coverage, manual smoke, and architecture checks expected for dashboard changes.
 
 ## Build and test gate

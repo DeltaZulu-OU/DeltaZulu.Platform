@@ -1,5 +1,7 @@
 # Library Workflow
 
+<!-- Retention note: Retained Library workflow reference. Central platform docs supersede any old Hunting project or standalone-host references in this file. -->
+
 ## Purpose
 
 The Library page is the primary management surface for reusable hunting artifacts. It brings saved queries, visualizations, and dashboards into one place without changing project boundaries or persistence ownership.

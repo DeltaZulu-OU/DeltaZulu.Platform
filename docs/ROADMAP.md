@@ -29,16 +29,12 @@ Evidence from the retained documentation and current tree:
 
 ## Gap analysis snapshot
 
-The repository is aligned with the revised target at the documentation and consolidation level, but
-implementation is still mostly pre-Operations. Analytics and Governance are usable; scheduled detection
-execution, alert materialization, Operations views, alert UI, enrichment, suppression, candidate
-correlation, and triage feedback remain the major gaps.
+The repository is aligned with the revised target at the documentation and consolidation level, but implementation is still mostly pre-Operations. Analytics and Governance are usable; scheduled detection execution, alert materialization, Operations views, alert UI, enrichment, suppression, candidate correlation, and triage feedback remain the major gaps.
 
 | Target area | Current repository state | Gap | Priority |
 |---|---|---|---|
 | Repository consolidation | One runnable Blazor host, four source projects, one test project, and Analytics/Governance as platform modules. | No major consolidation gap. | Closed |
-| Product framing and identity | Central architecture and docs define the full-cycle security analytics platform, while the design-system rules are DZNS-first for hero, CTA, and dark featured treatment. | Decide whether the shipped app is branded as DZNS, DeltaZulu Platform, or an internal DeltaZulu platform, then align names, hero language, CTAs, and dark-surface treatment. | High |
-| Module separation | Analytics and Governance are separate responsibility areas inside one host. Operations is defined as a target responsibility area. | `OperationsModule`, `/operations` routes, and Operations pages are not implemented, so alert queues, operational dashboards, investigation drawers, and monitoring flows cannot validate the target design. | High |
+| Product framing| Module separation | Analytics and Governance are separate responsibility areas inside one host. Operations is defined as a target responsibility area. | `OperationsModule`, `/operations` routes, and Operations pages are not implemented, so alert queues, operational dashboards, investigation drawers, and monitoring flows cannot validate the target design. | High |
 | Analytics module | `/analytics` exposes the consolidated analytics workbench, library, dashboards, schema, and visual surfaces. | Threat-hunting workflow, evidence workflow, curated analytics, and alert/candidate analytical pivots are still target surfaces. | Medium |
 | Shared analytics execution | Current query execution is still too UI-shaped around the Web query service and DuckDB runtime coordination. | Add an Application-layer `IAnalyticsQueryExecutor` with `ExecutionPurpose` policies for interactive, dashboard, validation, scheduled detection, and recovery paths. | Critical |
 | Query history vs curated analytics | Saved query history exists. | Add `CuratedAnalytic` semantics: purpose, expected shape, required views/fields, entity mappings, risk/severity/confidence hints, false-positive notes, and promotion metadata. | High |
