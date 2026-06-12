@@ -3,6 +3,7 @@ using DeltaZulu.Platform.Application.Analytics.Catalog;
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Data.Analytics;
+using DeltaZulu.Platform.Data.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Analytics.QueryHistory;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 using DeltaZulu.Platform.Tests.Analytics.Fixtures;
@@ -42,7 +43,7 @@ public sealed class QueryServiceDataOnlyTests
     public async Task ExecuteDataOnlyAsync_PureKql_SucceedsAndRecordsHistory()
     {
         var history = new InMemoryQueryHistoryRepository();
-        using var service = CreateService(history);
+        var service = CreateService(history);
 
         var result = await service.ExecuteDataOnlyAsync("ProcessEvent | project DeviceName | take 2", TestContext.CancellationToken);
 
@@ -57,7 +58,7 @@ public sealed class QueryServiceDataOnlyTests
     public async Task ExecuteDataOnlyAsync_RenderDirective_IsNotStripped()
     {
         var history = new InMemoryQueryHistoryRepository();
-        using var service = CreateService(history);
+        var service = CreateService(history);
         const string query = "ProcessEvent | take 1 | render barchart";
 
         var result = await service.ExecuteDataOnlyAsync(query, TestContext.CancellationToken);
@@ -73,7 +74,7 @@ public sealed class QueryServiceDataOnlyTests
     public async Task ExecuteAsync_RenderDirective_IsNoLongerStripped()
     {
         var history = new InMemoryQueryHistoryRepository();
-        using var service = CreateService(history);
+        var service = CreateService(history);
         const string query = "ProcessEvent | summarize LaunchCount = count() by DeviceName | render barchart xcolumn=DeviceName ycolumns=LaunchCount";
 
         var result = await service.ExecuteAsync(query, TestContext.CancellationToken);
@@ -86,7 +87,7 @@ public sealed class QueryServiceDataOnlyTests
 
     private static QueryService CreateService(IQueryHistoryRepository history)
         => new(
-            _runtime,
+            new AnalyticsQueryExecutor(_runtime, NullLogger<AnalyticsQueryExecutor>.Instance),
             NullLogger<QueryService>.Instance,
             history);
 

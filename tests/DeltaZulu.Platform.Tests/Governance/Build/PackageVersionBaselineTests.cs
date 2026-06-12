@@ -62,7 +62,7 @@ public sealed class PackageVersionBaselineTests
     {
         var repoRoot = FindRepositoryRoot();
         var buildPropsPath = Path.Combine(repoRoot.FullName, "Directory.Build.props");
-        var ciWorkflowPath = Path.Combine(repoRoot.FullName, "docs", "modules", "workbench", "repository", ".github", "workflows", "workbench-ci.yml");
+        var ciWorkflowPath = Path.Combine(repoRoot.FullName, ".github", "workflows", "platform-unit-tests.yml");
 
         var buildProps = XDocument.Load(buildPropsPath);
         var restorePackagesWithLockFile = buildProps.Descendants("RestorePackagesWithLockFile")
@@ -72,7 +72,7 @@ public sealed class PackageVersionBaselineTests
         Assert.AreEqual("true", restorePackagesWithLockFile, "Directory.Build.props must require package lock files for every project.");
 
         var ciWorkflow = File.ReadAllText(ciWorkflowPath);
-        Assert.Contains("dotnet restore DeltaZulu.Platform.slnx --locked-mode", ciWorkflow);
+        Assert.Contains("dotnet restore ${{ env.SOLUTION_FILE }} --locked-mode", ciWorkflow);
     }
 
     [TestMethod]

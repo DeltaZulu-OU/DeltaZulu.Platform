@@ -36,7 +36,7 @@ The repository is aligned with the revised target at the documentation and conso
 | Repository consolidation | One runnable Blazor host, four source projects, one test project, and Analytics/Governance as platform modules. | No major consolidation gap. | Closed |
 | Product framing| Module separation | Analytics and Governance are separate responsibility areas inside one host. Operations is defined as a target responsibility area. | `OperationsModule`, `/operations` routes, and Operations pages are not implemented, so alert queues, operational dashboards, investigation drawers, and monitoring flows cannot validate the target design. | High |
 | Analytics module | `/analytics` exposes the consolidated analytics workbench, library, dashboards, schema, and visual surfaces. | Threat-hunting workflow, evidence workflow, curated analytics, and alert/candidate analytical pivots are still target surfaces. | Medium |
-| Shared analytics execution | Current query execution is still too UI-shaped around the Web query service and DuckDB runtime coordination. | Add an Application-layer `IAnalyticsQueryExecutor` with `ExecutionPurpose` policies for interactive, dashboard, validation, scheduled detection, and recovery paths. | Critical |
+| Shared analytics execution | Application-layer `IAnalyticsQueryExecutor` and `ExecutionPurpose` policies exist; interactive and dashboard data-only execution route through the shared DuckDB executor while query-history recording stays in the Web adapter. | Move Governance validation dry-runs, scheduled detections, and recovery callers onto the same contract and complete boundary tests. | Critical |
 | Query history vs curated analytics | Saved query history exists. | Add `CuratedAnalytic` semantics: purpose, expected shape, required views/fields, entity mappings, risk/severity/confidence hints, false-positive notes, and promotion metadata. | High |
 | Executable detection projection | Detection records are scaffolded with useful metadata fields. | Add accepted-version identity, lookback policy, alert materialization mode, explicit entity mapping contract, projection pipeline, and operational overrides. | Critical |
 | Scheduled detection execution | Schedule metadata is scaffolded. | No scheduler, hosted service, Elsa scheduled workflow, manual run service, due selector, execution-window calculator, or run lifecycle service. | Critical |
@@ -104,7 +104,7 @@ Last assessed: 2026-06-12.
 |---:|---|---|
 | 1 | **Complete** | `AnalyticsModule` routes under `/analytics`; threat hunting is a sub-item under Analytics. |
 | 1A | **In progress** | Product identity is documented as DeltaZulu Platform; structural radius aliases and Mud defaults now use the sharp binary radius model; global product `h1` typography uses IBM Plex Sans; shared stylesheet audit coverage prevents legacy alias leakage outside the quarantined Analytics CSS. Remaining gaps: orange usage review, Analytics alias removal/quarantine cleanup, canonical dashboard/evidence primitives, Operations placeholders, and broader audit rules. |
-| 2 | **Not started** | No shared executor contract or `ExecutionPurpose` enum. Current execution remains too Web/UI-shaped around query materialization, interactive result limits, and query history concerns. |
+| 2 | **In progress** | Application-layer `ExecutionPurpose`, `AnalyticsQueryRequest`, `AnalyticsQueryResult`, and `IAnalyticsQueryExecutor` now exist. DuckDB execution and single-connection serialization have moved behind `AnalyticsQueryExecutor`; interactive Analytics and dashboard data-only execution call it through the Web adapter while preserving query-history behavior. Remaining gaps: Governance validation dry-runs, scheduled-detection/recovery callers, and stronger boundary tests for all non-UI callers. |
 | 3 | **Not started** | Only `SavedQueryRecord` exists; no `CuratedAnalytic` type with purpose, entity mappings, or severity/confidence hints. |
 | 4 | **Scaffolded** | `DetectionRecord` exists but lacks `LookbackPolicy`, `AlertMaterializationMode`, `AcceptedVersionId`. No projection pipeline from governance acceptance. |
 | 5 | **Scaffolded** | Domain records and SQLite Dapper repositories exist under `Analytics/` namespace. Missing key fields on `AlertRecord` (evidence hash, materialization key, rule hash, suppression) and `DetectionRunRecord` (alert count, lookback window). `IIncidentRepository` and `ICandidateDecisionRepository` have no SQLite implementations. |
@@ -139,10 +139,10 @@ The current roadmap position makes **Phase 1A and Phase 2 the immediate next pha
 3. Continue quarantining or removing legacy `--hunt-*`, `--bg-*`, and `--text-*` aliases; review orange usage so it remains action-only.
 4. Define canonical dashboard/table/state primitives and upgrade `DzQueryResultTable` toward evidence-grade metadata and degraded/overflow states.
 5. Expand design-system audit coverage for color literals, `Color.Primary`, raw Mud component divergence, and remaining legacy classes/variables.
-6. Add an `ExecutionPurpose` model and shared `IAnalyticsQueryExecutor` service interface in the application layer.
-7. Refactor interactive Analytics and dashboard execution onto that executor while preserving UI-safe result limits and query-history behavior in the Web adapter.
+6. ~~Add an `ExecutionPurpose` model and shared `IAnalyticsQueryExecutor` service interface in the application layer.~~ Done with application-layer execution request/result contracts.
+7. ~~Refactor interactive Analytics and dashboard execution onto that executor while preserving UI-safe result limits and query-history behavior in the Web adapter.~~ Done for `QueryService` and dashboard data-only execution.
 8. Move Governance validation dry-runs onto the same executor with validation-specific policy and diagnostics.
-9. Add architecture-boundary tests proving callers use the shared service and that UI code remains behind application contracts.
+9. Continue architecture-boundary tests proving callers use the shared service and that UI code remains behind application contracts.
 10. Split saved query history from curated analytic definitions with an explicit migration and persistence tests.
 11. Draft the executable detection projection contract before adding any scheduled runner code.
 

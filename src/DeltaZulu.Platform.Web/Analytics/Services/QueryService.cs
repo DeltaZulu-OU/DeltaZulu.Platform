@@ -1,42 +1,37 @@
 
-using DeltaZulu.Platform.Data.DuckDb;
+using DeltaZulu.Platform.Application.Analytics.Execution;
 using DeltaZulu.Platform.Data.Analytics;
+using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Analytics.QueryHistory;
 using DeltaZulu.Platform.Web.Analytics.Rendering;
-using DuckDB.NET.Data;
 
 namespace DeltaZulu.Platform.Web.Analytics.Services;
 /// <summary>
 /// <para>
-/// Wraps QueryRuntime with a SemaphoreSlim to serialize DuckDB access
-/// across concurrent Blazor Server circuits.
+/// Adapts the shared application-layer analytics executor for Blazor callers.
 /// </para>
 /// <para>
-/// The single-connection MVP model is correct but not concurrent-safe.
-/// All query execution goes through this service so the serialization
-/// point is explicit and named, not implicit.
+/// Query execution policy and DuckDB serialization live behind
+/// <see cref="IAnalyticsQueryExecutor" />. This web adapter keeps UI result
+/// shape compatibility and records query history.
 /// </para>
 /// </summary>
-public sealed partial class QueryService : IDataOnlyQueryService, IDisposable
+public sealed partial class QueryService : IDataOnlyQueryService
 {
-    private const int MaxMaterializedRows = 2000;
+    private readonly IAnalyticsQueryExecutor _executor;
     private readonly ILogger<QueryService> _logger;
     private readonly IQueryHistoryRepository _queryHistory;
-    private readonly QueryRuntime _runtime;
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
 
     public QueryService(
-        QueryRuntime runtime,
+        IAnalyticsQueryExecutor executor,
         ILogger<QueryService> logger,
         IQueryHistoryRepository queryHistory)
     {
-        _runtime = runtime;
-        _logger = logger;
-        _queryHistory = queryHistory;
+        _executor = executor ?? throw new ArgumentNullException(nameof(executor));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _queryHistory = queryHistory ?? throw new ArgumentNullException(nameof(queryHistory));
     }
-
-    public void Dispose() => _semaphore.Dispose();
 
     /// <summary>
     /// Execute a KQL query through the standard data path.
@@ -45,7 +40,7 @@ public sealed partial class QueryService : IDataOnlyQueryService, IDisposable
     public Task<QueryResult> ExecuteAsync(
         string kql,
         CancellationToken ct = default)
-        => ExecuteCoreAsync(kql, _runtime.ExecuteStreamed, ct);
+        => ExecuteCoreAsync(kql, ExecutionPurpose.Interactive, ct);
 
     /// <summary>
     /// Execute a KQL query as data only. This path deliberately does not strip or
@@ -55,133 +50,54 @@ public sealed partial class QueryService : IDataOnlyQueryService, IDisposable
     public Task<QueryResult> ExecuteDataOnlyAsync(
         string kql,
         CancellationToken ct = default)
-        => ExecuteCoreAsync(kql, _runtime.ExecuteStreamedDataOnly, ct);
+        => ExecuteCoreAsync(kql, ExecutionPurpose.Dashboard, ct);
 
-    private static List<object?>[] CreateColumnData(int count)
+    private static QueryResult ToQueryResult(AnalyticsQueryResult result)
     {
-        var columns = new List<object?>[count];
-        for (var i = 0; i < count; i++)
+        if (!result.Success)
         {
-            columns[i] = [];
+            return QueryResult.FromDiagnostics(
+                result.Diagnostics,
+                result.DebugTrace.Count > 0 ? [.. result.DebugTrace] : null);
         }
 
-        return columns;
+        var columnData = new List<object?>[result.ColumnData.Count];
+        for (var i = 0; i < result.ColumnData.Count; i++)
+        {
+            columnData[i] = [.. result.ColumnData[i]];
+        }
+
+        return QueryResult.FromData(
+            [.. result.Columns.Select(static c => new ResultColumn(c.Name, c.TypeName))],
+            columnData,
+            result.GeneratedSql,
+            result.PlannerStatsJson,
+            result.SqlShapeStatsJson,
+            result.DebugTrace.Count > 0 ? [.. result.DebugTrace] : null,
+            result.Diagnostics);
     }
 
     /// <summary>
-    /// Execute a KQL query. Serializes access to the single DuckDB connection.
-    /// Cancellation token is respected for the wait; query execution itself uses
-    /// the runtime's configured timeout.
+    /// Execute a KQL query through the shared application-layer executor and
+    /// preserve web-specific query-history behavior in this adapter.
     /// </summary>
     private async Task<QueryResult> ExecuteCoreAsync(
         string kql,
-        Func<string, Func<DuckDBDataReader, bool>, QueryStreamResult> execute,
+        ExecutionPurpose purpose,
         CancellationToken ct)
     {
-        // The cancellation token cancels the wait for the connection only. If the
-        // wait is cancelled we never acquired the semaphore, so there is nothing to
-        // release — return a diagnostic without entering the protected region.
-        try
-        {
-            await _semaphore.WaitAsync(ct);
-        }
-        catch (OperationCanceledException)
-        {
-            var bag = new DiagnosticBag();
-            bag.AddError(DiagnosticPhase.Execute,
-                "Query was cancelled before execution started.");
-            return QueryResult.FromDiagnostics(bag);
-        }
-
         var startedAt = DateTime.UtcNow;
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
-        try
-        {
-            // Deliberately NOT passing ct to Task.Run: cancelling it would abandon
-            // the task and release the semaphore while the DuckDB delegate is still
-            // running on the single shared connection, letting a second query in
-            // concurrently. A started query runs to completion (or its own
-            // CommandTimeout); the semaphore is released only once it truly ends.
-            List<object?>[]? columnData = null;
-            var rowCount = 0;
-            var streamResult = await Task.Run(() => execute(kql, reader => {
-                if (rowCount >= MaxMaterializedRows)
-                {
-                    return false;
-                }
+        var executionResult = await _executor.ExecuteAsync(
+            new AnalyticsQueryRequest(kql, purpose),
+            ct);
+        var result = ToQueryResult(executionResult);
 
-                columnData ??= CreateColumnData(reader.FieldCount);
-                for (var i = 0; i < reader.FieldCount; i++)
-                {
-                    columnData[i].Add(DuckDbValueReader.ReadValue(reader, i));
-                }
+        sw.Stop();
+        await RecordQueryHistoryAsync(kql, startedAt, sw.ElapsedMilliseconds, result, ct);
 
-                rowCount++;
-                return true;
-            }));
-
-            QueryResult result;
-            if (!streamResult.Success)
-            {
-                LogQueryFailed(
-                    kql,
-                    streamResult.GeneratedSql,
-                    string.Join(" | ", streamResult.Diagnostics.All.Select(d => d.Message)),
-                    string.Join(" | ", streamResult.DebugTrace));
-
-                result = QueryResult.FromDiagnostics(
-                    streamResult.Diagnostics,
-                    streamResult.DebugTrace.Count > 0 ? [.. streamResult.DebugTrace] : null);
-            }
-            else
-            {
-                var trace = streamResult.DebugTrace.Count > 0 ? new List<string>(streamResult.DebugTrace) : [];
-                if (streamResult.RowCount > rowCount)
-                {
-                    trace.Add($"Materialization truncated at {MaxMaterializedRows} rows for UI safety.");
-                }
-
-                result = QueryResult.FromData(
-                    [.. streamResult.Columns],
-                    columnData ?? CreateColumnData(streamResult.Columns.Count),
-                    streamResult.GeneratedSql,
-                    streamResult.PlannerStatsJson,
-                    streamResult.SqlShapeStatsJson,
-                    trace,
-                    streamResult.Diagnostics);
-            }
-
-            if (result.DebugTrace.Count > 0)
-            {
-                LogQueryDebugTrace(
-                    result.DebugTrace.Count,
-                    result.Success,
-                    string.Join(" | ", result.DebugTrace));
-            }
-
-            sw.Stop();
-            await RecordQueryHistoryAsync(kql, startedAt, sw.ElapsedMilliseconds, result, ct);
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            LogUnhandledKqlError(ex, kql);
-            var bag = new DiagnosticBag();
-            bag.AddError(DiagnosticPhase.Execute,
-                "An unexpected error occurred. Check application logs.");
-
-            var result = QueryResult.FromDiagnostics(bag);
-            sw.Stop();
-            await RecordQueryHistoryAsync(kql, startedAt, sw.ElapsedMilliseconds, result, ct);
-
-            return result;
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
+        return result;
     }
 
     private async Task RecordQueryHistoryAsync(
@@ -217,18 +133,6 @@ public sealed partial class QueryService : IDataOnlyQueryService, IDisposable
             LogQueryHistoryFailure(ex);
         }
     }
-
-    [LoggerMessage(EventId = 1, Level = LogLevel.Warning,
-        Message = "Query failed. KQL: {Kql}. SQL: {GeneratedSql}. Diagnostics: {Diagnostics}. Trace: {Trace}")]
-    private partial void LogQueryFailed(string kql, string? generatedSql, string diagnostics, string trace);
-
-    [LoggerMessage(EventId = 2, Level = LogLevel.Debug,
-        Message = "Query debug trace ({TraceCount} events, success={Success}): {DebugTrace}")]
-    private partial void LogQueryDebugTrace(int traceCount, bool success, string debugTrace);
-
-    [LoggerMessage(EventId = 3, Level = LogLevel.Error,
-        Message = "Unhandled error executing KQL: {Kql}")]
-    private partial void LogUnhandledKqlError(Exception ex, string kql);
 
     [LoggerMessage(EventId = 4, Level = LogLevel.Warning,
         Message = "Failed to record query history.")]

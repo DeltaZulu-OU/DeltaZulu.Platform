@@ -1,8 +1,10 @@
 
 using DeltaZulu.Platform.Application.Analytics.Catalog;
+using DeltaZulu.Platform.Application.Analytics.Execution;
 using DeltaZulu.Platform.Application.Analytics.Validation;
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Analytics;
+using DeltaZulu.Platform.Data.Analytics.Execution;
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
@@ -62,6 +64,7 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
             timeoutSeconds: options.TimeoutSeconds,
             developerMode: options.DeveloperMode,
             plannerMaxIterations: options.PlannerMaxIterations));
+        services.AddSingleton<IAnalyticsQueryExecutor, AnalyticsQueryExecutor>();
         services.AddSingleton<QueryService>();
 
         return services;
