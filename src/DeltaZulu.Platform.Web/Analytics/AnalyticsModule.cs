@@ -17,8 +17,7 @@ public sealed class AnalyticsModule : IPlatformModule
 
     public IReadOnlyList<DzNavItem> NavigationItems { get; } =
     [
-        new("Analytics Workbench", "/analytics/workbench", Icons.Material.Outlined.Search),
-        new("Threat Hunting", "/analytics/threat-hunting", Icons.Material.Outlined.TravelExplore),
+        new("Analytics", "/analytics", Icons.Material.Outlined.Search, NavLinkMatch.All),
         new("Library", "/analytics/library", Icons.Material.Outlined.LibraryBooks),
         new("Dashboards", "/analytics/dashboards", Icons.Material.Outlined.Dashboard),
     ];

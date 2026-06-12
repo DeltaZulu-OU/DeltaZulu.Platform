@@ -63,8 +63,7 @@
         get
         {
             var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/');
-            return string.Equals(relativePath, "analytics/workbench", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(relativePath, "analytics/threat-hunting", StringComparison.OrdinalIgnoreCase);
+            return string.Equals(relativePath, "analytics", StringComparison.OrdinalIgnoreCase);
         }
     }
 

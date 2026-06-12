@@ -111,7 +111,7 @@ public sealed class LibraryPageController
             | project Timestamp, DeviceName, AccountName, ProcessCommandLine
             | take 50
             """);
-        _navigation.NavigateTo("/analytics/workbench");
+        _navigation.NavigateTo("/analytics");
     }
 
     public void CreateVisualization()
@@ -123,7 +123,7 @@ public sealed class LibraryPageController
             | summarize Count = count() by AccountName
             | render barchart xcolumn=AccountName ycolumns=Count title='Events by account'
             """);
-        _navigation.NavigateTo("/analytics/workbench");
+        _navigation.NavigateTo("/analytics");
     }
 
     public void CreateDashboard()
@@ -207,7 +207,7 @@ public sealed class LibraryPageController
         }
 
         _editorBus.RequestInsert(queryText);
-        _navigation.NavigateTo("/analytics/workbench");
+        _navigation.NavigateTo("/analytics");
     }
 
     private async Task OpenVisualizationAsync(string id, CancellationToken cancellationToken)
@@ -220,6 +220,6 @@ public sealed class LibraryPageController
         }
 
         _editorBus.RequestInsert(queryText);
-        _navigation.NavigateTo("/analytics/workbench");
+        _navigation.NavigateTo("/analytics");
     }
 }

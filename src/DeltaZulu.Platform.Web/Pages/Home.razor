@@ -7,7 +7,7 @@
               Title="Overview"
               Description="Start investigations, reuse analytical content, manage detections, and review operational work from one place.">
     <Actions>
-        <MudButton Href="/analytics/workbench" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Search">
+        <MudButton Href="/analytics" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Search">
             Open Analytics Workbench
         </MudButton>
         <MudButton Href="/governance/detections" Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" Class="ml-2" StartIcon="@Icons.Material.Outlined.Radar">
@@ -22,29 +22,13 @@
             <MudText Typo="Typo.body2" Class="text-secondary">
                 Run KQL queries against approved Golden schema views, inspect results, and save reusable queries.
             </MudText>
-            <MudButton Href="/analytics/workbench"
+            <MudButton Href="/analytics"
                        Variant="Variant.Outlined"
                        Color="Color.Secondary"
                        Size="Size.Small"
                        Class="mt-3"
                        StartIcon="@Icons.Material.Outlined.Search">
                 Open workbench
-            </MudButton>
-        </DzPanel>
-    </MudItem>
-
-    <MudItem xs="12" md="4">
-        <DzPanel Eyebrow="Analytics" Title="Threat Hunting" Elevation="0" Outlined="true" Class="dz-panel--full-height">
-            <MudText Typo="Typo.body2" Class="text-secondary">
-                Run hypothesis-driven investigations using the analytics workbench with structured hunting workflows.
-            </MudText>
-            <MudButton Href="/analytics/threat-hunting"
-                       Variant="Variant.Outlined"
-                       Color="Color.Secondary"
-                       Size="Size.Small"
-                       Class="mt-3"
-                       StartIcon="@Icons.Material.Outlined.TravelExplore">
-                Start a hunt
             </MudButton>
         </DzPanel>
     </MudItem>
