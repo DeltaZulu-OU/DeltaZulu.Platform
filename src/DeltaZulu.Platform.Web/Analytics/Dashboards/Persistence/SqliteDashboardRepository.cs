@@ -24,8 +24,7 @@ public sealed class SqliteDashboardRepository : IDashboardRepository, IDisposabl
     {
         await EnsureInitializedAsync(ct);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(ct);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(ct);
 
         var rows = await connection.QueryAsync<DashboardSummaryRow>(
             new CommandDefinition(DashboardStoreSql.List, cancellationToken: ct));
@@ -38,8 +37,7 @@ public sealed class SqliteDashboardRepository : IDashboardRepository, IDisposabl
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         await EnsureInitializedAsync(ct);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(ct);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(ct);
 
         var row = await connection.QuerySingleOrDefaultAsync<DashboardDefinitionRow>(
             new CommandDefinition(DashboardStoreSql.Get, new { Id = id }, cancellationToken: ct));
@@ -61,8 +59,7 @@ public sealed class SqliteDashboardRepository : IDashboardRepository, IDisposabl
 
         var definitionJson = JsonSerializer.Serialize(dashboard, JsonOptions);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(ct);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(ct);
 
         await connection.ExecuteAsync(new CommandDefinition(
             DashboardStoreSql.Upsert,
@@ -83,8 +80,7 @@ public sealed class SqliteDashboardRepository : IDashboardRepository, IDisposabl
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         await EnsureInitializedAsync(ct);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(ct);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(ct);
 
         await connection.ExecuteAsync(new CommandDefinition(
             DashboardStoreSql.Delete,
@@ -107,8 +103,7 @@ public sealed class SqliteDashboardRepository : IDashboardRepository, IDisposabl
                 return;
             }
 
-            await using var connection = _connectionFactory.CreateConnection();
-            await connection.OpenAsync(ct);
+            await using var connection = await _connectionFactory.OpenConnectionAsync(ct);
             await connection.ExecuteAsync(new CommandDefinition(DashboardStoreSql.CreateSchema, cancellationToken: ct));
             _initialized = true;
         }

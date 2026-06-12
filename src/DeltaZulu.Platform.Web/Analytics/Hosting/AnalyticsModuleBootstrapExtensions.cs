@@ -14,15 +14,15 @@ public static partial class AnalyticsModuleBootstrapExtensions
         ArgumentNullException.ThrowIfNull(app);
         ArgumentNullException.ThrowIfNull(options);
 
-        if (options.BootstrapDuckDbSchema)
-        {
-            await BootstrapSchemaAsync(app, options.SeedDevelopmentMedallionSources);
-        }
-
         if (options.BootstrapApplicationPersistence)
         {
             await app.Services.InitializeApplicationPersistenceAsync();
             LogPersistenceInitialized(app.Logger);
+        }
+
+        if (options.BootstrapDuckDbSchema)
+        {
+            await BootstrapSchemaAsync(app, options.SeedDevelopmentMedallionSources);
         }
     }
 

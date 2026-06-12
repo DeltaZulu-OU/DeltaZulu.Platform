@@ -221,8 +221,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
                 return;
             }
 
-            await using var connection = _connectionFactory.CreateConnection();
-            await connection.OpenAsync(cancellationToken);
+            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
             await connection.ExecuteAsync(new CommandDefinition(CreateSchemaSql, cancellationToken: cancellationToken));
             _initialized = true;
         }
@@ -236,8 +235,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<CandidateRow>(
             new CommandDefinition(ListSql, cancellationToken: cancellationToken));
@@ -251,8 +249,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<CandidateRow>(
             new CommandDefinition(ListByStatusSql, new { Status = status }, cancellationToken: cancellationToken));
@@ -267,8 +264,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<CandidateRow>(
             new CommandDefinition(ListByEntitySql, new { EntityType = entityType, EntityValue = entityValue }, cancellationToken: cancellationToken));
@@ -282,8 +278,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var row = await connection.QuerySingleOrDefaultAsync<CandidateRow>(
             new CommandDefinition(GetSql, new { Id = id }, cancellationToken: cancellationToken));
@@ -300,8 +295,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpsertSql,
@@ -332,8 +326,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpdateStatusSql,
@@ -356,8 +349,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         foreach (var link in links)
@@ -384,8 +376,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<CandidateAlertLink>(
             new CommandDefinition(ListAlertLinksSql, new { CandidateId = candidateId }, cancellationToken: cancellationToken));

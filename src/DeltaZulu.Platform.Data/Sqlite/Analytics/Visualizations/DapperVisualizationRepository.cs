@@ -133,8 +133,7 @@ public sealed class DapperVisualizationRepository : AppIVisualizationRepository,
                 return;
             }
 
-            await using var connection = _connectionFactory.CreateConnection();
-            await connection.OpenAsync(cancellationToken);
+            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
             await connection.ExecuteAsync(new CommandDefinition(CreateSchemaSql, cancellationToken: cancellationToken));
             _initialized = true;
         }
@@ -148,8 +147,7 @@ public sealed class DapperVisualizationRepository : AppIVisualizationRepository,
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<VisualizationRow>(
             new CommandDefinition(ListSql, cancellationToken: cancellationToken));
@@ -164,8 +162,7 @@ public sealed class DapperVisualizationRepository : AppIVisualizationRepository,
         ArgumentException.ThrowIfNullOrWhiteSpace(queryId);
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<VisualizationRow>(
             new CommandDefinition(ListByQuerySql, new { QueryId = queryId }, cancellationToken: cancellationToken));
@@ -178,8 +175,7 @@ public sealed class DapperVisualizationRepository : AppIVisualizationRepository,
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var row = await connection.QuerySingleOrDefaultAsync<VisualizationRow>(
             new CommandDefinition(GetSql, new { Id = id }, cancellationToken: cancellationToken));
@@ -198,8 +194,7 @@ public sealed class DapperVisualizationRepository : AppIVisualizationRepository,
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpsertSql,
@@ -221,8 +216,7 @@ public sealed class DapperVisualizationRepository : AppIVisualizationRepository,
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             DeleteSql,

@@ -88,8 +88,7 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
                 return;
             }
 
-            await using var connection = _connectionFactory.CreateConnection();
-            await connection.OpenAsync(cancellationToken);
+            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
             await connection.ExecuteAsync(new CommandDefinition(CreateSchemaSql, cancellationToken: cancellationToken));
             _initialized = true;
         }
@@ -110,8 +109,7 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<QueryHistoryRow>(
             new CommandDefinition(ListRecentSql, new { Limit = limit }, cancellationToken: cancellationToken));
@@ -127,8 +125,7 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             InsertSql,
@@ -148,8 +145,7 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(ClearSql, cancellationToken: cancellationToken));
     }

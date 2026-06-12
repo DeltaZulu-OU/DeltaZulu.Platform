@@ -117,8 +117,7 @@ public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IDis
                 return;
             }
 
-            await using var connection = _connectionFactory.CreateConnection();
-            await connection.OpenAsync(cancellationToken);
+            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
             await connection.ExecuteAsync(new CommandDefinition(CreateSchemaSql, cancellationToken: cancellationToken));
             _initialized = true;
         }
@@ -134,8 +133,7 @@ public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IDis
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<DetectionRunRow>(
             new CommandDefinition(ListByDetectionSql, new { DetectionId = detectionId }, cancellationToken: cancellationToken));
@@ -149,8 +147,7 @@ public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IDis
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var row = await connection.QuerySingleOrDefaultAsync<DetectionRunRow>(
             new CommandDefinition(GetSql, new { Id = id }, cancellationToken: cancellationToken));
@@ -168,8 +165,7 @@ public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IDis
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpsertSql,

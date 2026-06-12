@@ -66,8 +66,7 @@ public sealed class DapperCandidateEvidenceRepository : ICandidateEvidenceReposi
                 return;
             }
 
-            await using var connection = _connectionFactory.CreateConnection();
-            await connection.OpenAsync(cancellationToken);
+            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
             await connection.ExecuteAsync(new CommandDefinition(CreateSchemaSql, cancellationToken: cancellationToken));
             _initialized = true;
         }
@@ -83,8 +82,7 @@ public sealed class DapperCandidateEvidenceRepository : ICandidateEvidenceReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<EvidenceRow>(
             new CommandDefinition(ListByCandidateSql, new { CandidateId = candidateId }, cancellationToken: cancellationToken));
@@ -100,8 +98,7 @@ public sealed class DapperCandidateEvidenceRepository : ICandidateEvidenceReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         await ExecuteInsertAsync(connection, evidence, cancellationToken);
     }
@@ -117,8 +114,7 @@ public sealed class DapperCandidateEvidenceRepository : ICandidateEvidenceReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         foreach (var item in evidence)

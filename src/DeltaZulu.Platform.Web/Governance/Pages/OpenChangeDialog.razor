@@ -27,7 +27,7 @@
                 <MudSelect @bind-Value="_selectedDetectionId" Label="Detection" T="Guid?" Required="true" Class="mb-3">
                     @foreach (var detection in _detections)
                     {
-                        <MudSelectItem Value="@(detection.Id.Value)">
+                        <MudSelectItem T="Guid?" Value="@((Guid?)detection.Id.Value)">
                             @detection.Slug — @detection.Title
                         </MudSelectItem>
                     }

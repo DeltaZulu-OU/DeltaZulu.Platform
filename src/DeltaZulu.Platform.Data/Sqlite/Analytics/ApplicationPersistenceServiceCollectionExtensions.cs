@@ -32,6 +32,13 @@ public static class ApplicationPersistenceServiceCollectionExtensions
 
         services.AddSingleton<IAppDbConnectionFactory>(
             _ => new SqliteAppDbConnectionFactory(sqliteConnectionString));
+        AddApplicationRepositories(services);
+
+        return services;
+    }
+
+    private static void AddApplicationRepositories(IServiceCollection services)
+    {
         services.AddSingleton<IUserSettingsRepository, DapperUserSettingsRepository>();
         services.AddSingleton<ISavedQueryRepository, DapperSavedQueryRepository>();
         services.AddSingleton<IQueryHistoryRepository, DapperQueryHistoryRepository>();
@@ -42,8 +49,6 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         services.AddSingleton<IAlertEntityRepository, DapperAlertEntityRepository>();
         services.AddSingleton<IIncidentCandidateRepository, DapperIncidentCandidateRepository>();
         services.AddSingleton<ICandidateEvidenceRepository, DapperCandidateEvidenceRepository>();
-
-        return services;
     }
 
     public static async Task InitializeApplicationPersistenceAsync(
