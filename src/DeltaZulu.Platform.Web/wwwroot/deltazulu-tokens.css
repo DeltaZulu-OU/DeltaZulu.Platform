@@ -148,14 +148,22 @@
 
 /* ============================================================
    9. BORDER RADIUS SCALE
+
+   Product UI follows a binary radius model: structural surfaces are
+   sharp, action controls are pill-shaped, and explicitly opted-in
+   inputs/code affordances may use the tiny input radius. The legacy
+   size aliases intentionally resolve to the structural value so old
+   component CSS cannot reintroduce medium/large rounding.
    ============================================================ */
 :root {
-    --radius-xs: 10px;
-    --radius-sm: 12px;
-    --radius-md: 16px;
-    --radius-lg: 18px;
-    --radius-xl: 24px;
-    --radius-2xl: 28px;
+    --radius-structure: 0;
+    --radius-input: 4px;
+    --radius-xs: var(--radius-structure);
+    --radius-sm: var(--radius-structure);
+    --radius-md: var(--radius-structure);
+    --radius-lg: var(--radius-structure);
+    --radius-xl: var(--radius-structure);
+    --radius-2xl: var(--radius-structure);
     --radius-pill: 999px;
 }
 
@@ -252,14 +260,13 @@ body {
 
 .text-h1,
 h1 {
-    font-family: var(--font-family-display);
+    font-family: var(--font-family-sans);
     font-size: clamp(2rem, 5vw, var(--font-size-h1));
     line-height: var(--line-height-h1);
     letter-spacing: var(--letter-spacing-h1);
     font-weight: 600;
     color: var(--color-text-primary);
     margin-top: 0;
-    font-optical-sizing: auto;
 }
 
 .text-h2,

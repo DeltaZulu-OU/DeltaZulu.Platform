@@ -49,6 +49,7 @@ route boundary for the pending Operations module, not a separate deployable.
 | [`ROADMAP.md`](ROADMAP.md) | Current target state, implementation phases, and active priorities. |
 | [`TARGET_USER_STORIES.md`](TARGET_USER_STORIES.md) | Target product-level user stories for the full-cycle security analytics platform (US-01 through US-28). |
 | [`CONSOLIDATION_ROADMAP.md`](CONSOLIDATION_ROADMAP.md) | Completed consolidation record retained for audit/history. |
+| [`design/PRODUCT_IDENTITY.md`](design/PRODUCT_IDENTITY.md) | Product identity and binding UI language/design rules for Phase 1A. |
 
 ## Domain-specific retained documents
 

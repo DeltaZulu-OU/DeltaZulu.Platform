@@ -191,7 +191,7 @@ public static class DeltaZuluTheme
 
         LayoutProperties = new LayoutProperties
         {
-            DefaultBorderRadius = "12px",
+            DefaultBorderRadius = "0px",
             DrawerWidthLeft = "260px",
         },
 

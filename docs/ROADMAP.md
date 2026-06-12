@@ -107,7 +107,7 @@ Last assessed: 2026-06-12.
 | Phase | Status | Notes |
 |---:|---|---|
 | 1 | **Complete** | `AnalyticsModule` routes under `/analytics`; threat hunting is a sub-item under Analytics. |
-| 1A | **Not started** | Design-system enforcement gaps remain: unresolved DZNS/DeltaZulu Platform identity, medium radius tokens/defaults, global `h1` Newsreader risk, orange-as-primary drift, legacy `hunt`/`bg`/`text` aliases, incomplete dashboard primitives, and no audit script. |
+| 1A | **In progress** | Product identity is documented as DeltaZulu Platform; structural radius aliases and Mud defaults now use the sharp binary radius model; global product `h1` typography uses IBM Plex Sans; shared stylesheet audit coverage prevents legacy alias leakage outside the quarantined Analytics CSS. Remaining gaps: orange usage review, Analytics alias removal/quarantine cleanup, canonical dashboard/evidence primitives, Operations placeholders, and broader audit rules. |
 | 2 | **Not started** | No shared executor contract or `ExecutionPurpose` enum. Current execution remains too Web/UI-shaped around query materialization, interactive result limits, and query history concerns. |
 | 3 | **Not started** | Only `SavedQueryRecord` exists; no `CuratedAnalytic` type with purpose, entity mappings, or severity/confidence hints. |
 | 4 | **Scaffolded** | `DetectionRecord` exists but lacks `LookbackPolicy`, `AlertMaterializationMode`, `AcceptedVersionId`. No projection pipeline from governance acceptance. |
@@ -138,11 +138,11 @@ The current roadmap position makes **Phase 1A and Phase 2 the immediate next pha
 
 ### Immediate execution backlog
 
-1. Decide and document product identity across DZNS, DeltaZulu Platform, and internal DeltaZulu platform language.
-2. Replace medium structural radius tokens/Mud defaults with the binary radius model and scope Newsreader away from product UI headings.
-3. Quarantine or remove legacy `--hunt-*`, `--bg-*`, and `--text-*` aliases; review orange usage so it remains action-only.
+1. ~~Decide and document product identity across DZNS, DeltaZulu Platform, and internal DeltaZulu platform language.~~ Done in `docs/design/PRODUCT_IDENTITY.md`.
+2. ~~Replace medium structural radius tokens/Mud defaults with the binary radius model and scope Newsreader away from product UI headings.~~ Structural tokens, Mud defaults, and global product `h1` typography are enforced.
+3. Continue quarantining or removing legacy `--hunt-*`, `--bg-*`, and `--text-*` aliases; review orange usage so it remains action-only.
 4. Define canonical dashboard/table/state primitives and upgrade `DzQueryResultTable` toward evidence-grade metadata and degraded/overflow states.
-5. Add a design-system audit script for color literals, radius usage, `Color.Primary`, Newsreader/font-family-display leakage, legacy aliases/classes, and raw Mud component divergence.
+5. Expand design-system audit coverage for color literals, `Color.Primary`, raw Mud component divergence, and remaining legacy classes/variables.
 6. Add an `ExecutionPurpose` model and shared `IAnalyticsQueryExecutor` service interface in the application layer.
 7. Refactor interactive Analytics and dashboard execution onto that executor while preserving UI-safe result limits and query-history behavior in the Web adapter.
 8. Move Governance validation dry-runs onto the same executor with validation-specific policy and diagnostics.
