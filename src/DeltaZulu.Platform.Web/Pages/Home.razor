@@ -1,11 +1,11 @@
 @page "/"
 @using MudBlazor
 
-<PageTitle>DeltaZulu Platform Overview</PageTitle>
+<PageTitle>DeltaZulu Platform — Overview</PageTitle>
 
 <DzPageHeader Eyebrow="Full-cycle security analytics"
               Title="Overview"
-              Description="Start analytics, manage detection content, and review operational work from one place.">
+              Description="Start investigations, reuse analytical content, manage detections, and review operational work from one place.">
     <Actions>
         <MudButton Href="/analytics/workbench" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Search">
             Open Analytics Workbench
@@ -18,17 +18,49 @@
 
 <MudGrid Spacing="3">
     <MudItem xs="12" md="4">
-        <DzPanel Eyebrow="Analytics" Title="Analytics" Elevation="0" Outlined="true" Class="dz-panel--full-height">
+        <DzPanel Eyebrow="Analytics" Title="Analytics Workbench" Elevation="0" Outlined="true" Class="dz-panel--full-height">
             <MudText Typo="Typo.body2" Class="text-secondary">
-                Run KQL against approved Golden schema views, inspect results, build dashboards, and reuse saved queries.
+                Run KQL queries against approved Golden schema views, inspect results, and save reusable queries.
             </MudText>
-            <MudButton Href="/analytics"
+            <MudButton Href="/analytics/workbench"
                        Variant="Variant.Outlined"
                        Color="Color.Secondary"
                        Size="Size.Small"
                        Class="mt-3"
-                       StartIcon="@Icons.Material.Outlined.Insights">
-                Open analytics
+                       StartIcon="@Icons.Material.Outlined.Search">
+                Open workbench
+            </MudButton>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="Analytics" Title="Threat Hunting" Elevation="0" Outlined="true" Class="dz-panel--full-height">
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                Run hypothesis-driven investigations using the analytics workbench with structured hunting workflows.
+            </MudText>
+            <MudButton Href="/analytics/threat-hunting"
+                       Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Size="Size.Small"
+                       Class="mt-3"
+                       StartIcon="@Icons.Material.Outlined.TravelExplore">
+                Start a hunt
+            </MudButton>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="Analytics" Title="Library" Elevation="0" Outlined="true" Class="dz-panel--full-height">
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                Browse saved queries, visualizations, and reusable analytical artifacts.
+            </MudText>
+            <MudButton Href="/analytics/library"
+                       Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Size="Size.Small"
+                       Class="mt-3"
+                       StartIcon="@Icons.Material.Outlined.LibraryBooks">
+                Open library
             </MudButton>
         </DzPanel>
     </MudItem>
@@ -36,7 +68,7 @@
     <MudItem xs="12" md="4">
         <DzPanel Eyebrow="Analytics" Title="Dashboards" Elevation="0" Outlined="true" Class="dz-panel--full-height">
             <MudText Typo="Typo.body2" Class="text-secondary">
-                Compose persisted table and chart widgets on top of the same render-aware query runtime.
+                Compose persisted table and chart widgets on top of the same query runtime.
             </MudText>
             <MudButton Href="/analytics/dashboards"
                        Variant="Variant.Outlined"
