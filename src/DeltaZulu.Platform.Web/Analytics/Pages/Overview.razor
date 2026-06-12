@@ -1,34 +1,7 @@
 @page "/analytics"
 @namespace DeltaZulu.Platform.Web.Analytics.Pages
-@using MudBlazor
+@inject NavigationManager Navigation
 
-<DzPageHeader Eyebrow="KQL-on-DuckDB Security Analytics"
-              Title="Overview"
-              Description="Run KQL against approved schema views, inspect results, and compose persistent dashboards.">
-    <Actions>
-        <MudButton Href="/analytics/threat-hunting" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small">
-            Open Threat Analytics
-        </MudButton>
-        <MudButton Href="/analytics/dashboards" Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" Class="ml-2">
-            View Dashboards
-        </MudButton>
-    </Actions>
-</DzPageHeader>
-
-<MudGrid Spacing="3">
-    <MudItem xs="12" md="4">
-        <DzPanel Title="Threat Analytics" Elevation="0" Outlined="true" Class="dz-panel--full-height">
-            Run KQL against approved Golden schema views, inspect generated results, and reuse saved or sample queries.
-        </DzPanel>
-    </MudItem>
-    <MudItem xs="12" md="4">
-        <DzPanel Title="Dashboards" Elevation="0" Outlined="true" Class="dz-panel--full-height">
-            Compose persisted table and chart widgets on top of the same render-aware query runtime.
-        </DzPanel>
-    </MudItem>
-    <MudItem xs="12" md="4">
-        <DzPanel Title="Settings" Elevation="0" Outlined="true" Class="dz-panel--full-height">
-            Configure query defaults and platform operational options.
-        </DzPanel>
-    </MudItem>
-</MudGrid>
+@code {
+    protected override void OnInitialized() => Navigation.NavigateTo("/", replace: true);
+}

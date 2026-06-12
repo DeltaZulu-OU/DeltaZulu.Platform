@@ -5,42 +5,45 @@
            ClipMode="@ClipMode"
            Elevation="@Elevation"
            Class="@DrawerClass">
-    @if (!string.IsNullOrWhiteSpace(Heading))
-    {
-        <div class="dz-shell-nav-heading">
-            <span class="eyebrow">@Heading</span>
-        </div>
-    }
-
-    @if (Header is not null)
-    {
-        <div class="dz-side-nav__header">
-            @Header
-        </div>
-    }
-
-    <MudNavMenu Class="dz-side-nav__menu">
-        @foreach (var item in Items)
+    <div class="dz-side-nav__content">
+        @if (!string.IsNullOrWhiteSpace(Heading))
         {
-            if (item.DividerBefore)
-            {
-                <MudDivider Class="my-3 mx-4 dz-nav-divider" />
-            }
-
-            <MudNavLink Href="@item.Href"
-                        Match="@item.Match"
-                        Icon="@item.Icon">
-                @item.Label
-            </MudNavLink>
+            <div class="dz-shell-nav-heading">
+                <span class="eyebrow">@Heading</span>
+            </div>
         }
-    </MudNavMenu>
 
-    @if (Footer is not null)
-    {
-        <div class="dz-side-nav__footer">
-            @Footer
-        </div>
-    }
+        @if (Header is not null)
+        {
+            <div class="dz-side-nav__header">
+                @Header
+            </div>
+        }
+
+        <MudNavMenu Class="dz-side-nav__menu">
+            @foreach (var item in Items)
+            {
+                if (item.DividerBefore)
+                {
+                    <MudDivider Class="my-3 mx-4 dz-nav-divider" />
+                }
+
+                <MudNavLink Href="@item.Href"
+                            Match="@item.Match"
+                            Icon="@item.Icon">
+                    @item.Label
+                </MudNavLink>
+            }
+        </MudNavMenu>
+
+        @if (Footer is not null)
+        {
+            <div class="dz-side-nav__spacer" aria-hidden="true"></div>
+            <div class="dz-side-nav__footer">
+                @Footer
+            </div>
+        }
+    </div>
 </MudDrawer>
 
 @code {

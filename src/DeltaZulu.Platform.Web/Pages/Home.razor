@@ -1,23 +1,115 @@
 @page "/"
-@using DeltaZulu.Platform.Web.Components
-@using DeltaZulu.Platform.Web.Platform
-@inject IEnumerable<IPlatformModule> Modules
+@using MudBlazor
 
-<PageTitle>DeltaZulu Platform</PageTitle>
+<PageTitle>DeltaZulu Platform Overview</PageTitle>
 
-<DzPageHeader Title="DeltaZulu Platform"
-              Description="Select a module to get started." />
+<DzPageHeader Eyebrow="Unified workbench"
+              Title="Overview"
+              Description="Start threat analytics, manage detection content, and review operational work from one place.">
+    <Actions>
+        <MudButton Href="/analytics/threat-hunting" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Search">
+            Open Threat Analytics
+        </MudButton>
+        <MudButton Href="/governance/detections" Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" Class="ml-2" StartIcon="@Icons.Material.Outlined.Radar">
+            Manage Detections
+        </MudButton>
+    </Actions>
+</DzPageHeader>
 
-<div class="platform-module-grid">
-    @foreach (var module in Modules.OrderBy(m => m.Descriptor.Order))
-    {
-        <a href="@module.Descriptor.RoutePrefix" class="platform-module-card">
-            <DzPanel Title="@module.Descriptor.DisplayName" Elevation="0" Outlined="true">
-                @if (!string.IsNullOrWhiteSpace(module.Descriptor.Badge))
-                {
-                    <DzStatusChip Label="@module.Descriptor.Badge" Tone="info" />
-                }
-            </DzPanel>
-        </a>
-    }
-</div>
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="Analytics" Title="Threat Analytics" Elevation="0" Outlined="true" Class="dz-panel--full-height">
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                Run KQL against approved Golden schema views, inspect generated results, and reuse saved or sample queries.
+            </MudText>
+            <MudButton Href="/analytics/threat-hunting"
+                       Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Size="Size.Small"
+                       Class="mt-3"
+                       StartIcon="@Icons.Material.Outlined.Search">
+                Open analytics
+            </MudButton>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="Analytics" Title="Dashboards" Elevation="0" Outlined="true" Class="dz-panel--full-height">
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                Compose persisted table and chart widgets on top of the same render-aware query runtime.
+            </MudText>
+            <MudButton Href="/analytics/dashboards"
+                       Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Size="Size.Small"
+                       Class="mt-3"
+                       StartIcon="@Icons.Material.Outlined.Dashboard">
+                View dashboards
+            </MudButton>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="Content" Title="Detections" Elevation="0" Outlined="true" Class="dz-panel--full-height">
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                Manage detection content packages and open changes.
+            </MudText>
+            <MudButton Href="/governance/detections"
+                       Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Size="Size.Small"
+                       Class="mt-3"
+                       StartIcon="@Icons.Material.Outlined.Radar">
+                Open detections
+            </MudButton>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="Workflow" Title="Changes" Elevation="0" Outlined="true" Class="dz-panel--full-height">
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                Review draft content, validation checks, approvals, and acceptance gates.
+            </MudText>
+            <MudButton Href="/governance/changes"
+                       Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Size="Size.Small"
+                       Class="mt-3"
+                       StartIcon="@Icons.Material.Outlined.Assignment">
+                Open changes
+            </MudButton>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="History" Title="Accepted versions" Elevation="0" Outlined="true" Class="dz-panel--full-height">
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                Compare accepted versions and restore previous content safely.
+            </MudText>
+            <MudButton Href="/governance/history"
+                       Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Size="Size.Small"
+                       Class="mt-3"
+                       StartIcon="@Icons.Material.Outlined.History">
+                Open history
+            </MudButton>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <DzPanel Eyebrow="Platform" Title="Settings" Elevation="0" Outlined="true" Class="dz-panel--full-height">
+            <MudText Typo="Typo.body2" Class="text-secondary">
+                Configure query defaults and platform operational options.
+            </MudText>
+            <MudButton Href="/settings"
+                       Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Size="Size.Small"
+                       Class="mt-3"
+                       StartIcon="@Icons.Material.Outlined.Settings">
+                Open settings
+            </MudButton>
+        </DzPanel>
+    </MudItem>
+</MudGrid>

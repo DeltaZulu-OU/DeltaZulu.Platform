@@ -15,7 +15,18 @@
               LogoSrc="img/logo-dark.png"
               OnMenuClick="@ToggleDrawer" />
 
-    <DzSideNav @bind-Open="_drawerOpen" Items="_navItems" Heading="Platform" />
+    <DzSideNav @bind-Open="_drawerOpen" Items="_navItems" Heading="Platform">
+        <Footer>
+            <MudDivider Class="my-3 mx-4 dz-nav-divider" />
+            <MudNavMenu Class="dz-side-nav__menu dz-side-nav__menu--footer">
+                <MudNavLink Href="@_settingsItem.Href"
+                            Match="@_settingsItem.Match"
+                            Icon="@_settingsItem.Icon">
+                    @_settingsItem.Label
+                </MudNavLink>
+            </MudNavMenu>
+        </Footer>
+    </DzSideNav>
 
     <DzMainContent Class="@ShellMainClass" MainContentClass="@MainContentClass">
         @Body
@@ -24,6 +35,8 @@
 
 @code {
     private static readonly MudTheme _theme = DeltaZuluTheme.Create();
+    private static readonly DzNavItem _overviewItem = new("Overview", "/", Icons.Material.Outlined.Home, NavLinkMatch.All, IsPlatformRoute: true);
+    private static readonly DzNavItem _settingsItem = new("Settings", "/settings", Icons.Material.Outlined.Settings, IsPlatformRoute: true);
     private bool _drawerOpen = true;
     private IReadOnlyList<IPlatformModule> _orderedModules = [];
     private IReadOnlyList<DzNavItem> _navItems = [];
@@ -31,10 +44,15 @@
     protected override void OnInitialized()
     {
         _orderedModules = Modules.OrderBy(m => m.Descriptor.Order).ToList();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        _navItems = _orderedModules
-            .SelectMany(m => m.NavigationItems)
-            .Where(item => !item.IsPlatformRoute || seen.Add(item.Href))
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            _overviewItem.Href,
+            _settingsItem.Href,
+        };
+
+        _navItems = new[] { _overviewItem }
+            .Concat(_orderedModules.SelectMany(m => m.NavigationItems)
+                .Where(item => !item.IsPlatformRoute && seen.Add(item.Href)))
             .ToList();
 
         Navigation.LocationChanged += OnLocationChanged;
