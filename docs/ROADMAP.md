@@ -59,6 +59,55 @@ dependency order.
 | 11 | Add candidate correlation | Explainable grouping over alert entities, windows, scoring factors, and evidence. Incident candidates with rationale and deterministic scoring. | US-24 |
 | 12 | Add triage feedback | Alert/candidate outcomes feed detection tuning, suppression adjustment, visibility gaps, and follow-up hunts. | US-25 |
 
+## Phase status
+
+Last assessed: 2026-06-12.
+
+| Phase | Status | Notes |
+|---:|---|---|
+| 1 | **Complete** | `AnalyticsModule` routes under `/analytics`; threat hunting is a sub-item under Analytics. |
+| 2 | **Not started** | No shared executor contract or `ExecutionPurpose` enum. Interactive queries, dashboards, and validation each call DuckDB independently. |
+| 3 | **Not started** | Only `SavedQueryRecord` exists; no `CuratedAnalytic` type with purpose, entity mappings, or severity/confidence hints. |
+| 4 | **Scaffolded** | `DetectionRecord` exists but lacks `LookbackPolicy`, `AlertMaterializationMode`, `AcceptedVersionId`. No projection pipeline from governance acceptance. |
+| 5 | **Scaffolded** | Domain records and SQLite Dapper repositories exist under `Analytics/` namespace. Missing key fields on `AlertRecord` (evidence hash, materialization key, rule hash, suppression) and `DetectionRunRecord` (alert count, lookback window). `IIncidentRepository` and `ICandidateDecisionRepository` have no SQLite implementations. |
+| 6 | **Not started** | `ScheduleCron` field exists on `DetectionRecord` but no runner, hosted service, or Elsa workflow. |
+| 7 | **Not started** | No materialization logic or mode dispatch. |
+| 8 | **Not started** | No approved KQL views for operations state. |
+| 9 | **Not started** | No `OperationsModule`, no `/operations` routes, no operations pages. |
+| 10 | **Not started** | `SuppressionPolicyJson` field only; no enrichment or suppression processing pipeline. |
+| 11 | **Not started** | `IncidentCandidateRecord` scoring fields exist; no correlation algorithm or service. |
+| 12 | **Not started** | Governance triage models (`Incident`, `CandidateDecision`) exist; no feedback loop to detection tuning. |
+
+### Module readiness
+
+| Module | Readiness | Summary |
+|---|---|---|
+| Analytics | Feature-rich | KQL translation at 70.6% coverage (226/320 constructs), schema browser, query history, saved queries, visualizations (ECharts), dashboards (full CRUD with chart/table/markdown widgets, layout, refresh, import/export), Monaco editor with schema-aware metadata. |
+| Governance | Mature | Change workflow (draft → validate → review → accept), five validation checks, review system with self-approval blocking, Git-backed accepted-content store, version history with compare/restore, merge reconciliation, Elsa workflow orchestrator abstraction, content library state machine. Full page set. |
+| Operations | Not started | Domain records and repositories exist under `Analytics/` namespace but no module, routes, pages, execution pipeline, or processing workflows. |
+
+### Phase dependency graph
+
+```text
+Consolidation (done)
+  └─ Phase 1: Rename product boundary (done)
+       └─ Phase 2: Deduplicate execution
+            ├─ Phase 3: Define curated analytics
+            │    └─ (feeds Phase 4 promotion readiness)
+            └─ Phase 4: Complete executable detection projection
+                 └─ Phase 5: Harden operations schema
+                      └─ Phase 6: Build scheduled detection runner
+                           └─ Phase 7: Materialize alerts
+                                ├─ Phase 8: Expose operations views
+                                ├─ Phase 9: Add alert UI
+                                └─ Phase 10: Add enrichment and suppression
+                                     └─ Phase 11: Add candidate correlation
+                                          └─ Phase 12: Add triage feedback
+```
+
+Phase 3 can be developed in parallel with Phases 4–5. Phases 8 and 9 can be developed in parallel
+once Phase 7 is complete. All other phases are strictly sequential.
+
 ## Active priorities
 
 These priorities apply across all phases and guide day-to-day work ordering:
