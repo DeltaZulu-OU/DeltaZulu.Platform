@@ -14,7 +14,7 @@ Repository consolidation is complete:
 
 ## Roadmap position assessment
 
-The platform is past repository consolidation and is now in the **post-consolidation POC hardening phase**. The remaining roadmap is not another merge or project split; it is the work needed to make the unified product dependable, demoable, and ready for larger domain expansion.
+The platform is past repository consolidation and is now in the **pre-Operations implementation phase**. The remaining roadmap is not another merge or project split; it is the work needed to cross the operational threshold: accepted detections must execute through a shared application-layer analytics contract, create traceable detection runs, materialize alerts/entities, expose approved KQL views, and feed enrichment, suppression, correlation, triage, and governance tuning loops.
 
 Evidence from the retained documentation and current tree:
 
@@ -22,7 +22,32 @@ Evidence from the retained documentation and current tree:
 - The central architecture is authoritative and supersedes imported module-era documents whenever they describe standalone Hunting or Workbench hosts.
 - Analytics has a working KQL-to-DuckDB contract, render/dashboard design, Golden-view query boundary, diagnostics-first unsupported behavior, and a construct-level checklist showing 226 MVP-ready or metadata-supported items out of 320 in-scope items, with 91 deferred and 3 deliberately blocked for semantic safety.
 - Governance has the core detection-content workflow shape in place: issues, detections, database-owned changes, checks, reviews, Git-backed accepted content, versions, compare/restore, and merge reconciliation. The retained Workbench roadmap still identifies the highest-value gaps as end-to-end UI hardening, richer workflow actions, merge-reconciliation guidance, stronger checks, and explicit persistence/read-model deferrals.
-- The next meaningful progress should therefore come from platform-level vertical slices that harden the user journeys and contracts already consolidated, not from recreating separate module projects.
+- The next meaningful progress should therefore come from a thin vertical Operations slice after one deduplication move: extract the shared analytics execution contract out of the Web-shaped query path instead of letting alerting call UI-oriented services directly.
+
+
+## Gap analysis snapshot
+
+The repository is aligned with the revised target at the documentation and consolidation level, but
+implementation is still mostly pre-Operations. Analytics and Governance are usable; scheduled detection
+execution, alert materialization, Operations views, alert UI, enrichment, suppression, candidate
+correlation, and triage feedback remain the major gaps.
+
+| Target area | Current repository state | Gap | Priority |
+|---|---|---|---|
+| Repository consolidation | One runnable Blazor host, four source projects, one test project, and Analytics/Governance as platform modules. | No major consolidation gap. | Closed |
+| Product framing | Central architecture and docs define the full-cycle security analytics platform. | Keep root and imported docs from leading with Hunting-first language. | Low |
+| Module separation | Analytics and Governance are separate responsibility areas inside one host. Operations is defined as a target responsibility area. | `OperationsModule`, `/operations` routes, and Operations pages are not implemented. | High |
+| Analytics module | `/analytics` exposes the consolidated analytics workbench, library, dashboards, schema, and visual surfaces. | Threat-hunting workflow, evidence workflow, curated analytics, and alert/candidate analytical pivots are still target surfaces. | Medium |
+| Shared analytics execution | Current query execution is still too UI-shaped around the Web query service and DuckDB runtime coordination. | Add an Application-layer `IAnalyticsQueryExecutor` with `ExecutionPurpose` policies for interactive, dashboard, validation, scheduled detection, and recovery paths. | Critical |
+| Query history vs curated analytics | Saved query history exists. | Add `CuratedAnalytic` semantics: purpose, expected shape, required views/fields, entity mappings, risk/severity/confidence hints, false-positive notes, and promotion metadata. | High |
+| Executable detection projection | Detection records are scaffolded with useful metadata fields. | Add accepted-version identity, lookback policy, alert materialization mode, explicit entity mapping contract, projection pipeline, and operational overrides. | Critical |
+| Scheduled detection execution | Schedule metadata is scaffolded. | No scheduler, hosted service, Elsa scheduled workflow, manual run service, due selector, execution-window calculator, or run lifecycle service. | Critical |
+| Detection run model | Run records are scaffolded. | Add lookback window, alert count, execution mode, retry/recovery context, diagnostics JSON, stale/no-data warnings, and workflow correlation. | High |
+| Alert model and entities | Alert and alert-entity records are scaffolded. | Add evidence hash, materialization key/mode, query/rule hash redundancy, suppression/disposition/enrichment/workflow/audit fields, normalized entity values, extraction, and mapping validation. | High |
+| Operations KQL views | Operations state exists only as target docs and scaffolded SQLite-backed records. | Add approved read-only `DetectionRun`, `AlertEvent`, `AlertEntity`, `AlertEnrichment`, and `IncidentCandidate` KQL views over a controlled projection. | Critical |
+| Elsa workflow expansion | Governance orchestration exists. | Add workflows for scheduled execution, alert processing, candidate correlation, triage, and recovery while keeping domain/application services authoritative. | High |
+| Suppression, enrichment, and correlation | Policies/records are scaffolded or documented. | Add deterministic suppression windows/keys, enrichment pipeline, candidate grouping/dedup/scoring/rationale, lifecycle, and triage actions. | High |
+| Audit identity | Demo actor context exists for Governance. | Separate demo actor switching from production-like audit identity across Governance and Operations actions. | Medium |
 
 ## Target
 
@@ -61,7 +86,7 @@ Last assessed: 2026-06-12.
 | Phase | Status | Notes |
 |---:|---|---|
 | 1 | **Complete** | `AnalyticsModule` routes under `/analytics`; threat hunting is a sub-item under Analytics. |
-| 2 | **Not started** | No shared executor contract or `ExecutionPurpose` enum. Interactive queries, dashboards, and validation each call DuckDB independently. |
+| 2 | **Not started** | No shared executor contract or `ExecutionPurpose` enum. Current execution remains too Web/UI-shaped around query materialization, interactive result limits, and query history concerns. |
 | 3 | **Not started** | Only `SavedQueryRecord` exists; no `CuratedAnalytic` type with purpose, entity mappings, or severity/confidence hints. |
 | 4 | **Scaffolded** | `DetectionRecord` exists but lacks `LookbackPolicy`, `AlertMaterializationMode`, `AcceptedVersionId`. No projection pipeline from governance acceptance. |
 | 5 | **Scaffolded** | Domain records and SQLite Dapper repositories exist under `Analytics/` namespace. Missing key fields on `AlertRecord` (evidence hash, materialization key, rule hash, suppression) and `DetectionRunRecord` (alert count, lookback window). `IIncidentRepository` and `ICandidateDecisionRepository` have no SQLite implementations. |
@@ -90,19 +115,20 @@ The current roadmap position makes **Phase 2 the immediate next phase**. Phases 
 
 ### Immediate execution backlog
 
-1. Add an `ExecutionPurpose` model and shared analytics execution service interface in the application layer.
-2. Replace direct UI/dashboard/validation DuckDB calls with adapters over the shared execution service.
-3. Add architecture-boundary tests proving callers use the shared service and that the UI remains behind application contracts.
-4. Split saved query history from curated analytic definitions with an explicit migration and persistence tests.
-5. Draft the executable detection projection contract before adding any scheduled runner code.
+1. Add an `ExecutionPurpose` model and shared `IAnalyticsQueryExecutor` service interface in the application layer.
+2. Refactor interactive Analytics and dashboard execution onto that executor while preserving UI-safe result limits and query-history behavior in the Web adapter.
+3. Move Governance validation dry-runs onto the same executor with validation-specific policy and diagnostics.
+4. Add architecture-boundary tests proving callers use the shared service and that UI code remains behind application contracts.
+5. Split saved query history from curated analytic definitions with an explicit migration and persistence tests.
+6. Draft the executable detection projection contract before adding any scheduled runner code.
 
 ### Module readiness
 
 | Module | Readiness | Summary |
 |---|---|---|
-| Analytics | Feature-rich | KQL translation at 70.6% coverage (226/320 constructs), schema browser, query history, saved queries, visualizations (ECharts), dashboards (full CRUD with chart/table/markdown widgets, layout, refresh, import/export), Monaco editor with schema-aware metadata. |
-| Governance | Mature | Change workflow (draft → validate → review → accept), five validation checks, review system with self-approval blocking, Git-backed accepted-content store, version history with compare/restore, merge reconciliation, Elsa workflow orchestrator abstraction, content library state machine. Full page set. |
-| Operations | Not started | Domain records and repositories exist under `Analytics/` namespace but no module, routes, pages, execution pipeline, or processing workflows. |
+| Analytics | Feature-rich, not yet Operations-ready | KQL translation at 70.6% coverage (226/320 constructs), schema browser, query history, saved queries, visualizations (ECharts), dashboards (full CRUD with chart/table/markdown widgets, layout, refresh, import/export), Monaco editor with schema-aware metadata. Still needs an application-layer shared executor, curated analytics, threat-hunting/evidence workflow surfaces, and alert/candidate pivots. |
+| Governance | Mature, projection gap remains | Change workflow (draft → validate → review → accept), five validation checks, review system with self-approval blocking, Git-backed accepted-content store, version history with compare/restore, merge reconciliation, Elsa workflow orchestrator abstraction, content library state machine. Remaining gap is accepted detection content projecting into executable definitions and triage feedback creating tuning work. |
+| Operations | Not started beyond scaffolding | Domain records and repositories exist under `Analytics/` namespace but no module, routes, pages, execution pipeline, Operations KQL views, alert materialization, suppression/enrichment, correlation, or processing workflows. |
 
 ### Phase dependency graph
 

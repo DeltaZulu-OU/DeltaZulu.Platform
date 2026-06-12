@@ -1,8 +1,8 @@
 # DeltaZulu.Platform
 
-DeltaZulu.Platform is the consolidated repository for the DeltaZulu platform: analytics-driven
-threat hunting, detection-content governance, shared UI, persistence adapters, and the unified Blazor
-web application.
+DeltaZulu.Platform is the consolidated repository for the DeltaZulu full-cycle security analytics
+platform: interactive Analytics, detection-content Governance, target Operations workflows, shared UI,
+persistence adapters, and the unified Blazor web application.
 
 The repository preserves history from the original Hunting and Workbench repositories, but the current
 codebase is no longer organized as separate Hunting/Workbench applications. The old module docs and
@@ -17,16 +17,19 @@ longer have standalone `Program.cs`, `App.razor`, host layouts, launch settings,
 separate Razor Class Library projects.
 
 The solution has completed its Clean Architecture consolidation: four source projects and one test
-project.
+project. The next implementation threshold is Operations: accepted detections still need a shared
+application-layer analytics execution contract, executable projection, scheduled/manual execution, alert
+materialization, approved KQL views over operations state, alert/candidate UI, enrichment, suppression,
+correlation, and triage feedback.
 
 ## Project layout
 
 | Layer | Project | Description |
 |---|---|---|
-| Domain | `src/DeltaZulu.Platform.Domain` | Detection contracts, analytics domain/query/schema records, governance aggregates/contracts, identifiers, enums, and invariants. |
-| Application | `src/DeltaZulu.Platform.Application` | Analytics translation/planning/rendering services and governance use cases, validation, workflow, and content pipeline services. |
-| Data | `src/DeltaZulu.Platform.Data` | DuckDB runtime/SQL infrastructure, SQLite repositories, Git accepted-content store, and seed data. |
-| Web | `src/DeltaZulu.Platform.Web` | Unified Blazor host, shared components/design tokens, platform shell, analytics UI, governance UI, module registry, and static assets. |
+| Domain | `src/DeltaZulu.Platform.Domain` | Detection contracts, analytics domain/query/schema records, governance aggregates/contracts, initial operations records, identifiers, enums, and invariants. |
+| Application | `src/DeltaZulu.Platform.Application` | Analytics translation/planning/rendering services and governance use cases, validation, workflow, and content pipeline services. Target Operations services are not yet complete. |
+| Data | `src/DeltaZulu.Platform.Data` | DuckDB runtime/SQL infrastructure, SQLite repositories, Git accepted-content store, and seed data. Initial operations persistence exists, but the operations read-model projection remains target work. |
+| Web | `src/DeltaZulu.Platform.Web` | Unified Blazor host, shared components/design tokens, platform shell, analytics UI, governance UI, module registry, and static assets. Operations UI is target work. |
 | Tests | `tests/DeltaZulu.Platform.Tests` | Consolidated domain, application, data, web, component, analytics, and governance tests. |
 
 ## Build and run

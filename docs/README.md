@@ -7,19 +7,38 @@ applications.
 
 ## Current status
 
-DeltaZulu is a full-cycle security analytics platform built as a single Clean Architecture solution:
+DeltaZulu is a full-cycle security analytics platform built as a single Clean Architecture solution.
+The repository is aligned at the documentation and consolidation level, while implementation is still
+mostly pre-Operations: Analytics and Governance are usable, and scheduled detection execution, alert
+materialization, operations KQL views, Operations UI, enrichment, suppression, candidate correlation,
+and triage feedback remain the main gaps.
+
+Current project ownership is:
 
 | Layer | Project | Owns |
 |---|---|---|
-| Domain | `src/DeltaZulu.Platform.Domain` | Detection contracts, analytics query model/schema records, governance aggregates, operations records (executable detections, runs, alerts, entities, candidates, triage), repository interfaces, identifiers, enums, and invariants. |
-| Application | `src/DeltaZulu.Platform.Application` | Shared analytics execution, translation/planning/rendering services, governance use cases, validation, workflows, operations services (detection projection, scheduled execution, alert materialization, enrichment, correlation, triage coordination), and content pipeline services. |
-| Data | `src/DeltaZulu.Platform.Data` | DuckDB SQL/runtime infrastructure, SQLite repositories, Git accepted-content store, and seed data. |
-| Web | `src/DeltaZulu.Platform.Web` | The only Blazor web host, shared components/design tokens, analytics pages, governance pages, operations pages, platform shell, and module registry. |
-| Tests | `tests/DeltaZulu.Platform.Tests` | All domain, application, data, web, component, analytics, governance, and operations tests. |
+| Domain | `src/DeltaZulu.Platform.Domain` | Detection contracts, analytics query model/schema records, governance aggregates, initial operations records (executable detections, runs, alerts, entities, candidates, triage), repository interfaces, identifiers, enums, and invariants. |
+| Application | `src/DeltaZulu.Platform.Application` | Analytics translation/planning/rendering services, governance use cases, validation, workflows, and content pipeline services. Target shared execution and Operations services are next-phase work. |
+| Data | `src/DeltaZulu.Platform.Data` | DuckDB SQL/runtime infrastructure, SQLite repositories, Git accepted-content store, and seed data. Initial operations repositories exist, but an operations namespace boundary and DuckDB read-model projection remain target work. |
+| Web | `src/DeltaZulu.Platform.Web` | The only Blazor web host, shared components/design tokens, analytics pages, governance pages, platform shell, and module registry. Operations pages are target work. |
+| Tests | `tests/DeltaZulu.Platform.Tests` | Consolidated tests for the platform projects. Operations pipeline coverage is target work. |
 
 There are no standalone Hunting or Workbench hosts, no separate Razor Class Library modules, and no
-separate shared component/contract projects. The `/analytics`, `/governance`, and `/operations` route
-prefixes are product navigation boundaries inside `DeltaZulu.Platform.Web`, not separate deployables.
+separate shared component/contract projects. The `/analytics` and `/governance` route prefixes are
+implemented product navigation boundaries inside `DeltaZulu.Platform.Web`; `/operations` is the target
+route boundary for the pending Operations module, not a separate deployable.
+
+## Current implementation gap snapshot
+
+| Area | Current state | Gap | Priority |
+|---|---|---|---|
+| Consolidation | One host, four source projects, one test project, Analytics and Governance modules. | No major consolidation gap. | Closed |
+| Product framing | Central docs describe the full-cycle platform. | Keep root-level and imported docs from drifting back to Hunting-first language. | Low |
+| Shared analytics execution | Query execution remains shaped around the Web/UI service path. | Add an application-layer `IAnalyticsQueryExecutor` with `ExecutionPurpose` policies before scheduled alerting. | Critical |
+| Curated analytics | Query history and saved queries exist. | Add curated analytic semantics: purpose, expected shape, entity mappings, tuning hints, notes, and promotion metadata. | High |
+| Executable detections | Detection records are scaffolded. | Add accepted-version identity, lookback, materialization mode, entity mapping contract, projection metadata, and operational overrides. | Critical |
+| Operations pipeline | Operations domain primitives and some repositories are scaffolded. | Build manual/scheduled runs, alert materialization, entity extraction, KQL read models, Operations UI, Elsa orchestration, enrichment, suppression, correlation, and triage feedback. | Critical |
+| Audit identity | Demo actor context exists for Governance. | Separate demo actor switching from production-like audit identity across governance and operations actions. | Medium |
 
 ## Authoritative documents
 

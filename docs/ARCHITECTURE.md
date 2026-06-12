@@ -22,9 +22,11 @@ The modules remain separate by responsibility:
 - **Governance** controls detection-content proposals and acceptance.
 - **Operations** executes accepted detections and manages produced operational state.
 
-The modules integrate through explicit handoff boundaries: curated analytics can be promoted into
-detection drafts; accepted detection versions project executable definitions; detection runs create
-alerts; alerts correlate into incident candidates; triage outcomes create detection-tuning work.
+The target modules integrate through explicit handoff boundaries: curated analytics can be promoted
+into detection drafts; accepted detection versions project executable definitions; detection runs create
+alerts; alerts correlate into incident candidates; triage outcomes create detection-tuning work. Today,
+Analytics and Governance are registered and usable; Operations is still a target module with scaffolded
+domain/persistence primitives rather than a registered module and execution-to-alert pipeline.
 
 Threat hunting is a workflow under Analytics, not the parent product category. The parent category
 is Analytics. Hunting is one analytics workflow. Scheduled detection execution, dashboards,
@@ -79,12 +81,13 @@ implements persistence/runtime adapters; web composes and renders the platform.
 
 - Detection content identity, path, file, and accepted-reference contracts under `Detection/`.
 - Analytics records, query model, schema definitions, mappings, diagnostics, saved-query records,
-  curated-analytic records, rendering records, and settings records under `Analytics/`.
+  target curated-analytic records, rendering records, and settings records under `Analytics/`.
 - Governance aggregates, changes, detections, issues, reviews, triage, workflow state, identifiers,
   content-library artifacts, and repository contracts under `Governance/`.
-- Operations records including executable detection definitions, detection runs, alerts, alert
-  entities, enrichment context, suppression state, incident candidates, candidate evidence, triage
-  decisions, and audit records under target `Operations/` namespace.
+- Initial operations records for executable detection definitions, detection runs, alerts, alert
+  entities, incident candidates, and candidate evidence are scaffolded, currently still under the
+  Analytics namespace. Target work should create explicit `Operations/` domain boundaries before the
+  operations model grows further.
 
 The domain layer does not know about Blazor, DuckDB connections, SQLite connections, Git repositories,
 MudBlazor, Elsa workflow internals, or platform hosting.
@@ -95,13 +98,14 @@ MudBlazor, Elsa workflow internals, or platform hosting.
 
 - Analytics translation, validation, relational planning, rendering, catalog/sample-query services,
   and query/runtime coordination that can report structured diagnostics.
-- Shared analytics execution contract used by interactive queries, dashboards, validation checks,
-  and scheduled detection execution with purpose-specific policies.
+- Target shared analytics execution contract used by interactive queries, dashboards, validation
+  checks, scheduled detection execution, and recovery with purpose-specific policies. The current
+  implementation still needs this application-layer contract extracted from the Web-shaped query path.
 - Governance change services, merge/readiness services, validation checks, workflow orchestration
   abstractions, and canonical content pipeline services.
-- Operations services including executable detection projection, scheduled execution coordination,
-  alert materialization, entity extraction, enrichment, suppression, candidate correlation, and
-  triage coordination.
+- Target Operations services including executable detection projection, scheduled execution
+  coordination, alert materialization, entity extraction, enrichment, suppression, candidate
+  correlation, and triage coordination.
 
 Application code may depend on domain contracts and external libraries needed for application behavior,
 but it should not contain UI state or direct host composition. Elsa workflows orchestrate order,
@@ -114,7 +118,9 @@ incident-candidate validity.
 `DeltaZulu.Platform.Data` owns infrastructure:
 
 - DuckDB SQL emission/runtime support, schema application, and analytics persistence.
-- SQLite repositories for analytics, governance, and operations operational state.
+- SQLite repositories for analytics, governance, and scaffolded operations operational state.
+- Target Operations persistence should move conceptually under a clean operations namespace/database
+  boundary and publish approved DuckDB-facing read models for KQL.
 - Git accepted-content store for accepted governance content history.
 - Development/demo seed data.
 
@@ -127,11 +133,12 @@ routes or UI components.
 
 - The Blazor host, layout, route table, static assets, component library, design tokens, and platform
   navigation.
-- Platform module descriptors and navigation entries for Analytics, Governance, and Operations.
+- Platform module descriptors and navigation entries for Analytics and Governance today, with
+  Operations as the next target module.
 - Analytics pages, dashboards, UI services, and visualization adapters.
 - Governance pages, UI services, and markdown/component adapters.
-- Operations pages including executable detection views, detection run views, alert queue, alert
-  detail, incident candidate views, triage workflows, and operations health.
+- Target Operations pages including executable detection views, detection run views, alert queue,
+  alert detail, incident candidate views, triage workflows, and operations health.
 - Dependency-injection composition in `Program.cs`.
 
 No standalone `Program.cs`, `App.razor`, appsettings, launch settings, or host layouts should be
@@ -139,17 +146,19 @@ reintroduced under separate module projects.
 
 ## Platform host composition
 
-`DeltaZulu.Platform.Web/Program.cs` registers all modules in one host:
+`DeltaZulu.Platform.Web/Program.cs` is the single host composition root. Current module registration
+includes Analytics and Governance; Operations is the target next module to add:
 
-- `AnalyticsModule`, `GovernanceModule`, and the target `OperationsModule` implement the platform
-  module contract.
+- `AnalyticsModule` and `GovernanceModule` implement the platform module contract today.
+- The target `OperationsModule` should implement the same platform module contract when the first
+  Operations slice lands.
 - MudBlazor services and shared UI assets are registered once.
 - Governance persistence, validation, workflow orchestration, and Git accepted-content storage are
   configured in the host composition root.
 - Analytics web services are registered through `AddAnalyticsWebModule` and bootstrapped once during
   app startup.
 - Operations services will register executable detection, run, alert, candidate, and triage
-  repositories plus workflow definitions.
+  repositories plus workflow definitions after the shared execution and projection contracts exist.
 - Razor components are mapped through the single `DeltaZulu.Platform.Web.App` root.
 
 ## Analytics architecture
@@ -165,10 +174,13 @@ Analytics is the consolidated successor to the imported Hunting runtime. Its cor
 - Dashboard rendering and visualization metadata sit above the query runtime; they do not create a
   second query language or storage model.
 - Threat hunting is a workflow under Analytics, not the parent module.
-- Curated analytics are reusable analytical objects with query text, purpose, expected result shape,
-  required schemas, entity mappings, known false positives, severity/confidence/risk hints, and notes.
-- The shared analytics execution contract supports multiple execution purposes: Interactive,
-  Dashboard, ValidationDryRun, ScheduledDetection, and Recovery.
+- Curated analytics are target reusable analytical objects with query text, purpose, expected result
+  shape, required schemas, entity mappings, known false positives, severity/confidence/risk hints, and
+  notes. Current saved-query history is not a substitute for this semantic model.
+- The target shared analytics execution contract supports multiple execution purposes: Interactive,
+  Dashboard, ValidationDryRun, ScheduledDetection, and Recovery. Alerting must not call the current
+  Web `QueryService` directly because UI safety limits, history recording, and scheduled detection
+  policies are different concerns.
 
 The detailed KQL semantics and support matrix remain in the domain-specific analytics documents linked
 from `docs/README.md`.
@@ -195,7 +207,11 @@ Governance rules:
 
 ## Operations architecture
 
-Operations is the target module for scheduled detection execution and security operations state:
+Operations is the target module for scheduled detection execution and security operations state. The
+current codebase has scaffolded records/repositories, but it has not crossed the operational threshold:
+there is no registered Operations module, no scheduled/manual runner, no alert materialization service,
+no approved operations KQL views, no Operations UI, and no enrichment/suppression/correlation/triage
+feedback loop yet.
 
 - Executable detection definitions are projections from accepted detection content. They include
   detection identity, accepted version, rule hash, query text, severity, confidence, risk score,
@@ -213,8 +229,10 @@ Operations is the target module for scheduled detection execution and security o
 - Triage decisions are analyst or system decisions about alerts or candidates, preserved as operational
   and audit state.
 - Alerting is scheduled or manually triggered, not real-time streaming.
-- Operations state can be exposed through approved read-only analytical views such as DetectionRun,
-  AlertEvent, AlertEntity, AlertEnrichment, and IncidentCandidate.
+- Operations state must be exposed through approved read-only analytical views such as DetectionRun,
+  AlertEvent, AlertEntity, AlertEnrichment, and IncidentCandidate. Because alerts are SQLite-backed
+  operational records, the implementation must choose a controlled DuckDB-facing projection or view
+  strategy rather than leaving alert querying as repository-backed UI lists only.
 
 ## Workflow orchestration
 
@@ -236,9 +254,10 @@ security semantics.
 ## Shared analytics execution
 
 The most important cross-cutting architectural contract is the shared analytics execution service.
-Interactive queries, dashboard widgets, validation checks, and scheduled detection runs must not
-grow separate KQL execution paths. They call the same application-layer execution service with
-purpose-specific policies:
+Interactive queries, dashboard widgets, validation checks, scheduled detection runs, and recovery must
+not grow separate KQL execution paths. This is the first implementation gap to close before alerting: the
+current Web query service can continue to adapt UI behavior, but the common contract belongs in the
+Application layer and should expose purpose-specific policies:
 
 - **Interactive**: bounded result tables, full diagnostics, query history recording.
 - **Dashboard**: bounded results per widget, refresh policy enforcement.
@@ -255,9 +274,9 @@ purpose-specific policies:
 | Analytics saved-query, curated-analytic, and dashboard state | Analytics/Data | SQLite application state, surfaced through application services. |
 | Governance drafts, checks, reviews, workflow state, and read models | Governance/Data | SQLite governance database. |
 | Accepted detection content | Governance/Data | Git repository managed by the accepted-content store. |
-| Executable detection definitions, detection runs, alerts, alert entities, enrichment, suppression, incident candidates, triage state | Operations/Data | SQLite operations database. |
+| Executable detection definitions, detection runs, alerts, alert entities, enrichment, suppression, incident candidates, triage state | Operations/Data | Target SQLite operations database; currently partially scaffolded under Analytics persistence. |
 | Workflow orchestration state | Data | Elsa workflow store (SQLite or configured provider). |
-| Approved operations read models | Operations/Data | DuckDB approved views projected from operations SQLite state. |
+| Approved operations read models | Operations/Data | Target DuckDB approved views projected from operations SQLite state. |
 | UI component/design-system assets | Web | `DeltaZulu.Platform.Web` static assets and components. |
 
 ## Safety invariants
