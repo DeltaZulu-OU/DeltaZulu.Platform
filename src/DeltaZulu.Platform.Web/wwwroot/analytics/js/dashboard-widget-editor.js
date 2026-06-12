@@ -1,7 +1,11 @@
 window.huntingDashboardWidgetEditor = (() => {
     const editors = new Map();
 
-    function getMonaco() {
+    async function getMonaco() {
+        if ((!window.monaco || !window.monaco.editor) && typeof window.ensureMonaco === "function") {
+            await window.ensureMonaco();
+        }
+
         if (window.monaco && window.monaco.editor) {
             return window.monaco;
         }
@@ -9,8 +13,8 @@ window.huntingDashboardWidgetEditor = (() => {
         return null;
     }
 
-    function initialize(elementId, value, language) {
-        const monaco = getMonaco();
+    async function initialize(elementId, value, language) {
+        const monaco = await getMonaco();
         const element = document.getElementById(elementId);
 
         if (!monaco || !element) {
@@ -45,8 +49,8 @@ window.huntingDashboardWidgetEditor = (() => {
         return language === "markdown" ? "markdown" : "kql";
     }
 
-    function setLanguage(elementId, language) {
-        const monaco = getMonaco();
+    async function setLanguage(elementId, language) {
+        const monaco = await getMonaco();
         const editor = editors.get(elementId);
 
         if (!monaco || !editor) {
