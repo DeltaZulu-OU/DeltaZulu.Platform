@@ -4,17 +4,17 @@
 
 This gap analysis was refreshed after re-reading the documentation set:
 
-- [AGENTS.md](AGENTS.md)
-- [README.md](README.md)
-- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [AGENTS.md](../AGENTS.md)
+- [README.md](../README.md)
+- [ARCHITECTURE.md](../ARCHITECTURE.md)
 - [ROADMAP.md](ROADMAP.md)
-- [AGENT.md](AGENT.md)
+- [AGENT.md](../AGENT.md)
 - [USER_STORIES.md](USER_STORIES.md)
 - [UI_ACTIVITY_DIAGRAM.md](UI_ACTIVITY_DIAGRAM.md)
 - [UX_REDESIGN_ANALYSIS.md](UX_REDESIGN_ANALYSIS.md)
-- All ADRs under [adr/](adr/)
+- All Governance ADRs under [`docs/adr/governance/`](../../../../adr/governance/)
 
-ADRs remain binding constraints. Later ADRs supersede earlier roadmap or architecture text where they conflict. In particular, [ADR-0014](adr/0014-delegate-case-management-to-external-systems.md) supersedes the earlier built-in case-management model from ADR-0007 and older roadmap language.
+ADRs remain binding constraints. Later ADRs supersede earlier roadmap or architecture text where they conflict. In particular, [ADR-0014](../../../../adr/governance/0014-delegate-case-management-to-external-systems.md) supersedes the earlier built-in case-management model from ADR-0007 and older roadmap language.
 
 ## 2. Current implementation snapshot
 

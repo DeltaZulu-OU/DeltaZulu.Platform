@@ -34,7 +34,7 @@ All paths relative to repository root.
 | Translation Spec | `docs/KQL-to-DuckDB-translation-spec.md` | Authoritative reference for every KQL construct (796 KB, 21 sections + 12 appendices) |
 | KQL Checklist | `docs/kql-syntax-coverage-checklist.md` | Implementation status (319 in-scope constructs) |
 | Roadmap | `docs/ROADMAP.md` | Phase plan, exit criteria, post-MVP priorities |
-| ADR Index | `docs/adr/README.md` | ADR process, status lifecycle, and template |
+| ADR Index | `../../../adr/analytics/README.md` | ADR process, status lifecycle, and template |
 
 ## Specification Hierarchy
 
@@ -191,7 +191,7 @@ Non-negotiable for MVP. Violating any requires explicit discussion and documente
 6. **After every implementation change, update status docs in the same change set.**
    At minimum:
    - update the implementation-status/feature-parity table in `README.md`,
-   - update `docs/ROADMAP.md` to reflect changed priorities/status, and
+   - update `../../../ROADMAP.md` to reflect changed priorities/status, and
    - update `docs/kql-syntax-coverage-checklist.md` for any newly supported/deferred/blocked constructs.
    Do not leave code and status documents out of sync across commits.
 

@@ -230,7 +230,7 @@ Deliverables:
 - Align ROADMAP and ARCHITECTURE with ADR-0014 external-case direction.
 - Maintain [GAP_ANALYSIS.md](GAP_ANALYSIS.md) as the source of current implementation gaps.
 - Keep docs explicit about what is POC scope vs post-POC scope.
-- Keep module-boundary and library-extraction guidance summarized in [ARCHITECTURE.md](ARCHITECTURE.md), not in separate standalone boundary documents.
+- Keep module-boundary and library-extraction guidance summarized in [ARCHITECTURE.md](../ARCHITECTURE.md), not in separate standalone boundary documents.
 
 Exit criteria:
 

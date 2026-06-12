@@ -6,9 +6,9 @@ Accepted (Phase 0 — domain layer).
 
 ## Context
 
-[AGENTS.md §"Required domain objects"](../AGENTS.md) lists both `Detection` and `DetectionDraft`
+[AGENTS.md §"Required domain objects"](../../modules/workbench/docs/AGENTS.md) lists both `Detection` and `DetectionDraft`
 as distinct objects, and the spec's "first implementation slice" sequence starts with "create a
-detection draft in the database" before any change is opened. [ARCHITECTURE.md](../ARCHITECTURE.md)
+detection draft in the database" before any change is opened. [ARCHITECTURE.md](../../ARCHITECTURE.md)
 also models `ChangeRequest` with `ChangeDraftFile` children. The relationship between the two
 draft mechanisms was left implicit.
 

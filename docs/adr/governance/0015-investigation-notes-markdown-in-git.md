@@ -69,7 +69,7 @@ detections: [anomalous-sign-in, brute-force-spray]
 Links between documents inside the Git tree use **standard relative paths**:
 
 ```markdown
-See also [brute-force detection](../../brute-force-spray/detection.yaml)
+See also `brute-force-spray/detection.yaml`
 ```
 
 Relative paths work in any Markdown renderer (GitHub, VS Code, local preview). The
@@ -97,7 +97,7 @@ text-based validation for `StaticAsset` files.
 Notes reference assets with relative paths:
 
 ```markdown
-![Auth log timeline](assets/auth-log-timeline.png)
+`assets/auth-log-timeline.png`
 ```
 
 ### Markdown rendering

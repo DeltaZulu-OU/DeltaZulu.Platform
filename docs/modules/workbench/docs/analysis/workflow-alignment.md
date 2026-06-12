@@ -237,4 +237,4 @@ without a domain model change.
 ## Supporting ADR
 
 These changes warrant a new Architecture Decision Record: **ADR-0018 — Expand Issue Domain
-to Align with SIEM Detection Content Issue Workflow**. See `docs/adr/0018-expand-issue-domain-for-detection-content-workflow.md`.
+to Align with SIEM Detection Content Issue Workflow**. See [`docs/adr/governance/0018-expand-issue-domain-for-detection-content-workflow.md`](../../../../adr/governance/0018-expand-issue-domain-for-detection-content-workflow.md).
