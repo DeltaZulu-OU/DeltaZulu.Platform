@@ -37,7 +37,8 @@ route boundary for the pending Operations module, not a separate deployable.
 | Shared analytics execution | Query execution remains shaped around the Web/UI service path. | Add an application-layer `IAnalyticsQueryExecutor` with `ExecutionPurpose` policies before scheduled alerting. | Critical |
 | Curated analytics | Query history and saved queries exist. | Add curated analytic semantics: purpose, expected shape, entity mappings, tuning hints, notes, and promotion metadata. | High |
 | Executable detections | Detection records are scaffolded. | Add accepted-version identity, lookback, materialization mode, entity mapping contract, projection metadata, and operational overrides. | Critical |
-| Operations pipeline | Operations domain primitives and some repositories are scaffolded. | Build manual/scheduled runs, alert materialization, entity extraction, KQL read models, Operations UI, Elsa orchestration, enrichment, suppression, correlation, and triage feedback. | Critical |
+| Operations pipeline | Operations domain primitives and some repositories are scaffolded. | Build manual/scheduled runs, alert materialization, entity extraction, KQL read models, Operations UI, Elsa orchestration, enrichment, suppression, correlation, and triage feedback. Add Operations navigation/placeholders early enough to validate operational dashboard and triage patterns. | Critical |
+| Design-system enforcement | Shared tokens and components exist in Web, but identity, radius, typography scope, legacy CSS aliases, evidence-table metadata, dashboard states, and audit checks are incomplete. | Resolve DZNS/DeltaZulu Platform identity, enforce binary radius/product typography/orange action semantics, quarantine legacy aliases, build canonical dashboard primitives, and add a design-system audit. | High |
 | Audit identity | Demo actor context exists for Governance. | Separate demo actor switching from production-like audit identity across governance and operations actions. | Medium |
 
 ## Authoritative documents
@@ -66,8 +67,8 @@ architecture and roadmap above when repository layout or platform ownership diff
 
 1. Update `docs/ARCHITECTURE.md` for changes to project boundaries, dependency direction, runtime
    ownership, module ownership, routing, storage ownership, workflow orchestration, or safety invariants.
-2. Update `docs/ROADMAP.md` for target changes, priority changes, phase completion, or active priority
-   changes.
+2. Update `docs/ROADMAP.md` for target changes, priority changes, phase completion, active priority
+   changes, or design-system remediation order changes.
 3. Update `docs/TARGET_USER_STORIES.md` for product-level user story changes, new user stories, or
    acceptance criteria updates.
 4. Keep imported module documents only for deep domain detail, ADR provenance, or historical context.

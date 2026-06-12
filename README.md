@@ -17,10 +17,12 @@ longer have standalone `Program.cs`, `App.razor`, host layouts, launch settings,
 separate Razor Class Library projects.
 
 The solution has completed its Clean Architecture consolidation: four source projects and one test
-project. The next implementation threshold is Operations: accepted detections still need a shared
-application-layer analytics execution contract, executable projection, scheduled/manual execution, alert
-materialization, approved KQL views over operations state, alert/candidate UI, enrichment, suppression,
-correlation, and triage feedback.
+project. The next implementation thresholds are design-system enforcement and Operations: the product
+identity decision, binary radius model, product typography scope, orange action semantics, legacy
+Hunting CSS quarantine, dashboard primitives, evidence-table metadata, and audit checks need to land
+alongside the shared application-layer analytics execution contract, executable projection,
+scheduled/manual execution, alert materialization, approved KQL views over operations state,
+alert/candidate UI, enrichment, suppression, correlation, and triage feedback.
 
 ## Project layout
 
@@ -53,7 +55,7 @@ Start with the centralized docs:
 
 - [Documentation index](docs/README.md)
 - [Current architecture](docs/ARCHITECTURE.md)
-- [Current roadmap](docs/ROADMAP.md)
+- [Current roadmap](docs/ROADMAP.md) — includes the active design-system remediation track and Operations sequence.
 - [Completed consolidation record](docs/CONSOLIDATION_ROADMAP.md)
 
 Imported module docs under `docs/modules/` are subordinate to the central docs whenever they describe

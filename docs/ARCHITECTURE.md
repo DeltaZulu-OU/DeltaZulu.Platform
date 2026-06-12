@@ -35,7 +35,9 @@ under different policies.
 
 The route names are product navigation boundaries inside `DeltaZulu.Platform.Web`, not separate
 deployables. All modules run inside the same host and share the same design system, service
-container, configuration pipeline, and host lifecycle.
+container, configuration pipeline, and host lifecycle. The current design-system adoption is not yet
+fully enforced: tokens and components are present, but product identity, radius rules, typography scope,
+legacy CSS aliases, table/state primitives, and Operations validation surfaces remain active gaps.
 
 ## Solution structure
 
@@ -133,8 +135,13 @@ routes or UI components.
 
 - The Blazor host, layout, route table, static assets, component library, design tokens, and platform
   navigation.
+- The product UI design-system boundary, currently housed inside Web. As components grow, shared
+  `Dz*` primitives should remain visibly separated from feature pages so they do not become thin,
+  page-specific wrappers.
 - Platform module descriptors and navigation entries for Analytics and Governance today, with
-  Operations as the next target module.
+  Operations as the next target module. The first Operations navigation slice should expose placeholders
+  for executable detections, detection runs, alerts, incident candidates, operations health, and settings
+  before deeper alerting implementation so the design system can be validated against operational flows.
 - Analytics pages, dashboards, UI services, and visualization adapters.
 - Governance pages, UI services, and markdown/component adapters.
 - Target Operations pages including executable detection views, detection run views, alert queue,
@@ -151,7 +158,8 @@ includes Analytics and Governance; Operations is the target next module to add:
 
 - `AnalyticsModule` and `GovernanceModule` implement the platform module contract today.
 - The target `OperationsModule` should implement the same platform module contract when the first
-  Operations slice lands.
+  Operations slice lands, with placeholder routes early enough to exercise alert queues, detection runs,
+  incident candidates, operations health, and investigation/triage flows in the shell.
 - MudBlazor services and shared UI assets are registered once.
 - Governance persistence, validation, workflow orchestration, and Git accepted-content storage are
   configured in the host composition root.
@@ -160,6 +168,35 @@ includes Analytics and Governance; Operations is the target next module to add:
 - Operations services will register executable detection, run, alert, candidate, and triage
   repositories plus workflow definitions after the shared execution and projection contracts exist.
 - Razor components are mapped through the single `DeltaZulu.Platform.Web.App` root.
+
+## Product identity and design-system rules
+
+The architecture intentionally uses one coherent product UI rather than separate visual systems per
+module. The current product name is `DeltaZulu Platform`, while the imported design-system rules are
+DZNS-first for hero, CTA, and dark featured treatment. Before adding broad Operations UI, the product
+identity decision must be explicit: the app is either DZNS-branded, DeltaZulu Platform-branded, or an
+internal DeltaZulu platform. That decision owns visible naming, home/hero copy, CTA labels, and any dark
+featured treatment.
+
+Design-system enforcement rules:
+
+- Product UI uses IBM Plex Sans. Newsreader is marketing/display typography only and must not leak into
+  product pages through global heading selectors.
+- Orange is action-only. Primary action buttons may use it; decorative hovers, close buttons, splitters,
+  passive badges, and ambient chrome should not use orange simply because they are `Primary` or accent.
+- Radius is binary: structural surfaces are sharp, action controls are pill-shaped, and only explicitly
+  allowed inputs receive tiny softening. Medium panel/table/drawer radii are a design-system gap.
+- DeltaZulu tokens are authoritative. Hunting-era compatibility aliases such as `--hunt-*`, broad
+  `--bg-*`, and broad `--text-*` should be removed or isolated during migration instead of becoming a
+  permanent abstraction layer over the design system.
+- Dashboard UI must use canonical primitives for tables, filters, toolbars, drawers, status badges,
+  evidence panels, and state blocks. Components must cover empty, loading, degraded, error, disabled,
+  selected, hover, focus, overflow, freshness, truncation, row-limit, source, and partial-result states.
+- Evidence/result tables must expose operational context as first-class UI: source, freshness, query
+  purpose, row limit, truncation, degraded/partial status, column overflow, and copy/export affordances.
+- A design-system audit should check for forbidden radius values, orange misuse, Newsreader leakage,
+  unsupported color literals, legacy aliases/classes, and raw Mud component usage that bypasses approved
+  `Dz*` wrappers.
 
 ## Analytics architecture
 
@@ -304,6 +341,8 @@ Application layer and should expose purpose-specific policies:
 - Operations state can be exposed through approved read-only analytical views.
 - DuckDB is the embedded MVP execution engine and should be hidden from normal users.
 - Dashboard widgets reuse approved analytics, visualizations, alerts, detection runs, and candidates.
+- Dashboard, table, drawer, and state components should be canonical `Dz*` primitives before module pages
+  invent local variants.
 - Detection governance is intentionally PR-like in the domain, but user-facing language remains
   detection/change/check/review/history.
 - Alerting is scheduled or manually triggered in the target design, not real-time streaming.

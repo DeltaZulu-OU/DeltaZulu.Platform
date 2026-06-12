@@ -227,11 +227,13 @@ The user lands on the platform home page, sees registered modules, and opens Ana
 
 **Acceptance criteria**
 
+- Product identity is explicit before broad UI expansion: visible naming, hero copy, CTA labels, and dark featured treatment consistently follow the chosen DZNS, DeltaZulu Platform, or internal DeltaZulu platform brand model.
+- Product UI follows the shared design system: IBM Plex Sans for product headings, Newsreader only on marketing/company surfaces, orange only for action semantics, sharp structural surfaces, pill action controls, and no permanent Hunting-era token alias layer.
 - Home lists platform modules in configured order.
 - Each module card routes to that module's route prefix.
 - Analytics exposes Overview, Analytics Workbench, Threat Hunting, Library, Dashboards, and Settings navigation.
 - Detection Content Governance exposes Home, Detections, Proposals, History, and Settings navigation.
-- Operations exposes Executable Detections, Detection Runs, Alerts, Incident Candidates, Operations Health, and Settings navigation.
+- Operations exposes Executable Detections, Detection Runs, Alerts, Incident Candidates, Operations Health, and Settings navigation, even as placeholders before deep alerting implementation, so operational queues, monitoring, triage, and investigation-drawer patterns can be validated.
 - Settings distinguish user preferences, workspace settings, workflow settings, operations/recovery, and development/demo-only settings.
 - Workflow state is surfaced as meaningful security operations state, not as raw Elsa implementation detail.
 
