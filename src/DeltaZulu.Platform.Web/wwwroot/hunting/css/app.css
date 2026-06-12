@@ -216,6 +216,20 @@ body:has(.hunt-app) {
 }
 
 /* ─── Main content ──────────────────────────────────────────────────────── */
+.dz-main-content--full-height {
+    min-height: calc(100vh - var(--mud-appbar-height, 64px));
+    overflow: hidden;
+}
+
+.dz-shell-main--full-bleed {
+    width: 100%;
+    max-width: none;
+    min-height: calc(100vh - var(--mud-appbar-height, 64px));
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
 .hunt-main {
     display: flex;
     flex-direction: column;

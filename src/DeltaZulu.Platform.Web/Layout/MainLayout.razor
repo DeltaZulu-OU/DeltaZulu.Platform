@@ -2,6 +2,8 @@
 @using DeltaZulu.Platform.Web.Components
 @using DeltaZulu.Platform.Web.Platform
 @inject IEnumerable<IPlatformModule> Modules
+@inject NavigationManager Navigation
+@implements IDisposable
 
 <MudThemeProvider Theme="_theme" />
 <MudPopoverProvider />
@@ -15,7 +17,7 @@
 
     <DzSideNav @bind-Open="_drawerOpen" Items="_navItems" Heading="Platform" />
 
-    <DzMainContent>
+    <DzMainContent Class="@ShellMainClass" MainContentClass="@MainContentClass">
         @Body
     </DzMainContent>
 </MudLayout>
@@ -34,7 +36,26 @@
             .SelectMany(m => m.NavigationItems)
             .Where(item => !item.IsPlatformRoute || seen.Add(item.Href))
             .ToList();
+
+        Navigation.LocationChanged += OnLocationChanged;
     }
 
+    private bool IsThreatAnalyticsRoute
+    {
+        get
+        {
+            var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/');
+            return string.Equals(relativePath, "hunting/threat-hunting", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private string? ShellMainClass => IsThreatAnalyticsRoute ? "dz-shell-main--full-bleed" : null;
+
+    private string? MainContentClass => IsThreatAnalyticsRoute ? "dz-main-content--full-height" : null;
+
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
 }
