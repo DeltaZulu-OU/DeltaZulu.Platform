@@ -1,13 +1,17 @@
 
 using DeltaZulu.Platform.Data.Seeding;
+using DeltaZulu.Platform.Data.Sqlite.Analytics.AlertEntities;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Alerts;
+using DeltaZulu.Platform.Data.Sqlite.Analytics.Candidates;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.DetectionRuns;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Detections;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.QueryHistory;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.SavedQueries;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Settings;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Visualizations;
+using DeltaZulu.Platform.Domain.Analytics.AlertEntities;
 using DeltaZulu.Platform.Domain.Analytics.Alerts;
+using DeltaZulu.Platform.Domain.Analytics.Candidates;
 using DeltaZulu.Platform.Domain.Analytics.DetectionRuns;
 using DeltaZulu.Platform.Domain.Analytics.Detections;
 using DeltaZulu.Platform.Domain.Analytics.QueryHistory;
@@ -35,6 +39,9 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         services.AddSingleton<IDetectionRepository, DapperDetectionRepository>();
         services.AddSingleton<IDetectionRunRepository, DapperDetectionRunRepository>();
         services.AddSingleton<IAlertRepository, DapperAlertRepository>();
+        services.AddSingleton<IAlertEntityRepository, DapperAlertEntityRepository>();
+        services.AddSingleton<IIncidentCandidateRepository, DapperIncidentCandidateRepository>();
+        services.AddSingleton<ICandidateEvidenceRepository, DapperCandidateEvidenceRepository>();
 
         return services;
     }
@@ -66,5 +73,14 @@ public static class ApplicationPersistenceServiceCollectionExtensions
 
         var alerts = services.GetRequiredService<IAlertRepository>();
         await alerts.EnsureInitializedAsync(cancellationToken);
+
+        var alertEntities = services.GetRequiredService<IAlertEntityRepository>();
+        await alertEntities.EnsureInitializedAsync(cancellationToken);
+
+        var candidates = services.GetRequiredService<IIncidentCandidateRepository>();
+        await candidates.EnsureInitializedAsync(cancellationToken);
+
+        var candidateEvidence = services.GetRequiredService<ICandidateEvidenceRepository>();
+        await candidateEvidence.EnsureInitializedAsync(cancellationToken);
     }
 }
