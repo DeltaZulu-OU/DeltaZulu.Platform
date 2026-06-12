@@ -13,13 +13,13 @@ The platform exposes three user-facing modules inside one platform shell:
 | Module | Route prefix | Primary purpose | Current code home |
 |---|---:|---|---|
 | Analytics | `/analytics` | KQL-based querying, schema exploration, query history, curated analytics, visualizations, dashboards, evidence capture, and threat-hunting workflows. | `src/DeltaZulu.Platform.Web/Analytics`, `src/DeltaZulu.Platform.Application/Analytics`, `src/DeltaZulu.Platform.Domain/Analytics`, `src/DeltaZulu.Platform.Data` |
-| Detection Content Governance | `/governance` | Detection packages, governed changes, semantic detection content, validation checks, review, acceptance, restore, and version history. | `src/DeltaZulu.Platform.Web/Governance`, `src/DeltaZulu.Platform.Application/Governance`, `src/DeltaZulu.Platform.Domain/Governance`, `src/DeltaZulu.Platform.Data` |
+| Detection Content Governance | `/governance` | Detection packages, governed proposals, semantic detection content, validation checks, review, acceptance, restore, and version history. | `src/DeltaZulu.Platform.Web/Governance`, `src/DeltaZulu.Platform.Application/Governance`, `src/DeltaZulu.Platform.Domain/Governance`, `src/DeltaZulu.Platform.Data` |
 | Operations | `/operations` | Executable detections, scheduled detection runs, alerts, alert entities, enrichment, suppression, incident candidates, triage state, and recovery. | Target module; code home will follow the same Domain/Application/Data/Web pattern. |
 
 The modules remain separate by responsibility:
 
 - **Analytics** asks questions and preserves analytical artifacts.
-- **Governance** controls detection-content change and acceptance.
+- **Governance** controls detection-content proposals and acceptance.
 - **Operations** executes accepted detections and manages produced operational state.
 
 The modules integrate through explicit handoff boundaries: curated analytics can be promoted into
@@ -184,13 +184,13 @@ Governance rules:
 - The database owns operational state: changes, drafts, checks, reviews, workflow state, read models,
   and version projections.
 - Git owns accepted canonical detection content and accepted version history.
-- A Change is a database object, not a Git branch.
-- Checks and reviews are part of the Change workspace; users should not need to reason about workflow
+- A Proposal is a database-owned object, not a Git branch.
+- Checks and reviews are part of the Proposal workspace; users should not need to reason about workflow
   engine internals.
-- Users see product concepts such as detections, changes, checks, reviews, versions, compare, restore,
+- Users see product concepts such as detections, proposals, checks, reviews, versions, compare, restore,
   and history. They should not see Git implementation terms such as branch, staging, rebase, reset,
   tree, index, or HEAD.
-- Restore creates a new change and must not rewrite accepted history.
+- Restore creates a new proposal and must not rewrite accepted history.
 - Acceptance can project or update an executable detection definition when required metadata exists.
 
 ## Operations architecture

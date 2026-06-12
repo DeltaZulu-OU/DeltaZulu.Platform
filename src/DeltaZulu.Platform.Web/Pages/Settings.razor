@@ -113,7 +113,7 @@
                     <DzTableShell>
                         <MudTable Items="_mergeIntents" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="MergeIntent" Elevation="0">
                             <HeaderContent>
-                                <MudTh>Change</MudTh>
+                                <MudTh>Proposal</MudTh>
                                 <MudTh>Detection</MudTh>
                                 <MudTh>Recovery state</MudTh>
                                 <MudTh>Requested</MudTh>
@@ -123,7 +123,7 @@
                             </HeaderContent>
                             <RowTemplate>
                                 @{ var guidance = GuidanceFor(context); }
-                                <MudTd DataLabel="Change"><code>@context.ChangeId.Value</code></MudTd>
+                                <MudTd DataLabel="Proposal"><code>@context.ChangeId.Value</code></MudTd>
                                 <MudTd DataLabel="Detection">
                                     <MudText Typo="Typo.body2">@context.DetectionSlug</MudText>
                                     <MudText Typo="Typo.caption" Class="mud-text-secondary"><code>@context.DetectionId.Value</code></MudText>
@@ -168,7 +168,7 @@
 </MudGrid>
 
 <MudAlert Severity="Severity.Info" Class="mt-2">
-    Analytics preferences are persisted locally. Workflow profiles are selected on individual changes; low-level storage operations are intentionally outside normal user access.
+    Analytics preferences are persisted locally. Workflow profiles are selected on individual proposals; low-level storage operations are intentionally outside normal user access.
 </MudAlert>
 
 @code {

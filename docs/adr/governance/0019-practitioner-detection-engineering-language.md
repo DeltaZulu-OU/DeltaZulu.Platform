@@ -27,7 +27,7 @@ Use plain detection-engineering language in user-facing UI, docs, and new domain
 | Validate / run checks | Execute pipeline stage | Users need confidence and repair guidance, not engine details. |
 | Review / approve / request changes | Workflow activity | The decision matters; orchestration is infrastructure. |
 | Accept into history | Merge / commit / push | Users accept detection content; Git remains hidden storage. |
-| Restore as new change | Reset / revert / checkout | Recovery follows normal validation and review without rewriting history. |
+| Restore as new proposal | Reset / revert / checkout | Recovery follows normal validation and review without rewriting history. |
 | Outcome / tuning reason | Required outcome taxonomy | Outcomes are useful evidence and reporting dimensions, not blockers for starting work. |
 | Tier / fidelity metadata | Separate tiering workflow | Tiering describes detection intent and confidence; it should not fragment the core loop. |
 
@@ -47,4 +47,4 @@ FIRST-aligned concepts are adopted as architecture and roadmap guidance:
 
 ## Supersedes
 
-This ADR updates the terminology used by ADR-0013 and ADR-0017 without changing their architectural decisions: detection identity can still exist before first acceptance, and the UI still exposes Detections, Changes, History, and operator-only Settings.
+This ADR updates the terminology used by ADR-0013 and ADR-0017 without changing their architectural decisions: detection identity can still exist before first acceptance, and the UI still exposes Detections, Proposals, History, and operator-only Settings.

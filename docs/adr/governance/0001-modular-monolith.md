@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-The product is a Detection Content Workbench with detection authoring, issue/case management, PR-like changes, checks, reviews, workflow profiles, automatic version history, and Git-backed accepted content. The current scope does not require independent service scaling or independent deployment of modules.
+The product is a Detection Content Workbench with detection authoring, issue/case management, PR-like proposals, checks, reviews, workflow profiles, automatic version history, and Git-backed accepted content. The current scope does not require independent service scaling or independent deployment of modules.
 
 Starting with multiple services would introduce distributed transactions, service discovery, inter-service authentication, deployment complexity, event ordering issues, operational monitoring overhead, and unnecessary failure modes before product boundaries are validated.
 

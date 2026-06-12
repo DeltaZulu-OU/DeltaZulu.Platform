@@ -1,4 +1,5 @@
 @namespace DeltaZulu.Platform.Web.Governance.Components.Pages
+@page "/governance/proposals/{Id}"
 @page "/governance/changes/{Id}"
 @using DeltaZulu.Platform.Web.Governance.Components.Shared
 @using MudBlazor
@@ -23,7 +24,7 @@
 @inject NavigationManager Nav
 @inject PocUserContext UserContext
 
-<PageTitle>Change — @(_change?.Key ?? "Loading")</PageTitle>
+<PageTitle>Proposal — @(_change?.Key ?? "Loading")</PageTitle>
 
 @if (_change is null)
 {
@@ -34,7 +35,7 @@
 <MudBreadcrumbs Items="_breadcrumbs" Class="mb-2" />
 
 @* ── Header ── *@
-<DzPageHeader Eyebrow="Change"
+<DzPageHeader Eyebrow="Proposal"
               Title="@($"{_change.Key} {_change.Title}")"
               Description="@ChangeReadinessSummary()">
     <Metadata>
@@ -79,7 +80,7 @@
 @if (_change.IsStale && !IsTerminal)
 {
     <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4">
-        @(_change.StaleReason ?? "A newer version was accepted since this change was opened. Review the latest accepted content before proceeding.")
+        @(_change.StaleReason ?? "A newer version was accepted since this proposal was opened. Review the latest accepted content before proceeding.")
     </MudAlert>
 }
 
@@ -143,7 +144,7 @@
             @if (_change.DraftFiles.Count == 0)
             {
                 <DzEmptyState Title="No draft files yet."
-                              Description="Add content to begin the change."
+                              Description="Add content to begin the proposal."
                               Icon="@Icons.Material.Outlined.NoteAdd" />
             }
             else
@@ -353,7 +354,7 @@
                     <MudExpansionPanels Class="mb-3">
                         <MudExpansionPanel Text="Switch user for testing" Dense="true">
                             <MudAlert Severity="@(IsCurrentUserAuthor ? Severity.Warning : Severity.Info)" Dense="true" Class="mb-2">
-                                Acting as @UserContext.CurrentUser.DisplayName. Controlled review blocks approval by the change author.
+                                Acting as @UserContext.CurrentUser.DisplayName. Controlled review blocks approval by the proposal author.
                             </MudAlert>
                             <MudSelect Value="UserContext.CurrentPersona" ValueChanged="SwitchUser" Label="POC user" T="PocUserPersona">
                                 @foreach (var user in UserContext.AvailableUsers)
@@ -446,7 +447,7 @@
     // Delete file
     private string _deletingFilePath = "";
 
-    // Close change
+    // Close proposal
     private string _closeReason = "";
 
     // Review
@@ -480,7 +481,7 @@
 
         _breadcrumbs =
         [
-            new("Changes", "/changes"),
+            new("Proposals", "/governance/proposals"),
             new(_change.Key, null, disabled: true),
     ];
 
@@ -625,14 +626,14 @@
         }
     }
 
-    // ── Close change ──
+    // ── Close proposal ──
 
     private async Task RequestCloseChange()
     {
         var parameters = new DialogParameters<DeltaZulu.Platform.Web.Components.DzConfirmDialog>
         {
-            { x => x.Title, "Close change?" },
-            { x => x.Message, "This will close the change without accepting. Please provide a reason." },
+            { x => x.Title, "Close proposal?" },
+            { x => x.Message, "This will close the proposal without accepting. Please provide a reason." },
             { x => x.ConfirmText, "Confirm close" },
             { x => x.ConfirmColor, Color.Error },
             { x => x.Tone, "error" },
@@ -640,7 +641,7 @@
             { x => x.ReasonLabel, "Reason" },
         };
         var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<DeltaZulu.Platform.Web.Components.DzConfirmDialog>("Close change", parameters, options);
+        var dialog = await DialogService.ShowAsync<DeltaZulu.Platform.Web.Components.DzConfirmDialog>("Close proposal", parameters, options);
         var result = await dialog.Result;
 
         if (result is not null && !result.Canceled)
@@ -658,7 +659,7 @@
         {
             await ChangeService.CloseAsync(_change.Id, _closeReason);
             _closeReason = "";
-            Snackbar.Add("Change closed.", Severity.Success);
+            Snackbar.Add("Proposal closed.", Severity.Success);
             await LoadAsync();
         }
         catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
@@ -677,7 +678,7 @@
     {
         if (IsTerminal)
         {
-            return "This change is completed and retained for review.";
+            return "This proposal is completed and retained for review.";
         }
 
         if (_readiness is null)

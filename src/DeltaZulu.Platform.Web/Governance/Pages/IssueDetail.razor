@@ -268,18 +268,18 @@
     </MudItem>
 
     <MudItem xs="12" md="8">
-        <MudText Typo="Typo.subtitle2" Class="dz-section-title">Related changes</MudText>
+        <MudText Typo="Typo.subtitle2" Class="dz-section-title">Related proposals</MudText>
         @if (_relatedChanges.Count == 0)
         {
-            <DzEmptyState Title="No changes linked to this issue."
-                          Description="Linked changes will appear here once work starts from this issue."
+            <DzEmptyState Title="No proposals linked to this issue."
+                          Description="Linked proposals will appear here once work starts from this issue."
                           Icon="@Icons.Material.Outlined.Assignment" />
         }
         else
         {
             <DzTableShell>
                 <MudTable Items="_relatedChanges" Dense="true" Hover="true"
-                          OnRowClick="@(args => Nav.NavigateTo($"/governance/changes/{args.Item!.Id}"))"
+                          OnRowClick="@(args => Nav.NavigateTo($"/governance/proposals/{args.Item!.Id}"))"
                           T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
                     <HeaderContent>
                         <MudTh>Key</MudTh>
@@ -330,7 +330,7 @@
 
         _breadcrumbs =
         [
-            new("Changes", "/changes"),
+            new("Proposals", "/governance/proposals"),
             new(_issue.Key, null, disabled: true),
         ];
 

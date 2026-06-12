@@ -451,7 +451,7 @@
     white-space: nowrap;
 }
 
-/* --- Change workspace gate checklist --- */
+/* --- Proposal workspace gate checklist --- */
 
 .dz-gate-panel .dz-panel__body {
     display: flex;
@@ -498,7 +498,7 @@
     color: var(--color-success) !important;
 }
 
-/* --- Change workspace file/code/diff primitives --- */
+/* --- Proposal workspace file/code/diff primitives --- */
 
 .dz-code-block--compact {
     font-size: 0.8125rem;
@@ -527,7 +527,7 @@
     }
 }
 
-/* --- Change detail workspace surfaces --- */
+/* --- Proposal detail workspace surfaces --- */
 
 .dz-tab-body {
     padding: var(--space-3);
@@ -564,7 +564,7 @@
     margin-bottom: var(--space-3) !important;
 }
 
-/* --- Change workspace review surfaces --- */
+/* --- Proposal workspace review surfaces --- */
 
 .dz-review-timeline {
     margin-top: var(--space-2);
@@ -587,7 +587,7 @@
     margin-top: var(--space-1) !important;
 }
 
-/* --- Change detail header surface --- */
+/* --- Proposal detail header surface --- */
 
 .dz-linked-issue {
     display: flex;

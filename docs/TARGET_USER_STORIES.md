@@ -8,7 +8,7 @@ The platform connects six slices:
 
 1. Analytics execution: run KQL over approved Golden schema views backed by DuckDB, with shared execution semantics for interactive queries, dashboards, validation, and scheduled detections.
 2. Knowledge reuse: preserve query history, curated analytics, visualizations, dashboards, evidence selections, and reusable analytical patterns.
-3. Detection content governance: create, validate, review, accept, restore, and version detection content through governed change workflows.
+3. Detection content governance: create, validate, review, accept, restore, and version detection content through governed proposal workflows.
 4. Scheduled operations: project accepted detection content into executable detection definitions, run them on schedule or on demand, and record traceable detection runs.
 5. Alerting and correlation: materialize matching results as alerts, extract entities, enrich evidence, apply suppression, correlate alerts into incident candidates, and support triage decisions.
 6. Workflow orchestration: use Elsa workflows to coordinate long-running processes such as validation, review, acceptance, scheduled execution, alert processing, incident-candidate correlation, triage, and recovery.
@@ -17,15 +17,15 @@ Domain rules remain in the SIEM domain and application services. Elsa workflows 
 
 ## Product narrative
 
-DeltaZulu.Platform gives a security practitioner a local, schema-governed security analytics loop: inspect data readiness, explore normalized event contracts, investigate evidence, preserve useful analytical logic, promote reusable analytics into governed detection changes, accept validated detection versions, execute accepted detections on a schedule, preserve produced alerts, enrich and correlate alert evidence, triage incident candidates, and feed operational outcomes back into detection tuning and visibility improvement.
+DeltaZulu.Platform gives a security practitioner a local, schema-governed security analytics loop: inspect data readiness, explore normalized event contracts, investigate evidence, preserve useful analytical logic, promote reusable analytics into governed detection proposals, accept validated detection versions, execute accepted detections on a schedule, preserve produced alerts, enrich and correlate alert evidence, triage incident candidates, and feed operational outcomes back into detection tuning and visibility improvement.
 
 The platform starts at a module picker and exposes three major user-facing modules:
 
 - **Analytics** for KQL-based querying, schema exploration, query history, curated analytics, visualizations, dashboards, evidence capture, and threat-hunting workflows.
-- **Detection Content Governance** for detection packages, governed changes, semantic detection content, validation checks, review, acceptance, restore, and version history.
+- **Detection Content Governance** for detection packages, governed proposals, semantic detection content, validation checks, review, acceptance, restore, and version history.
 - **Operations** for executable detections, scheduled detection runs, alerts, alert entities, enrichment, suppression, incident candidates, triage state, and recovery.
 
-The modules remain separate by responsibility. Analytics asks questions and preserves analytical artifacts. Governance controls detection-content change and acceptance. Operations executes accepted detections and manages produced operational state. The modules integrate through explicit handoff boundaries: curated analytics can be promoted into detection drafts; accepted detection versions can project executable definitions; detection runs create alerts; alerts can correlate into incident candidates; triage outcomes can create detection-tuning work.
+The modules remain separate by responsibility. Analytics asks questions and preserves analytical artifacts. Governance controls detection-content proposals and acceptance. Operations executes accepted detections and manages produced operational state. The modules integrate through explicit handoff boundaries: curated analytics can be promoted into detection drafts; accepted detection versions can project executable definitions; detection runs create alerts; alerts can correlate into incident candidates; triage outcomes can create detection-tuning work.
 
 ```mermaid
 flowchart LR
@@ -43,7 +43,7 @@ flowchart LR
     Analytics --> Evidence[Evidence selections]
 
     Governance --> Detections[Detection packages]
-    Governance --> Changes[Governed changes]
+    Governance --> Proposals[Governed proposals]
     Governance --> Checks[Validation checks]
     Governance --> Reviews[Peer review]
     Governance --> History[Accepted version history]
@@ -59,7 +59,7 @@ flowchart LR
     Golden --> DuckDB[KQL to DuckDB execution]
     Query --> Curated[Curated analytic]
     Curated --> Promote[Promote to detection draft]
-    Promote --> Changes
+    Promote --> Proposals
 
     History --> Definitions
     Definitions --> Runs
@@ -68,7 +68,7 @@ flowchart LR
     Alerts --> Candidates
     Candidates --> Triage
     Triage --> Feedback[Detection tuning / visibility feedback]
-    Feedback --> Changes
+    Feedback --> Proposals
 
     Workflows[Elsa workflows] --> Checks
     Workflows --> Reviews
@@ -100,8 +100,8 @@ flowchart LR
 |---|---|---|
 | SOC analyst | Query approved security data, inspect evidence, review alerts, pivot by entity, and preserve useful investigation steps. | Analytics workbench, schema browser, query history, curated analytics, alert queue, alert detail, incident candidates. |
 | Threat hunter | Run hypothesis-driven investigations without forcing every hunt into detection engineering or incident response. | Threat hunting workflow, analytics workbench, evidence selections, findings, handover actions. |
-| Detection engineer | Convert useful analytical logic into governed, testable, executable detection content. | Detection catalog, detection changes, validation workflow, test cases, entity mapping, suppression settings, accepted versions. |
-| Reviewer / maintainer | Review detection-content changes, approve safe versions, recover prior versions, and preserve auditability. | Change review tab, gate checklist, workflow state, accepted history, compare/restore. |
+| Detection engineer | Convert useful analytical logic into governed, testable, executable detection content. | Detection catalog, detection proposals, validation workflow, test cases, entity mapping, suppression settings, accepted versions. |
+| Reviewer / maintainer | Review detection-content proposals, approve safe versions, recover prior versions, and preserve auditability. | Proposal review tab, gate checklist, workflow state, accepted history, compare/restore. |
 | Dashboard author | Package repeated views of analytics, alerts, runs, and candidates without redefining detection logic. | Dashboard list/detail, widget editor, saved visualization support, alert/candidate widgets. |
 | Detection operations user | Monitor scheduled detection execution, failed runs, produced alerts, suppression behavior, and execution diagnostics. | Executable detections, detection runs, run detail, alert batches, operations health. |
 | Triage analyst | Review alerts and incident candidates, preserve evidence, promote or dismiss candidates, and record disposition. | Alert queue, alert detail, candidate queue, candidate detail, triage workflow. |
@@ -197,11 +197,11 @@ mindmap
 | US-09 | Build and refresh dashboards. | Target UI |
 | US-10 | Import, export, search, and manage dashboards. | Target UI |
 | US-11 | Create and browse detection content packages. | Target UI |
-| US-12 | Open a governed detection-content change. | Target UI + workflow-backed |
+| US-12 | Open a governed detection-content proposal. | Target UI + workflow-backed |
 | US-13 | Edit semantic detection content and compare with accepted content. | Target UI |
-| US-14 | Validate a detection-content change. | Workflow-backed |
-| US-15 | Review and approve a governed change. | Workflow-backed |
-| US-16 | Accept a ready change into version history and project executable detection metadata. | Workflow-backed |
+| US-14 | Validate a detection-content proposal. | Workflow-backed |
+| US-15 | Review and approve a governed proposal. | Workflow-backed |
+| US-16 | Accept a ready proposal into version history and project executable detection metadata. | Workflow-backed |
 | US-17 | Compare and restore prior accepted versions. | Target UI + workflow-backed |
 | US-18 | Configure local user, workspace, workflow, operations, and query defaults. | Target UI |
 | US-19 | Recover incomplete accepted-content projections and failed workflows. | Workflow-backed |
@@ -230,7 +230,7 @@ The user lands on the platform home page, sees registered modules, and opens Ana
 - Home lists platform modules in configured order.
 - Each module card routes to that module's route prefix.
 - Analytics exposes Overview, Analytics Workbench, Threat Hunting, Library, Dashboards, and Settings navigation.
-- Detection Content Governance exposes Home, Detections, Changes, History, and Settings navigation.
+- Detection Content Governance exposes Home, Detections, Proposals, History, and Settings navigation.
 - Operations exposes Executable Detections, Detection Runs, Alerts, Incident Candidates, Operations Health, and Settings navigation.
 - Settings distinguish user preferences, workspace settings, workflow settings, operations/recovery, and development/demo-only settings.
 - Workflow state is surfaced as meaningful security operations state, not as raw Elsa implementation detail.
@@ -248,7 +248,7 @@ flowchart TD
     Analytics --> Dash[Dashboards]
 
     Governance --> Detections[Detections]
-    Governance --> Changes[Changes]
+    Governance --> Proposals[Proposals]
     Governance --> History[History]
 
     Operations --> ExecDefs[Executable Detections]
@@ -426,7 +426,7 @@ Threat hunting is a workflow under Analytics. It can use curated analytics, ad h
 
 **Narrative**
 
-The user can promote an active query, query history item, saved query, curated analytic, hunt finding, or evidence selection into a detection-content change. The promotion flow preserves query text, selected time range, result sample, pinned evidence, schema dependencies, entity mappings, severity/confidence/risk hints, known false positives, and analyst notes. The result is a governed detection change, not an accepted detection.
+The user can promote an active query, query history item, saved query, curated analytic, hunt finding, or evidence selection into a detection-content proposal. The promotion flow preserves query text, selected time range, result sample, pinned evidence, schema dependencies, entity mappings, severity/confidence/risk hints, known false positives, and analyst notes. The result is a governed detection proposal, not an accepted detection.
 
 **Acceptance criteria**
 
@@ -435,9 +435,9 @@ The user can promote an active query, query history item, saved query, curated a
 - Promotion preserves query text, required views, required fields, observed result shape, selected time range, and pinned evidence.
 - Promotion captures intended entity mappings before the detection can become executable.
 - Promotion captures severity, confidence, risk, ATT&CK metadata where available, known false positives, and operational notes.
-- Promotion creates a governed detection-content change rather than directly creating an accepted detection.
+- Promotion creates a governed detection-content proposal rather than directly creating an accepted detection.
 - Promotion can start an Elsa-backed detection-draft workflow.
-- The resulting change can proceed through validation, review, and acceptance gates.
+- The resulting proposal can proceed through validation, review, and acceptance gates.
 
 ```mermaid
 flowchart TD
@@ -445,9 +445,9 @@ flowchart TD
     Promote --> Choose{New or existing detection?}
     Choose --> NewDetection[Create detection package]
     Choose --> ExistingDetection[Attach to existing detection]
-    NewDetection --> Change[Governed change]
-    ExistingDetection --> Change
-    Change --> Metadata[Query, metadata, entities, evidence, tests]
+    NewDetection --> Proposal[Governed proposal]
+    ExistingDetection --> Proposal
+    Proposal --> Metadata[Query, metadata, entities, evidence, tests]
     Metadata --> Workflow[Elsa: detection draft workflow]
     Workflow --> Validation[Validation gates]
 ```
@@ -495,7 +495,7 @@ The dashboard list supports search, pagination, creation, JSON import, opening, 
 
 ### US-11: Create and browse detection content packages
 
-**As a** detection engineer, **I want** to create and browse detection packages, **so that** detection content has a stable identity before changes are proposed.
+**As a** detection engineer, **I want** to create and browse detection packages, **so that** detection content has a stable identity before proposals are opened.
 
 **Narrative**
 
@@ -507,27 +507,27 @@ The Detections page lists detection content packages, supports search by slug or
 - The user can search detections by slug or title.
 - The user can filter by Draft, Accepted, Deprecated, or Disabled lifecycle where applicable.
 - The user can open a detection detail page from the table.
-- Detection detail shows accepted version, open changes, execution state, entity mappings, and latest run summary where available.
+- Detection detail shows accepted version, open proposals, execution state, entity mappings, and latest run summary where available.
 - Detection package identity remains stable across content versions.
 
-### US-12: Open a governed detection-content change
+### US-12: Open a governed detection-content proposal
 
-**As a** detection engineer, **I want** to open a proposed change against a detection, **so that** content edits can carry checks, review, workflow state, and acceptance state.
+**As a** detection engineer, **I want** to open a proposed update against a detection, **so that** content edits can carry checks, review, workflow state, and acceptance state.
 
 **Narrative**
 
-Changes are PR-like domain objects against detections. They carry draft content, workflow profile, checks, reviews, stale state, optional linked issue, merge result, close reason, and workflow instance references where applicable. The Changes page lists work by all, mine, awaiting review, stale, failed workflow, and ready to accept.
+Proposals are PR-like domain objects against detections. They carry draft content, workflow profile, checks, reviews, stale state, optional linked issue, merge result, close reason, and workflow instance references where applicable. The Proposals page lists work by all, mine, awaiting review, stale, failed workflow, and ready to accept.
 
 **Acceptance criteria**
 
-- The user can create a new change from the Changes page.
-- The user can create a new change from a promoted analytical artifact.
-- Open changes show key, title, status, file count or semantic section count, check count, stale state, workflow state, and update time.
-- The list can filter to the current user's open changes.
-- The list can filter to changes awaiting review by someone else.
-- The list can filter to stale changes.
+- The user can create a new proposal from the Proposals page.
+- The user can create a new proposal from a promoted analytical artifact.
+- Open proposals show key, title, status, file count or semantic section count, check count, stale state, workflow state, and update time.
+- The list can filter to the current user's open proposals.
+- The list can filter to proposals awaiting review by someone else.
+- The list can filter to stale proposals.
 - The list can filter to failed or paused workflow states.
-- Opening a row navigates to the change workspace.
+- Opening a row navigates to the proposal workspace.
 - Workflow state is shown in user-facing language such as Draft, Validating, Awaiting Review, Ready to Accept, Accepting, Merged, Failed, or Blocked.
 
 ### US-13: Edit semantic detection content and compare with accepted content
@@ -536,36 +536,36 @@ Changes are PR-like domain objects against detections. They carry draft content,
 
 **Narrative**
 
-The change workspace lets mutable changes edit semantic detection sections. These sections may be backed by files, but the user-facing model is detection-oriented rather than file-oriented. The main sections are query logic, metadata, entity mapping, schedule/lookback, alert materialization, suppression, test cases, evidence examples, notes, and static supporting assets. Advanced users can still inspect and edit raw files where appropriate.
+The proposal workspace lets mutable proposals edit semantic detection sections. These sections may be backed by files, but the user-facing model is detection-oriented rather than file-oriented. The main sections are query logic, metadata, entity mapping, schedule/lookback, alert materialization, suppression, test cases, evidence examples, notes, and static supporting assets. Advanced users can still inspect and edit raw files where appropriate.
 
 **Acceptance criteria**
 
-- Mutable changes can edit detection query logic.
-- Mutable changes can edit title, description, severity, confidence, risk, ATT&CK metadata, and operational notes.
-- Mutable changes can edit entity mappings required for alert generation and candidate correlation.
-- Mutable changes can edit schedule, lookback, and suppression settings.
-- Mutable changes can edit alert materialization mode: PerResultRow, SingleAlertPerRun, GroupByEntity, or GroupByCustomKey.
-- Mutable changes can add positive and negative test cases.
-- Mutable changes can attach evidence examples from analytics result rows.
+- Mutable proposals can edit detection query logic.
+- Mutable proposals can edit title, description, severity, confidence, risk, ATT&CK metadata, and operational notes.
+- Mutable proposals can edit entity mappings required for alert generation and candidate correlation.
+- Mutable proposals can edit schedule, lookback, and suppression settings.
+- Mutable proposals can edit alert materialization mode: PerResultRow, SingleAlertPerRun, GroupByEntity, or GroupByCustomKey.
+- Mutable proposals can add positive and negative test cases.
+- Mutable proposals can attach evidence examples from analytics result rows.
 - Editing content resets approvals when the workflow profile requires it.
 - Editing content returns review-ready statuses back to Draft when required.
 - Draft content can be compared against accepted content.
 - Stale check warnings appear when content changes after the last completed check.
 - Advanced file view remains available without forcing normal users to work at the file level.
 
-### US-14: Validate a detection-content change
+### US-14: Validate a detection-content proposal
 
-**As a** detection engineer, **I want** to run validation checks in the change workspace, **so that** only syntactically valid, schema-compatible, testable, and operationally usable content can advance.
+**As a** detection engineer, **I want** to run validation checks in the proposal workspace, **so that** only syntactically valid, schema-compatible, testable, and operationally usable content can advance.
 
 **Narrative**
 
-An Elsa-backed validation workflow collects draft content, determines applicable checks, queues blocking or non-blocking runs, records pass/fail outcomes, and updates change status according to workflow gates. KQL syntax validation uses the same catalog policy and translator path as runtime query execution but stops before DuckDB execution unless a test fixture or explicit dry-run check requires execution.
+An Elsa-backed validation workflow collects draft content, determines applicable checks, queues blocking or non-blocking runs, records pass/fail outcomes, and updates proposal status according to workflow gates. KQL syntax validation uses the same catalog policy and translator path as runtime query execution but stops before DuckDB execution unless a test fixture or explicit dry-run check requires execution.
 
 **Acceptance criteria**
 
-- The user can run checks from the change header, gate checklist, content warning, or validation tab.
+- The user can run checks from the proposal header, gate checklist, content warning, or validation tab.
 - The validation workflow can be started, resumed, cancelled, and retried where allowed.
-- Checks apply only when the change contains matching content types or semantic sections.
+- Checks apply only when the proposal contains matching content types or semantic sections.
 - Each check records name, blocking flag, status, summary, details JSON, optional logs excerpt, and workflow step identity.
 - A pipeline summary reports passed, failed, skipped, blocked, and errored counts.
 - Required check gates block acceptance when checks have not run or have not passed.
@@ -579,7 +579,7 @@ An Elsa-backed validation workflow collects draft content, determines applicable
 - Test-case checks run positive and negative tests where fixtures exist.
 - Regression checks preserve previous expected behavior where applicable.
 
-### US-15: Review and approve a governed change
+### US-15: Review and approve a governed proposal
 
 **As a** reviewer, **I want** to record an approval or request changes with context visible, **so that** acceptance reflects a current, reviewed draft.
 
@@ -589,71 +589,71 @@ The Review tab explains the workflow profile, optionally blocks author self-appr
 
 **Acceptance criteria**
 
-- Review workflow requirements are visible in the change workspace.
+- Review workflow requirements are visible in the proposal workspace.
 - Controlled workflows require approval from someone other than the author.
 - Self-approval is blocked by domain rules for non-author approval workflows.
 - Reviewers can record Approved or Changes Requested decisions with comments.
-- Changes Requested moves the change to a changes-requested state.
-- Approval can move the change to Ready to Accept if all gates pass.
+- Changes Requested moves the proposal to a changes-requested state.
+- Approval can move the proposal to Ready to Accept if all gates pass.
 - Prior reviews remain visible, including superseded approvals.
-- Workflow state clearly shows whether the change is awaiting review, blocked by stale checks, ready to accept, or failed.
+- Workflow state clearly shows whether the proposal is awaiting review, blocked by stale checks, ready to accept, or failed.
 - Review records include actor, timestamp, decision, comment, and supersession state.
 
-### US-16: Accept a ready change into version history and project executable detection metadata
+### US-16: Accept a ready proposal into version history and project executable detection metadata
 
-**As a** maintainer, **I want** to accept a ready change, **so that** proposed detection content becomes an immutable accepted version and can produce executable detection definitions.
+**As a** maintainer, **I want** to accept a ready proposal, **so that** proposed detection content becomes an immutable accepted version and can produce executable detection definitions.
 
 **Narrative**
 
-The gate checklist calls acceptance only when merge readiness is satisfied. An Elsa-backed acceptance workflow coordinates accepted-content write, merge intent marking, version projection, executable detection projection, change merge state, detection lifecycle update, and sibling-change staleness. Domain and persistence services enforce atomicity and recovery markers.
+The gate checklist calls acceptance only when merge readiness is satisfied. An Elsa-backed acceptance workflow coordinates accepted-content write, merge intent marking, version projection, executable detection projection, proposal merge state, detection lifecycle update, and sibling-proposal staleness. Domain and persistence services enforce atomicity and recovery markers.
 
 **Acceptance criteria**
 
 - Terminal, stale, missing-check, failed-check, missing-approval, and missing-non-author-approval gates can block acceptance.
-- A ready change can be accepted with one action.
+- A ready proposal can be accepted with one action.
 - Acceptance workflow records its progress in meaningful steps.
 - Accepted content is committed before version projection is completed.
 - The resulting version records changed sections, commit SHA, checks summary, review summary, and content hash.
 - The accepted detection points to the resulting version.
 - Accepted content can project or update an executable detection definition when required metadata exists.
-- Other open changes for the same detection are marked stale.
+- Other open proposals for the same detection are marked stale.
 - Failed acceptance leaves a recoverable merge intent or workflow state.
 - Recovery can reconcile committed content and incomplete projection.
 
 ```mermaid
 flowchart TD
-    Change[Change workspace] --> Gates{Merge readiness gates pass?}
+    Proposal[Proposal workspace] --> Gates{Merge readiness gates pass?}
     Gates -- No --> Checklist[Show gate checklist and fix actions]
-    Checklist --> Change
+    Checklist --> Proposal
     Gates -- Yes --> Workflow[Elsa: acceptance workflow]
     Workflow --> Commit[Commit accepted content]
     Commit --> Intent[Mark merge intent committed]
     Intent --> Project[Project accepted version]
     Project --> Executable[Project executable detection definition]
     Executable --> Tx[Persist DB changes atomically]
-    Tx --> Merged[Mark change merged]
+    Tx --> Merged[Mark proposal merged]
     Tx --> Accepted[Mark detection accepted]
-    Tx --> Stale[Mark sibling changes stale]
+    Tx --> Stale[Mark sibling proposals stale]
     Merged --> History[Accepted version history]
 ```
 
 ### US-17: Compare and restore prior accepted versions
 
-**As a** maintainer, **I want** to compare accepted versions and restore older content through a new change, **so that** recovery remains governed and auditable.
+**As a** maintainer, **I want** to compare accepted versions and restore older content through a new proposal, **so that** recovery remains governed and auditable.
 
 **Narrative**
 
-History pages expose accepted versions. Version detail shows accepted metadata and content. Restore creates a new governed change rather than rewriting accepted history. The restore workflow can prefill draft content from a prior version and route the change through validation, review, and acceptance gates.
+History pages expose accepted versions. Version detail shows accepted metadata and content. Restore creates a new governed proposal rather than rewriting accepted history. The restore workflow can prefill draft content from a prior version and route the proposal through validation, review, and acceptance gates.
 
 **Acceptance criteria**
 
 - The user can open accepted version history.
 - Version detail can show accepted version metadata and content.
 - The user can compare versions to understand what changed.
-- Restoring prior content creates a new change instead of rewriting history.
+- Restoring prior content creates a new proposal instead of rewriting history.
 - Restored content follows the same validation, review, and acceptance gates.
 - Restore records which prior version was used as the source.
-- Restore can trigger an Elsa-backed restore workflow that creates the new change and routes it to validation.
+- Restore can trigger an Elsa-backed restore workflow that creates the new proposal and routes it to validation.
 
 ### US-18: Configure local user, workspace, workflow, operations, and query defaults
 

@@ -10,7 +10,7 @@ The current asset is a KQL query editor and a design for detection content manag
 
 ## Decision
 
-The POC excludes SIEM runtime and SOAR automation. It focuses on content authoring, issue/case workflow, PR-like changes, checks, reviews, workflow profiles, merge into Git, and automatic version history.
+The POC excludes SIEM runtime and SOAR automation. It focuses on content authoring, issue/case workflow, PR-like proposals, checks, reviews, workflow profiles, merge into Git, and automatic version history.
 
 ## Consequences
 

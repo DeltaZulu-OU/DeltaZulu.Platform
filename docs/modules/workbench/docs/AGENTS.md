@@ -38,31 +38,31 @@ detections/<slug>/
 
 ### 3. Three user-facing concepts (ADR-0017)
 
-Users see: **Detections**, **Changes**, **History**. Plus operator-only **Settings**.
+Users see: **Detections**, **Proposals**, **History**. Plus operator-only **Settings**.
 
-Navigation: Home, Detections, Changes, History, Settings.
+Navigation: Home, Detections, Proposals, History, Settings.
 
-Checks and reviews are shown inline on the Change workspace. No standalone Checks or Reviews
+Checks and reviews are shown inline on the Proposal workspace. No standalone Checks or Reviews
 pages in navigation.
 
-### 4. Changes are self-contained
+### 4. Proposals are self-contained
 
-A Change carries: title, reason, related investigation URL, target detection, draft content,
-checks, reviews, and status. No separate Issue is required to start a Change.
+A Proposal carries: title, reason, related investigation URL, target detection, draft content,
+checks, reviews, and status. No separate Issue is required to start a Proposal.
 
 Issues remain in the domain model as an optional lightweight intake form but are not part of
 the core workflow or navigation.
 
 ### 5. Governance is derived
 
-Users do not select workflow profiles per-change. The system derives governance from workspace
+Users do not select workflow profiles per-proposal. The system derives governance from workspace
 configuration. The UI shows the effect ("requires approval") not the mechanism
 ("controlled_review profile").
 
 ### 6. Users see versions, not commits
 
 Git commits are projected into user-friendly versions. UI uses: version, compare, restore as
-new change, accepted by, checks, review.
+new proposal, accepted by, checks, review.
 
 Avoid: branch, checkout, rebase, reset, staging, HEAD, tree, index, conflict marker.
 
@@ -75,9 +75,9 @@ Users never see workflow instance IDs, activity IDs, or designer concepts.
 
 Users cannot author arbitrary workflows, upload scripts, or run unrestricted automation.
 
-### 9. PR-like changes are database objects
+### 9. PR-like proposals are database objects
 
-A Change is a database-owned object. Not a Git branch. Merge writes canonical files to Git
+A Proposal is a database-owned object. Not a Git branch. Merge writes canonical files to Git
 and creates a version projection.
 
 ### 10. Vendor-neutral terminology
@@ -116,11 +116,11 @@ workflow.
 
 ## Safety requirements
 
-- Each change records the base detection version.
-- Merge blocked if current accepted version differs from change base.
+- Each proposal records the base detection version.
+- Merge blocked if current accepted version differs from the proposal base.
 - Authors cannot self-approve in controlled review.
 - Editing content after approval resets approval in controlled review.
-- Restore creates a new change, never rewrites history.
+- Restore creates a new proposal, never rewrites history.
 - Detection IDs validated before path construction.
 - Git operations are internal and controlled.
 
@@ -134,7 +134,7 @@ Tests should cover:
 - Blocking stale merges.
 - Writing accepted content to Git on merge.
 - Projecting Git commit to detection version.
-- Restoring a previous version as a new change.
+- Restoring a previous version as a new proposal.
 
 Prefer application-service tests over UI-only tests for workflow behavior.
 

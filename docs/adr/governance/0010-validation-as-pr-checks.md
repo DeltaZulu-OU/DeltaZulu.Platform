@@ -10,7 +10,7 @@ The system needs to validate detection content before acceptance. Users are fami
 
 ## Decision
 
-Represent validation as check runs associated with PR-like changes.
+Represent validation as check runs associated with PR-like proposals.
 
 Minimum check types:
 

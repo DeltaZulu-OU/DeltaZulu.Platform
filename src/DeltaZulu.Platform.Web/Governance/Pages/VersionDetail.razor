@@ -37,7 +37,7 @@ else
                 <Actions>
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                                StartIcon="@Icons.Material.Outlined.Restore" Disabled="_restoring" OnClick="RestoreVersion">
-                        Restore as new change
+                        Restore as new proposal
                     </MudButton>
                     <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small"
                                OnClick="@(() => Nav.NavigateTo($"/governance/detections/{_comparison.Detection.Id}"))">
@@ -65,9 +65,9 @@ else
 
                     <DzDetailItem Label="Changed files" Value="@_comparison.ChangedFiles.Count.ToString()" />
 
-                    <DzDetailItem Label="Source change">
-                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/governance/changes/{_comparison.AfterVersion.SourceChangeRequestId}"))" Class="mt-1">
-                            View change
+                    <DzDetailItem Label="Source proposal">
+                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/governance/proposals/{_comparison.AfterVersion.SourceChangeRequestId}"))" Class="mt-1">
+                            View proposal
                         </DzActionLink>
                     </DzDetailItem>
 
@@ -227,8 +227,8 @@ else
 
         _breadcrumbs =
         [
-            new("History", "/history"),
-            new(_comparison.Detection.Slug, $"/detections/{_comparison.Detection.Id}"),
+            new("History", "/governance/history"),
+            new(_comparison.Detection.Slug, $"/governance/detections/{_comparison.Detection.Id}"),
             new(_comparison.AfterVersion.DisplayVersion, null, disabled: true),
         ];
     }
@@ -267,8 +267,8 @@ else
                 _comparison.AfterVersion.Id,
                 UserContext.CurrentUser.Id,
                 WorkflowProfileId.QuickLab);
-            Snackbar.Add($"Opened {change.Key} from {_comparison.AfterVersion.DisplayVersion}.", Severity.Success);
-            Nav.NavigateTo($"/governance/changes/{change.Id}");
+            Snackbar.Add($"Opened proposal {change.Key} from {_comparison.AfterVersion.DisplayVersion}.", Severity.Success);
+            Nav.NavigateTo($"/governance/proposals/{change.Id}");
         }
         catch (DomainException ex)
         {

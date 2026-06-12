@@ -89,7 +89,7 @@ else
                     <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
                                StartIcon="@Icons.Material.Outlined.Add"
                                OnClick="@(() => OpenChangeForDetection(context.Id))">
-                        Open change
+                        Open proposal
                     </MudButton>
                 </MudTd>
             </RowTemplate>
@@ -153,11 +153,11 @@ else
             { x => x.AuthorId, UserContext.CurrentUser.Id },
         };
         var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<OpenChangeDialog>("Open Change", parameters, options);
+        var dialog = await DialogService.ShowAsync<OpenChangeDialog>("Open proposal", parameters, options);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled && result.Data is ChangeRequestId changeId)
         {
-            Nav.NavigateTo($"/governance/changes/{changeId}");
+            Nav.NavigateTo($"/governance/proposals/{changeId}");
         }
     }
 }

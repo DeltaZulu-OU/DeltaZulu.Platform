@@ -12,7 +12,7 @@
 <PageTitle>Checks</PageTitle>
 
 <DzPageHeader Title="Checks"
-              Description="Validation outcomes across open and accepted changes. Checks remain attached to database-owned changes." />
+              Description="Validation outcomes across open and accepted proposals. Checks remain attached to database-owned proposals." />
 
 @if (_loading)
 {
@@ -21,7 +21,7 @@
 else if (_rows.Count == 0)
 {
     <DzEmptyState Title="No checks have been run yet."
-                  Description="Open a change and run the validation pipeline."
+                  Description="Open a proposal and run the validation pipeline."
                   Icon="@Icons.Material.Outlined.PlaylistAddCheck" />
 }
 else
@@ -30,7 +30,7 @@ else
         <MudItem xs="12" sm="6" md="3">
             <DzMetricTile Eyebrow="Total checks"
                           Value="@_rows.Count.ToString()"
-                          Label="@($"Across {_changeCount} change(s)")" />
+                          Label="@($"Across {_changeCount} proposal(s)")" />
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
             <DzMetricTile Eyebrow="Blocking attention"
@@ -40,7 +40,7 @@ else
         <MudItem xs="12" sm="6" md="3">
             <DzMetricTile Eyebrow="Failed checks"
                           Value="@FailedCount.ToString()"
-                          Label="Latest failures stay linked to changes"
+                          Label="Latest failures stay linked to proposals"
                           Tone="error" />
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
@@ -82,7 +82,7 @@ else
         <DzTableShell>
             <MudTable Items="_filteredRows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="CheckRow" Elevation="0">
                 <HeaderContent>
-                    <MudTh>Change</MudTh>
+                    <MudTh>Proposal</MudTh>
                     <MudTh>Check</MudTh>
                     <MudTh>Blocking</MudTh>
                     <MudTh>Status</MudTh>
@@ -90,8 +90,8 @@ else
                     <MudTh>Completed</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="Change">
-                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/governance/changes/{context.Change.Id}"))">
+                    <MudTd DataLabel="Proposal">
+                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/governance/proposals/{context.Change.Id}"))">
                             <code>@context.Change.Key</code>
                         </DzActionLink>
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>

@@ -23,7 +23,7 @@ Allowed user-facing concepts:
 - Approval.
 - Version.
 - Compare.
-- Restore as new change.
+- Restore as new proposal.
 - Changed sections.
 
 Disallowed normal user-facing Git concepts:
