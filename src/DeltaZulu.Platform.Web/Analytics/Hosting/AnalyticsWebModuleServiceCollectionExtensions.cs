@@ -16,6 +16,19 @@ using MudBlazor.Services;
 namespace DeltaZulu.Platform.Web.Analytics.Hosting;
 public static class AnalyticsWebModuleServiceCollectionExtensions
 {
+    private static readonly string[] AppStateTables = [
+        "user_settings",
+        "saved_queries",
+        "query_history",
+        "visualizations",
+        "detections",
+        "detection_runs",
+        "alerts",
+        "alert_entities",
+        "incident_candidates",
+        "candidate_alert_links",
+        "candidate_evidence"];
+
     /// <summary>
     /// Registers DuckDB-backed Analytics query/runtime services. This layer is reusable outside the
     /// standalone Blazor host and deliberately excludes application-state persistence and UI providers.
@@ -34,7 +47,13 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         });
 
         services.AddSingleton<IQuerySyntaxValidator, KqlQuerySyntaxValidator>();
-        services.AddSingleton(_ => new DuckDbConnectionFactory($"DataSource={options.DuckDbPath}"));
+        services.AddSingleton(_ => new DuckDbConnectionFactory(
+            $"DataSource={options.DuckDbPath}",
+            attachedDatabases: [new DuckDbAttachedDatabase(
+                options.AppDatabaseAlias,
+                options.AppDbPath,
+                readOnly: true,
+                views: CreateAppStateViews(options.AppViewSchema))]));
         services.AddSingleton<SchemaApplier>();
         services.AddSingleton(sp => new QueryRuntime(
             sp.GetRequiredService<ApprovedViewCatalog>(),
@@ -60,6 +79,8 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
 
+        // Keep repository writes on Microsoft.Data.Sqlite: DuckDB's SQLite attachment supports
+        // cross-database reads, but does not support SQLite-backed ON CONFLICT/MERGE writes.
         services.AddApplicationPersistence($"Data Source={options.AppDbPath}");
         services.AddDashboards();
         services.AddScoped<UserSettingsState>();
@@ -97,5 +118,13 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         services.AddScoped<LanguageService>();
 
         return services;
+    }
+
+    private static IReadOnlyList<DuckDbAttachedView> CreateAppStateViews(string appViewSchema)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appViewSchema);
+        return AppStateTables
+            .Select(tableName => new DuckDbAttachedView(tableName, tableName, appViewSchema))
+            .ToArray();
     }
 }

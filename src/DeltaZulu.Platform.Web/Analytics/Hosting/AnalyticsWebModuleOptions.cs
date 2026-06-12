@@ -9,6 +9,8 @@ public sealed record AnalyticsModuleOptions
 {
     public string DuckDbPath { get; init; } = "hunting.db";
     public string AppDbPath { get; init; } = "settings.db";
+    public string AppDatabaseAlias { get; init; } = "app";
+    public string AppViewSchema { get; init; } = "app_state";
     public int PlannerMaxIterations { get; init; } = 3;
     public int DefaultLimit { get; init; } = 10_000;
     public int TimeoutSeconds { get; init; } = 30;

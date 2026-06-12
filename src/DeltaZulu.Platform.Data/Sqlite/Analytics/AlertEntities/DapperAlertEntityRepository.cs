@@ -102,8 +102,7 @@ public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IDispo
                 return;
             }
 
-            await using var connection = _connectionFactory.CreateConnection();
-            await connection.OpenAsync(cancellationToken);
+            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
             await connection.ExecuteAsync(new CommandDefinition(CreateSchemaSql, cancellationToken: cancellationToken));
             _initialized = true;
         }
@@ -119,8 +118,7 @@ public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IDispo
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<AlertEntityRow>(
             new CommandDefinition(ListByAlertSql, new { AlertId = alertId }, cancellationToken: cancellationToken));
@@ -135,8 +133,7 @@ public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IDispo
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<AlertEntityRow>(
             new CommandDefinition(ListByEntityValueSql, new { EntityType = entityType, EntityValue = entityValue }, cancellationToken: cancellationToken));
@@ -155,8 +152,7 @@ public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IDispo
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         foreach (var entity in entities)

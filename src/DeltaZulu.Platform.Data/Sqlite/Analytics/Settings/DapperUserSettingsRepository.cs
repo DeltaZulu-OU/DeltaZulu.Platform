@@ -61,8 +61,7 @@ public sealed class DapperUserSettingsRepository : AppIUserSettingsRepository, I
                 return;
             }
 
-            await using var connection = _connectionFactory.CreateConnection();
-            await connection.OpenAsync(cancellationToken);
+            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
             await connection.ExecuteAsync(new CommandDefinition(CreateSchemaSql, cancellationToken: cancellationToken));
             _initialized = true;
         }
@@ -76,8 +75,7 @@ public sealed class DapperUserSettingsRepository : AppIUserSettingsRepository, I
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var row = await connection.QuerySingleOrDefaultAsync<UserSettingsRow>(
             new CommandDefinition(SelectSql, cancellationToken: cancellationToken));
@@ -98,8 +96,7 @@ public sealed class DapperUserSettingsRepository : AppIUserSettingsRepository, I
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpdateSql,

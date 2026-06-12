@@ -1,4 +1,3 @@
-
 using Dapper;
 using DuckDB.NET.Data;
 
@@ -26,16 +25,23 @@ public sealed class DuckDbConnectionFactory : IDisposable
 {
     private readonly string _connectionString;
     private readonly Lock _lock = new();
+    private readonly IReadOnlyList<DuckDbAttachedDatabase> _attachedDatabases;
     private readonly IReadOnlyList<string> _startupSql;
     private DuckDBConnection? _connection;
 
     public DuckDbConnectionFactory(
         string connectionString = "DataSource=:memory:",
-        IReadOnlyList<string>? startupSql = null)
+        IReadOnlyList<string>? startupSql = null,
+        IReadOnlyList<DuckDbAttachedDatabase>? attachedDatabases = null)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+
         _connectionString = connectionString;
         _startupSql = startupSql ?? [
             "INSTALL inet;LOAD inet;"];
+        _attachedDatabases = attachedDatabases ?? [];
+
+        ValidateAttachedDatabases(_attachedDatabases);
     }
 
     public void Dispose()
@@ -58,17 +64,18 @@ public sealed class DuckDbConnectionFactory : IDisposable
             if (_connection is null)
             {
                 var connection = new DuckDBConnection(_connectionString);
-                connection.Open();
 
                 try
                 {
+                    connection.Open();
                     ApplyStartupSql(connection, _startupSql);
+                    AttachDatabases(connection, _attachedDatabases);
                     _connection = connection;
                 }
-                catch
+                catch (Exception ex)
                 {
                     connection.Dispose();
-                    throw;
+                    throw new InvalidOperationException("DuckDB connection initialization failed. See the inner exception for the failed startup step.", ex);
                 }
             }
 
@@ -78,9 +85,151 @@ public sealed class DuckDbConnectionFactory : IDisposable
 
     private static void ApplyStartupSql(DuckDBConnection connection, IReadOnlyList<string> startupSql)
     {
-        foreach (var sql in startupSql.Where(static sql => !string.IsNullOrWhiteSpace(sql)))
+        for (var index = 0; index < startupSql.Count; index++)
         {
-            connection.Execute(sql);
+            var sql = startupSql[index];
+            if (string.IsNullOrWhiteSpace(sql))
+            {
+                continue;
+            }
+
+            try
+            {
+                connection.Execute(sql);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"DuckDB startup SQL statement at index {index} failed.", ex);
+            }
         }
+    }
+
+    private static void AttachDatabases(
+        DuckDBConnection connection,
+        IReadOnlyList<DuckDbAttachedDatabase> attachedDatabases)
+    {
+        if (attachedDatabases.Count == 0)
+        {
+            return;
+        }
+
+        if (attachedDatabases.Any(static database => database.Type.Equals("sqlite", StringComparison.OrdinalIgnoreCase)))
+        {
+            try
+            {
+                connection.Execute("INSTALL sqlite;LOAD sqlite;");
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Failed to load DuckDB's SQLite extension required by attached SQLite databases.", ex);
+            }
+        }
+
+        foreach (var database in attachedDatabases)
+        {
+            try
+            {
+                connection.Execute(BuildAttachSql(database));
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to attach DuckDB database '{database.Alias}' with type '{database.Type}'.",
+                    ex);
+            }
+
+            CreateAttachedViews(connection, database);
+        }
+    }
+
+    internal static string BuildAttachSql(DuckDbAttachedDatabase database)
+    {
+        ArgumentNullException.ThrowIfNull(database);
+        var alias = QuoteIdentifier(database.Alias);
+        var path = QuoteStringLiteral(database.Path);
+        var type = FormatDatabaseType(database.Type);
+        var readOnly = database.ReadOnly ? ", READ_ONLY" : string.Empty;
+        return $"ATTACH {path} AS {alias} (TYPE {type}{readOnly});";
+    }
+
+    private static void CreateAttachedViews(DuckDBConnection connection, DuckDbAttachedDatabase database)
+    {
+        foreach (var view in database.Views)
+        {
+            try
+            {
+                connection.Execute(BuildCreateViewSql(database, view));
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to create DuckDB view '{view.TargetSchema}.{view.Name}' for attached database '{database.Alias}' table '{view.SourceSchema}.{view.SourceTable}'.",
+                    ex);
+            }
+        }
+    }
+
+    internal static string BuildCreateViewSql(DuckDbAttachedDatabase database, DuckDbAttachedView view)
+    {
+        ArgumentNullException.ThrowIfNull(database);
+        ArgumentNullException.ThrowIfNull(view);
+
+        var targetSchema = QuoteIdentifier(view.TargetSchema);
+        var targetView = QuoteIdentifier(view.Name);
+        var sourceAlias = QuoteIdentifier(database.Alias);
+        var sourceSchema = QuoteIdentifier(view.SourceSchema);
+        var sourceTable = QuoteIdentifier(view.SourceTable);
+
+        return $"CREATE SCHEMA IF NOT EXISTS {targetSchema};" + Environment.NewLine
+            + $"CREATE OR REPLACE VIEW {targetSchema}.{targetView} AS "
+            + $"SELECT * FROM {sourceAlias}.{sourceSchema}.{sourceTable};";
+    }
+
+    private static void ValidateAttachedDatabases(IReadOnlyList<DuckDbAttachedDatabase> attachedDatabases)
+    {
+        var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var viewNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var database in attachedDatabases)
+        {
+            ArgumentNullException.ThrowIfNull(database);
+            if (!aliases.Add(database.Alias))
+            {
+                throw new ArgumentException($"Duplicate attached DuckDB database alias '{database.Alias}'.", nameof(attachedDatabases));
+            }
+
+            foreach (var view in database.Views)
+            {
+                ArgumentNullException.ThrowIfNull(view);
+                var viewKey = $"{view.TargetSchema}.{view.Name}";
+                if (!viewNames.Add(viewKey))
+                {
+                    throw new ArgumentException($"Duplicate attached DuckDB view target '{viewKey}'.", nameof(attachedDatabases));
+                }
+            }
+        }
+    }
+
+    private static string FormatDatabaseType(string type)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(type);
+        if (type.Any(static character => !char.IsAsciiLetterOrDigit(character) && character != '_'))
+        {
+            throw new ArgumentException("Database type may only contain ASCII letters, digits, and underscores.", nameof(type));
+        }
+
+        return type;
+    }
+
+    internal static string QuoteIdentifier(string identifier)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
+        return $"\"{identifier.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+    }
+
+    internal static string QuoteStringLiteral(string value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        return $"'{value.Replace("'", "''", StringComparison.Ordinal)}'";
     }
 }

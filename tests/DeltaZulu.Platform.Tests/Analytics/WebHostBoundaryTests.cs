@@ -47,15 +47,19 @@ public sealed class WebHostBoundaryTests
         Assert.Contains("AddAnalyticsWebModule(", registration);
         Assert.Contains("services.AddAnalyticsRuntime(options);", registration);
         Assert.Contains("services.AddAnalyticsApplicationState(options);", registration);
+        Assert.Contains("services.AddApplicationPersistence", registration);
+        Assert.IsFalse(registration.Contains("AddDuckDbApplicationPersistence", StringComparison.Ordinal));
 
         var runtimeStart = registration.IndexOf("AddAnalyticsRuntime(", StringComparison.Ordinal);
         var applicationStateStart = registration.IndexOf("AddAnalyticsApplicationState(", StringComparison.Ordinal);
         var runtimeSection = registration[runtimeStart..applicationStateStart];
 
+        Assert.Contains("DuckDbAttachedDatabase", runtimeSection);
+        Assert.Contains("CreateAppStateViews", runtimeSection);
         Assert.IsFalse(
-            runtimeSection.Contains("AppDbPath", StringComparison.Ordinal)
-            || runtimeSection.Contains("AddApplicationPersistence", StringComparison.Ordinal),
-            "Runtime registration must not own application-state persistence paths.");
+            runtimeSection.Contains("AddApplicationPersistence", StringComparison.Ordinal)
+            || runtimeSection.Contains("AddDuckDbApplicationPersistence", StringComparison.Ordinal),
+            "Runtime registration may attach app-state databases for cross-database reads, but repository persistence registration must stay in application state.");
     }
 
     [TestMethod]

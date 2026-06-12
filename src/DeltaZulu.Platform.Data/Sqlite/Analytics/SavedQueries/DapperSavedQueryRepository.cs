@@ -141,8 +141,7 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisp
                 return;
             }
 
-            await using var connection = _connectionFactory.CreateConnection();
-            await connection.OpenAsync(cancellationToken);
+            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
             await connection.ExecuteAsync(new CommandDefinition(CreateSchemaSql, cancellationToken: cancellationToken));
             _initialized = true;
         }
@@ -156,8 +155,7 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisp
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<SavedQueryRow>(
             new CommandDefinition(ListSql, cancellationToken: cancellationToken));
@@ -186,8 +184,7 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisp
             Limit = boundedLimit
         };
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var totalCount = await connection.ExecuteScalarAsync<int>(
             new CommandDefinition(SearchCountSql, parameters, cancellationToken: cancellationToken));
@@ -207,8 +204,7 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisp
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var row = await connection.QuerySingleOrDefaultAsync<SavedQueryRow>(
             new CommandDefinition(GetSql, new { Id = id }, cancellationToken: cancellationToken));
@@ -225,8 +221,7 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisp
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpsertSql,
@@ -248,8 +243,7 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisp
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             DeleteSql,
@@ -263,8 +257,7 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisp
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             MarkRunSql,
