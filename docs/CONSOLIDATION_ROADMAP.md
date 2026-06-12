@@ -13,8 +13,8 @@ Repository consolidation is complete.
 | Runnable web host | `src/DeltaZulu.Platform.Web` is the only `Microsoft.NET.Sdk.Web` project. |
 | Source projects | `DeltaZulu.Platform.Domain`, `DeltaZulu.Platform.Application`, `DeltaZulu.Platform.Data`, `DeltaZulu.Platform.Web`. |
 | Test projects | `tests/DeltaZulu.Platform.Tests`. |
-| Analytics UI/runtime | Consolidated under `DeltaZulu.Platform.*` with Web routes under `/hunting`. |
-| Governance UI/runtime | Consolidated under `DeltaZulu.Platform.*` with Web routes under `/workbench`. |
+| Analytics UI/runtime | Consolidated under `DeltaZulu.Platform.*` with Web routes under `/analytics`. |
+| Governance UI/runtime | Consolidated under `DeltaZulu.Platform.*` with Web routes under `/governance`. |
 | Shared UI/components | Absorbed into `DeltaZulu.Platform.Web/Components` and Web static assets. |
 | Detection-content contracts | Absorbed into `DeltaZulu.Platform.Domain/Detection`. |
 | Platform module abstractions | Absorbed into `DeltaZulu.Platform.Web/Platform`. |

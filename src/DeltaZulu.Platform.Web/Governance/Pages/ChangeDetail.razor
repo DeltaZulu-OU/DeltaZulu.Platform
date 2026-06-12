@@ -1,5 +1,5 @@
 @namespace DeltaZulu.Platform.Web.Governance.Components.Pages
-@page "/workbench/changes/{Id}"
+@page "/governance/changes/{Id}"
 @using DeltaZulu.Platform.Web.Governance.Components.Shared
 @using MudBlazor
 @rendermode InteractiveServer
@@ -69,7 +69,7 @@
 {
     <div class="dz-linked-issue mb-4">
         <MudIcon Icon="@Icons.Material.Outlined.Link" Size="Size.Small" Class="dz-inline-icon" />
-        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/workbench/issues/{_linkedIssue.Id}"))">
+        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/governance/issues/{_linkedIssue.Id}"))">
             Issue: <code>@_linkedIssue.Key</code> @_linkedIssue.Title
         </DzActionLink>
     </div>

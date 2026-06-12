@@ -6,7 +6,7 @@
  *   2. deltazulu-tokens.css
  *   3. dz-components.css
  *   4. dz-shell.css
- *   5. hunting/css/app.css  (this file)
+ *   5. analytics/css/app.css  (this file)
  *
  * Design tokens, typography classes, and shared component CSS come from
  * deltazulu-tokens.css / dz-components.css / dz-shell.css. This file
@@ -1147,7 +1147,7 @@ body.hunt-splitter-active {
  *
  * Purpose:
  *   Keep the upstream DeltaZulu design system intact, then adapt the existing
- *   dashboard/workbench UI to the DeltaZulu palette, typography, spacing,
+ *   dashboard workspace UI to the DeltaZulu palette, typography, spacing,
  *   surface model, focus treatment, and component rhythm.
  */
 

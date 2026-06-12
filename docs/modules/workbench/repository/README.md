@@ -7,7 +7,7 @@ longer the current repository root or a standalone application guide.
 
 Workbench has been consolidated into DeltaZulu Platform as the Governance capability area:
 
-- Web/routes: `src/DeltaZulu.Platform.Web/Governance` under `/workbench`.
+- Web/routes: `src/DeltaZulu.Platform.Web/Governance` under `/governance`.
 - Domain: `src/DeltaZulu.Platform.Domain/Governance`.
 - Application services: `src/DeltaZulu.Platform.Application/Governance`.
 - Data/persistence infrastructure: `src/DeltaZulu.Platform.Data`.

@@ -1,4 +1,4 @@
-@page "/hunting/dashboards/{DashboardId}"
+@page "/analytics/dashboards/{DashboardId}"
 @namespace DeltaZulu.Platform.Web.Analytics.Pages
 @using DeltaZulu.Platform.Web.Analytics.Components.Dashboards
 @using DeltaZulu.Platform.Web.Analytics.Dashboards.PageState
@@ -153,5 +153,5 @@
         => _ = InvokeAsync(StateHasChanged);
 
     private void BackToDashboards()
-        => Navigation.NavigateTo("/hunting/dashboards");
+        => Navigation.NavigateTo("/analytics/dashboards");
 }

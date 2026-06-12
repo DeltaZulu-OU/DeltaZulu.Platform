@@ -12,7 +12,7 @@ of truth for current architecture and target state.
 ## Current status
 
 `DeltaZulu.Platform.Web` is the only runnable Blazor web host in this repository. Analytics
-(`/hunting`) and Governance (`/workbench`) are route-scoped capability areas inside that host. They no
+(`/analytics`) and Governance (`/governance`) are route-scoped capability areas inside that host. They no
 longer have standalone `Program.cs`, `App.razor`, host layouts, launch settings, host appsettings, or
 separate Razor Class Library projects.
 

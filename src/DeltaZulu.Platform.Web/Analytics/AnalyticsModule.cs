@@ -9,18 +9,18 @@ public sealed class AnalyticsModule : IPlatformModule
 {
     public PlatformModuleDescriptor Descriptor { get; } = new()
     {
-        Id = "hunting",
+        Id = "analytics",
         DisplayName = "Analytics",
-        RoutePrefix = "/hunting",
+        RoutePrefix = "/analytics",
         Order = 100,
     };
 
     public IReadOnlyList<DzNavItem> NavigationItems { get; } =
     [
-        new("Overview", "/hunting", Icons.Material.Outlined.Home, NavLinkMatch.All),
-        new("Threat Analytics", "/hunting/threat-hunting", Icons.Material.Outlined.Search),
-        new("Library", "/hunting/library", Icons.Material.Outlined.LibraryBooks),
-        new("Dashboards", "/hunting/dashboards", Icons.Material.Outlined.Dashboard),
+        new("Overview", "/analytics", Icons.Material.Outlined.Home, NavLinkMatch.All),
+        new("Threat Analytics", "/analytics/threat-hunting", Icons.Material.Outlined.Search),
+        new("Library", "/analytics/library", Icons.Material.Outlined.LibraryBooks),
+        new("Dashboards", "/analytics/dashboards", Icons.Material.Outlined.Dashboard),
         new("Settings", "/settings", Icons.Material.Outlined.Settings, DividerBefore: true, IsPlatformRoute: true),
     ];
 
@@ -28,7 +28,7 @@ public sealed class AnalyticsModule : IPlatformModule
     [
         new()
         {
-            RoutePrefix = "/hunting",
+            RoutePrefix = "/analytics",
             PageAssembly = typeof(AnalyticsModule).Assembly,
         },
     ];

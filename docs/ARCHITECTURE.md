@@ -10,10 +10,10 @@ The product has two user-facing capability areas inside one platform shell:
 
 | Capability area | Route prefix | Primary purpose | Current code home |
 |---|---:|---|---|
-| Analytics | `/hunting` | KQL hunting over governed Golden security views, dashboards, saved queries, local analytics state, and render-aware query results. | `src/DeltaZulu.Platform.Web/Analytics`, `src/DeltaZulu.Platform.Application/Analytics`, `src/DeltaZulu.Platform.Domain/Analytics`, `src/DeltaZulu.Platform.Data` |
-| Governance | `/workbench` | Detection content lifecycle: edit a detection, prove it is safe, review/approve it, accept it into versioned history, and inspect history. | `src/DeltaZulu.Platform.Web/Governance`, `src/DeltaZulu.Platform.Application/Governance`, `src/DeltaZulu.Platform.Domain/Governance`, `src/DeltaZulu.Platform.Data` |
+| Analytics | `/analytics` | KQL hunting over governed Golden security views, dashboards, saved queries, local analytics state, and render-aware query results. | `src/DeltaZulu.Platform.Web/Analytics`, `src/DeltaZulu.Platform.Application/Analytics`, `src/DeltaZulu.Platform.Domain/Analytics`, `src/DeltaZulu.Platform.Data` |
+| Governance | `/governance` | Detection content lifecycle: edit a detection, prove it is safe, review/approve it, accept it into versioned history, and inspect history. | `src/DeltaZulu.Platform.Web/Governance`, `src/DeltaZulu.Platform.Application/Governance`, `src/DeltaZulu.Platform.Domain/Governance`, `src/DeltaZulu.Platform.Data` |
 
-The route names preserve product familiarity, but they are not separate applications. Both capability
+The route names now use platform capability names, and they are not separate applications. Both capability
 areas run inside `DeltaZulu.Platform.Web` and share the same design system, service container,
 configuration pipeline, and host lifecycle.
 

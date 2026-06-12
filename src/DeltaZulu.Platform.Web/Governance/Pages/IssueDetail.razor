@@ -1,5 +1,5 @@
 @namespace DeltaZulu.Platform.Web.Governance.Components.Pages
-@page "/workbench/issues/{Id}"
+@page "/governance/issues/{Id}"
 @using DeltaZulu.Platform.Web.Governance.Components.Shared
 @using MudBlazor
 @rendermode InteractiveServer
@@ -279,7 +279,7 @@
         {
             <DzTableShell>
                 <MudTable Items="_relatedChanges" Dense="true" Hover="true"
-                          OnRowClick="@(args => Nav.NavigateTo($"/workbench/changes/{args.Item!.Id}"))"
+                          OnRowClick="@(args => Nav.NavigateTo($"/governance/changes/{args.Item!.Id}"))"
                           T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
                     <HeaderContent>
                         <MudTh>Key</MudTh>

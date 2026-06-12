@@ -7,7 +7,7 @@ the current repository root or a standalone application guide.
 
 Hunting has been consolidated into DeltaZulu Platform as the Analytics capability area:
 
-- Web/routes: `src/DeltaZulu.Platform.Web/Analytics` under `/hunting`.
+- Web/routes: `src/DeltaZulu.Platform.Web/Analytics` under `/analytics`.
 - Domain: `src/DeltaZulu.Platform.Domain/Analytics`.
 - Application services: `src/DeltaZulu.Platform.Application/Analytics`.
 - Data/runtime infrastructure: `src/DeltaZulu.Platform.Data`.

@@ -50,7 +50,7 @@ public sealed class LibraryPageController
         switch (item.Kind)
         {
             case LibraryItemKind.Dashboard:
-                _navigation.NavigateTo($"/dashboards/{item.Id}");
+                _navigation.NavigateTo($"/analytics/dashboards/{item.Id}");
                 return;
 
             case LibraryItemKind.SavedQuery:
@@ -111,7 +111,7 @@ public sealed class LibraryPageController
             | project Timestamp, DeviceName, AccountName, ProcessCommandLine
             | take 50
             """);
-        _navigation.NavigateTo("/threat-hunting");
+        _navigation.NavigateTo("/analytics/threat-hunting");
     }
 
     public void CreateVisualization()
@@ -123,13 +123,13 @@ public sealed class LibraryPageController
             | summarize Count = count() by AccountName
             | render barchart xcolumn=AccountName ycolumns=Count title='Events by account'
             """);
-        _navigation.NavigateTo("/threat-hunting");
+        _navigation.NavigateTo("/analytics/threat-hunting");
     }
 
     public void CreateDashboard()
     {
         State.ResetPendingDelete();
-        _navigation.NavigateTo("/dashboards");
+        _navigation.NavigateTo("/analytics/dashboards");
     }
 
     public void SetFilter(LibraryItemKind? kind)
@@ -207,7 +207,7 @@ public sealed class LibraryPageController
         }
 
         _editorBus.RequestInsert(queryText);
-        _navigation.NavigateTo("/threat-hunting");
+        _navigation.NavigateTo("/analytics/threat-hunting");
     }
 
     private async Task OpenVisualizationAsync(string id, CancellationToken cancellationToken)
@@ -220,6 +220,6 @@ public sealed class LibraryPageController
         }
 
         _editorBus.RequestInsert(queryText);
-        _navigation.NavigateTo("/threat-hunting");
+        _navigation.NavigateTo("/analytics/threat-hunting");
     }
 }

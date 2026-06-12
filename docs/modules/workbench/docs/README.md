@@ -10,7 +10,7 @@ documentation.
 ## Current status
 
 Workbench is now the Governance capability area inside the single `DeltaZulu.Platform.Web` host, with
-routes under `/workbench`. Its domain, application, data, and web code live in the consolidated
+routes under `/governance`. Its domain, application, data, and web code live in the consolidated
 platform projects:
 
 | Layer | Current location |

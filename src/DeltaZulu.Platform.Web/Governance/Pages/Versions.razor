@@ -1,6 +1,6 @@
 @namespace DeltaZulu.Platform.Web.Governance.Components.Pages
-@page "/workbench/history"
-@page "/workbench/versions"
+@page "/governance/history"
+@page "/governance/versions"
 @rendermode InteractiveServer
 @using DeltaZulu.Platform.Application.Governance.Services
 @using DeltaZulu.Platform.Domain.Governance.Detections
@@ -53,7 +53,7 @@ else
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Detection">
-                    <DzActionLink OnClick="@(() => Nav.NavigateTo($"/workbench/detections/{context.Detection.Id}"))">
+                    <DzActionLink OnClick="@(() => Nav.NavigateTo($"/governance/detections/{context.Detection.Id}"))">
                         @context.Detection.Title
                     </DzActionLink>
                     <MudText Typo="Typo.caption" Class="mud-text-secondary"><code>@context.Detection.Slug</code></MudText>
@@ -88,7 +88,7 @@ else
                     <MudText Typo="Typo.caption">@context.Version.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
                 </MudTd>
                 <MudTd DataLabel="Actions">
-                    <DzActionLink OnClick="@(() => Nav.NavigateTo($"/workbench/history/{context.Version.Id}"))">
+                    <DzActionLink OnClick="@(() => Nav.NavigateTo($"/governance/history/{context.Version.Id}"))">
                         Compare / restore
                     </DzActionLink>
                 </MudTd>

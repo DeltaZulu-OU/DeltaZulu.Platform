@@ -9,19 +9,19 @@ public sealed class GovernanceModule : IPlatformModule
 {
     public PlatformModuleDescriptor Descriptor { get; } = new()
     {
-        Id = "workbench",
+        Id = "governance",
         DisplayName = "Detection Content Governance",
         Badge = "POC",
-        RoutePrefix = "/workbench",
+        RoutePrefix = "/governance",
         Order = 200,
     };
 
     public IReadOnlyList<DzNavItem> NavigationItems { get; } =
     [
-        new("Home", "/workbench", Icons.Material.Outlined.Dashboard, NavLinkMatch.All),
-        new("Detections", "/workbench/detections", Icons.Material.Outlined.Radar),
-        new("Changes", "/workbench/changes", Icons.Material.Outlined.Assignment),
-        new("History", "/workbench/history", Icons.Material.Outlined.History),
+        new("Home", "/governance", Icons.Material.Outlined.Dashboard, NavLinkMatch.All),
+        new("Detections", "/governance/detections", Icons.Material.Outlined.Radar),
+        new("Changes", "/governance/changes", Icons.Material.Outlined.Assignment),
+        new("History", "/governance/history", Icons.Material.Outlined.History),
         new("Settings", "/settings", Icons.Material.Outlined.Settings, DividerBefore: true, IsPlatformRoute: true),
     ];
 
@@ -29,7 +29,7 @@ public sealed class GovernanceModule : IPlatformModule
     [
         new()
         {
-            RoutePrefix = "/workbench",
+            RoutePrefix = "/governance",
             PageAssembly = typeof(GovernanceModule).Assembly,
         },
     ];

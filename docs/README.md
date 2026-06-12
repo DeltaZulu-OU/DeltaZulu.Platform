@@ -18,7 +18,7 @@ DeltaZulu is now a single Clean Architecture solution:
 | Tests | `tests/DeltaZulu.Platform.Tests` | All domain, application, data, web, component, analytics, and governance tests. |
 
 There are no standalone Hunting or Workbench hosts, no separate Razor Class Library modules, and no
-separate shared component/contract projects. The retained `/hunting` and `/workbench` route prefixes
+separate shared component/contract projects. The `/analytics` and `/governance` route prefixes
 are product navigation boundaries inside `DeltaZulu.Platform.Web`, not separate deployables.
 
 ## Authoritative documents

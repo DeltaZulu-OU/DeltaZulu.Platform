@@ -10,7 +10,7 @@ documentation.
 ## Current status
 
 Analytics is now a capability area inside the single `DeltaZulu.Platform.Web` host, with routes under
-`/hunting`. Its domain, application, data, and web code live in the consolidated platform projects:
+`/analytics`. Its domain, application, data, and web code live in the consolidated platform projects:
 
 | Layer | Current location |
 |---|---|

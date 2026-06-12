@@ -45,6 +45,6 @@ This makes platform import less noisy because the host can depend on shared modu
 on `HuntingModuleRouter` as a permanent abstraction. It also makes persistence ownership visible: platform
 composition can replace path-based SQLite registration without disturbing DuckDB query/runtime services.
 
-Before final platform hosting, Hunting still needs a mechanical route-prefixing decision for `/hunting`,
-`/hunting/query`, `/hunting/library`, `/hunting/dashboards`, and `/hunting/settings` or another agreed base.
-Until that exists, standalone absolute routes remain acceptable only inside the standalone host.
+The platform host now owns the mounted Analytics route base. The former Hunting route base is no longer
+the target; Analytics pages are mounted under `/analytics` with module-owned navigation and static assets.
+Standalone absolute routes remain acceptable only inside historical standalone host documentation.
