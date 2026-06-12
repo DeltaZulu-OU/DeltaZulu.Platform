@@ -29,6 +29,12 @@ public sealed class QueryLibraryService
     public Task<IReadOnlyList<SavedQueryRecord>> ListSavedQueriesAsync(
         CancellationToken cancellationToken = default) => _savedQueries.ListAsync(cancellationToken);
 
+    public Task<SavedQueryPage> SearchSavedQueriesAsync(
+        string? searchText,
+        int offset,
+        int limit,
+        CancellationToken cancellationToken = default) => _savedQueries.SearchAsync(searchText, offset, limit, cancellationToken);
+
     public Task<IReadOnlyList<QueryHistoryRecord>> ListRecentHistoryAsync(
         int limit = DefaultRecentHistoryLimit,
         CancellationToken cancellationToken = default) => _queryHistory.ListRecentAsync(limit, cancellationToken);

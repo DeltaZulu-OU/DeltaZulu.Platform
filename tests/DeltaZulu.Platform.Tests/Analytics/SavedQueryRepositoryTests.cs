@@ -166,6 +166,52 @@ public sealed class SavedQueryRepositoryTests
         }
     }
 
+
+    [TestMethod]
+    public async Task SearchAsync_FiltersAndPaginatesInDatabaseOrder()
+    {
+        var repository = CreateRepository(out var dbPath);
+        try
+        {
+            var baseTime = new DateTime(2026, 6, 3, 8, 0, 0, DateTimeKind.Utc);
+
+            for (var i = 0; i < 18; i++)
+            {
+                await repository.SaveAsync(new AppSavedQueryRecord(
+                    $"query-{i:00}",
+                    $"DNS investigation {i:00}",
+                    i % 2 == 0 ? "Find resolver activity." : "Review saved network query.",
+                    "Dns | take 10",
+                    baseTime,
+                    baseTime.AddMinutes(i),
+                    null), TestContext.CancellationToken);
+            }
+
+            await repository.SaveAsync(new AppSavedQueryRecord(
+                "query-other",
+                "Process activity",
+                "Not part of the DNS search.",
+                "ProcessEvent | take 10",
+                baseTime,
+                baseTime.AddHours(1),
+                null), TestContext.CancellationToken);
+
+            var firstPage = await repository.SearchAsync("dns investigation", 0, 15, TestContext.CancellationToken);
+            var secondPage = await repository.SearchAsync("dns investigation", 15, 15, TestContext.CancellationToken);
+
+            Assert.AreEqual(18, firstPage.TotalCount);
+            Assert.HasCount(15, firstPage.Items);
+            Assert.IsTrue(firstPage.HasMore);
+            Assert.AreEqual("query-17", firstPage.Items[0].Id);
+            Assert.HasCount(3, secondPage.Items);
+            Assert.IsFalse(secondPage.HasMore);
+        }
+        finally
+        {
+            DeleteDatabaseFiles(dbPath);
+        }
+    }
+
     private static DapperSavedQueryRepository CreateRepository(out string dbPath)
     {
         dbPath = Path.Combine(

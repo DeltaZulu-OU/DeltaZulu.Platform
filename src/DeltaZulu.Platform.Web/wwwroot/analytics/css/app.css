@@ -210,6 +210,36 @@ body:has(.hunt-app) {
     font-size: 11px;
 }
 
+.schema-saved-queries-menu {
+    min-width: 0;
+}
+
+.schema-saved-queries-actions {
+    padding: 4px 12px 6px;
+}
+
+.schema-saved-queries-search {
+    width: 100%;
+    margin-bottom: 4px;
+}
+
+.schema-saved-queries-list {
+    max-height: min(560px, 45vh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
+.schema-saved-queries-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 12px 8px 16px;
+    color: var(--text-dim);
+    font-size: 11px;
+}
+
 .schema-empty {
     padding: 8px 16px;
     color: var(--text-dim);

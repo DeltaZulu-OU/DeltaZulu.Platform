@@ -1,0 +1,138 @@
+@namespace DeltaZulu.Platform.Web.Analytics.Shared
+@using DeltaZulu.Platform.Domain.Analytics.SavedQueries
+@inject DeltaZulu.Platform.Web.Analytics.Services.EditorBus EditorBus
+@inject DeltaZulu.Platform.Web.Analytics.Services.QueryLibraryService QueryLibrary
+
+<div class="schema-saved-queries-menu">
+    <div class="schema-saved-queries-actions">
+        <MudTextField T="string"
+                      Value="@_searchText"
+                      ValueChanged="OnSearchChangedAsync"
+                      Placeholder="Search saved queries"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true"
+                      Clearable="true"
+                      Margin="Margin.Dense"
+                      Variant="Variant.Outlined"
+                      Class="schema-saved-queries-search" />
+
+        <MudNavLink OnClick="RefreshSavedQueriesAsync" Disabled="@_loadingSavedQueries">
+            @(_loadingSavedQueries ? "Refreshing…" : "Refresh saved queries")
+        </MudNavLink>
+    </div>
+
+    @if (_savedQueries.Count == 0 && !_loadingSavedQueries)
+    {
+        <MudText Typo="Typo.body2" Class="schema-empty">@EmptyMessage</MudText>
+    }
+
+    <div class="schema-saved-queries-list" role="list" aria-label="Saved queries results">
+        @foreach (var query in _savedQueries)
+        {
+            <MudNavLink OnClick="@(() => OnSavedQueryClickAsync(query.Id))">
+                <span class="schema-saved-query-nav-item">
+                    <span class="schema-saved-query-name">@query.Name</span>
+                    @if (!string.IsNullOrWhiteSpace(query.Description))
+                    {
+                        <span class="schema-saved-query-description">@query.Description</span>
+                    }
+                </span>
+            </MudNavLink>
+        }
+    </div>
+
+    @if (_totalCount > 0)
+    {
+        <div class="schema-saved-queries-pager">
+            <span>Showing @_savedQueries.Count of @_totalCount</span>
+            @if (_hasMore)
+            {
+                <MudButton Variant="Variant.Text"
+                           Size="Size.Small"
+                           Disabled="@_loadingSavedQueries"
+                           OnClick="LoadMoreSavedQueriesAsync">
+                    Load more
+                </MudButton>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+
+    private readonly List<SavedQueryRecord> _savedQueries = [];
+    private string? _searchText;
+    private int _totalCount;
+    private int _loadVersion;
+    private bool _hasMore;
+    private bool _loadingSavedQueries;
+
+    private string EmptyMessage => string.IsNullOrWhiteSpace(_searchText)
+        ? "No saved queries yet."
+        : "No saved queries match your search.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshSavedQueriesAsync();
+    }
+
+    private async Task OnSearchChangedAsync(string? value)
+    {
+        _searchText = value;
+        await RefreshSavedQueriesAsync();
+    }
+
+    private Task RefreshSavedQueriesAsync() => LoadSavedQueriesPageAsync(reset: true);
+
+    private Task LoadMoreSavedQueriesAsync() => LoadSavedQueriesPageAsync(reset: false);
+
+    private async Task LoadSavedQueriesPageAsync(bool reset)
+    {
+        if (!reset && _loadingSavedQueries)
+        {
+            return;
+        }
+
+        var loadVersion = ++_loadVersion;
+        _loadingSavedQueries = true;
+
+        try
+        {
+            var offset = reset ? 0 : _savedQueries.Count;
+            var page = await QueryLibrary.SearchSavedQueriesAsync(_searchText, offset, PageSize);
+
+            if (loadVersion != _loadVersion)
+            {
+                return;
+            }
+
+            if (reset)
+            {
+                _savedQueries.Clear();
+            }
+
+            _savedQueries.AddRange(page.Items);
+            _totalCount = page.TotalCount;
+            _hasMore = page.HasMore;
+        }
+        finally
+        {
+            if (loadVersion == _loadVersion)
+            {
+                _loadingSavedQueries = false;
+            }
+        }
+    }
+
+    private async Task OnSavedQueryClickAsync(string id)
+    {
+        var queryText = await QueryLibrary.LoadSavedQueryTextAsync(id);
+
+        if (!string.IsNullOrWhiteSpace(queryText))
+        {
+            EditorBus.RequestInsert(queryText);
+        }
+    }
+}

@@ -2,6 +2,7 @@
 using Dapper;
 using AppISavedQueryRepository = DeltaZulu.Platform.Domain.Analytics.SavedQueries.ISavedQueryRepository;
 using AppSavedQueryRecord = DeltaZulu.Platform.Domain.Analytics.SavedQueries.SavedQueryRecord;
+using AppSavedQueryPage = DeltaZulu.Platform.Domain.Analytics.SavedQueries.SavedQueryPage;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.SavedQueries;
 public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisposable
@@ -31,6 +32,33 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisp
             last_run_at AS LastRunAt
         FROM saved_queries
         ORDER BY updated_at DESC, name ASC;
+        """;
+
+    private const string SearchSql =
+        """
+        SELECT
+            id AS Id,
+            name AS Name,
+            description AS Description,
+            query_text AS QueryText,
+            created_at AS CreatedAt,
+            updated_at AS UpdatedAt,
+            last_run_at AS LastRunAt
+        FROM saved_queries
+        WHERE @SearchText IS NULL
+            OR name LIKE @SearchPattern ESCAPE '\' COLLATE NOCASE
+            OR description LIKE @SearchPattern ESCAPE '\' COLLATE NOCASE
+        ORDER BY updated_at DESC, name ASC
+        LIMIT @Limit OFFSET @Offset;
+        """;
+
+    private const string SearchCountSql =
+        """
+        SELECT COUNT(*)
+        FROM saved_queries
+        WHERE @SearchText IS NULL
+            OR name LIKE @SearchPattern ESCAPE '\' COLLATE NOCASE
+            OR description LIKE @SearchPattern ESCAPE '\' COLLATE NOCASE;
         """;
 
     private const string GetSql =
@@ -137,6 +165,42 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisp
         return rows.Select(ToRecord).ToArray();
     }
 
+    public async Task<AppSavedQueryPage> SearchAsync(
+        string? searchText,
+        int offset,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
+        ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
+
+        await EnsureInitializedAsync(cancellationToken);
+
+        var boundedLimit = Math.Min(limit, 100);
+        var normalizedSearch = NormalizeSearchText(searchText);
+        var parameters = new
+        {
+            SearchText = normalizedSearch,
+            SearchPattern = normalizedSearch is null ? null : $"%{EscapeLikePattern(normalizedSearch)}%",
+            Offset = offset,
+            Limit = boundedLimit
+        };
+
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        var totalCount = await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(SearchCountSql, parameters, cancellationToken: cancellationToken));
+        var rows = await connection.QueryAsync<SavedQueryRow>(
+            new CommandDefinition(SearchSql, parameters, cancellationToken: cancellationToken));
+
+        return new AppSavedQueryPage(
+            rows.Select(ToRecord).ToArray(),
+            totalCount,
+            offset,
+            boundedLimit);
+    }
+
     public async Task<AppSavedQueryRecord?> GetAsync(string id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
@@ -207,6 +271,13 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisp
             new { Id = id, RunAt = FormatDateTime(runAt) },
             cancellationToken: cancellationToken));
     }
+
+    private static string? NormalizeSearchText(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string EscapeLikePattern(string value) => value
+        .Replace("\\", "\\\\", StringComparison.Ordinal)
+        .Replace("%", "\\%", StringComparison.Ordinal)
+        .Replace("_", "\\_", StringComparison.Ordinal);
 
     private static AppSavedQueryRecord ToRecord(SavedQueryRow row) => new AppSavedQueryRecord(
             row.Id,
