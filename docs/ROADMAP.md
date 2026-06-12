@@ -1,9 +1,6 @@
 # DeltaZulu Platform roadmap
 
-This roadmap describes the current target after repository consolidation. The historical merge plan is
-retained in [`CONSOLIDATION_ROADMAP.md`](CONSOLIDATION_ROADMAP.md); it is no longer the active plan.
-The target product-level user stories are defined in
-[`TARGET_USER_STORIES.md`](TARGET_USER_STORIES.md).
+This roadmap describes the current target after repository consolidation. The historical merge plan is retained in [`CONSOLIDATION_ROADMAP.md`](CONSOLIDATION_ROADMAP.md); it is no longer the active plan. The target product-level user stories are defined in [`TARGET_USER_STORIES.md`](TARGET_USER_STORIES.md).
 
 ## Current baseline
 
@@ -13,36 +10,34 @@ Repository consolidation is complete:
 - Four source projects: Domain, Application, Data, Web.
 - One test project: `tests/DeltaZulu.Platform.Tests`.
 - Analytics and Governance are platform modules, not separately deployed applications.
-- Shared components, design tokens, detection contracts, platform module abstractions, analytics code,
-  governance code, persistence, and tests have been absorbed into the platform projects.
+- Shared components, design tokens, detection contracts, platform module abstractions, analytics code, governance code, persistence, and tests have been absorbed into the platform projects.
+
+## Roadmap position assessment
+
+The platform is past repository consolidation and is now in the **post-consolidation POC hardening phase**. The remaining roadmap is not another merge or project split; it is the work needed to make the unified product dependable, demoable, and ready for larger domain expansion.
+
+Evidence from the retained documentation and current tree:
+
+- The consolidation roadmap is closed: C1 through C12 are complete, and the solution inventory is the four platform source projects plus the single consolidated test project.
+- The central architecture is authoritative and supersedes imported module-era documents whenever they describe standalone Hunting or Workbench hosts.
+- Analytics has a working KQL-to-DuckDB contract, render/dashboard design, Golden-view query boundary, diagnostics-first unsupported behavior, and a construct-level checklist showing 226 MVP-ready or metadata-supported items out of 320 in-scope items, with 91 deferred and 3 deliberately blocked for semantic safety.
+- Governance has the core detection-content workflow shape in place: issues, detections, database-owned changes, checks, reviews, Git-backed accepted content, versions, compare/restore, and merge reconciliation. The retained Workbench roadmap still identifies the highest-value gaps as end-to-end UI hardening, richer workflow actions, merge-reconciliation guidance, stronger checks, and explicit persistence/read-model deferrals.
+- The next meaningful progress should therefore come from platform-level vertical slices that harden the user journeys and contracts already consolidated, not from recreating separate module projects.
 
 ## Target
 
-The target is a full-cycle security analytics platform that keeps Clean Architecture boundaries
-while connecting interactive analytics, detection governance, scheduled execution, alerting,
-correlation, triage, and feedback into one coherent product:
+The target is a full-cycle security analytics platform that keeps Clean Architecture boundaries while connecting interactive analytics, detection governance, scheduled execution, alerting, correlation, triage, and feedback into one coherent product:
 
-1. **Analytics** provides governed KQL querying, schema exploration, query history, curated analytics,
-   visualizations, dashboards, evidence capture, threat-hunting workflows, and a shared execution
-   substrate used by all modules.
-2. **Detection Content Governance** provides detection content change control: draft, validate, review,
-   accept into Git history, compare, restore, inspect versions, and project executable detection
-   metadata.
-3. **Operations** provides executable detections, scheduled detection runs, alert materialization,
-   alert entities, enrichment, suppression, incident-candidate correlation, triage, and recovery.
-4. **Shared platform shell** provides one navigation model, one design system, one host lifecycle, one
-   settings surface, and one test suite.
-5. **Storage boundaries** remain explicit: DuckDB for analytics execution, SQLite for operational
-   state, Git for accepted detection content, and approved read-only views for operations state
-   queryable through KQL.
-6. **Workflow orchestration** uses Elsa for long-running processes. Elsa coordinates steps, timers,
-   retries, branching, and human decisions. Domain and application services own security semantics.
+1. **Analytics** provides governed KQL querying, schema exploration, query history, curated analytics, visualizations, dashboards, evidence capture, threat-hunting workflows, and a shared execution ubstrate used by all modules.
+2. **Detection Content Governance** provides detection content change control: draft, validate, review, accept into Git history, compare, restore, inspect versions, and project executable detection metadata.
+3. **Operations** provides executable detections, scheduled detection runs, alert materialization, alert entities, enrichment, suppression, incident-candidate correlation, triage, and recovery.
+4. **Shared platform shell** provides one navigation model, one design system, one host lifecycle, one settings surface, and one test suite.
+5. **Storage boundaries** remain explicit: DuckDB for analytics execution, SQLite for operational state, Git for accepted detection content, and approved read-only views for operations state queryable through KQL.
+6. **Workflow orchestration** uses Elsa for long-running processes. Elsa coordinates steps, timers, retries, branching, and human decisions. Domain and application services own security semantics.
 
 ## Implementation phases
 
-These phases represent the minimum implementation sequence from the target user stories. Each phase
-builds on the previous. Phases do not need to ship as separate releases but define a logical
-dependency order.
+These phases represent the minimum implementation sequence from the target user stories. Each phase builds on the previous. Phases do not need to ship as separate releases but define a logical dependency order.
 
 | Phase | Goal | Main deliverable | Key user stories |
 |---:|---|---|---|
@@ -105,8 +100,7 @@ Consolidation (done)
                                           └─ Phase 12: Add triage feedback
 ```
 
-Phase 3 can be developed in parallel with Phases 4–5. Phases 8 and 9 can be developed in parallel
-once Phase 7 is complete. All other phases are strictly sequential.
+Phase 3 can be developed in parallel with Phases 4–5. Phases 8 and 9 can be developed in parallel once Phase 7 is complete. All other phases are strictly sequential.
 
 ## Active priorities
 
@@ -136,10 +130,7 @@ These priorities apply across all phases and guide day-to-day work ordering:
 
 ## Documentation cleanup policy
 
-- Central docs (`docs/README.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`,
-  `docs/TARGET_USER_STORIES.md`) are authoritative.
+- Central docs (`docs/README.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `docs/TARGET_USER_STORIES.md`) are authoritative.
 - Imported ADRs have been centralized under `docs/adr/analytics` and `docs/adr/governance` for provenance.
-- Deep domain references may remain in module trees when they describe active semantics, such as KQL
-  translation behavior or dashboard rendering behavior.
-- Imported module roadmaps/readmes/architecture pages should redirect to central docs unless they carry
-  unique active domain detail.
+- Deep domain references may remain in module trees when they describe active semantics, such as KQL translation behavior or dashboard rendering behavior.
+- Imported module roadmaps/readmes/architecture pages should redirect to central docs unless they carry unique active domain detail.
