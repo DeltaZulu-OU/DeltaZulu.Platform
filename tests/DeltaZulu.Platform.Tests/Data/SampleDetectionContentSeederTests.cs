@@ -66,7 +66,7 @@ public sealed class SampleDetectionContentSeederTests
     public void SeedGovernanceCatalog_WritesDetectionsAndAcceptedVersions()
     {
         var dbPath = Path.Combine(Path.GetTempPath(), "deltazulu-governance-samples-" + Guid.NewGuid().ToString("N") + ".db");
-        var connectionString = $"Data Source={dbPath}";
+        var connectionString = new SqliteConnectionStringBuilder { DataSource = dbPath, Pooling = false }.ToString();
 
         try
         {
@@ -90,6 +90,7 @@ public sealed class SampleDetectionContentSeederTests
         }
         finally
         {
+            SqliteConnection.ClearAllPools();
             if (File.Exists(dbPath))
             {
                 File.Delete(dbPath);
@@ -101,7 +102,7 @@ public sealed class SampleDetectionContentSeederTests
     public void SeedGovernanceCatalog_IsIdempotent()
     {
         var dbPath = Path.Combine(Path.GetTempPath(), "deltazulu-governance-samples-" + Guid.NewGuid().ToString("N") + ".db");
-        var connectionString = $"Data Source={dbPath}";
+        var connectionString = new SqliteConnectionStringBuilder { DataSource = dbPath, Pooling = false }.ToString();
 
         try
         {
@@ -123,6 +124,7 @@ public sealed class SampleDetectionContentSeederTests
         }
         finally
         {
+            SqliteConnection.ClearAllPools();
             if (File.Exists(dbPath))
             {
                 File.Delete(dbPath);
