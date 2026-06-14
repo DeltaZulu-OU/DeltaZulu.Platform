@@ -3,10 +3,10 @@
  *
  * Load order (set in DeltaZulu.Platform.Web/App.razor):
  *   1. _content/MudBlazor/MudBlazor.min.css
- *   2. deltazulu-tokens.css
- *   3. dz-components.css
- *   4. dz-shell.css
- *   5. analytics/css/app.css  (this file)
+ *   2. css/deltazulu-tokens.css
+ *   3. css/dz-components.css
+ *   4. css/dz-shell.css
+ *   5. css/analytics-app.css  (this file)
  *
  * Design tokens, typography classes, and shared component CSS come from
  * deltazulu-tokens.css / dz-components.css / dz-shell.css. This file
@@ -1210,7 +1210,7 @@ body.hunt-splitter-active {
  *   2. _content/DeltaZulu.Blazor.Components/deltazulu-tokens.css  (canonical DeltaZulu tokens)
  *   3. _content/DeltaZulu.Blazor.Components/dz-components.css   (shared component CSS)
  *   4. _content/DeltaZulu.Blazor.Components/dz-shell.css        (shared shell/layout CSS)
- *   5. css/app.css                                              (this file)
+ *   5. css/analytics-app.css                                     (this file)
  *
  * Purpose:
  *   Keep the upstream DeltaZulu design system intact, then adapt the existing

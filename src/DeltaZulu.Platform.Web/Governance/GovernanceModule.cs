@@ -33,6 +33,6 @@ public sealed class GovernanceModule : IPlatformModule
 
     public IReadOnlyList<PlatformStaticAssetDescriptor> StaticAssets { get; } =
     [
-        new() { Href = "app.css", Kind = PlatformStaticAssetKind.Stylesheet, Order = 100 },
+        new() { Href = "css/governance-app.css", Kind = PlatformStaticAssetKind.Stylesheet, Order = 100 },
     ];
 }

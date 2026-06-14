@@ -33,7 +33,7 @@ public sealed class AnalyticsModule : IPlatformModule
 
     public IReadOnlyList<PlatformStaticAssetDescriptor> StaticAssets { get; } =
     [
-        new() { Href = "css/app.css", Kind = PlatformStaticAssetKind.Stylesheet, Order = 100 },
+        new() { Href = "css/analytics-app.css", Kind = PlatformStaticAssetKind.Stylesheet, Order = 100 },
         new() { Href = "css/kql-helper-drawer.css", Kind = PlatformStaticAssetKind.Stylesheet, Order = 101 },
     ];
 }
