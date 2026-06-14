@@ -5,21 +5,11 @@
 html,
 body {
     height: 100%;
-    font-family: var(--font-family-sans);
-    background: var(--color-surface-canvas);
-    color: var(--color-text-primary);
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
 }
 
-code,
-pre,
-kbd,
-samp,
-.mud-code,
-.text-mono {
+.mud-code {
     font-family: var(--font-family-mono);
-    font-size: 0.88em;
+    font-size: 0.92em;
     font-weight: 400;
 }
 
@@ -41,15 +31,7 @@ pre {
     line-height: 1.55;
 }
 
-.eyebrow {
-    font-family: var(--font-family-sans);
-    font-size: var(--font-size-label);
-    line-height: var(--line-height-label);
-    letter-spacing: var(--letter-spacing-label);
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--brand-slate);
-}
+/* .eyebrow baseline lives in deltazulu-tokens.css (.text-label / .eyebrow-label) */
 
 .mud-button-root.mud-button-filled,
 .mud-button-root.mud-button-outlined {
@@ -307,15 +289,4 @@ pre {
             color: var(--brand-ink);
         }
 
-@media (prefers-reduced-motion: reduce) {
-    html {
-        scroll-behavior: auto;
-    }
-
-    *,
-    *::before,
-    *::after {
-        transition-duration: 0ms !important;
-        animation-duration: 0ms !important;
-    }
-}
+/* prefers-reduced-motion rules live in deltazulu-tokens.css */

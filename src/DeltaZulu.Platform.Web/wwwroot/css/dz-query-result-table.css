@@ -32,7 +32,7 @@
 
     .dz-query-result-table__mud .mud-table-container {
         border: 1px solid var(--color-border-strong, rgba(19, 31, 42, 0.18));
-        border-radius: var(--radius-sm, 12px);
+        border-radius: var(--radius-sm, 0);
     }
 
     .dz-query-result-table__mud .mud-table-head .mud-table-cell {

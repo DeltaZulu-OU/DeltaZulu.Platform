@@ -625,54 +625,7 @@
     margin-top: var(--space-1);
 }
 
-/* --- Layout shell cleanup --- */
-
-.dz-shell-logo {
-    opacity: 0.92;
-}
-
-.dz-shell-title {
-    color: var(--color-text-inverse-muted) !important;
-    font-weight: 500 !important;
-}
-
-.dz-shell-badge {
-    color: var(--color-text-inverse-muted) !important;
-    opacity: 0.58;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    font-weight: 700 !important;
-    font-size: 0.75rem !important;
-}
-
-.dz-shell-nav-heading {
-    padding: var(--space-4) var(--space-3) var(--space-2) var(--space-3);
-}
-
-    .dz-shell-nav-heading .eyebrow {
-        font-size: 0.6875rem;
-    }
-
-.dz-shell-main {
-    max-width: var(--container-max);
-    margin: 0 auto;
-    padding: var(--space-6) var(--space-5);
-}
-
-.dz-nav-divider {
-    border-color: var(--color-divider) !important;
-}
-
-/* --- Dialog cleanup --- */
-
-.dz-dialog-title {
-    font-weight: 700 !important;
-}
-
-.dz-mono-input input,
-.dz-mono-input textarea {
-    font-family: var(--font-family-mono) !important;
-}
+/* Shell, dialog, and mono-input rules live in dz-shell.css — single source of truth. */
 
 /* --- Detail surfaces shared by issue/version pages --- */
 

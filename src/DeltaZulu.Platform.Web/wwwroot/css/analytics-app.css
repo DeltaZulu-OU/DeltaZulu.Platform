@@ -39,56 +39,38 @@
     --dz-workspace-topbar-height: 60px;
     --dz-workspace-sidebar-width: 276px;
     --dz-workspace-compact-sidebar-width: 232px;
-    --hunt-surface-canvas: var(--dz-product-canvas);
-    --hunt-surface-panel: var(--dz-product-surface);
-    --hunt-surface-sidebar: var(--dz-product-surface-subtle);
-    --hunt-surface-input: var(--dz-product-surface);
-    --hunt-surface-table-header: var(--dz-product-surface-subtle);
-    --hunt-surface-table-row: var(--dz-product-surface);
-    --hunt-surface-table-alt: var(--dz-product-surface-hover);
-    --hunt-border: var(--dz-product-border);
-    --hunt-accent: var(--dz-product-action);
-    --hunt-accent-hover: var(--color-cta-bg-hover);
-    --hunt-success: var(--color-success);
-    --hunt-warning: var(--color-warning);
-    --hunt-error: var(--color-error);
-    --hunt-info: var(--dz-product-structure);
-    --hunt-text-main: var(--dz-product-text);
-    --hunt-text-dim: var(--dz-product-text-muted);
-    --hunt-text-head: var(--dz-product-text);
-    --hunt-font-mono: var(--font-family-mono);
-    --hunt-font-ui: var(--font-family-sans);
-    --hunt-radius: var(--radius-sm);
-    --hunt-shadow: var(--shadow-md);
-    --bg-dark: var(--hunt-surface-canvas);
-    --bg-panel: var(--hunt-surface-panel);
-    --bg-sidebar: var(--hunt-surface-sidebar);
-    --bg-input: var(--hunt-surface-input);
-    --bg-table-h: var(--hunt-surface-table-header);
-    --bg-table-r: var(--hunt-surface-table-row);
-    --bg-table-a: var(--hunt-surface-table-alt);
-    --bg-hover: var(--hunt-surface-table-alt);
-    --border: var(--hunt-border);
-    --accent: var(--hunt-accent);
-    --accent-h: var(--hunt-accent-hover);
-    --success: var(--hunt-success);
-    --warning: var(--hunt-warning);
-    --error: var(--hunt-error);
-    --info: var(--hunt-info);
-    --text-main: var(--hunt-text-main);
-    --text-dim: var(--hunt-text-dim);
-    --text-head: var(--hunt-text-head);
-    --font-mono: var(--hunt-font-mono);
-    --font-ui: var(--hunt-font-ui);
-    --radius: var(--hunt-radius);
-    --shadow: var(--hunt-shadow);
+    /* Legacy shorthand aliases — point directly to --dz-product-* tokens
+       (collapsed from the former three-tier --hunt-* → --bg-* chain). */
+    --bg-dark: var(--dz-product-canvas);
+    --bg-panel: var(--dz-product-surface);
+    --bg-sidebar: var(--dz-product-surface-subtle);
+    --bg-input: var(--dz-product-surface);
+    --bg-table-h: var(--dz-product-surface-subtle);
+    --bg-table-r: var(--dz-product-surface);
+    --bg-table-a: var(--dz-product-surface-hover);
+    --bg-hover: var(--dz-product-surface-hover);
+    --border: var(--dz-product-border);
+    --accent: var(--dz-product-action);
+    --accent-h: var(--color-cta-bg-hover);
+    --success: var(--color-success);
+    --warning: var(--color-warning);
+    --error: var(--color-error);
+    --info: var(--dz-product-structure);
+    --text-main: var(--dz-product-text);
+    --text-dim: var(--dz-product-text-muted);
+    --text-head: var(--dz-product-text);
+    --font-mono: var(--font-family-mono);
+    --font-ui: var(--font-family-sans);
+    --radius: var(--radius-sm);
+    --shadow: var(--shadow-md);
 }
 
 .hunt-app {
     box-sizing: border-box;
-    color: var(--hunt-text-main);
-    font-family: var(--hunt-font-ui);
+    color: var(--dz-product-text);
+    font-family: var(--font-family-sans);
     font-size: 14px;
+    line-height: var(--line-height-body-sm);
 }
 
     .hunt-app *,
@@ -113,12 +95,7 @@ body:has(.hunt-app) {
     overflow: hidden;
 }
 
-.hunt-topbar {
-    background: var(--bg-sidebar) !important;
-    border-bottom: 1px solid var(--border);
-    min-height: 52px !important;
-    padding: 0 16px;
-}
+/* .hunt-topbar base — see DeltaZulu adaptation section below */
 
 .hunt-shell {
     display: grid;
@@ -135,10 +112,6 @@ body:has(.hunt-app) {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-}
-
-.hunt-settings-link {
-    color: var(--text-main) !important;
 }
 
 /* ─── Schema browser and workbench navigation ─────────────────────────────── */
@@ -382,40 +355,11 @@ body:has(.hunt-app) {
     margin-right: 8px;
 }
 
-/* ─── Buttons ───────────────────────────────────────────────────────────── */
+/* .hunt-btn base — see controls section in DeltaZulu adaptation below.
+   Only cursor kept here as it isn't repeated in the adaptation. */
 .hunt-btn {
-    padding: 5px 14px;
-    border-radius: var(--radius);
-    font-size: 13px;
-    font-family: var(--font-ui);
     cursor: pointer;
-    border: 1px solid var(--border);
-    background: var(--bg-input);
-    color: var(--text-main);
-    transition: background .15s, border-color .15s;
 }
-
-    .hunt-btn:hover:not(:disabled) {
-        background: var(--bg-table-a);
-        border-color: var(--accent);
-    }
-
-    .hunt-btn:disabled {
-        opacity: .5;
-        cursor: default;
-    }
-
-.hunt-btn-run {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-    font-weight: 600;
-}
-
-    .hunt-btn-run:hover:not(:disabled) {
-        background: var(--accent-h);
-        border-color: var(--accent-h);
-    }
 
 .hunt-btn-sql {
     font-size: 12px;
@@ -460,42 +404,7 @@ body.hunt-splitter-active {
     font-style: italic;
 }
 
-.hunt-drawer-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-}
-
-.hunt-drawer-close {
-    width: 32px;
-    height: 32px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg-input);
-    color: var(--text-main);
-    font: inherit;
-    font-size: 20px;
-    line-height: 1;
-    cursor: pointer;
-}
-
-    .hunt-drawer-close:hover,
-    .hunt-drawer-close:focus-visible {
-        border-color: var(--accent);
-        color: var(--text-head);
-    }
-
-    .hunt-drawer-close:focus-visible {
-        outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
-        outline-offset: 2px;
-    }
+/* .hunt-drawer-header and .hunt-drawer-close — consolidated below with code-drawer variants */
 
 .hunt-drawer-backdrop {
     position: fixed;
@@ -604,40 +513,7 @@ body.hunt-splitter-active {
     padding-top: 38px;
 }
 
-.json-key {
-    color: #ffab70;
-}
-
-.json-string {
-    color: #a5d6ff;
-}
-
-.json-number {
-    color: #79c0ff;
-}
-
-.json-literal {
-    color: #d2a8ff;
-    font-weight: 600;
-}
-
-.sql-keyword {
-    color: #ff7b72;
-    font-weight: 700;
-}
-
-.sql-string {
-    color: #a5d6ff;
-}
-
-.sql-number {
-    color: #79c0ff;
-}
-
-.sql-comment {
-    color: #8b949e;
-    font-style: italic;
-}
+/* JSON/SQL syntax colours — see DeltaZulu adaptation section below */
 
 /* ─── Results table ─────────────────────────────────────────────────────── */
 .hunt-results-tabs {
@@ -647,22 +523,10 @@ body.hunt-splitter-active {
     border-bottom: 1px solid var(--border);
 }
 
-.hunt-tab-button {
-    border-radius: 8px 8px 0 0;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-}
-
     .hunt-tab-button[disabled] {
         opacity: .5;
         cursor: not-allowed;
     }
-
-.hunt-tab-active {
-    border-color: var(--accent);
-    color: var(--text-main);
-    background: rgba(88, 166, 255, 0.12);
-}
 
 .hunt-results-content {
     display: flex;
@@ -837,9 +701,8 @@ body.hunt-splitter-active {
     flex-shrink: 0;
 }
 
-/* ─── Blazor error overlay ──────────────────────────────────────────────── */
+/* ─── Blazor error overlay — see DeltaZulu adaptation section below ────── */
 #blazor-error-ui {
-    background: var(--error);
     bottom: 0;
     left: 0;
     right: 0;
@@ -847,7 +710,6 @@ body.hunt-splitter-active {
     padding: 8px 16px;
     display: none;
     z-index: 1000;
-    color: #fff;
 }
 
     #blazor-error-ui.blazor-error-ui-visible {
@@ -891,27 +753,9 @@ body.hunt-splitter-active {
     border-bottom: 1px solid var(--border);
 }
 
-.hunt-nav-link {
-    color: var(--text-main);
-    text-decoration: none;
-    padding: 8px 10px;
-    border-radius: var(--radius);
-    font-size: 13px;
-}
-
-    .hunt-nav-link:hover {
-        background: var(--bg-input);
-    }
-
-    .hunt-nav-link.active {
-        background: color-mix(in srgb, var(--accent) 18%, var(--bg-input));
-        color: var(--text-head);
-    }
+/* .hunt-nav-link styles live in the topbar/navigation final rules section below */
 
 .settings-page {
-    max-width: 840px;
-    margin: 0 auto;
-    padding: 28px 24px 40px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -966,25 +810,6 @@ body.hunt-splitter-active {
 .settings-footer-note {
     color: var(--text-dim);
     font-size: 12px;
-}
-
-.hunt-chart {
-    width: 100%;
-    height: 320px;
-    border: 1px solid var(--border);
-    background: #0f141b;
-    border-radius: 6px;
-}
-
-.hunt-chart-grid {
-    stroke: #2a3443;
-    stroke-width: 1;
-}
-
-.hunt-chart-axis {
-    fill: var(--text-dim);
-    font-size: 11px;
-    font-family: var(--font-mono);
 }
 
 .hunt-render-legend {
@@ -1231,30 +1056,22 @@ body.hunt-splitter-active {
    2. Base and MudBlazor harmonisation
    ────────────────────────────────────────────────────────────────────────── */
 
-html,
-body {
-    height: 100%;
-    background: var(--dz-product-canvas);
-    color: var(--dz-product-text);
-    font-family: var(--font-family-sans);
-    font-size: 14px;
-    line-height: var(--line-height-body-sm);
-}
+/* html, body baseline lives in deltazulu-tokens.css + dz-shell.css.
+   Hunt workspace scopes its 14px/tighter line-height via .hunt-app. */
 
-body,
-.mud-typography,
-.mud-button,
-.mud-input,
-.mud-select,
-.mud-list,
-.mud-table,
-.mud-toolbar,
-.mud-appbar,
-.mud-drawer,
-.mud-snackbar,
-.mud-popover,
-.mud-menu,
-.mud-tooltip {
+.hunt-app .mud-typography,
+.hunt-app .mud-button,
+.hunt-app .mud-input,
+.hunt-app .mud-select,
+.hunt-app .mud-list,
+.hunt-app .mud-table,
+.hunt-app .mud-toolbar,
+.hunt-app .mud-appbar,
+.hunt-app .mud-drawer,
+.hunt-app .mud-snackbar,
+.hunt-app .mud-popover,
+.hunt-app .mud-menu,
+.hunt-app .mud-tooltip {
     font-family: var(--font-family-sans) !important;
 }
 
@@ -1276,10 +1093,7 @@ samp,
     font-family: var(--font-family-mono) !important;
 }
 
-*:focus-visible {
-    outline: 0;
-    box-shadow: 0 0 0 4px var(--color-focus-ring) !important;
-}
+/* *:focus-visible lives in dz-shell.css */
 
 ::selection {
     background: color-mix(in srgb, var(--brand-accent) 28%, transparent);
@@ -1295,15 +1109,15 @@ samp,
     color: var(--dz-product-text) !important;
 }
 
-.mud-icon-button {
+.hunt-app .mud-icon-button {
     border-radius: var(--radius-pill) !important;
 }
 
-    .mud-icon-button:hover {
+    .hunt-app .mud-icon-button:hover {
         background: var(--dz-product-surface-hover) !important;
     }
 
-.mud-snackbar {
+.hunt-app .mud-snackbar {
     border-radius: var(--radius-md) !important;
     box-shadow: var(--shadow-lg) !important;
 }
@@ -1317,11 +1131,13 @@ samp,
 }
 
 .hunt-topbar {
+    height: var(--dz-workspace-topbar-height);
     min-height: var(--dz-workspace-topbar-height) !important;
     padding: 0 var(--space-5) !important;
     background: var(--dz-product-surface) !important;
     border-bottom: 1px solid var(--dz-product-divider);
     box-shadow: none !important;
+    color: var(--dz-product-text);
 }
 
 .hunt-settings-link {
@@ -1993,14 +1809,7 @@ body.hunt-splitter-active {
     }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        transition-duration: 0ms !important;
-        animation-duration: 0ms !important;
-    }
-}
+/* prefers-reduced-motion rules live in deltazulu-tokens.css */
 
 /* ==========================================================================
    Dashboard list/detail/editor/widgets
@@ -3092,14 +2901,7 @@ body.hunt-splitter-active {
    Topbar and primary navigation final rules
    ========================================================================== */
 
-.hunt-topbar {
-    height: 60px;
-    min-height: 60px;
-    background: var(--bg-panel);
-    border-bottom: 1px solid var(--border);
-    color: var(--text-main);
-    padding: 0 24px;
-}
+/* .hunt-topbar — authoritative definition is in the adaptation section above */
 
     .hunt-topbar .mud-toolbar {
         min-height: 60px;
@@ -3124,7 +2926,7 @@ body.hunt-splitter-active {
         height: 34px;
         flex: 0 0 auto;
         border-radius: var(--radius-sm);
-        background: linear-gradient(135deg, var(--dz-brand-primary), var(--dz-brand-accent));
+        background: linear-gradient(135deg, var(--brand-slate), var(--brand-accent));
         box-shadow: var(--shadow-sm);
     }
 
@@ -3182,12 +2984,10 @@ body.hunt-splitter-active {
         background: rgba(108, 92, 231, .16);
     }
 
-.hunt-settings-link {
-    color: var(--text-main);
-}
+/* .hunt-settings-link — authoritative definition in adaptation section */
 
     .hunt-settings-link:hover {
-        color: var(--text-head);
+        color: var(--dz-product-text);
     }
 
 .hunt-main-content,
@@ -3214,9 +3014,7 @@ body.hunt-splitter-active {
     }
 }
 
-.hunt-global-nav-toggle {
-    flex: 0 0 auto;
-}
+/* .hunt-global-nav-toggle flex is already set in the main definition above */
 
 /* Module-host surface: used when Hunting pages are rendered inside an external shell. */
 .hunt-module-main {

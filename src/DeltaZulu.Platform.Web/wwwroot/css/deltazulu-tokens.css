@@ -119,20 +119,12 @@
     --viz-series-neutral: var(--viz-unknown);
 }
 
-/* ============================================================
-   7. SURFACE ROLE ALIASES
-   ============================================================ */
-:root {
-    --surface-featured: var(--color-surface-dark);
-    --surface-card: var(--color-surface-primary);
-    --surface-note: var(--color-surface-muted);
-}
+/* Surface role aliases removed — unused in product CSS. */
 
 /* ============================================================
    8. SPACING SCALE
    ============================================================ */
 :root {
-    --space-0: 0;
     --space-1: 4px;
     --space-2: 8px;
     --space-3: 12px;
@@ -141,9 +133,6 @@
     --space-6: 32px;
     --space-7: 40px;
     --space-8: 48px;
-    --space-9: 64px;
-    --space-10: 80px;
-    --space-11: 96px;
 }
 
 /* ============================================================
@@ -158,12 +147,9 @@
 :root {
     --radius-structure: 0;
     --radius-input: 4px;
-    --radius-xs: var(--radius-structure);
     --radius-sm: var(--radius-structure);
     --radius-md: var(--radius-structure);
     --radius-lg: var(--radius-structure);
-    --radius-xl: var(--radius-structure);
-    --radius-2xl: var(--radius-structure);
     --radius-pill: 999px;
 }
 
@@ -182,7 +168,6 @@
 :root {
     --duration-fast: 120ms;
     --duration-base: 180ms;
-    --duration-slow: 260ms;
     --easing-standard: ease;
 }
 
@@ -191,15 +176,6 @@
    ============================================================ */
 :root {
     --container-max: 1200px;
-    --container-gutter-desktop: 40px;
-    --container-gutter-tablet: 24px;
-    --container-gutter-mobile: 16px;
-    --grid-gutter-desktop: 24px;
-    --grid-gutter-tablet: 20px;
-    --grid-gutter-mobile: 16px;
-    --section-space-desktop: 80px;
-    --section-space-tablet: 64px;
-    --section-space-mobile: 48px;
 }
 
 /* ============================================================
@@ -312,7 +288,8 @@ p {
 }
 
 .text-label,
-.eyebrow-label {
+.eyebrow-label,
+.eyebrow {
     font-family: var(--font-family-sans);
     font-size: var(--font-size-label);
     line-height: var(--line-height-label);
@@ -332,16 +309,6 @@ samp {
     font-weight: 400;
 }
 
-.code-inline {
-    font-family: var(--font-family-mono);
-    font-size: 0.875em;
-    background: #DEE5E8;
-    color: #1F4756;
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-weight: 500;
-}
-
 .code-block {
     font-family: var(--font-family-mono);
     font-size: 0.875rem;
@@ -355,14 +322,6 @@ samp {
 
 .text-muted {
     color: var(--color-text-muted);
-}
-
-.text-inverse {
-    color: var(--color-text-inverse);
-}
-
-.text-inverse-muted {
-    color: var(--color-text-inverse-muted);
 }
 
 .text-secondary {
