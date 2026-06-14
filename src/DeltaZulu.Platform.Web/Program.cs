@@ -61,8 +61,8 @@ var seedSampleDetectionCatalog = builder.Configuration.GetValue<bool?>("SampleDe
 if (seedSampleDetectionCatalog)
     {
     SampleDetectionContentSeeder.SeedGovernanceCatalog(connectionString);
-    SampleDetectionContentSeeder.Seed(acceptedContentRepositoryPath, overwrite: false);
-    }
+    SampleDetectionContentSeeder.SeedAcceptedContentRepository(acceptedContentRepositoryPath, overwrite: false);
+}
 
 // --- Analytics module services ---
 builder.Services.AddAnalyticsWebModule(new AnalyticsModuleOptions

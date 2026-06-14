@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Dapper;
+using LibGit2Sharp;
 using Microsoft.Data.Sqlite;
 
 namespace DeltaZulu.Platform.Data.Seeding;
@@ -565,6 +566,70 @@ ProcessEvent
 
             File.WriteAllText(fullPath, file.Content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             written.Add(fullPath);
+        }
+
+        return written;
+    }
+
+
+    /// <summary>
+    /// Seeds the accepted-content Git repository with canonical sample detection files.
+    /// The Detection Detail Files tab reads accepted content through the Git-backed
+    /// accepted-content store, so plain files outside a committed <c>detections/&lt;slug&gt;</c>
+    /// tree are intentionally not enough.
+    /// </summary>
+    public static IReadOnlyList<string> SeedAcceptedContentRepository(
+        string repositoryDirectory,
+        bool overwrite = false)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryDirectory);
+
+        Directory.CreateDirectory(repositoryDirectory);
+        if (!Repository.IsValid(repositoryDirectory))
+        {
+            Repository.Init(repositoryDirectory);
+        }
+
+        var written = new List<string>();
+        var stagePaths = new List<string>();
+
+        foreach (var file in Files)
+        {
+            var repositoryPath = "detections/" + file.RelativePath;
+            var fullPath = Path.Combine(
+                repositoryDirectory,
+                repositoryPath.Replace('/', Path.DirectorySeparatorChar));
+            var directory = Path.GetDirectoryName(fullPath);
+
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            if (!File.Exists(fullPath) || overwrite)
+            {
+                File.WriteAllText(fullPath, file.Content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                written.Add(repositoryPath);
+            }
+
+            stagePaths.Add(repositoryPath);
+        }
+
+        using var repository = new Repository(repositoryDirectory);
+        foreach (var path in stagePaths.Distinct(StringComparer.Ordinal))
+        {
+            Commands.Stage(repository, path);
+        }
+
+        if (repository.RetrieveStatus().IsDirty)
+        {
+            var committedAt = DateTimeOffset.UtcNow;
+            var signature = new Signature(
+                "DeltaZulu Sample Seeder",
+                "samples@deltazulu.local",
+                committedAt);
+
+            repository.Commit("Seed sample detection content", signature, signature);
         }
 
         return written;

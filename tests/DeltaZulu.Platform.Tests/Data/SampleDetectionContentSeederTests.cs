@@ -1,6 +1,7 @@
 using Dapper;
 using DeltaZulu.Platform.Data.Seeding;
 using DeltaZulu.Platform.Data.Sqlite.Governance;
+using LibGit2Sharp;
 using Microsoft.Data.Sqlite;
 
 namespace DeltaZulu.Platform.Tests.Data;
@@ -30,10 +31,7 @@ public sealed class SampleDetectionContentSeederTests
         }
         finally
         {
-            if (Directory.Exists(root))
-            {
-                Directory.Delete(root, recursive: true);
-            }
+            DeleteDirectoryIfExists(root);
         }
     }
 
@@ -54,10 +52,52 @@ public sealed class SampleDetectionContentSeederTests
         }
         finally
         {
-            if (Directory.Exists(root))
-            {
-                Directory.Delete(root, recursive: true);
-            }
+            DeleteDirectoryIfExists(root);
+        }
+    }
+
+    [TestMethod]
+    public void SeedAcceptedContentRepository_WritesCanonicalFilesAndCreatesGitCommit()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "deltazulu-accepted-content-" + Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var written = SampleDetectionContentSeeder.SeedAcceptedContentRepository(root);
+
+            var metadataPath = Path.Combine(root, "detections", "powershell-execution-policy-change", "detection.yaml");
+            var queryPath = Path.Combine(root, "detections", "powershell-execution-policy-change", "query.kql");
+
+            Assert.IsGreaterThanOrEqualTo(20, written.Count);
+            Assert.IsTrue(File.Exists(metadataPath));
+            Assert.IsTrue(File.Exists(queryPath));
+
+            using var repository = new Repository(root);
+            Assert.IsNotNull(repository.Head.Tip);
+            Assert.IsNotNull(repository.Head.Tip.Tree["detections/powershell-execution-policy-change/detection.yaml"]);
+            Assert.IsNotNull(repository.Head.Tip.Tree["detections/powershell-execution-policy-change/query.kql"]);
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(root);
+        }
+    }
+
+    [TestMethod]
+    public void SeedAcceptedContentRepository_IsIdempotent()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "deltazulu-accepted-content-" + Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            SampleDetectionContentSeeder.SeedAcceptedContentRepository(root);
+            var second = SampleDetectionContentSeeder.SeedAcceptedContentRepository(root);
+
+            Assert.IsEmpty(second);
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(root);
         }
     }
 
@@ -130,5 +170,31 @@ public sealed class SampleDetectionContentSeederTests
                 File.Delete(dbPath);
             }
         }
+    }
+
+    private static void DeleteDirectoryIfExists(string path)
+    {
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
+        // LibGit2Sharp creates a real Git repository for these tests. On Windows, loose
+        // objects, pack files, and repository metadata can carry read-only/hidden/system
+        // attributes. Directory.Delete(recursive: true) can then fail with
+        // UnauthorizedAccessException even after all repository handles are disposed.
+        foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+        {
+            File.SetAttributes(file, FileAttributes.Normal);
+        }
+
+        foreach (var directory in Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories)
+                     .OrderByDescending(directory => directory.Length))
+        {
+            File.SetAttributes(directory, FileAttributes.Normal);
+        }
+
+        File.SetAttributes(path, FileAttributes.Normal);
+        Directory.Delete(path, recursive: true);
     }
 }
