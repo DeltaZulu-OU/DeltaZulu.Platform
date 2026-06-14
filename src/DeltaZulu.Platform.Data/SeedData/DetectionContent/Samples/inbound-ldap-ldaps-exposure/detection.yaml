@@ -1,0 +1,42 @@
+id: dz-sample-inbound-ldap-ldaps-exposure
+title: Inbound LDAP or LDAPS connection observed
+status: sample
+enabled: true
+severity: Medium
+confidence: Medium
+risk_score: 50
+content_type: detection
+query_language: kql
+query_file: query.kql
+schedule:
+  type: cron
+  expression: '0 */1 * * *'
+lookback: 1d
+materialization:
+  mode: per_result_row
+  max_alerts_per_run: 100
+source:
+  repository: Sentinel-Queries-main sample extract
+  original_path: Defender for Endpoint/Device-SummarizeLDAPandLDAPStraffic.kql
+  adaptation: rewritten for DeltaZulu golden analytical views
+description: >-
+  Identifies devices accepting inbound LDAP or LDAPS traffic. This sample is useful for
+  surfacing directory-service exposure and unexpected LDAP listeners.
+required_tables:
+  - NetworkSession
+tactics:
+  - Discovery
+  - Lateral Movement
+techniques:
+  - T1046
+entity_mappings:
+  - type: host
+    field: DeviceName
+  - type: ip
+    field: RemoteIP
+  - type: process
+    field: InitiatingProcessFileName
+false_positive_notes:
+  - Administrative activity, vulnerability scans, baselined services, or sanctioned automation may match depending on the rule.
+validation_notes:
+  - Sample content only; tune thresholds, schemas, and suppression before production use.

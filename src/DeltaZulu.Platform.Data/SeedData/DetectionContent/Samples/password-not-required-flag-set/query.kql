@@ -1,0 +1,6 @@
+UserManagement
+| where Timestamp > ago(7d)
+| where EventId == 4738
+| where UserAccountControl has "2082"
+| project Timestamp, TargetAccount, ActorAccount, UserAccountControl, DeviceName, SourceType
+| sort by Timestamp desc

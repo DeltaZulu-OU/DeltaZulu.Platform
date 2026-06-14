@@ -1,0 +1,41 @@
+id: dz-sample-rdp-interactive-logon
+title: Remote Desktop interactive logon observed
+status: sample
+enabled: true
+severity: Low
+confidence: High
+risk_score: 40
+content_type: detection
+query_language: kql
+query_file: query.kql
+schedule:
+  type: cron
+  expression: '0 */1 * * *'
+lookback: 1d
+materialization:
+  mode: per_result_row
+  max_alerts_per_run: 100
+source:
+  repository: Sentinel-Queries-main sample extract
+  original_path: Active Directory/SecurityEvent-SummarizeRDPActivity.kql
+  adaptation: rewritten for DeltaZulu golden analytical views
+description: >-
+  Detects successful logons with RDP logon type. It is a baseline and investigation sample
+  for lateral movement review, not a final incident rule.
+required_tables:
+  - Authentication
+tactics:
+  - Lateral Movement
+techniques:
+  - T1021.001
+entity_mappings:
+  - type: host
+    field: DeviceName
+  - type: account
+    field: AccountName
+  - type: ip
+    field: SourceIP
+false_positive_notes:
+  - Administrative activity, vulnerability scans, baselined services, or sanctioned automation may match depending on the rule.
+validation_notes:
+  - Sample content only; tune thresholds, schemas, and suppression before production use.

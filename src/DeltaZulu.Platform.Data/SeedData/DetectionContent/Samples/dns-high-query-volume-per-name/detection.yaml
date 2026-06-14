@@ -1,0 +1,40 @@
+id: dz-sample-dns-high-query-volume-per-name
+title: High DNS query volume for a single name
+status: sample
+enabled: true
+severity: Low
+confidence: Medium
+risk_score: 35
+content_type: detection
+query_language: kql
+query_file: query.kql
+schedule:
+  type: cron
+  expression: '0 */1 * * *'
+lookback: 1d
+materialization:
+  mode: per_result_row
+  max_alerts_per_run: 100
+source:
+  repository: Sentinel-Queries-main sample extract
+  original_path: Derived from DNS anomaly patterns in sample extract
+  adaptation: rewritten for DeltaZulu golden analytical views
+description: >-
+  Summarizes DNS telemetry to find device/name pairs with unusually high query counts in a
+  short window. The threshold is deliberately conservative for seed content and should be
+  tuned per environment.
+required_tables:
+  - Dns
+tactics:
+  - Command and Control
+techniques:
+  - T1071.004
+entity_mappings:
+  - type: host
+    field: DeviceName
+  - type: domain
+    field: QueryName
+false_positive_notes:
+  - Administrative activity, vulnerability scans, baselined services, or sanctioned automation may match depending on the rule.
+validation_notes:
+  - Sample content only; tune thresholds, schemas, and suppression before production use.

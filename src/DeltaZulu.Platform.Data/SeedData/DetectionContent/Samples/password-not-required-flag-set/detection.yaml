@@ -1,0 +1,43 @@
+id: dz-sample-password-not-required-flag-set
+title: Active Directory account set to password not required
+status: sample
+enabled: true
+severity: High
+confidence: High
+risk_score: 75
+content_type: detection
+query_language: kql
+query_file: query.kql
+schedule:
+  type: cron
+  expression: '0 */1 * * *'
+lookback: 1d
+materialization:
+  mode: per_result_row
+  max_alerts_per_run: 100
+source:
+  repository: Sentinel-Queries-main sample extract
+  original_path: Active Directory/SecurityEvent-AccountSetPasswordNotRequired.kql
+  adaptation: rewritten for DeltaZulu golden analytical views
+description: >-
+  Detects account change events where the password-not-required bit appears in
+  UserAccountControl telemetry. This is a high-signal account-hardening violation when the
+  field is populated by the source parser.
+required_tables:
+  - UserManagement
+tactics:
+  - Persistence
+  - Defense Evasion
+techniques:
+  - T1098
+entity_mappings:
+  - type: account
+    field: TargetAccount
+  - type: account
+    field: ActorAccount
+  - type: host
+    field: DeviceName
+false_positive_notes:
+  - Administrative activity, vulnerability scans, baselined services, or sanctioned automation may match depending on the rule.
+validation_notes:
+  - Sample content only; tune thresholds, schemas, and suppression before production use.

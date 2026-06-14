@@ -1,0 +1,7 @@
+ProcessEvent
+| where Timestamp > ago(1d)
+| where FileName =~ "powershell.exe"
+| where ProcessCommandLine contains "Set-ExecutionPolicy"
+| where AccountName !~ "system"
+| project Timestamp, DeviceName, AccountName, ProcessCommandLine, ParentFileName, SourceType
+| sort by Timestamp desc

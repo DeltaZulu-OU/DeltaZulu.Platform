@@ -1,0 +1,42 @@
+id: dz-sample-new-low-port-listener
+title: Low-numbered service listener created on endpoint
+status: sample
+enabled: true
+severity: Medium
+confidence: Medium
+risk_score: 55
+content_type: detection
+query_language: kql
+query_file: query.kql
+schedule:
+  type: cron
+  expression: '0 */1 * * *'
+lookback: 1d
+materialization:
+  mode: per_result_row
+  max_alerts_per_run: 100
+source:
+  repository: Sentinel-Queries-main sample extract
+  original_path: Defender for Endpoint/Device-InterestingPortsOpened.kql
+  adaptation: rewritten for DeltaZulu golden analytical views
+description: >-
+  Finds endpoint telemetry indicating a listener on common low-numbered service ports.
+  This is a sample for exposure review and unexpected service creation.
+required_tables:
+  - NetworkSession
+tactics:
+  - Persistence
+  - Command and Control
+techniques:
+  - T1571
+entity_mappings:
+  - type: host
+    field: DeviceName
+  - type: process
+    field: InitiatingProcessFileName
+  - type: account
+    field: AccountName
+false_positive_notes:
+  - Administrative activity, vulnerability scans, baselined services, or sanctioned automation may match depending on the rule.
+validation_notes:
+  - Sample content only; tune thresholds, schemas, and suppression before production use.

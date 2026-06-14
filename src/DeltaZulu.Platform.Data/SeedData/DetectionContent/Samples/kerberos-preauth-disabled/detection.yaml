@@ -1,0 +1,42 @@
+id: dz-sample-kerberos-preauth-disabled
+title: Kerberos preauthentication disabled for account
+status: sample
+enabled: true
+severity: High
+confidence: Medium
+risk_score: 80
+content_type: detection
+query_language: kql
+query_file: query.kql
+schedule:
+  type: cron
+  expression: '0 */1 * * *'
+lookback: 1d
+materialization:
+  mode: per_result_row
+  max_alerts_per_run: 100
+source:
+  repository: Sentinel-Queries-main sample extract
+  original_path: Active Directory/SecurityEvent-AccountPreAuthChanges.kql
+  adaptation: rewritten for DeltaZulu golden analytical views
+description: >-
+  Detects account change events that indicate Kerberos preauthentication was disabled.
+  This should be reviewed quickly because it can increase AS-REP roasting exposure.
+required_tables:
+  - UserManagement
+tactics:
+  - Credential Access
+  - Persistence
+techniques:
+  - T1558.004
+entity_mappings:
+  - type: account
+    field: TargetAccount
+  - type: account
+    field: ActorAccount
+  - type: host
+    field: DeviceName
+false_positive_notes:
+  - Administrative activity, vulnerability scans, baselined services, or sanctioned automation may match depending on the rule.
+validation_notes:
+  - Sample content only; tune thresholds, schemas, and suppression before production use.

@@ -1,0 +1,5 @@
+NetworkSession
+| where Timestamp > ago(7d)
+| where LocalPort in (389, 636, 3269)
+| project Timestamp, DeviceName, LocalIP, LocalPort, RemoteIP, InitiatingProcessFileName, SourceType
+| sort by Timestamp desc

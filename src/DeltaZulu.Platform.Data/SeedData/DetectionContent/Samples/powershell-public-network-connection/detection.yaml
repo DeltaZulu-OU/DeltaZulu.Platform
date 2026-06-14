@@ -1,0 +1,45 @@
+id: dz-sample-powershell-public-network-connection
+title: PowerShell initiated public network connection
+status: sample
+enabled: true
+severity: Medium
+confidence: Medium
+risk_score: 60
+content_type: detection
+query_language: kql
+query_file: query.kql
+schedule:
+  type: cron
+  expression: '0 */1 * * *'
+lookback: 1d
+materialization:
+  mode: per_result_row
+  max_alerts_per_run: 100
+source:
+  repository: Sentinel-Queries-main sample extract
+  original_path: Defender for Endpoint/Device-PowershellConnectingtoInternet.kql
+  adaptation: rewritten for DeltaZulu golden analytical views
+description: >-
+  Finds non-system PowerShell activity associated with outbound connections to public
+  endpoints. This is a triage-oriented sample because benign administration and package
+  installation can produce similar telemetry.
+required_tables:
+  - NetworkSession
+tactics:
+  - Command and Control
+  - Execution
+techniques:
+  - T1059.001
+entity_mappings:
+  - type: host
+    field: DeviceName
+  - type: account
+    field: AccountName
+  - type: ip
+    field: RemoteIP
+  - type: process
+    field: InitiatingProcessCommandLine
+false_positive_notes:
+  - Administrative activity, vulnerability scans, baselined services, or sanctioned automation may match depending on the rule.
+validation_notes:
+  - Sample content only; tune thresholds, schemas, and suppression before production use.

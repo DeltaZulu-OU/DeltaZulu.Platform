@@ -1,0 +1,6 @@
+Authentication
+| where Timestamp > ago(7d)
+| where EventId == 4624
+| where LogonType == 10
+| project Timestamp, DeviceName, AccountName, AccountDomain, SourceIP, LogonType, SourceType
+| sort by Timestamp desc

@@ -1,0 +1,43 @@
+id: dz-sample-suspicious-command-line-download
+title: Command-line download utility usage
+status: sample
+enabled: true
+severity: Medium
+confidence: Medium
+risk_score: 60
+content_type: detection
+query_language: kql
+query_file: query.kql
+schedule:
+  type: cron
+  expression: '0 */1 * * *'
+lookback: 1d
+materialization:
+  mode: per_result_row
+  max_alerts_per_run: 100
+source:
+  repository: Sentinel-Queries-main sample extract
+  original_path: Derived from Defender endpoint command-line hunting patterns in sample extract
+  adaptation: rewritten for DeltaZulu golden analytical views
+description: >-
+  Detects common command-line download patterns in process telemetry. The query is
+  intentionally simple so it can act as validation content for KQL translation and
+  governance workflows.
+required_tables:
+  - ProcessEvent
+tactics:
+  - Command and Control
+  - Execution
+techniques:
+  - T1105
+entity_mappings:
+  - type: host
+    field: DeviceName
+  - type: account
+    field: AccountName
+  - type: process
+    field: FileName
+false_positive_notes:
+  - Administrative activity, vulnerability scans, baselined services, or sanctioned automation may match depending on the rule.
+validation_notes:
+  - Sample content only; tune thresholds, schemas, and suppression before production use.

@@ -1,0 +1,5 @@
+ProcessEvent
+| where Timestamp > ago(1d)
+| where ProcessCommandLine has_any ("Invoke-WebRequest", "DownloadString", "curl", "wget", "bitsadmin")
+| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine, ParentFileName, SourceType
+| sort by Timestamp desc

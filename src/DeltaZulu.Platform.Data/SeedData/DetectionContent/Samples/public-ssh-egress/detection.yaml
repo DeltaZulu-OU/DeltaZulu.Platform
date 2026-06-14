@@ -1,0 +1,42 @@
+id: dz-sample-public-ssh-egress
+title: Outbound SSH connection to public endpoint
+status: sample
+enabled: true
+severity: Low
+confidence: Medium
+risk_score: 45
+content_type: detection
+query_language: kql
+query_file: query.kql
+schedule:
+  type: cron
+  expression: '0 */1 * * *'
+lookback: 1d
+materialization:
+  mode: per_result_row
+  max_alerts_per_run: 100
+source:
+  repository: Sentinel-Queries-main sample extract
+  original_path: Defender for Endpoint/Device-PublicPort22Allowed.kql
+  adaptation: rewritten for DeltaZulu golden analytical views
+description: >-
+  Detects outbound SSH connections toward public addresses. It is intended as a policy and
+  exposure sample rather than a high-confidence compromise rule.
+required_tables:
+  - NetworkSession
+tactics:
+  - Command and Control
+  - Lateral Movement
+techniques:
+  - T1021.004
+entity_mappings:
+  - type: host
+    field: DeviceName
+  - type: account
+    field: AccountName
+  - type: ip
+    field: RemoteIP
+false_positive_notes:
+  - Administrative activity, vulnerability scans, baselined services, or sanctioned automation may match depending on the rule.
+validation_notes:
+  - Sample content only; tune thresholds, schemas, and suppression before production use.
