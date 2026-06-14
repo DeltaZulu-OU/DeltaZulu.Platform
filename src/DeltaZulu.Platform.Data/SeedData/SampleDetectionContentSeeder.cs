@@ -637,7 +637,7 @@ ProcessEvent
                      accepted_at, changed_sections, git_commit_sha, checks_summary, review_summary)
                 VALUES
                     (@VersionId, @DetectionId, 1, '1.0', @Title, @ChangeSummary,
-                     @AuthorId, 'SampleSeed', @ChangeRequestId, NULL,
+                     @AuthorId, 'StandardReview', @ChangeRequestId, NULL,
                      @AcceptedAt, 'detection.yaml;query.kql', @GitCommitSha, @ChecksSummary, @ReviewSummary)
                 """, new {
                 VersionId = versionId,
