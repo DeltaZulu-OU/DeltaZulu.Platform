@@ -104,7 +104,9 @@ public static class DemoSeeder
             """;
 
         foreach (var d in detections)
+        {
             conn.Execute(sql, new { d.Id, d.Slug, d.Title, d.Summary, d.Lifecycle, CreatedAt = Iso(d.CreatedAt) }, tx);
+        }
 
         var versionedDetections = detections.Where(d => d.Lifecycle == "Accepted").ToList();
         foreach (var d in versionedDetections)
@@ -343,7 +345,9 @@ public static class DemoSeeder
             """;
 
         foreach (var f in files)
+        {
             conn.Execute(sql, new { f.CrId, f.Path, f.ContentType, f.Content, UpdatedAt = Iso(now), f.By }, tx);
+        }
     }
 
     private static void SeedCheckRuns(

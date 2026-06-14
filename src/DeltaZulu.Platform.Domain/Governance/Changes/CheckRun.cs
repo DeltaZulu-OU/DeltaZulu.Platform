@@ -26,9 +26,14 @@ public sealed class CheckRun : Entity<CheckRunId>
         : base(id)
     {
         if (string.IsNullOrWhiteSpace(name))
+        {
             throw new DomainException("check.name_empty", "Check name must not be empty.");
+        }
+
         if (name.Length > 64)
+        {
             throw new DomainException("check.name_too_long", "Check name exceeds 64 characters.");
+        }
 
         ChangeRequestId = changeRequestId;
         Name = name;
@@ -81,7 +86,10 @@ public sealed class CheckRun : Entity<CheckRunId>
     public void Complete(CheckStatus terminal, string summary, string detailsJson, string logsExcerpt, DateTimeOffset now)
     {
         if (terminal is not (CheckStatus.Passed or CheckStatus.Failed or CheckStatus.Cancelled or CheckStatus.Skipped))
+        {
             throw new DomainException("check.terminal_invalid", $"Status {terminal} is not a terminal status.");
+        }
+
         if (IsTerminal)
         {
             throw new DomainException("check.already_complete",

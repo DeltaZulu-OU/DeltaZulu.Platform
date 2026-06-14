@@ -40,12 +40,18 @@ public sealed class DapperCuratedAnalyticRepository : ICuratedAnalyticRepository
 
     public async Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
     {
-        if (_initialized) return;
+        if (_initialized)
+        {
+            return;
+        }
 
         await _schemaSemaphore.WaitAsync(cancellationToken);
         try
         {
-            if (_initialized) return;
+            if (_initialized)
+            {
+                return;
+            }
 
             await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
             await connection.ExecuteAsync(new CommandDefinition(

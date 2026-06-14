@@ -75,7 +75,9 @@ public sealed class MergeReconciliationService(
         var intent = unresolved.FirstOrDefault(i => i.ChangeId.Equals(changeId));
 
         if (intent is null)
+        {
             return MergeRepairResult.NotFound(changeId);
+        }
 
         if (intent.State != MergeIntentState.Committed || string.IsNullOrWhiteSpace(intent.CommitSha))
         {
@@ -133,8 +135,15 @@ public sealed class MergeReconciliationService(
         var siblings = await changes.ListByDetectionAsync(detection.Id, ct);
         foreach (var sibling in siblings)
         {
-            if (sibling.Id.Equals(change.Id)) continue;
-            if (sibling.Status is ChangeStatus.Merged or ChangeStatus.Closed) continue;
+            if (sibling.Id.Equals(change.Id))
+            {
+                continue;
+            }
+
+            if (sibling.Status is ChangeStatus.Merged or ChangeStatus.Closed)
+            {
+                continue;
+            }
 
             sibling.MarkStale($"Change {change.Key} was repaired at version {version.DisplayVersion}.", now);
             changes.Save(sibling);
@@ -147,7 +156,11 @@ public sealed class MergeReconciliationService(
 
     private static string BuildChecksSummary(Domain.Governance.Changes.ChangeRequest change)
     {
-        if (change.Checks.Count == 0) return "No checks.";
+        if (change.Checks.Count == 0)
+        {
+            return "No checks.";
+        }
+
         var passed = change.Checks.Count(c => c.Status == CheckStatus.Passed);
         var failed = change.Checks.Count(c => c.Status == CheckStatus.Failed);
         return $"{passed} passed, {failed} failed (of {change.Checks.Count} total).";
@@ -155,7 +168,11 @@ public sealed class MergeReconciliationService(
 
     private static string BuildReviewSummary(Domain.Governance.Changes.ChangeRequest change)
     {
-        if (change.Reviews.Count == 0) return "No reviews.";
+        if (change.Reviews.Count == 0)
+        {
+            return "No reviews.";
+        }
+
         var effective = change.Reviews.Where(r => !r.IsSuperseded).ToList();
         var approved = effective.Count(r => r.Decision == Domain.Governance.Enums.ReviewDecision.Approved);
         return $"{approved} approved (of {effective.Count} effective reviews).";

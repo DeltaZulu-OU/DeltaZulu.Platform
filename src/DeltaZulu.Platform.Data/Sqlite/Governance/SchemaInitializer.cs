@@ -46,7 +46,9 @@ public static class SchemaInitializer
     {
         var columns = conn.Query<SqliteColumnInfo>($"PRAGMA table_info({tableName})");
         if (columns.Any(c => string.Equals(c.name, columnName, StringComparison.OrdinalIgnoreCase)))
+        {
             return;
+        }
 
         conn.Execute($"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition}");
     }

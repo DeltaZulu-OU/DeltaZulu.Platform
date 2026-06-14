@@ -66,13 +66,24 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
         DateTimeOffset now, IssueId? linkedIssueId = null)
     {
         if (string.IsNullOrWhiteSpace(key))
+        {
             throw new DomainException("change.key_empty", "Change key must not be empty.");
+        }
+
         if (key.Length > 32)
+        {
             throw new DomainException("change.key_too_long", "Change key exceeds 32 characters.");
+        }
+
         if (string.IsNullOrWhiteSpace(title))
+        {
             throw new DomainException("change.title_empty", "Change title must not be empty.");
+        }
+
         if (title.Length > 200)
+        {
             throw new DomainException("change.title_too_long", "Change title exceeds 200 characters.");
+        }
 
         _ = WorkflowProfile.For(workflowProfileId);
 
@@ -177,10 +188,14 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
         if (profile.ResetsApprovalOnContentEdit)
         {
             foreach (var review in _reviews.Where(r => !r.IsSuperseded && r.Decision == ReviewDecision.Approved))
+            {
                 review.Supersede(now);
+            }
         }
         if (Status is ChangeStatus.ReviewRequired or ChangeStatus.ReadyToAccept)
+        {
             Status = ChangeStatus.Draft;
+        }
     }
 
     // --- checks -----------------------------------------------------------------------------
@@ -198,7 +213,10 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
         var run = new CheckRun(id, Id, name, isBlocking);
         _checks.Add(run);
         if (Status == ChangeStatus.Draft || Status == ChangeStatus.ChangesRequested)
+        {
             Status = ChangeStatus.ChecksRunning;
+        }
+
         UpdatedAt = now;
         return run;
     }
@@ -219,11 +237,17 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
             g.Code is "gate.no_checks" || g.Code.StartsWith("gate.checks", StringComparison.Ordinal));
 
         if (profile.RequiresPassingChecks && hasUnmetCheckGate)
+        {
             Status = ChangeStatus.Draft;
+        }
         else if (profile.RequiresApproval)
+        {
             Status = ChangeStatus.ReviewRequired;
+        }
         else
+        {
             Status = ChangeStatus.ReadyToAccept;
+        }
 
         UpdatedAt = now;
     }
@@ -253,9 +277,13 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
         else if (decision == ReviewDecision.Approved)
         {
             if (EvaluateMergeReadiness().IsReady)
+            {
                 Status = ChangeStatus.ReadyToAccept;
+            }
             else if (Status == ChangeStatus.Draft || Status == ChangeStatus.ChangesRequested)
+            {
                 Status = ChangeStatus.ReviewRequired;
+            }
         }
 
         UpdatedAt = now;
@@ -339,11 +367,15 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
         {
             var effective = EffectiveApprovals.ToList();
             if (effective.Count == 0)
+            {
                 unmet.Add(new UnmetGate("gate.approval_missing",
                     "Workflow profile requires an approval; none is recorded."));
+            }
             else if (profile.RequiresNonAuthorApprover && effective.All(r => r.ReviewerId.Equals(AuthorId)))
+            {
                 unmet.Add(new UnmetGate("gate.non_author_approval_missing",
                     "Workflow profile requires approval by someone other than the change author."));
+            }
         }
 
         return unmet.Count == 0 ? MergeReadiness.Ready() : MergeReadiness.Blocked(unmet);
@@ -379,8 +411,15 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
     public void Close(string reason, DateTimeOffset now)
     {
         if (Status is ChangeStatus.Merged or ChangeStatus.Published)
+        {
             throw new DomainException("change.close_after_merge", "A merged change cannot be closed.");
-        if (Status == ChangeStatus.Closed) return;
+        }
+
+        if (Status == ChangeStatus.Closed)
+        {
+            return;
+        }
+
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
         Status = ChangeStatus.Closed;
         CloseReason = reason;

@@ -27,7 +27,10 @@ public sealed class DapperSession : IUnitOfWork, IDisposable
     public void BeginTransaction()
     {
         if (Transaction is not null)
+        {
             throw new InvalidOperationException("A transaction is already open on this session.");
+        }
+
         Transaction = Connection.BeginTransaction();
     }
 

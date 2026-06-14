@@ -1,7 +1,7 @@
 using System.Reflection;
 using DeltaZulu.Platform.Web.Analytics;
-using DeltaZulu.Platform.Web.Platform;
 using DeltaZulu.Platform.Web.Governance;
+using DeltaZulu.Platform.Web.Platform;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 
@@ -45,7 +45,10 @@ public sealed class PlatformCompositionTests
                 Assert.IsFalse(string.IsNullOrWhiteSpace(item.Label), $"{module.Descriptor.Id} navigation item label is required.");
                 Assert.IsFalse(string.IsNullOrWhiteSpace(item.Icon), $"{module.Descriptor.Id} navigation item '{item.Label}' should define an icon.");
                 if (!item.IsPlatformRoute)
+                {
                     Assert.StartsWith(module.Descriptor.RoutePrefix, item.Href);
+                }
+
                 Assert.IsTrue(
                     item.Match is NavLinkMatch.All or NavLinkMatch.Prefix,
                     $"{module.Descriptor.Id} navigation item '{item.Label}' uses an unsupported match mode.");

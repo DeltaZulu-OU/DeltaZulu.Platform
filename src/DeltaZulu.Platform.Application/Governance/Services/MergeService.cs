@@ -102,8 +102,16 @@ public sealed class MergeService(
         var siblings = await changes.ListByDetectionAsync(detection.Id, ct);
         foreach (var sibling in siblings)
         {
-            if (sibling.Id.Equals(change.Id)) continue;
-            if (sibling.Status is Domain.Governance.Enums.ChangeStatus.Merged or Domain.Governance.Enums.ChangeStatus.Closed) continue;
+            if (sibling.Id.Equals(change.Id))
+            {
+                continue;
+            }
+
+            if (sibling.Status is Domain.Governance.Enums.ChangeStatus.Merged or Domain.Governance.Enums.ChangeStatus.Closed)
+            {
+                continue;
+            }
+
             sibling.MarkStale($"Change {change.Key} merged at version {version.DisplayVersion}.", now);
             changes.Save(sibling);
         }
@@ -116,7 +124,11 @@ public sealed class MergeService(
 
     private static string BuildChecksSummary(ChangeRequest change)
     {
-        if (change.Checks.Count == 0) return "No checks.";
+        if (change.Checks.Count == 0)
+        {
+            return "No checks.";
+        }
+
         var passed = change.Checks.Count(c => c.Status == Domain.Governance.Enums.CheckStatus.Passed);
         var failed = change.Checks.Count(c => c.Status == Domain.Governance.Enums.CheckStatus.Failed);
         return $"{passed} passed, {failed} failed (of {change.Checks.Count} total).";
@@ -124,7 +136,11 @@ public sealed class MergeService(
 
     private static string BuildReviewSummary(ChangeRequest change)
     {
-        if (change.Reviews.Count == 0) return "No reviews.";
+        if (change.Reviews.Count == 0)
+        {
+            return "No reviews.";
+        }
+
         var effective = change.Reviews.Where(r => !r.IsSuperseded).ToList();
         var approved = effective.Count(r => r.Decision == Domain.Governance.Enums.ReviewDecision.Approved);
         return $"{approved} approved (of {effective.Count} effective reviews).";

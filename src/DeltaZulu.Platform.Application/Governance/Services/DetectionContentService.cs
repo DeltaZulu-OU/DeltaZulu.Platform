@@ -13,7 +13,9 @@ public sealed class DetectionContentService(
     {
         var existing = await detections.GetBySlugAsync(slug, ct);
         if (existing is not null)
+        {
             throw new DomainException("detection.slug_duplicate", $"Detection slug '{slug}' is already in use.");
+        }
 
         var detection = Detection.CreateDraft(DetectionId.New(), slug, title, summary, time.GetUtcNow());
         detections.Add(detection);

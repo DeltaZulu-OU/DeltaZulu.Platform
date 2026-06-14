@@ -56,9 +56,15 @@ public sealed class Incident : Entity<IncidentId>
         DateTimeOffset now)
     {
         if (string.IsNullOrWhiteSpace(title))
+        {
             throw new DomainException("incident.title_empty", "Incident title must not be empty.");
+        }
+
         if (title.Length > 200)
+        {
             throw new DomainException("incident.title_too_long", "Incident title exceeds 200 characters.");
+        }
+
         return severity < 1 || severity > 5
             ? throw new DomainException("incident.severity_invalid", "Severity must be between 1 and 5.")
             : new Incident(id, title, sourceCandidateId, approvalDecisionId, ownerId, severity, now);
@@ -91,9 +97,14 @@ public sealed class Incident : Entity<IncidentId>
     {
         EnsureNotTerminal();
         if (string.IsNullOrWhiteSpace(reason))
+        {
             throw new DomainException("incident.close_reason_empty", "Close reason must not be empty.");
+        }
+
         if (reason.Length > 2000)
+        {
             throw new DomainException("incident.close_reason_too_long", "Close reason exceeds 2000 characters.");
+        }
 
         CloseReason = reason;
         Status = IncidentStatus.Closed;
@@ -106,9 +117,15 @@ public sealed class Incident : Entity<IncidentId>
     {
         EnsureNotTerminal();
         if (string.IsNullOrWhiteSpace(newTitle))
+        {
             throw new DomainException("incident.title_empty", "Incident title must not be empty.");
+        }
+
         if (newTitle.Length > 200)
+        {
             throw new DomainException("incident.title_too_long", "Incident title exceeds 200 characters.");
+        }
+
         Title = newTitle;
         UpdatedAt = now;
     }
@@ -117,7 +134,10 @@ public sealed class Incident : Entity<IncidentId>
     {
         EnsureNotTerminal();
         if (newSeverity < 1 || newSeverity > 5)
+        {
             throw new DomainException("incident.severity_invalid", "Severity must be between 1 and 5.");
+        }
+
         Severity = newSeverity;
         UpdatedAt = now;
     }

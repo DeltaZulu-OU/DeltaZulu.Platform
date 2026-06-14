@@ -198,6 +198,8 @@ public sealed class CuratedAnalyticRepositoryTests
     private static void DeleteIfExists(string path)
     {
         if (File.Exists(path))
+        {
             File.Delete(path);
+        }
     }
 }

@@ -51,10 +51,14 @@ public sealed partial class Detection : Entity<DetectionId>
         }
 
         if (string.IsNullOrWhiteSpace(title))
+        {
             throw new DomainException("detection.title_empty", "Detection title must not be empty.");
+        }
 
         if (title.Length > 200)
+        {
             throw new DomainException("detection.title_too_long", "Detection title exceeds 200 characters.");
+        }
 
         return summary.Length > 2000
             ? throw new DomainException("detection.summary_too_long", "Detection summary exceeds 2000 characters.")
@@ -75,9 +79,15 @@ public sealed partial class Detection : Entity<DetectionId>
     public void Rename(string newTitle, DateTimeOffset now)
     {
         if (string.IsNullOrWhiteSpace(newTitle))
+        {
             throw new DomainException("detection.title_empty", "Detection title must not be empty.");
+        }
+
         if (newTitle.Length > 200)
+        {
             throw new DomainException("detection.title_too_long", "Detection title exceeds 200 characters.");
+        }
+
         Title = newTitle;
         UpdatedAt = now;
     }

@@ -46,9 +46,14 @@ public sealed class CandidateDecision : Entity<CandidateDecisionId>
     public void LinkIncident(IncidentId incidentId)
     {
         if (Type != CandidateDecisionType.Approve)
+        {
             throw new DomainException("decision.not_approval", "Only approval decisions create incidents.");
+        }
+
         if (ResultingIncidentId is not null)
+        {
             throw new DomainException("decision.already_linked", "Decision is already linked to an incident.");
+        }
 
         ResultingIncidentId = incidentId;
     }

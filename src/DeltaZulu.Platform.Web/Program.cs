@@ -6,9 +6,9 @@ using DeltaZulu.Platform.Data.Seeding;
 using DeltaZulu.Platform.Data.Sqlite.Governance;
 using DeltaZulu.Platform.Web.Analytics;
 using DeltaZulu.Platform.Web.Analytics.Hosting;
-using DeltaZulu.Platform.Web.Platform;
 using DeltaZulu.Platform.Web.Governance;
 using DeltaZulu.Platform.Web.Governance.Services;
+using DeltaZulu.Platform.Web.Platform;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,17 +31,18 @@ var connectionString = builder.Configuration.GetConnectionString("Governance")
     ?? "Data Source=governance.db";
 builder.Services.AddGovernancePersistence(connectionString);
 
-if (builder.Configuration.GetValue<bool>("DemoSeed:Enabled"))
-    DemoSeeder.Seed(connectionString);
-
 builder.Services.AddGovernanceApplication();
 builder.Services.AddGovernanceValidation();
 
 var useElsa = builder.Configuration.GetValue<bool>("Workflow:UseElsa");
 if (useElsa)
+{
     builder.Services.AddGovernanceElsaWorkflows();
+}
 else
+{
     builder.Services.AddGovernanceDomainOrchestrator();
+}
 
 var acceptedContentRepositoryPath = builder.Configuration.GetValue<string>("AcceptedContent:RepositoryPath")
     ?? Path.Combine(builder.Environment.ContentRootPath, "accepted-content");
@@ -49,6 +50,19 @@ builder.Services.AddGovernanceGitAcceptedContentStore(options =>
     options.RepositoryPath = Path.IsPathRooted(acceptedContentRepositoryPath)
         ? acceptedContentRepositoryPath
         : Path.Combine(builder.Environment.ContentRootPath, acceptedContentRepositoryPath));
+
+if (builder.Configuration.GetValue<bool>("DemoSeed:Enabled"))
+    {
+    DemoSeeder.Seed(connectionString);
+    }
+
+var seedSampleDetectionCatalog = builder.Configuration.GetValue<bool?>("SampleDetectionContent:SeedGovernanceCatalog")
+    ?? builder.Environment.IsDevelopment();
+if (seedSampleDetectionCatalog)
+    {
+    SampleDetectionContentSeeder.SeedGovernanceCatalog(connectionString);
+    SampleDetectionContentSeeder.Seed(acceptedContentRepositoryPath, overwrite: false);
+    }
 
 // --- Analytics module services ---
 builder.Services.AddAnalyticsWebModule(new AnalyticsModuleOptions

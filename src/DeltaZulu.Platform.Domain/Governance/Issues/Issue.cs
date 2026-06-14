@@ -51,11 +51,20 @@ public sealed class Issue : Entity<IssueId>
     public static Issue Create(IssueId id, string key, string title, IssueType type, DateTimeOffset now)
     {
         if (string.IsNullOrWhiteSpace(key))
+        {
             throw new DomainException("issue.key_empty", "Issue key must not be empty.");
+        }
+
         if (key.Length > 32)
+        {
             throw new DomainException("issue.key_too_long", "Issue key exceeds 32 characters.");
+        }
+
         if (string.IsNullOrWhiteSpace(title))
+        {
             throw new DomainException("issue.title_empty", "Issue title must not be empty.");
+        }
+
         return title.Length > 200
             ? throw new DomainException("issue.title_too_long", "Issue title exceeds 200 characters.")
             : new Issue(id, key, title, type, now);
@@ -87,13 +96,21 @@ public sealed class Issue : Entity<IssueId>
         if (labels is not null)
         {
             if (labels.Count > 20)
+            {
                 throw new DomainException("issue.too_many_labels", "An issue may not have more than 20 labels.");
+            }
+
             foreach (var label in labels)
             {
                 if (string.IsNullOrWhiteSpace(label))
+                {
                     throw new DomainException("issue.label_empty", "Labels must not be empty.");
+                }
+
                 if (label.Length > 64)
+                {
                     throw new DomainException("issue.label_too_long", $"Label '{label}' exceeds 64 characters.");
+                }
             }
         }
         Tlp = tlp;
@@ -106,9 +123,15 @@ public sealed class Issue : Entity<IssueId>
     public void Rename(string newTitle, DateTimeOffset now)
     {
         if (string.IsNullOrWhiteSpace(newTitle))
+        {
             throw new DomainException("issue.title_empty", "Issue title must not be empty.");
+        }
+
         if (newTitle.Length > 200)
+        {
             throw new DomainException("issue.title_too_long", "Issue title exceeds 200 characters.");
+        }
+
         Title = newTitle;
         UpdatedAt = now;
     }
@@ -119,15 +142,29 @@ public sealed class Issue : Entity<IssueId>
         DateTimeOffset now)
     {
         if (description?.Length > 2000)
+        {
             throw new DomainException("issue.description_too_long", "Description exceeds 2000 characters.");
+        }
+
         if (acceptanceCriteria?.Length > 2000)
+        {
             throw new DomainException("issue.criteria_too_long", "Acceptance criteria exceeds 2000 characters.");
+        }
+
         if (dataSource?.Length > 128)
+        {
             throw new DomainException("issue.data_source_too_long", "Data source exceeds 128 characters.");
+        }
+
         if (platform?.Length > 64)
+        {
             throw new DomainException("issue.platform_too_long", "Platform exceeds 64 characters.");
+        }
+
         if (attackTechniqueId?.Length > 32)
+        {
             throw new DomainException("issue.attack_technique_too_long", "ATT&CK technique ID exceeds 32 characters.");
+        }
 
         Description = description;
         AcceptanceCriteria = acceptanceCriteria;
@@ -192,9 +229,15 @@ public sealed class Issue : Entity<IssueId>
     {
         RequireStatus("issue.define_criteria_invalid", IssueStatus.Backlog);
         if (string.IsNullOrWhiteSpace(criteria))
+        {
             throw new DomainException("issue.criteria_empty", "Acceptance criteria must not be empty.");
+        }
+
         if (criteria.Length > 2000)
+        {
             throw new DomainException("issue.criteria_too_long", "Acceptance criteria exceeds 2000 characters.");
+        }
+
         AcceptanceCriteria = criteria;
         Status = IssueStatus.Ready;
         UpdatedAt = now;

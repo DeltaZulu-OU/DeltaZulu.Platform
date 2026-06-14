@@ -3,7 +3,6 @@ using DeltaZulu.Platform.Application.Analytics.Catalog;
 using DeltaZulu.Platform.Application.Analytics.Validation;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
-using DeltaZulu.Platform.Domain.Governance.Enums;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Validation;
 [TestClass]
@@ -32,7 +31,7 @@ public sealed class KqlQuerySyntaxValidatorTests
         var result = _validator.Validate(Request("ProcessEvent | where"));
 
         Assert.IsFalse(result.IsValid);
-        Assert.IsTrue(result.Diagnostics.Count > 0, "Expected at least one diagnostic.");
+        Assert.IsNotEmpty(result.Diagnostics, "Expected at least one diagnostic.");
     }
 
     [TestMethod]
@@ -54,8 +53,8 @@ public sealed class KqlQuerySyntaxValidatorTests
         var result = _validator.Validate(Request("golden.ProcessEvent | take 1"));
 
         Assert.IsFalse(result.IsValid);
-        Assert.IsTrue(
-            result.Diagnostics.Any(d => d.Message.Contains("Table path 'golden.ProcessEvent' is not allowed", StringComparison.Ordinal)),
+        Assert.Contains(
+            d => d.Message.Contains("Table path 'golden.ProcessEvent' is not allowed", StringComparison.Ordinal), result.Diagnostics,
             $"Expected qualified-path rejection; got: {string.Join(", ", result.Diagnostics.Select(d => d.Message))}");
     }
 

@@ -25,7 +25,9 @@ public sealed class Review : Entity<ReviewId>
     {
         ArgumentNullException.ThrowIfNull(comment);
         if (comment.Length > 4000)
+        {
             throw new DomainException("review.comment_too_long", "Review comment exceeds 4000 characters.");
+        }
 
         ChangeRequestId = changeRequestId;
         ReviewerId = reviewerId;
@@ -59,7 +61,11 @@ public sealed class Review : Entity<ReviewId>
 
     internal void Supersede(DateTimeOffset now)
     {
-        if (IsSuperseded) return;
+        if (IsSuperseded)
+        {
+            return;
+        }
+
         IsSuperseded = true;
         SupersededAt = now;
     }

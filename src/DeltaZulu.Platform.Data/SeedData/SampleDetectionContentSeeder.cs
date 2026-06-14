@@ -1,6 +1,9 @@
+using System.Security.Cryptography;
 using System.Text;
+using Dapper;
+using Microsoft.Data.Sqlite;
 
-namespace DeltaZulu.Platform.Data.SeedData;
+namespace DeltaZulu.Platform.Data.Seeding;
 
 /// <summary>
 /// Seeds sample detection-content files for development and demo environments.
@@ -567,5 +570,120 @@ ProcessEvent
         return written;
     }
 
+    /// <summary>
+    /// Seeds the Governance detection catalog with sample detections so the Detections page
+    /// has records to display. This is deliberately idempotent and does not delete or overwrite
+    /// user-created detections.
+    /// </summary>
+    public static IReadOnlyList<string> SeedGovernanceCatalog(string connectionString)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+
+        using var conn = new SqliteConnection(connectionString);
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+
+        var seeded = SeedGovernanceCatalog(conn, tx, DateTimeOffset.UtcNow);
+
+        tx.Commit();
+        return seeded;
+    }
+
+    internal static IReadOnlyList<string> SeedGovernanceCatalog(
+        SqliteConnection conn,
+        SqliteTransaction tx,
+        DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(conn);
+        ArgumentNullException.ThrowIfNull(tx);
+
+        var seeded = new List<string>();
+        foreach (var sample in CatalogEntries)
+        {
+            var existingId = conn.QuerySingleOrDefault<string>(
+                "SELECT id FROM detections WHERE slug = @Slug",
+                new { sample.Slug },
+                tx);
+
+            if (!string.IsNullOrWhiteSpace(existingId))
+            {
+                continue;
+            }
+
+            var detectionId = Guid.NewGuid().ToString("D");
+            var versionId = Guid.NewGuid().ToString("D");
+            var changeRequestId = Guid.NewGuid().ToString("D");
+            var createdAt = now.AddDays(-CatalogEntries.Length + seeded.Count);
+            var acceptedAt = createdAt.AddMinutes(30);
+
+            conn.Execute("""
+                INSERT INTO detections
+                    (id, slug, title, summary, lifecycle, current_version_id, created_at, updated_at)
+                VALUES
+                    (@Id, @Slug, @Title, @Summary, 'Accepted', NULL, @CreatedAt, @UpdatedAt)
+                """, new {
+                Id = detectionId,
+                sample.Slug,
+                sample.Title,
+                sample.Summary,
+                CreatedAt = Iso(createdAt),
+                UpdatedAt = Iso(acceptedAt),
+            }, tx);
+
+            conn.Execute("""
+                INSERT INTO detection_versions
+                    (id, detection_id, sequence_number, display_version, title, change_summary,
+                     author_id, workflow_profile, source_change_request_id, linked_issue_id,
+                     accepted_at, changed_sections, git_commit_sha, checks_summary, review_summary)
+                VALUES
+                    (@VersionId, @DetectionId, 1, '1.0', @Title, @ChangeSummary,
+                     @AuthorId, 'SampleSeed', @ChangeRequestId, NULL,
+                     @AcceptedAt, 'detection.yaml;query.kql', @GitCommitSha, @ChecksSummary, @ReviewSummary)
+                """, new {
+                VersionId = versionId,
+                DetectionId = detectionId,
+                sample.Title,
+                ChangeSummary = "Seeded from filtered Sentinel query sample content.",
+                AuthorId = "a0000000-0000-0000-0000-000000000001",
+                ChangeRequestId = changeRequestId,
+                AcceptedAt = Iso(acceptedAt),
+                GitCommitSha = ShortHash(sample.Slug),
+                ChecksSummary = "Seed content imported for development and demo use.",
+                ReviewSummary = "Auto-accepted sample content.",
+            }, tx);
+
+            conn.Execute(
+                "UPDATE detections SET current_version_id = @VersionId WHERE id = @DetectionId",
+                new { VersionId = versionId, DetectionId = detectionId },
+                tx);
+
+            seeded.Add(sample.Slug);
+        }
+
+        return seeded;
+    }
+
+    private static string Iso(DateTimeOffset value) => value.ToUniversalTime().ToString("O");
+
+    private static string ShortHash(string value) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant()[..12];
+
+    private static readonly SampleDetectionCatalogEntry[] CatalogEntries =
+    {
+        new("powershell-execution-policy-change", "PowerShell execution policy changed by non-system account", "Detects PowerShell command lines that attempt to change the local execution policy outside the system account context."),
+        new("powershell-public-network-connection", "PowerShell initiated public network connection", "Finds non-system PowerShell activity associated with outbound connections to public endpoints."),
+        new("public-ssh-egress", "Outbound SSH connection to public endpoint", "Detects outbound SSH connections toward public addresses for policy and exposure review."),
+        new("inbound-ldap-ldaps-exposure", "Inbound LDAP or LDAPS connection observed", "Identifies devices accepting inbound LDAP or LDAPS traffic."),
+        new("rdp-interactive-logon", "Remote Desktop interactive logon observed", "Detects successful logons with RDP logon type for lateral-movement review."),
+        new("password-not-required-flag-set", "Active Directory account set to password not required", "Detects account change events where the password-not-required bit appears in UserAccountControl telemetry."),
+        new("kerberos-preauth-disabled", "Kerberos preauthentication disabled for account", "Detects account change events that indicate Kerberos preauthentication was disabled."),
+        new("new-low-port-listener", "Low-numbered service listener created on endpoint", "Finds endpoint telemetry indicating a listener on common low-numbered service ports."),
+        new("suspicious-command-line-download", "Suspicious command line download utility usage", "Detects command lines that use common download utilities or PowerShell download primitives."),
+        new("dns-high-query-volume-per-name", "High DNS query volume for a single name", "Summarizes DNS telemetry to find device and name pairs with unusually high query counts."),
+    };
+
+
     private sealed record SampleDetectionContentFile(string RelativePath, string Content);
+
+    private sealed record SampleDetectionCatalogEntry(string Slug, string Title, string Summary);
 }
