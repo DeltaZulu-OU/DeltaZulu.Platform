@@ -65,9 +65,6 @@ else
                         {
                             <div class="d-flex align-center gap-2 flex-wrap">
                                 <DzMetaChip Kind="version">@_latestVersion.DisplayVersion</DzMetaChip>
-                                <DzActionLink OnClick="@(() => Nav.NavigateTo($"/governance/history/{_latestVersion.Id}"))">
-                                    Compare
-                                </DzActionLink>
                             </div>
                         }
                         else
@@ -119,6 +116,7 @@ else
                                 <MudTd DataLabel="Accepted"><MudText Typo="Typo.caption">@context.AcceptedAt.ToString("yyyy-MM-dd HH:mm")</MudText></MudTd>
                                 <MudTd DataLabel="Actions">
                                     <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                               Disabled="@(context.Id == _latestVersion?.Id)"
                                                OnClick="@(() => Nav.NavigateTo($"/governance/history/{context.Id}"))">
                                         Compare / restore
                                     </MudButton>
