@@ -580,12 +580,12 @@ body.hunt-splitter-active {
     color: var(--dz-code-text, #FFFFFF);
 }
 
-.dz-code-drawer .hunt-drawer-content code {
-    background: transparent;
-    color: inherit;
-    padding: 0;
-    border: 0;
-}
+    .dz-code-drawer .hunt-drawer-content code {
+        background: transparent;
+        color: inherit;
+        padding: 0;
+        border: 0;
+    }
 
 .hunt-sql-snippet {
     position: relative;
@@ -1808,6 +1808,57 @@ body.hunt-splitter-active {
 .code-block {
     background: var(--dz-code-bg);
     color: var(--dz-code-text);
+}
+
+.dz-code-highlight,
+.dz-code-drawer .hunt-drawer-content {
+    background: var(--dz-code-bg, var(--brand-ink, #131F2A));
+    color: var(--dz-code-text, #FFFFFF);
+}
+
+.dz-code-drawer .hunt-drawer-content code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    border: 0;
+}
+
+.kql-keyword,
+.yaml-key {
+    color: #ff7b72;
+    font-weight: 700;
+}
+
+.kql-table {
+    color: #d2a8ff;
+    font-weight: 700;
+}
+
+.kql-pipe,
+.yaml-punctuation {
+    color: #ffab70;
+    font-weight: 700;
+}
+
+.kql-string,
+.yaml-string {
+    color: #a5d6ff;
+}
+
+.kql-number,
+.yaml-number {
+    color: #79c0ff;
+}
+
+.kql-comment,
+.yaml-comment {
+    color: #8b949e;
+    font-style: italic;
+}
+
+.yaml-literal {
+    color: #d2a8ff;
+    font-weight: 700;
 }
 
 .hunt-sql-snippet {

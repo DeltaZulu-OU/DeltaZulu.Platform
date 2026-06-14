@@ -206,6 +206,7 @@ else
                   Title="Accepted file"
                   Subtitle="@(_selectedAcceptedFile?.LogicalPath ?? _selectedAcceptedFilePath)"
                   Content="@_selectedAcceptedFile?.Content"
+                  Language="@(_selectedAcceptedFile?.LogicalPath ?? _selectedAcceptedFilePath)"
                   CopyText="@_selectedAcceptedFile?.Content"
                   ShowCopyButton="@(_selectedAcceptedFile is { IsBinary: false } && !string.IsNullOrEmpty(_selectedAcceptedFile.Content))"
                   IsLoading="_fileLoading"

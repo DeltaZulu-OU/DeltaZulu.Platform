@@ -64,9 +64,9 @@
                         <button class="hunt-btn hunt-btn-copy" @onclick="CopyAsync">Copy</button>
                     }
 
-                    @if (!string.IsNullOrEmpty(HighlightedHtml))
+                    @if (!string.IsNullOrEmpty(EffectiveHighlightedHtml))
                     {
-                        <pre class="hunt-sql-highlight">@((MarkupString)HighlightedHtml)</pre>
+                        <pre class="hunt-sql-highlight dz-code-highlight">@((MarkupString)EffectiveHighlightedHtml)</pre>
                     }
                     else
                     {
@@ -85,6 +85,7 @@
     [Parameter] public string? Subtitle { get; set; }
     [Parameter] public string? Content { get; set; }
     [Parameter] public string? HighlightedHtml { get; set; }
+    [Parameter] public string? Language { get; set; }
     [Parameter] public string? CopyText { get; set; }
     [Parameter] public bool ShowCopyButton { get; set; } = true;
     [Parameter] public bool IsLoading { get; set; }
@@ -97,6 +98,11 @@
     [Parameter] public string CloseAriaLabel { get; set; } = "Close details drawer";
 
     private string? EffectiveCopyText => string.IsNullOrEmpty(CopyText) ? Content : CopyText;
+
+    private string? EffectiveHighlightedHtml =>
+        !string.IsNullOrEmpty(HighlightedHtml)
+            ? HighlightedHtml
+            : TryHighlight(Content, Language ?? Subtitle);
 
     private async Task CloseAsync()
     {
@@ -112,5 +118,128 @@
         }
 
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", EffectiveCopyText);
+    }
+
+
+    private static string? TryHighlight(string? content, string? languageOrName)
+    {
+        if (string.IsNullOrEmpty(content))
+        {
+            return null;
+        }
+
+        var language = (languageOrName ?? string.Empty).Trim().ToLowerInvariant();
+        if (language.EndsWith(".kql", StringComparison.Ordinal) || language is "kql" or "kusto")
+        {
+            return HighlightKql(content);
+        }
+
+        if (language.EndsWith(".yaml", StringComparison.Ordinal)
+            || language.EndsWith(".yml", StringComparison.Ordinal)
+            || language is "yaml" or "yml")
+        {
+            return HighlightYaml(content);
+        }
+
+        return null;
+    }
+
+    private static string HighlightKql(string content)
+    {
+        var encoded = System.Net.WebUtility.HtmlEncode(content.Replace("\r\n", "\n"));
+
+        encoded = System.Text.RegularExpressions.Regex.Replace(
+            encoded,
+            "(&quot;[^\\n]*?&quot;|'[^\\n]*?')",
+            "<span class=\"kql-string\">$1</span>");
+
+        encoded = System.Text.RegularExpressions.Regex.Replace(
+            encoded,
+            "(?m)//.*$",
+            "<span class=\"kql-comment\">$0</span>");
+
+        encoded = System.Text.RegularExpressions.Regex.Replace(
+            encoded,
+            "\\b(where|project|summarize|extend|sort|order|by|desc|asc|take|limit|join|lookup|on|in|has|has_any|has_all|contains|startswith|endswith|matches|regex|and|or|not|between|ago|count|dcount|bin|distinct|top|null|true|false)\\b",
+            "<span class=\"kql-keyword\">$1</span>",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        encoded = System.Text.RegularExpressions.Regex.Replace(
+            encoded,
+            "\\b(-?\\d+(?:\\.\\d+)?)([smhd])?\\b",
+            "<span class=\"kql-number\">$0</span>");
+
+        encoded = System.Text.RegularExpressions.Regex.Replace(
+            encoded,
+            "(^|\\n)(\\s*)([A-Za-z_][A-Za-z0-9_]*)",
+            "$1$2<span class=\"kql-table\">$3</span>");
+
+        encoded = encoded.Replace("|", "<span class=\"kql-pipe\">|</span>", StringComparison.Ordinal);
+
+        return encoded;
+    }
+
+    private static string HighlightYaml(string content)
+    {
+        var lines = content.Replace("\r\n", "\n").Split('\n');
+        return string.Join("\n", lines.Select(HighlightYamlLine));
+    }
+
+    private static string HighlightYamlLine(string line)
+    {
+        if (string.IsNullOrEmpty(line))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = line.TrimStart();
+        if (trimmed.StartsWith("#", StringComparison.Ordinal))
+        {
+            return $"<span class=\"yaml-comment\">{System.Net.WebUtility.HtmlEncode(line)}</span>";
+        }
+
+        var match = System.Text.RegularExpressions.Regex.Match(line, "^(\\s*-?\\s*)([A-Za-z0-9_.-]+)(\\s*:)\\s*(.*)$");
+        if (!match.Success)
+        {
+            return HighlightYamlScalar(System.Net.WebUtility.HtmlEncode(line));
+        }
+
+        var prefix = System.Net.WebUtility.HtmlEncode(match.Groups[1].Value);
+        var key = System.Net.WebUtility.HtmlEncode(match.Groups[2].Value);
+        var colon = System.Net.WebUtility.HtmlEncode(match.Groups[3].Value);
+        var value = System.Net.WebUtility.HtmlEncode(match.Groups[4].Value);
+
+        return $"{prefix}<span class=\"yaml-key\">{key}</span><span class=\"yaml-punctuation\">{colon}</span> {HighlightYamlScalar(value)}".TrimEnd();
+    }
+
+    private static string HighlightYamlScalar(string encodedValue)
+    {
+        if (string.IsNullOrWhiteSpace(encodedValue))
+        {
+            return encodedValue;
+        }
+
+        encodedValue = System.Text.RegularExpressions.Regex.Replace(
+            encodedValue,
+            "(^|\\s)(true|false|null)(?=\\s|$)",
+            "$1<span class=\"yaml-literal\">$2</span>",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        encodedValue = System.Text.RegularExpressions.Regex.Replace(
+            encodedValue,
+            "(^|\\s)(-?\\d+(?:\\.\\d+)?)(?=\\s|$)",
+            "$1<span class=\"yaml-number\">$2</span>");
+
+        encodedValue = System.Text.RegularExpressions.Regex.Replace(
+            encodedValue,
+            "(&quot;[^\\n]*?&quot;|'[^\\n]*?')",
+            "<span class=\"yaml-string\">$1</span>");
+
+        encodedValue = System.Text.RegularExpressions.Regex.Replace(
+            encodedValue,
+            "(\\s#.*)$",
+            "<span class=\"yaml-comment\">$1</span>");
+
+        return encodedValue;
     }
 }
