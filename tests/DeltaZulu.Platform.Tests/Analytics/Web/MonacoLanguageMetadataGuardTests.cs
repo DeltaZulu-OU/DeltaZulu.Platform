@@ -6,7 +6,7 @@ public sealed class MonacoLanguageMetadataGuardTests
     [TestMethod]
     public void MonacoLanguage_ConsumesGeneratedTermsAndHandlesHyphenatedCompletionFragments()
     {
-        var source = ReadRepositorySource("src", "DeltaZulu.Platform.Web", "wwwroot", "analytics", "js", "monaco.js");
+        var source = ReadRepositorySource("src", "DeltaZulu.Platform.Web", "wwwroot", "js", "monaco.js");
         Assert.Contains("const keywords = language.keywords ?? [];", source);
         Assert.Contains("const operators = language.operators ?? [];", source);
         Assert.Contains("const renderKinds = language.renderKinds ?? [];", source);

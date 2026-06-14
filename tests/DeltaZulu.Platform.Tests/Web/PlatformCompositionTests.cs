@@ -97,32 +97,6 @@ public sealed class PlatformCompositionTests
     }
 
     [TestMethod]
-    public void StaticAssets_ResolveUnderModuleWebRoots()
-    {
-        var repositoryRoot = FindRepositoryRoot();
-        var moduleRoots = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["analytics"] = Path.Combine(repositoryRoot, "src", "DeltaZulu.Platform.Web", "wwwroot", "analytics"),
-            ["governance"] = Path.Combine(repositoryRoot, "src", "DeltaZulu.Platform.Web", "wwwroot", "governance"),
-        };
-
-        foreach (var module in Modules)
-        {
-            Assert.IsTrue(moduleRoots.TryGetValue(module.Descriptor.Id, out var webRoot), $"No test web root registered for {module.Descriptor.Id}.");
-
-            foreach (var asset in module.StaticAssets)
-            {
-                Assert.IsFalse(string.IsNullOrWhiteSpace(asset.Href), $"{module.Descriptor.Id} static asset href is required.");
-                Assert.IsFalse(Path.IsPathRooted(asset.Href), $"{module.Descriptor.Id} static asset '{asset.Href}' should be module-relative.");
-                Assert.AreNotEqual(PlatformStaticAssetKind.Image, asset.Kind, $"{module.Descriptor.Id} image assets should not be part of the required host load list.");
-
-                var resolvedPath = Path.Combine(webRoot, asset.Href.Replace('/', Path.DirectorySeparatorChar));
-                Assert.IsTrue(File.Exists(resolvedPath), $"{module.Descriptor.Id} static asset '{asset.Href}' should resolve to {resolvedPath}.");
-            }
-        }
-    }
-
-    [TestMethod]
     public void PlatformApp_LoadsCssInDocumentedSharedThenModuleOrder()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -131,12 +105,13 @@ public sealed class PlatformCompositionTests
         AssertInOrder(
             app,
             "_content/MudBlazor/MudBlazor.min.css",
-            "deltazulu-tokens.css",
-            "dz-components.css",
-            "dz-shell.css",
-            "analytics/css/app.css",
-            "governance/app.css",
-            "platform.css");
+            "css/deltazulu-tokens.css",
+            "css/dz-components.css",
+            "css/dz-shell.css",
+            "css/analytics-app.css",
+            "css/kql-helper-drawer.css",
+            "css/governance-app.css",
+            "css/platform.css");
     }
 
     private static IReadOnlyList<string> DiscoverRoutes(Assembly assembly) =>

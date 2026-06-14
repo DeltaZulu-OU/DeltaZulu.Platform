@@ -147,10 +147,13 @@
 :root {
     --radius-structure: 0;
     --radius-input: 4px;
+    --radius-pill: 999px;
+    --radius-xs: var(--radius-structure);
     --radius-sm: var(--radius-structure);
     --radius-md: var(--radius-structure);
     --radius-lg: var(--radius-structure);
-    --radius-pill: 999px;
+    --radius-xl: var(--radius-structure);
+    --radius-2xl: var(--radius-structure);
 }
 
 /* ============================================================

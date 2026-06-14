@@ -32,7 +32,7 @@ public sealed partial class DesignSystemAuditTests
     public void DesignTokens_KeepStructuralRadiusAliasesSharp()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var tokens = File.ReadAllText(Path.Combine(repositoryRoot, "src", "DeltaZulu.Platform.Web", "wwwroot", "deltazulu-tokens.css"));
+        var tokens = File.ReadAllText(Path.Combine(repositoryRoot, "src", "DeltaZulu.Platform.Web", "wwwroot", "css", "deltazulu-tokens.css"));
 
         Assert.Contains("--radius-structure: 0;", tokens);
         Assert.Contains("--radius-input: 4px;", tokens);
@@ -51,11 +51,11 @@ public sealed partial class DesignSystemAuditTests
     public void DesignTokens_DoNotApplyNewsreaderToGlobalProductHeadings()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var tokens = File.ReadAllText(Path.Combine(repositoryRoot, "src", "DeltaZulu.Platform.Web", "wwwroot", "deltazulu-tokens.css"));
+        var tokens = File.ReadAllText(Path.Combine(repositoryRoot, "src", "DeltaZulu.Platform.Web", "wwwroot", "css", "deltazulu-tokens.css"));
 
         Assert.Contains(".text-display", tokens);
-        AssertCssRuleContains(tokens, ".text-h1,\nh1", "font-family: var(--font-family-sans);");
-        AssertCssRuleDoesNotContain(tokens, ".text-h1,\nh1", "font-family: var(--font-family-display);");
+        AssertCssRuleContains(tokens, ".text-h1,\r\nh1", "font-family: var(--font-family-sans);");
+        AssertCssRuleDoesNotContain(tokens, ".text-h1,\r\nh1", "font-family: var(--font-family-display);");
     }
 
     [TestMethod]
