@@ -575,6 +575,18 @@ body.hunt-splitter-active {
     line-height: 1.6;
 }
 
+.dz-code-drawer .hunt-drawer-content {
+    background: var(--dz-code-bg, var(--brand-ink, #131F2A));
+    color: var(--dz-code-text, #FFFFFF);
+}
+
+.dz-code-drawer .hunt-drawer-content code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    border: 0;
+}
+
 .hunt-sql-snippet {
     position: relative;
 }
