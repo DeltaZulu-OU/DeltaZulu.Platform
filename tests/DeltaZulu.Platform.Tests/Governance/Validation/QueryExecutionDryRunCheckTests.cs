@@ -40,7 +40,7 @@ public sealed class QueryExecutionDryRunCheckTests
     {
         var executor = new StubExecutor(Ok());
         var check = new QueryExecutionDryRunCheck(executor, NullLogger<QueryExecutionDryRunCheck>.Instance);
-        var ctx = Ctx(new("rule.kql", DraftContentType.AnalyticsQuery, "SigninLogs | take 10"));
+        var ctx = Ctx(new DraftFileSnapshot("rule.kql", DraftContentType.AnalyticsQuery, "SigninLogs | take 10"));
 
         var result = await check.RunAsync(ctx, TestContext.CancellationToken);
 
@@ -55,7 +55,7 @@ public sealed class QueryExecutionDryRunCheckTests
         var check = new QueryExecutionDryRunCheck(new StubExecutor(Fail("Unsupported 'mv-expand'.")), NullLogger<QueryExecutionDryRunCheck>.Instance);
 
         var result = await check.RunAsync(
-            Ctx(new("rule.kql", DraftContentType.AnalyticsQuery, "T | mv-expand col")),
+            Ctx(new DraftFileSnapshot("rule.kql", DraftContentType.AnalyticsQuery, "T | mv-expand col")),
             TestContext.CancellationToken);
 
         Assert.AreEqual(CheckStatus.Failed, result.Status);
@@ -71,7 +71,7 @@ public sealed class QueryExecutionDryRunCheckTests
             NullLogger<QueryExecutionDryRunCheck>.Instance);
 
         var result = await check.RunAsync(
-            Ctx(new("rule.kql", DraftContentType.AnalyticsQuery, "T")),
+            Ctx(new DraftFileSnapshot("rule.kql", DraftContentType.AnalyticsQuery, "T")),
             TestContext.CancellationToken);
 
         Assert.AreEqual(CheckStatus.Failed, result.Status);
@@ -85,7 +85,7 @@ public sealed class QueryExecutionDryRunCheckTests
         var check = new QueryExecutionDryRunCheck(executor, NullLogger<QueryExecutionDryRunCheck>.Instance);
 
         var result = await check.RunAsync(
-            Ctx(new("empty.kql", DraftContentType.AnalyticsQuery, "  ")),
+            Ctx(new DraftFileSnapshot("empty.kql", DraftContentType.AnalyticsQuery, "  ")),
             TestContext.CancellationToken);
 
         Assert.AreEqual(CheckStatus.Failed, result.Status);
@@ -98,7 +98,7 @@ public sealed class QueryExecutionDryRunCheckTests
         var check = new QueryExecutionDryRunCheck(new StubExecutor(Ok()), NullLogger<QueryExecutionDryRunCheck>.Instance);
 
         var result = await check.RunAsync(
-            Ctx(new("detection.yaml", DraftContentType.DetectionMetadata, "id: test-det")),
+            Ctx(new DraftFileSnapshot("detection.yaml", DraftContentType.DetectionMetadata, "id: test-det")),
             TestContext.CancellationToken);
 
         Assert.AreEqual(CheckStatus.Skipped, result.Status);
@@ -112,7 +112,7 @@ public sealed class QueryExecutionDryRunCheckTests
             NullLogger<QueryExecutionDryRunCheck>.Instance);
 
         var result = await check.RunAsync(
-            Ctx(new("rule.kql", DraftContentType.AnalyticsQuery, "T")),
+            Ctx(new DraftFileSnapshot("rule.kql", DraftContentType.AnalyticsQuery, "T")),
             TestContext.CancellationToken);
 
         Assert.AreEqual(CheckStatus.Failed, result.Status);
@@ -134,7 +134,10 @@ public sealed class QueryExecutionDryRunCheckTests
         public AnalyticsQueryRequest? LastRequest { get; private set; }
 
         public StubExecutor(AnalyticsQueryResult result) : this(_ => result) { }
-        public StubExecutor(Func<AnalyticsQueryRequest, AnalyticsQueryResult> handler) => _handler = handler;
+        public StubExecutor(Func<AnalyticsQueryRequest, AnalyticsQueryResult> handler)
+        {
+            _handler = handler;
+        }
 
         public Task<AnalyticsQueryResult> ExecuteAsync(AnalyticsQueryRequest request, CancellationToken cancellationToken = default)
         {

@@ -1,3 +1,4 @@
+using DeltaZulu.Platform.Application.Analytics.Execution;
 using DeltaZulu.Platform.Application.Governance;
 using DeltaZulu.Platform.Application.Governance.Services;
 using DeltaZulu.Platform.Application.Governance.Validation;
@@ -36,6 +37,7 @@ internal sealed class TestServiceProvider : IDisposable
         services.AddGovernanceValidation();
         services.AddScoped<IWorkflowOrchestrator, DomainDrivenOrchestrator>();
         services.AddSingleton<IAcceptedContentStore>(ContentStore);
+        services.AddSingleton<IAnalyticsQueryExecutor, PassingAnalyticsQueryExecutor>();
         services.AddSingleton<TimeProvider>(new FakeTimeProvider());
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
 
@@ -67,5 +69,22 @@ internal sealed class FakeTimeProvider : TimeProvider
             _current = _current.AddMinutes(1);
             return now;
         }
+    }
+}
+
+internal sealed class PassingAnalyticsQueryExecutor : IAnalyticsQueryExecutor
+{
+    public Task<AnalyticsQueryResult> ExecuteAsync(
+        AnalyticsQueryRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var result = new AnalyticsQueryResult
+        {
+            Success = true
+        };
+
+        return Task.FromResult(result);
     }
 }
