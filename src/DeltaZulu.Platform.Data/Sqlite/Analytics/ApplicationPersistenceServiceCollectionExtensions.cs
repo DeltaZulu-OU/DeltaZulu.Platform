@@ -3,6 +3,7 @@ using DeltaZulu.Platform.Data.Seeding;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.AlertEntities;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Alerts;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Candidates;
+using DeltaZulu.Platform.Data.Sqlite.Analytics.CuratedAnalytics;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.DetectionRuns;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Detections;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.QueryHistory;
@@ -12,6 +13,7 @@ using DeltaZulu.Platform.Data.Sqlite.Analytics.Visualizations;
 using DeltaZulu.Platform.Domain.Analytics.AlertEntities;
 using DeltaZulu.Platform.Domain.Analytics.Alerts;
 using DeltaZulu.Platform.Domain.Analytics.Candidates;
+using DeltaZulu.Platform.Domain.Analytics.CuratedAnalytics;
 using DeltaZulu.Platform.Domain.Analytics.DetectionRuns;
 using DeltaZulu.Platform.Domain.Analytics.Detections;
 using DeltaZulu.Platform.Domain.Analytics.QueryHistory;
@@ -41,6 +43,7 @@ public static class ApplicationPersistenceServiceCollectionExtensions
     {
         services.AddSingleton<IUserSettingsRepository, DapperUserSettingsRepository>();
         services.AddSingleton<ISavedQueryRepository, DapperSavedQueryRepository>();
+        services.AddSingleton<ICuratedAnalyticRepository, DapperCuratedAnalyticRepository>();
         services.AddSingleton<IQueryHistoryRepository, DapperQueryHistoryRepository>();
         services.AddSingleton<IVisualizationRepository, DapperVisualizationRepository>();
         services.AddSingleton<IDetectionRepository, DapperDetectionRepository>();
@@ -63,6 +66,9 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         var savedQueries = services.GetRequiredService<ISavedQueryRepository>();
         await savedQueries.EnsureInitializedAsync(cancellationToken);
         await SampleSavedQuerySeeder.SeedMissingAsync(savedQueries, cancellationToken);
+
+        var curatedAnalytics = services.GetRequiredService<ICuratedAnalyticRepository>();
+        await curatedAnalytics.EnsureInitializedAsync(cancellationToken);
 
         var queryHistory = services.GetRequiredService<IQueryHistoryRepository>();
         await queryHistory.EnsureInitializedAsync(cancellationToken);

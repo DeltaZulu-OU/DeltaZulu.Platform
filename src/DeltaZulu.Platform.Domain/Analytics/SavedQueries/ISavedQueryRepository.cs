@@ -1,3 +1,5 @@
+using DeltaZulu.Platform.Domain.Analytics;
+
 namespace DeltaZulu.Platform.Domain.Analytics.SavedQueries;
 
 public interface ISavedQueryRepository
@@ -6,7 +8,7 @@ public interface ISavedQueryRepository
 
     Task<IReadOnlyList<SavedQueryRecord>> ListAsync(CancellationToken cancellationToken = default);
 
-    async Task<SavedQueryPage> SearchAsync(
+    async Task<PageResult<SavedQueryRecord>> SearchAsync(
         string? searchText,
         int offset,
         int limit,
@@ -25,7 +27,7 @@ public interface ISavedQueryRepository
                         && record.Description.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)))
                 .ToArray();
 
-        return new SavedQueryPage(
+        return new PageResult<SavedQueryRecord>(
             filtered.Skip(offset).Take(limit).ToArray(),
             filtered.Count,
             offset,

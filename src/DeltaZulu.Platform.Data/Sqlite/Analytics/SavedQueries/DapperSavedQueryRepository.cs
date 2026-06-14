@@ -2,7 +2,8 @@
 using Dapper;
 using AppISavedQueryRepository = DeltaZulu.Platform.Domain.Analytics.SavedQueries.ISavedQueryRepository;
 using AppSavedQueryRecord = DeltaZulu.Platform.Domain.Analytics.SavedQueries.SavedQueryRecord;
-using AppSavedQueryPage = DeltaZulu.Platform.Domain.Analytics.SavedQueries.SavedQueryPage;
+using AppSavedQueryPage = DeltaZulu.Platform.Domain.Analytics.PageResult<DeltaZulu.Platform.Domain.Analytics.SavedQueries.SavedQueryRecord>;
+using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.SavedQueries;
 public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisposable
@@ -175,7 +176,7 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisp
         await EnsureInitializedAsync(cancellationToken);
 
         var boundedLimit = Math.Min(limit, 100);
-        var normalizedSearch = NormalizeSearchText(searchText);
+        var normalizedSearch = NormalizeLikeSearch(searchText);
         var parameters = new
         {
             SearchText = normalizedSearch,
@@ -230,9 +231,9 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisp
                 query.Name,
                 query.Description,
                 query.QueryText,
-                CreatedAt = FormatDateTime(query.CreatedAt),
-                UpdatedAt = FormatDateTime(query.UpdatedAt),
-                LastRunAt = FormatNullableDateTime(query.LastRunAt)
+                CreatedAt = Format(query.CreatedAt),
+                UpdatedAt = Format(query.UpdatedAt),
+                LastRunAt = FormatNullable(query.LastRunAt)
             },
             cancellationToken: cancellationToken));
     }
@@ -261,40 +262,18 @@ public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisp
 
         await connection.ExecuteAsync(new CommandDefinition(
             MarkRunSql,
-            new { Id = id, RunAt = FormatDateTime(runAt) },
+            new { Id = id, RunAt = Format(runAt) },
             cancellationToken: cancellationToken));
     }
-
-    private static string? NormalizeSearchText(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private static string EscapeLikePattern(string value) => value
-        .Replace("\\", "\\\\", StringComparison.Ordinal)
-        .Replace("%", "\\%", StringComparison.Ordinal)
-        .Replace("_", "\\_", StringComparison.Ordinal);
 
     private static AppSavedQueryRecord ToRecord(SavedQueryRow row) => new AppSavedQueryRecord(
             row.Id,
             row.Name,
             row.Description,
             row.QueryText,
-            ParseDateTime(row.CreatedAt),
-            ParseDateTime(row.UpdatedAt),
-            ParseNullableDateTime(row.LastRunAt));
-
-    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
-
-    private static string? FormatNullableDateTime(DateTime? value) => value is null ? null : FormatDateTime(value.Value);
-
-    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-
-    private static DateTime? ParseNullableDateTime(string? value) => string.IsNullOrWhiteSpace(value) ? null : ParseDateTime(value);
-
-    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
-    {
-        DateTimeKind.Utc => value,
-        DateTimeKind.Local => value.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-    };
+            Parse(row.CreatedAt),
+            Parse(row.UpdatedAt),
+            ParseNullable(row.LastRunAt));
 
     public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 

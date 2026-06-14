@@ -75,26 +75,16 @@ public sealed class QueryServiceExecutionContractTests
         Diagnostics = new DiagnosticBag()
     };
 
-    private sealed class CapturingAnalyticsQueryExecutor : IAnalyticsQueryExecutor
+    private sealed class CapturingAnalyticsQueryExecutor(AnalyticsQueryResult result) : IAnalyticsQueryExecutor
     {
-        private readonly AnalyticsQueryResult _result;
-
-        public CapturingAnalyticsQueryExecutor(AnalyticsQueryResult result)
-        {
-            _result = result;
-        }
-
         public AnalyticsQueryRequest? LastRequest { get; private set; }
-
-        public CancellationToken LastCancellationToken { get; private set; }
 
         public Task<AnalyticsQueryResult> ExecuteAsync(
             AnalyticsQueryRequest request,
             CancellationToken cancellationToken = default)
         {
             LastRequest = request;
-            LastCancellationToken = cancellationToken;
-            return Task.FromResult(_result);
+            return Task.FromResult(result);
         }
     }
 

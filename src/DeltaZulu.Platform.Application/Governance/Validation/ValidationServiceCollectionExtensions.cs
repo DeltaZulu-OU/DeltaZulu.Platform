@@ -19,6 +19,7 @@ public static class ValidationServiceCollectionExtensions
         services.AddSingleton<ICheck, FixtureParseCheck>();
         services.AddSingleton<ICheck, TestDefinitionCheck>();
         services.AddSingleton<ICheck, NoteFrontmatterCheck>();
+        services.AddSingleton<ICheck, QueryExecutionDryRunCheck>();
         return services;
     }
 }

@@ -1,4 +1,5 @@
 
+using DeltaZulu.Platform.Domain.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.QueryHistory;
 using DeltaZulu.Platform.Domain.Analytics.SavedQueries;
 using DeltaZulu.Platform.Domain.Analytics.Visualizations;
@@ -29,7 +30,7 @@ public sealed class QueryLibraryService
     public Task<IReadOnlyList<SavedQueryRecord>> ListSavedQueriesAsync(
         CancellationToken cancellationToken = default) => _savedQueries.ListAsync(cancellationToken);
 
-    public Task<SavedQueryPage> SearchSavedQueriesAsync(
+    public Task<PageResult<SavedQueryRecord>> SearchSavedQueriesAsync(
         string? searchText,
         int offset,
         int limit,

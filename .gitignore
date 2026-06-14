@@ -13,3 +13,4 @@ TestResults/
 coverage/
 artifacts/
 packages.lock.json
+*.patch

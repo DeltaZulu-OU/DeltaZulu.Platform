@@ -1,7 +1,7 @@
-namespace DeltaZulu.Platform.Domain.Analytics.SavedQueries;
+namespace DeltaZulu.Platform.Domain.Analytics;
 
-public sealed record SavedQueryPage(
-    IReadOnlyList<SavedQueryRecord> Items,
+public sealed record PageResult<T>(
+    IReadOnlyList<T> Items,
     int TotalCount,
     int Offset,
     int Limit)
