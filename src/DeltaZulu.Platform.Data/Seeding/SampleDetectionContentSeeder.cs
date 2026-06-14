@@ -621,7 +621,7 @@ ProcessEvent
             Commands.Stage(repository, path);
         }
 
-        if (repository.RetrieveStatus().IsDirty)
+        if (HasStagedChanges(repository))
         {
             var committedAt = DateTimeOffset.UtcNow;
             var signature = new Signature(
@@ -634,6 +634,13 @@ ProcessEvent
 
         return written;
     }
+
+    private static bool HasStagedChanges(Repository repository) => repository.RetrieveStatus().Any(entry =>
+                                                                            entry.State.HasFlag(FileStatus.NewInIndex)
+                                                                            || entry.State.HasFlag(FileStatus.ModifiedInIndex)
+                                                                            || entry.State.HasFlag(FileStatus.DeletedFromIndex)
+                                                                            || entry.State.HasFlag(FileStatus.RenamedInIndex)
+                                                                            || entry.State.HasFlag(FileStatus.TypeChangeInIndex));
 
     /// <summary>
     /// Seeds the Governance detection catalog with sample detections so the Detections page
