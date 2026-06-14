@@ -519,6 +519,31 @@ body.hunt-splitter-active {
     z-index: 1300;
 }
 
+.dz-code-drawer {
+    width: min(540px, 92vw);
+}
+
+.dz-code-drawer-header,
+.hunt-drawer-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid var(--border, rgba(19, 31, 42, 0.10));
+}
+
+.dz-code-drawer-close,
+.hunt-drawer-close {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+}
+
 .hunt-drawer-title {
     font-size: 14px;
     font-weight: 600;

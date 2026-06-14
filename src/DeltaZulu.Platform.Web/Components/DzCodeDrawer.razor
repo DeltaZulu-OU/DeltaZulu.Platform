@@ -1,0 +1,116 @@
+﻿@namespace DeltaZulu.Platform.Web.Components
+@inject IJSRuntime JS
+
+@if (Open)
+{
+    <button class="hunt-drawer-backdrop dz-code-drawer-backdrop"
+            @onclick="CloseAsync"
+            aria-label="@CloseAriaLabel"></button>
+
+    <aside class="hunt-drawer dz-code-drawer" role="dialog" aria-modal="true" aria-label="@AriaLabel">
+        <div class="hunt-drawer-header dz-code-drawer-header">
+            <div>
+                <div class="hunt-drawer-title">@Title</div>
+                @if (!string.IsNullOrWhiteSpace(Subtitle))
+                {
+                    <div class="hunt-drawer-subtitle">@Subtitle</div>
+                }
+            </div>
+
+            <button class="hunt-drawer-close dz-code-drawer-close"
+                    @onclick="CloseAsync"
+                    aria-label="@CloseAriaLabel">
+                ×
+            </button>
+        </div>
+
+        <div class="hunt-drawer-body dz-code-drawer-body">
+            @if (IsLoading)
+            {
+                <div class="hunt-drawer-body-padded">
+                    <MudProgressLinear Indeterminate="true" Color="Color.Secondary" />
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <div class="hunt-drawer-body-padded">
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                        @ErrorMessage
+                    </MudAlert>
+                </div>
+            }
+            else if (IsBinary)
+            {
+                <div class="hunt-drawer-body-padded">
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                        @BinaryMessage
+                    </MudAlert>
+                </div>
+            }
+            else if (string.IsNullOrEmpty(Content) && string.IsNullOrEmpty(HighlightedHtml))
+            {
+                <div class="hunt-drawer-body-padded">
+                    <DzEmptyState Title="@EmptyTitle"
+                                  Description="@EmptyDescription"
+                                  Icon="@Icons.Material.Outlined.InsertDriveFile"
+                                  Elevation="0" />
+                </div>
+            }
+            else
+            {
+                <div class="hunt-sql-snippet dz-code-drawer-snippet">
+                    @if (ShowCopyButton && !string.IsNullOrWhiteSpace(EffectiveCopyText))
+                    {
+                        <button class="hunt-btn hunt-btn-copy" @onclick="CopyAsync">Copy</button>
+                    }
+
+                    @if (!string.IsNullOrEmpty(HighlightedHtml))
+                    {
+                        <pre class="hunt-sql-highlight">@((MarkupString)HighlightedHtml)</pre>
+                    }
+                    else
+                    {
+                        <pre class="hunt-drawer-content"><code>@Content</code></pre>
+                    }
+                </div>
+            }
+        </div>
+    </aside>
+}
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public string Title { get; set; } = "Details";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string? Content { get; set; }
+    [Parameter] public string? HighlightedHtml { get; set; }
+    [Parameter] public string? CopyText { get; set; }
+    [Parameter] public bool ShowCopyButton { get; set; } = true;
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public bool IsBinary { get; set; }
+    [Parameter] public string BinaryMessage { get; set; } = "Binary content cannot be previewed inline.";
+    [Parameter] public string EmptyTitle { get; set; } = "No content selected.";
+    [Parameter] public string EmptyDescription { get; set; } = "Select content to preview it here.";
+    [Parameter] public string AriaLabel { get; set; } = "Details drawer";
+    [Parameter] public string CloseAriaLabel { get; set; } = "Close details drawer";
+
+    private string? EffectiveCopyText => string.IsNullOrEmpty(CopyText) ? Content : CopyText;
+
+    private async Task CloseAsync()
+    {
+        Open = false;
+        await OpenChanged.InvokeAsync(false);
+    }
+
+    private async Task CopyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(EffectiveCopyText))
+        {
+            return;
+        }
+
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", EffectiveCopyText);
+    }
+}

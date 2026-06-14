@@ -288,36 +288,17 @@
     </main>
 </div>
 
-@if (_showDrawer)
-{
-    <button class="hunt-drawer-backdrop" @onclick="CloseDrawer" aria-label="Close details drawer"></button>
-    <aside class="hunt-drawer" role="dialog" aria-modal="true" aria-label="@_drawerTitle">
-        <div class="hunt-drawer-header">
-            <div>
-                <div class="hunt-drawer-title">@_drawerTitle</div>
-                <div class="hunt-drawer-subtitle">@_drawerTypeLabel</div>
-            </div>
-            <button class="hunt-drawer-close"
-                    @onclick="CloseDrawer"
-                    aria-label="Close details drawer">
-                ×
-            </button>
-        </div>
-        <div class="hunt-drawer-body">
-            @if (_drawerMode == DrawerMode.Sql || _drawerMode == DrawerMode.Json)
-            {
-                <div class="hunt-sql-snippet">
-                    <button class="hunt-btn hunt-btn-copy" @onclick="CopyDrawerContentToClipboard">Copy</button>
-                    <pre class="hunt-sql-highlight">@((MarkupString)_drawerSqlHtml)</pre>
-                </div>
-            }
-            else
-            {
-                <pre class="hunt-drawer-content">@_drawerContent</pre>
-            }
-        </div>
-    </aside>
-}
+<DzCodeDrawer Open="_showDrawer"
+              OpenChanged="OnDrawerOpenChanged"
+              Title="@_drawerTitle"
+              Subtitle="@_drawerTypeLabel"
+              Content="@_drawerContent"
+              HighlightedHtml="@DrawerHighlightedHtml"
+              CopyText="@DrawerCopyText"
+              ShowCopyButton="@DrawerCanCopy"
+              EmptyTitle="No drawer content."
+              EmptyDescription="Run a query or open a cell value to inspect content."
+              AriaLabel="@_drawerTitle" />
 
 @code {
     private string _kql = string.Empty;
@@ -580,9 +561,8 @@
 #endif
     }
 
-    private async Task CopyDrawerContentToClipboard()
-    {
-        string? text = _drawerMode switch
+    private string? DrawerCopyText => 
+    _drawerMode switch
         {
 #if DEBUG
             DrawerMode.Sql => _result?.GeneratedSql,
@@ -590,10 +570,9 @@
             DrawerMode.Json => _drawerContent,
             _ => null
         };
-        if (string.IsNullOrWhiteSpace(text)) return;
 
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
-    }
+    private string? DrawerHighlightedHtml => _drawerMode is DrawerMode.Sql or DrawerMode.Json ? _drawerSqlHtml : null;
+    private bool DrawerCanCopy => !string.IsNullOrWhiteSpace(DrawerCopyText);
 
     private void OpenCellDrawer(string columnName, object? value, bool forceOpen = false)
     {
@@ -620,7 +599,11 @@
         _showDrawer = true;
     }
 
-    private void CloseDrawer() => _showDrawer = false;
+    private Task OnDrawerOpenChanged(bool open)
+    {
+        _showDrawer = open;
+        return Task.CompletedTask;
+    }
 
     protected override async Task OnInitializedAsync()
     {
