@@ -183,8 +183,15 @@ else
                     <MudList T="string" Dense="true" Class="dz-card-list">
                         @foreach (var file in _acceptedFiles)
                         {
-                            <MudListItem T="string" Icon="@Icons.Material.Filled.InsertDriveFile">
-                                <code>@file.RepositoryPath</code>
+                            <MudListItem T="string">
+                                <MudButton Variant="Variant.Text"
+                                           Color="Color.Secondary"
+                                           FullWidth="true"
+                                           Class="justify-start"
+                                           StartIcon="@Icons.Material.Filled.InsertDriveFile"
+                                           OnClick="@(() => OpenAcceptedFileAsync(file))">
+                                    <code>@file.RepositoryPath</code>
+                                </MudButton>
                             </MudListItem>
                         }
                     </MudList>
@@ -192,6 +199,59 @@ else
             </DzTabBody>
         </MudTabPanel>
     </MudTabs>
+
+    
+    <MudDrawer @bind-Open="_fileDrawerOpen"
+               Anchor="Anchor.End"
+               Variant="DrawerVariant.Temporary"
+               Elevation="4"
+               Class="dz-tight-drawer"
+               Style="width: 480px; max-width: 92vw;">
+        <div class="pa-4 d-flex flex-column gap-3">
+            <div class="d-flex align-center justify-space-between gap-2">
+                <div>
+                    <MudText Typo="Typo.overline">Accepted file</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="dz-config-value dz-config-value--mono">
+                        @(_selectedAcceptedFile?.LogicalPath ?? _selectedAcceptedFilePath ?? "No file selected")
+                    </MudText>
+                </div>
+                <MudIconButton Icon="@Icons.Material.Outlined.Close"
+                               Color="Color.Default"
+                               Size="Size.Small"
+                               AriaLabel="Close accepted file drawer"
+                               OnClick="CloseAcceptedFileDrawer" />
+            </div>
+
+            @if (_fileLoading)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Secondary" />
+            }
+            else if (!string.IsNullOrWhiteSpace(_fileLoadError))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @_fileLoadError
+                </MudAlert>
+            }
+            else if (_selectedAcceptedFile is null)
+            {
+                <DzEmptyState Title="No file selected."
+                              Description="Select an accepted file to preview its content."
+                              Icon="@Icons.Material.Outlined.InsertDriveFile" />
+            }
+            else if (_selectedAcceptedFile.IsBinary)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    Binary accepted content cannot be previewed inline.
+                </MudAlert>
+            }
+            else
+            {
+                <MudPaper Elevation="0" Class="pa-3 overflow-auto" Style="max-height: calc(100vh - 180px);">
+                    <pre class="ma-0"><code>@_selectedAcceptedFile.Content</code></pre>
+                </MudPaper>
+            }
+        </div>
+    </MudDrawer>
 }
 
 @code {
@@ -203,6 +263,11 @@ else
     private List<DetectionVersion> _versions = [];
     private List<ChangeRequest> _changes = [];
     private List<AcceptedContentFileSummary> _acceptedFiles = [];
+    private AcceptedContentFileDetails? _selectedAcceptedFile;
+    private string? _selectedAcceptedFilePath;
+    private string? _fileLoadError;
+    private bool _fileDrawerOpen;
+    private bool _fileLoading;
     private List<BreadcrumbItem> _breadcrumbs = [];
 
     protected override async Task OnParametersSetAsync()
@@ -255,5 +320,41 @@ else
         {
             Nav.NavigateTo($"/governance/proposals/{changeId}");
         }
+    }
+    
+    private async Task OpenAcceptedFileAsync(AcceptedContentFileSummary file)
+    {
+        if (_detection is null) return;
+
+        _fileDrawerOpen = true;
+        _fileLoading = true;
+        _fileLoadError = null;
+        _selectedAcceptedFile = null;
+        _selectedAcceptedFilePath = file.LogicalPath;
+
+        try
+        {
+            _selectedAcceptedFile = await AcceptedContentReadService.GetAcceptedFileForDetectionAsync(
+                _detection.Id,
+                file.LogicalPath);
+
+            if (_selectedAcceptedFile is null)
+            {
+                _fileLoadError = $"Accepted file '{file.LogicalPath}' was not found.";
+            }
+        }
+        catch (DomainException ex)
+        {
+            _fileLoadError = ex.Message;
+        }
+        finally
+        {
+            _fileLoading = false;
+        }
+    }
+
+    private void CloseAcceptedFileDrawer()
+    {
+        _fileDrawerOpen = false;
     }
 }

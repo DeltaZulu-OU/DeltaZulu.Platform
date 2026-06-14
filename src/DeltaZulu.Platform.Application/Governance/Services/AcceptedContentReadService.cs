@@ -80,6 +80,29 @@ public sealed class AcceptedContentReadService(
             .ToList();
     }
 
+    /// <summary>Reads one accepted canonical file for a detection using the file's logical path.</summary>
+    public async Task<AcceptedContentFileDetails?> GetAcceptedFileForDetectionAsync(
+        DetectionId detectionId,
+        string logicalPath,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(logicalPath);
+
+        var detection = await detections.GetByIdAsync(detectionId, ct)
+            ?? throw new DomainException("detection.not_found", $"Detection '{detectionId}' not found.");
+
+        var repositoryPath = CanonicalPathResolver.Resolve(detection.Slug, LogicalPath.Parse(logicalPath));
+        var file = await contentStore.GetFileAsync(repositoryPath, ct);
+
+        return file is null
+            ? null
+            : new AcceptedContentFileDetails(
+                file.RepositoryPath,
+                logicalPath,
+                file.IsBinary,
+                file.Content);
+    }
+
     private static Dictionary<string, ContentFile> ToLogicalPathMap(
         string detectionPrefix,
         IReadOnlyList<ContentFile> files)
@@ -104,6 +127,14 @@ public sealed record AcceptedContentFileSummary(
     string RepositoryPath,
     string LogicalPath,
     bool IsBinary);
+
+/// <summary>UI-safe accepted canonical file content.</summary>
+public sealed record AcceptedContentFileDetails(
+    string RepositoryPath,
+    string LogicalPath,
+    bool IsBinary,
+    string Content);
+
 /// <summary>UI-safe draft-to-accepted comparison read model.</summary>
 public sealed record DraftAcceptedComparison(
     string LogicalPath,
