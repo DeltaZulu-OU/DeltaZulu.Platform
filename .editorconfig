@@ -1,4 +1,4 @@
-# NetBannerNG EditorConfig style and formatting rules.
+# DeltaZulu EditorConfig style and formatting rules.
 # Update these settings as project conventions evolve.
 # Reference: https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference
 [*.cs]
@@ -15,8 +15,8 @@ indent_style = space
 csharp_new_line_before_else = true
 #require members of object intializers to be on separate lines
 csharp_new_line_before_members_in_object_initializers = true
-#require braces to be on a new line for control_blocks, methods, types, and object_collection_array_initializers (also known as "Allman" style)
-csharp_new_line_before_open_brace = control_blocks, methods, types, object_collection_array_initializers
+#require braces to be on a new line for control_blocks, methods, types (also known as "Allman" style)
+csharp_new_line_before_open_brace = control_blocks, methods, types, object_collection, local_functions
 
 #Formatting - organize using options
 
@@ -144,14 +144,13 @@ csharp_style_implicit_object_creation_when_type_is_apparent = false
 
 [*.{cs,vb}]
 dotnet_style_operator_placement_when_wrapping = beginning_of_line
-tab_width = 4
 indent_size = 4
 end_of_line = crlf
 dotnet_style_coalesce_expression = true:suggestion
 dotnet_style_null_propagation = true:suggestion
 dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
 dotnet_style_prefer_auto_properties = true:silent
-[*.{cs,vb}]
+
 #### Naming styles ####
 
 # Naming rules
@@ -188,11 +187,6 @@ dotnet_naming_style.begins_with_i.required_prefix = I
 dotnet_naming_style.begins_with_i.required_suffix = 
 dotnet_naming_style.begins_with_i.word_separator = 
 dotnet_naming_style.begins_with_i.capitalization = pascal_case
-
-dotnet_naming_style.pascal_case.required_prefix = 
-dotnet_naming_style.pascal_case.required_suffix = 
-dotnet_naming_style.pascal_case.word_separator = 
-dotnet_naming_style.pascal_case.capitalization = pascal_case
 
 dotnet_naming_style.pascal_case.required_prefix = 
 dotnet_naming_style.pascal_case.required_suffix = 
