@@ -1,6 +1,6 @@
 
 using System.Text.Json;
-using DeltaZulu.Platform.Application.Analytics.Render.Directives;
+using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 using DeltaZulu.Platform.Domain.Analytics.SavedQueries;
 using DeltaZulu.Platform.Domain.Analytics.Visualizations;

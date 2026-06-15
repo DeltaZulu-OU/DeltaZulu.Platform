@@ -1,6 +1,7 @@
 
 using Dapper;
 using DeltaZulu.Platform.Domain.Analytics.DetectionRuns;
+using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.DetectionRuns;
 public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IDisposable
@@ -174,15 +175,15 @@ public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IDis
                 run.DetectionId,
                 run.DetectionVersion,
                 run.RuleHash,
-                ExecutionWindowStartUtc = FormatDateTime(run.ExecutionWindowStartUtc),
-                ExecutionWindowEndUtc = FormatDateTime(run.ExecutionWindowEndUtc),
+                ExecutionWindowStartUtc = Format(run.ExecutionWindowStartUtc),
+                ExecutionWindowEndUtc = Format(run.ExecutionWindowEndUtc),
                 run.Status,
                 run.ResultCount,
                 run.DurationMs,
                 run.ErrorMessage,
                 run.QueryHash,
-                StartedAtUtc = FormatDateTime(run.StartedAtUtc),
-                CompletedAtUtc = FormatNullableDateTime(run.CompletedAtUtc)
+                StartedAtUtc = Format(run.StartedAtUtc),
+                CompletedAtUtc = FormatNullable(run.CompletedAtUtc)
             },
             cancellationToken: cancellationToken));
     }
@@ -192,30 +193,15 @@ public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IDis
             row.DetectionId,
             row.DetectionVersion,
             row.RuleHash,
-            ParseDateTime(row.ExecutionWindowStartUtc),
-            ParseDateTime(row.ExecutionWindowEndUtc),
+            Parse(row.ExecutionWindowStartUtc),
+            Parse(row.ExecutionWindowEndUtc),
             row.Status,
             row.ResultCount,
             row.DurationMs,
             row.ErrorMessage,
             row.QueryHash,
-            ParseDateTime(row.StartedAtUtc),
-            ParseNullableDateTime(row.CompletedAtUtc));
-
-    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
-
-    private static string? FormatNullableDateTime(DateTime? value) => value is null ? null : FormatDateTime(value.Value);
-
-    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-
-    private static DateTime? ParseNullableDateTime(string? value) => string.IsNullOrWhiteSpace(value) ? null : ParseDateTime(value);
-
-    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
-    {
-        DateTimeKind.Utc => value,
-        DateTimeKind.Local => value.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-    };
+            Parse(row.StartedAtUtc),
+            ParseNullable(row.CompletedAtUtc));
 
     public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 

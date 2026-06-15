@@ -2,7 +2,7 @@
 using DeltaZulu.Platform.Application.Analytics.Planning;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
-namespace DeltaZulu.Platform.Domain.Analytics.Planning;
+namespace DeltaZulu.Platform.Application.Analytics.Planning;
 public sealed partial class RelationalPlanner
 {
     private sealed class IdentityProjectionCollapsePass : IPlannerPass

@@ -1,9 +1,10 @@
 
 using Dapper;
 using DeltaZulu.Platform.Domain.Analytics.Detections;
+using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.Detections;
-public sealed class DapperDetectionRepository : IDetectionRepository, IDisposable
+public sealed class DapperDetectionRepository : IDetectionRecordRepository, IDisposable
 {
     private const string CreateSchemaSql =
         """
@@ -315,8 +316,8 @@ public sealed class DapperDetectionRepository : IDetectionRepository, IDisposabl
                 detection.SuppressionPolicyJson,
                 IsEnabled = detection.IsEnabled ? 1 : 0,
                 detection.TestMetadataJson,
-                CreatedAtUtc = FormatDateTime(detection.CreatedAtUtc),
-                UpdatedAtUtc = FormatDateTime(detection.UpdatedAtUtc)
+                CreatedAtUtc = Format(detection.CreatedAtUtc),
+                UpdatedAtUtc = Format(detection.UpdatedAtUtc)
             },
             cancellationToken: cancellationToken));
     }
@@ -334,7 +335,7 @@ public sealed class DapperDetectionRepository : IDetectionRepository, IDisposabl
             new {
                 DetectionId = detectionId,
                 IsEnabled = isEnabled ? 1 : 0,
-                UpdatedAtUtc = FormatDateTime(DateTime.UtcNow)
+                UpdatedAtUtc = Format(DateTime.UtcNow)
             },
             cancellationToken: cancellationToken));
     }
@@ -371,19 +372,8 @@ public sealed class DapperDetectionRepository : IDetectionRepository, IDisposabl
             row.SuppressionPolicyJson,
             row.IsEnabled != 0,
             row.TestMetadataJson,
-            ParseDateTime(row.CreatedAtUtc),
-            ParseDateTime(row.UpdatedAtUtc));
-
-    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
-
-    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-
-    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
-    {
-        DateTimeKind.Utc => value,
-        DateTimeKind.Local => value.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-    };
+            Parse(row.CreatedAtUtc),
+            Parse(row.UpdatedAtUtc));
 
     public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 

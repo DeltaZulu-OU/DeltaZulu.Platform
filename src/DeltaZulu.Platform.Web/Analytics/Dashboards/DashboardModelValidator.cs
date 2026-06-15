@@ -1,5 +1,5 @@
 
-using DeltaZulu.Platform.Application.Analytics.Render.Directives;
+using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
 
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards;
 public static class DashboardModelValidator

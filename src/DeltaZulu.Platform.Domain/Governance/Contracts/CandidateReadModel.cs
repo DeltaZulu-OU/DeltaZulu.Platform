@@ -2,7 +2,7 @@ namespace DeltaZulu.Platform.Domain.Governance.Contracts;
 
 /// <summary>
 /// Read model for an incident candidate produced by Analytics. Governance consumes this
-/// through <see cref="ICandidateProvider"/> and never creates or mutates candidates.
+/// read-only and never creates or mutates candidates.
 /// </summary>
 public sealed record CandidateReadModel
 {

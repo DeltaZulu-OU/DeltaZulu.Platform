@@ -1,6 +1,7 @@
 
 using Dapper;
 using DeltaZulu.Platform.Domain.Analytics.Candidates;
+using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.Candidates;
 public sealed class DapperCandidateEvidenceRepository : ICandidateEvidenceRepository, IDisposable
@@ -138,7 +139,7 @@ public sealed class DapperCandidateEvidenceRepository : ICandidateEvidenceReposi
                 evidence.CandidateId,
                 evidence.EvidenceType,
                 evidence.ContentJson,
-                CollectedAtUtc = FormatDateTime(evidence.CollectedAtUtc)
+                CollectedAtUtc = Format(evidence.CollectedAtUtc)
             },
             cancellationToken: cancellationToken));
 
@@ -147,18 +148,7 @@ public sealed class DapperCandidateEvidenceRepository : ICandidateEvidenceReposi
             row.CandidateId,
             row.EvidenceType,
             row.ContentJson,
-            ParseDateTime(row.CollectedAtUtc));
-
-    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
-
-    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-
-    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
-    {
-        DateTimeKind.Utc => value,
-        DateTimeKind.Local => value.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-    };
+            Parse(row.CollectedAtUtc));
 
     public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 

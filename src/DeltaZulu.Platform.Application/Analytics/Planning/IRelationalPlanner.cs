@@ -1,4 +1,3 @@
-using DeltaZulu.Platform.Domain.Analytics.Planning;
 
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 

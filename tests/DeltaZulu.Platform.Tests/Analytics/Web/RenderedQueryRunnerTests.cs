@@ -1,6 +1,6 @@
 
 
-using DeltaZulu.Platform.Application.Analytics.Render.Directives;using DeltaZulu.Platform.Application.Analytics.Rendering.Services;using DeltaZulu.Platform.Data.DuckDb;
+using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;using DeltaZulu.Platform.Application.Analytics.Rendering.Services;using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Analytics;using DeltaZulu.Platform.Domain.Analytics.Policy;using DeltaZulu.Platform.Domain.Analytics.Rendering;
 using DeltaZulu.Platform.Web.Analytics.Rendering;
 namespace DeltaZulu.Platform.Tests.Analytics.Web;[TestClass]public sealed class RenderedQueryRunnerTests

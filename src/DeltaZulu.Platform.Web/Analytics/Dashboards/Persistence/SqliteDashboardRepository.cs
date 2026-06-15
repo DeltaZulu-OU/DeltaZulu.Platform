@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Dapper;
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
+using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards.Persistence;
 public sealed class SqliteDashboardRepository : IDashboardRepository, IDisposable
@@ -69,8 +70,8 @@ public sealed class SqliteDashboardRepository : IDashboardRepository, IDisposabl
                 dashboard.Description,
                 WidgetCount = dashboard.Widgets.Count,
                 DefinitionJson = definitionJson,
-                CreatedAtUtc = FormatDateTime(dashboard.CreatedAtUtc),
-                UpdatedAtUtc = FormatDateTime(dashboard.UpdatedAtUtc)
+                CreatedAtUtc = Format(dashboard.CreatedAtUtc),
+                UpdatedAtUtc = Format(dashboard.UpdatedAtUtc)
             },
             cancellationToken: ct));
     }
@@ -140,22 +141,8 @@ public sealed class SqliteDashboardRepository : IDashboardRepository, IDisposabl
             Name = row.Name,
             Description = row.Description,
             WidgetCount = checked((int)row.WidgetCount),
-            CreatedAtUtc = ParseDateTime(row.CreatedAtUtc),
-            UpdatedAtUtc = ParseDateTime(row.UpdatedAtUtc)
-        };
-
-    private static string FormatDateTime(DateTime value)
-        => NormalizeUtc(value).ToString("O");
-
-    private static DateTime ParseDateTime(string value)
-        => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-
-    private static DateTime NormalizeUtc(DateTime value)
-        => value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Local => value.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+            CreatedAtUtc = Parse(row.CreatedAtUtc),
+            UpdatedAtUtc = Parse(row.UpdatedAtUtc)
         };
 
     private sealed class DashboardSummaryRow

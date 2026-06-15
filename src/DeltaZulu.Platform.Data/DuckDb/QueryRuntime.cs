@@ -4,7 +4,6 @@ using System.Globalization;
 using DeltaZulu.Platform.Application.Analytics.Catalog;
 using DeltaZulu.Platform.Application.Analytics.Planning;
 using DeltaZulu.Platform.Data.DuckDb;
-using DeltaZulu.Platform.Domain.Analytics.Planning;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using DuckDB.NET.Data;
@@ -532,7 +531,7 @@ public sealed partial class QueryRuntime
 
             return true;
         }
-        catch
+        catch (DuckDBException)
         {
             estimatedRows = 0;
             return false;

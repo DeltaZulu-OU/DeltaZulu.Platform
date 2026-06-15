@@ -1,4 +1,3 @@
-using DeltaZulu.Platform.Domain.Analytics.Planning;
 
 namespace DeltaZulu.Platform.Application.Analytics.Planning;
 

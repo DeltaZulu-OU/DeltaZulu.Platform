@@ -1,5 +1,5 @@
 
-using DeltaZulu.Platform.Application.Analytics.Render.Directives;
+using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Render;

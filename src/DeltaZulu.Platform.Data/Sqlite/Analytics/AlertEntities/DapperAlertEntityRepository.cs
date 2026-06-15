@@ -1,6 +1,7 @@
 
 using Dapper;
 using DeltaZulu.Platform.Domain.Analytics.AlertEntities;
+using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.AlertEntities;
 public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IDisposable
@@ -173,7 +174,7 @@ public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IDispo
                     entity.SpecificityWeight,
                     entity.CriticalityWeight,
                     IsHighFanout = entity.IsHighFanout ? 1 : 0,
-                    CreatedAtUtc = FormatDateTime(entity.CreatedAtUtc)
+                    CreatedAtUtc = Format(entity.CreatedAtUtc)
                 },
                 cancellationToken: cancellationToken));
         }
@@ -190,18 +191,7 @@ public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IDispo
             row.SpecificityWeight,
             row.CriticalityWeight,
             row.IsHighFanout != 0,
-            ParseDateTime(row.CreatedAtUtc));
-
-    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
-
-    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-
-    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
-    {
-        DateTimeKind.Utc => value,
-        DateTimeKind.Local => value.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-    };
+            Parse(row.CreatedAtUtc));
 
     public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 

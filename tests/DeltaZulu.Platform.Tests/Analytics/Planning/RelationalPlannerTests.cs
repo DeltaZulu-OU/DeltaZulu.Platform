@@ -1,5 +1,5 @@
 
-using DeltaZulu.Platform.Domain.Analytics.Planning;
+using DeltaZulu.Platform.Application.Analytics.Planning;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Planning;

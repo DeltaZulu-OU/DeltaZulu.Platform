@@ -2,6 +2,7 @@
 using Dapper;
 using AppIQueryHistoryRepository = DeltaZulu.Platform.Domain.Analytics.QueryHistory.IQueryHistoryRepository;
 using AppQueryHistoryRecord = DeltaZulu.Platform.Domain.Analytics.QueryHistory.QueryHistoryRecord;
+using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.QueryHistory;
 public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, IDisposable
@@ -132,7 +133,7 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
             new {
                 record.Id,
                 record.QueryText,
-                ExecutedAt = FormatDateTime(record.ExecutedAt),
+                ExecutedAt = Format(record.ExecutedAt),
                 Succeeded = record.Succeeded ? 1 : 0,
                 record.RowCount,
                 record.DurationMs,
@@ -153,7 +154,7 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
     private static AppQueryHistoryRecord ToRecord(QueryHistoryRow row) => new AppQueryHistoryRecord(
             row.Id,
             row.QueryText,
-            ParseDateTime(row.ExecutedAt),
+            Parse(row.ExecutedAt),
             row.Succeeded != 0,
             ConvertNullableInt32(row.RowCount),
             row.DurationMs,
@@ -173,17 +174,6 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
 
         return checked((int)value.Value);
     }
-
-    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
-
-    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-
-    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
-    {
-        DateTimeKind.Utc => value,
-        DateTimeKind.Local => value.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-    };
 
     private sealed class QueryHistoryRow
     {

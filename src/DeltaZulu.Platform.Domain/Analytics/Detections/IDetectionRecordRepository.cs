@@ -1,6 +1,6 @@
 namespace DeltaZulu.Platform.Domain.Analytics.Detections;
 
-public interface IDetectionRepository
+public interface IDetectionRecordRepository
 {
     Task EnsureInitializedAsync(CancellationToken cancellationToken = default);
 

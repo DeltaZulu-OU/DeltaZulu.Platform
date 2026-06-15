@@ -1,8 +1,7 @@
 
-using DeltaZulu.Platform.Application.Analytics.Planning;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
-namespace DeltaZulu.Platform.Domain.Analytics.Planning;
+namespace DeltaZulu.Platform.Application.Analytics.Planning;
 public sealed record PlannerContext(bool Enabled, int MaxIterations = 3, int MaxRuleApplications = 10_000);
 
 public sealed record PlannerRunStats(

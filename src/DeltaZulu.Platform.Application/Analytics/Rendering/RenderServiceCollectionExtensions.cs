@@ -1,5 +1,4 @@
 
-using DeltaZulu.Platform.Application.Analytics.Render.Directives;
 using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
 using DeltaZulu.Platform.Application.Analytics.Rendering.Services;
 using Microsoft.Extensions.DependencyInjection;

@@ -5,7 +5,6 @@ using DeltaZulu.Platform.Application.Analytics.Planning;
 using DeltaZulu.Platform.Application.Analytics.Translation;
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
-using DeltaZulu.Platform.Domain.Analytics.Planning;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DuckDB.NET.Data;
 

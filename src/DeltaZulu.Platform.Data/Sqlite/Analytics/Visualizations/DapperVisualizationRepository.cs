@@ -2,6 +2,7 @@
 using Dapper;
 using AppIVisualizationRepository = DeltaZulu.Platform.Domain.Analytics.Visualizations.IVisualizationRepository;
 using AppVisualizationRecord = DeltaZulu.Platform.Domain.Analytics.Visualizations.VisualizationRecord;
+using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.Visualizations;
 public sealed class DapperVisualizationRepository : AppIVisualizationRepository, IDisposable
@@ -205,8 +206,8 @@ public sealed class DapperVisualizationRepository : AppIVisualizationRepository,
                 visualization.Description,
                 visualization.Kind,
                 visualization.SpecJson,
-                CreatedAt = FormatDateTime(visualization.CreatedAt),
-                UpdatedAt = FormatDateTime(visualization.UpdatedAt)
+                CreatedAt = Format(visualization.CreatedAt),
+                UpdatedAt = Format(visualization.UpdatedAt)
             },
             cancellationToken: cancellationToken));
     }
@@ -231,19 +232,8 @@ public sealed class DapperVisualizationRepository : AppIVisualizationRepository,
             row.Description,
             row.Kind,
             row.SpecJson,
-            ParseDateTime(row.CreatedAt),
-            ParseDateTime(row.UpdatedAt));
-
-    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
-
-    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-
-    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
-    {
-        DateTimeKind.Utc => value,
-        DateTimeKind.Local => value.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-    };
+            Parse(row.CreatedAt),
+            Parse(row.UpdatedAt));
 
     public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 

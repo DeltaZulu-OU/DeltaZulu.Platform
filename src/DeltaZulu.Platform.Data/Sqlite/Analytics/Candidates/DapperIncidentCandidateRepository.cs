@@ -1,6 +1,7 @@
 
 using Dapper;
 using DeltaZulu.Platform.Domain.Analytics.Candidates;
+using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.Candidates;
 public sealed class DapperIncidentCandidateRepository : IIncidentCandidateRepository, IDisposable
@@ -303,8 +304,8 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
                 candidate.Id,
                 candidate.PrimaryEntityType,
                 candidate.PrimaryEntityValue,
-                WindowStartUtc = FormatDateTime(candidate.WindowStartUtc),
-                WindowEndUtc = FormatDateTime(candidate.WindowEndUtc),
+                WindowStartUtc = Format(candidate.WindowStartUtc),
+                WindowEndUtc = Format(candidate.WindowEndUtc),
                 candidate.AlertCount,
                 candidate.SourceDiversityCount,
                 candidate.TacticBreadth,
@@ -313,8 +314,8 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
                 candidate.ScoringFactorsJson,
                 candidate.CorrelationRationale,
                 candidate.Status,
-                CreatedAtUtc = FormatDateTime(candidate.CreatedAtUtc),
-                UpdatedAtUtc = FormatDateTime(candidate.UpdatedAtUtc)
+                CreatedAtUtc = Format(candidate.CreatedAtUtc),
+                UpdatedAtUtc = Format(candidate.UpdatedAtUtc)
             },
             cancellationToken: cancellationToken));
     }
@@ -333,7 +334,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
             new {
                 Id = id,
                 Status = status,
-                UpdatedAtUtc = FormatDateTime(updatedAtUtc)
+                UpdatedAtUtc = Format(updatedAtUtc)
             },
             cancellationToken: cancellationToken));
     }
@@ -388,8 +389,8 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
             row.Id,
             row.PrimaryEntityType,
             row.PrimaryEntityValue,
-            ParseDateTime(row.WindowStartUtc),
-            ParseDateTime(row.WindowEndUtc),
+            Parse(row.WindowStartUtc),
+            Parse(row.WindowEndUtc),
             row.AlertCount,
             row.SourceDiversityCount,
             row.TacticBreadth,
@@ -398,19 +399,8 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
             row.ScoringFactorsJson,
             row.CorrelationRationale,
             row.Status,
-            ParseDateTime(row.CreatedAtUtc),
-            ParseDateTime(row.UpdatedAtUtc));
-
-    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
-
-    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-
-    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
-    {
-        DateTimeKind.Utc => value,
-        DateTimeKind.Local => value.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-    };
+            Parse(row.CreatedAtUtc),
+            Parse(row.UpdatedAtUtc));
 
     public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 

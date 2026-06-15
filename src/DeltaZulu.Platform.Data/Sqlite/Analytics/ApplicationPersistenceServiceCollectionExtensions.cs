@@ -46,7 +46,7 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         services.AddSingleton<ICuratedAnalyticRepository, DapperCuratedAnalyticRepository>();
         services.AddSingleton<IQueryHistoryRepository, DapperQueryHistoryRepository>();
         services.AddSingleton<IVisualizationRepository, DapperVisualizationRepository>();
-        services.AddSingleton<IDetectionRepository, DapperDetectionRepository>();
+        services.AddSingleton<IDetectionRecordRepository, DapperDetectionRepository>();
         services.AddSingleton<IDetectionRunRepository, DapperDetectionRunRepository>();
         services.AddSingleton<IAlertRepository, DapperAlertRepository>();
         services.AddSingleton<IAlertEntityRepository, DapperAlertEntityRepository>();
@@ -76,7 +76,7 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         var visualizations = services.GetRequiredService<IVisualizationRepository>();
         await visualizations.EnsureInitializedAsync(cancellationToken);
 
-        var detections = services.GetRequiredService<IDetectionRepository>();
+        var detections = services.GetRequiredService<IDetectionRecordRepository>();
         await detections.EnsureInitializedAsync(cancellationToken);
 
         var detectionRuns = services.GetRequiredService<IDetectionRunRepository>();

@@ -1,6 +1,7 @@
 
 using Dapper;
 using DeltaZulu.Platform.Domain.Analytics.Alerts;
+using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.Alerts;
 public sealed class DapperAlertRepository : IAlertRepository, IDisposable
@@ -261,7 +262,7 @@ public sealed class DapperAlertRepository : IAlertRepository, IDisposable
             new {
                 Id = id,
                 Status = status,
-                UpdatedAtUtc = FormatDateTime(updatedAtUtc)
+                UpdatedAtUtc = Format(updatedAtUtc)
             },
             cancellationToken: cancellationToken));
     }
@@ -276,7 +277,7 @@ public sealed class DapperAlertRepository : IAlertRepository, IDisposable
                 alert.DetectionId,
                 alert.DetectionVersion,
                 alert.DetectionRunId,
-                AlertTimeUtc = FormatDateTime(alert.AlertTimeUtc),
+                AlertTimeUtc = Format(alert.AlertTimeUtc),
                 alert.SourceView,
                 alert.SourceEventId,
                 alert.Severity,
@@ -284,8 +285,8 @@ public sealed class DapperAlertRepository : IAlertRepository, IDisposable
                 alert.RiskScore,
                 alert.EvidenceJson,
                 alert.Status,
-                CreatedAtUtc = FormatDateTime(alert.CreatedAtUtc),
-                UpdatedAtUtc = FormatDateTime(alert.UpdatedAtUtc)
+                CreatedAtUtc = Format(alert.CreatedAtUtc),
+                UpdatedAtUtc = Format(alert.UpdatedAtUtc)
             },
             cancellationToken: cancellationToken));
 
@@ -294,7 +295,7 @@ public sealed class DapperAlertRepository : IAlertRepository, IDisposable
             row.DetectionId,
             row.DetectionVersion,
             row.DetectionRunId,
-            ParseDateTime(row.AlertTimeUtc),
+            Parse(row.AlertTimeUtc),
             row.SourceView,
             row.SourceEventId,
             row.Severity,
@@ -302,19 +303,8 @@ public sealed class DapperAlertRepository : IAlertRepository, IDisposable
             row.RiskScore,
             row.EvidenceJson,
             row.Status,
-            ParseDateTime(row.CreatedAtUtc),
-            ParseDateTime(row.UpdatedAtUtc));
-
-    private static string FormatDateTime(DateTime value) => NormalizeUtc(value).ToString("O");
-
-    private static DateTime ParseDateTime(string value) => DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
-
-    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
-    {
-        DateTimeKind.Utc => value,
-        DateTimeKind.Local => value.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-    };
+            Parse(row.CreatedAtUtc),
+            Parse(row.UpdatedAtUtc));
 
     public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 

@@ -1,24 +1,24 @@
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics;
 
-internal static class SqliteDateTimeHelpers
+public static class SqliteDateTimeHelpers
 {
-    internal static string Format(DateTime value) => NormalizeUtc(value).ToString("O");
+    public static string Format(DateTime value) => NormalizeUtc(value).ToString("O");
 
-    internal static string? FormatNullable(DateTime? value) =>
+    public static string? FormatNullable(DateTime? value) =>
         value is null ? null : Format(value.Value);
 
-    internal static DateTime Parse(string value) =>
+    public static DateTime Parse(string value) =>
         DateTime.Parse(value, null, System.Globalization.DateTimeStyles.RoundtripKind);
 
-    internal static DateTime? ParseNullable(string? value) =>
+    public static DateTime? ParseNullable(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : Parse(value);
 
-    internal static string EscapeLikePattern(string value) => value
+    public static string EscapeLikePattern(string value) => value
         .Replace("\\", "\\\\", StringComparison.Ordinal)
         .Replace("%", "\\%", StringComparison.Ordinal)
         .Replace("_", "\\_", StringComparison.Ordinal);
 
-    internal static string? NormalizeLikeSearch(string? value) =>
+    public static string? NormalizeLikeSearch(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
