@@ -1,5 +1,5 @@
 using System.Text.Json;
-using DeltaZulu.Platform.Application.Analytics.Execution;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
 using DeltaZulu.Platform.Domain.Governance.Enums;
 using Microsoft.Extensions.Logging;

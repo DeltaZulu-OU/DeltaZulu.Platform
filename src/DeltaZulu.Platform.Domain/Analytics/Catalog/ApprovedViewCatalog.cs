@@ -1,9 +1,8 @@
-
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 using Kusto.Language;
 using Kusto.Language.Symbols;
 
-namespace DeltaZulu.Platform.Application.Analytics.Catalog;
+namespace DeltaZulu.Platform.Domain.Analytics.Catalog;
 /// <summary>
 /// Builds and maintains the approved public hunting view catalog.
 /// Produces the Kusto.Language GlobalState used for semantic analysis

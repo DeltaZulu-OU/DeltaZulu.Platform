@@ -1,6 +1,6 @@
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 
-namespace DeltaZulu.Platform.Application.Analytics.Execution;
+namespace DeltaZulu.Platform.Domain.Analytics.Execution;
 
 public sealed class AnalyticsQueryResult
 {

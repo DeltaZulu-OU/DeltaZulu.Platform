@@ -1,3 +1,5 @@
+using DeltaZulu.Platform.Domain.Analytics.Samples;
+
 namespace DeltaZulu.Platform.Application.Analytics.Samples;
 
 public static class SampleQueryCatalog

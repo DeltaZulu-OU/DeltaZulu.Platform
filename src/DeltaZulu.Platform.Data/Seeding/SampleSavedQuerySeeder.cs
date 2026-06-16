@@ -1,6 +1,7 @@
 
 using System.Text;
 using DeltaZulu.Platform.Application.Analytics.Samples;
+using DeltaZulu.Platform.Domain.Analytics.Samples;
 using DeltaZulu.Platform.Domain.Analytics.SavedQueries;
 
 namespace DeltaZulu.Platform.Data.Seeding;

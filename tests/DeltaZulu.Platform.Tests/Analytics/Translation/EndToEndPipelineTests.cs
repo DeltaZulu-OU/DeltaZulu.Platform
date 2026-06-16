@@ -1,9 +1,8 @@
-
-using DeltaZulu.Platform.Application.Analytics.Catalog;
 using DeltaZulu.Platform.Application.Analytics.Planning;
 using DeltaZulu.Platform.Data.Analytics;
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
+using DeltaZulu.Platform.Domain.Analytics.Catalog;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 using DeltaZulu.Platform.Tests.Analytics.Fixtures;

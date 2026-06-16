@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Analytics.Execution;
+namespace DeltaZulu.Platform.Domain.Analytics.Execution;
 
 public sealed record AnalyticsQueryRequest(
     string QueryText,

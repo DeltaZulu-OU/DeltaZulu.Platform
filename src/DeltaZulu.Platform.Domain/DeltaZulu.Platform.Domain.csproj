@@ -11,4 +11,13 @@
     <InternalsVisibleTo Include="DeltaZulu.Platform.Data" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Analytics\Sample\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Kusto.Toolkit" />
+    <PackageReference Include="Microsoft.Azure.Kusto.Language" />
+  </ItemGroup>
+
 </Project>

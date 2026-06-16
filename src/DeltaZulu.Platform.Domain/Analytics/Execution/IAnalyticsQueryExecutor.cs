@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Analytics.Execution;
+namespace DeltaZulu.Platform.Domain.Analytics.Execution;
 
 public interface IAnalyticsQueryExecutor
 {

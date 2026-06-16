@@ -1,5 +1,3 @@
-using DeltaZulu.Platform.Domain.Analytics;
-
 namespace DeltaZulu.Platform.Domain.Analytics.SavedQueries;
 
 public interface ISavedQueryRepository

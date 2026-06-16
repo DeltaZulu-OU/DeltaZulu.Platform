@@ -1,8 +1,6 @@
-using DeltaZulu.Platform.Application.Analytics.Execution;
-using DeltaZulu.Platform.Data.Analytics;
 using DeltaZulu.Platform.Data.DuckDb;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
-using DuckDB.NET.Data;
 using Microsoft.Extensions.Logging;
 
 namespace DeltaZulu.Platform.Data.Analytics.Execution;

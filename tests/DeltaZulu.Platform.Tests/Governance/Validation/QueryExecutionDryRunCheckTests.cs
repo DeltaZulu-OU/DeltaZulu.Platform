@@ -1,5 +1,5 @@
-using DeltaZulu.Platform.Application.Analytics.Execution;
 using DeltaZulu.Platform.Application.Governance.Validation.Checks;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
 using Microsoft.Extensions.Logging.Abstractions;

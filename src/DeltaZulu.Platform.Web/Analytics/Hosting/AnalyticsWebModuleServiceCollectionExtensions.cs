@@ -1,6 +1,3 @@
-
-using DeltaZulu.Platform.Application.Analytics.Catalog;
-using DeltaZulu.Platform.Application.Analytics.Execution;
 using DeltaZulu.Platform.Application.Analytics.Validation;
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Analytics;
@@ -14,6 +11,8 @@ using DeltaZulu.Platform.Web.Analytics.Library;
 using DeltaZulu.Platform.Web.Analytics.Rendering;
 using DeltaZulu.Platform.Web.Analytics.Services;
 using MudBlazor.Services;
+using DeltaZulu.Platform.Domain.Analytics.Catalog;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 
 namespace DeltaZulu.Platform.Web.Analytics.Hosting;
 public static class AnalyticsWebModuleServiceCollectionExtensions

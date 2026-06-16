@@ -1,5 +1,4 @@
-
-using DeltaZulu.Platform.Application.Analytics.Catalog;
+using DeltaZulu.Platform.Domain.Analytics.Catalog;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using Kusto.Language.Syntax;

@@ -1,8 +1,8 @@
-using DeltaZulu.Platform.Application.Analytics.Execution;
 using DeltaZulu.Platform.Application.Governance;
 using DeltaZulu.Platform.Application.Governance.Services;
 using DeltaZulu.Platform.Application.Governance.Validation;
 using DeltaZulu.Platform.Data.Sqlite.Governance;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
 using DeltaZulu.Platform.Tests.Governance.Infrastructure;
 using Microsoft.Data.Sqlite;

@@ -1,4 +1,4 @@
-using DeltaZulu.Platform.Application.Analytics.Execution;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Analytics.QueryHistory;
 using DeltaZulu.Platform.Web.Analytics.Services;

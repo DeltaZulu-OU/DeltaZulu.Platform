@@ -1,6 +1,5 @@
 
 using System.Text.RegularExpressions;
-using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 
 namespace DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
