@@ -1,10 +1,11 @@
 
 using Dapper;
+using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.Candidates;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.Candidates;
-public sealed class DapperIncidentCandidateRepository : IIncidentCandidateRepository, IApplicationPersistenceRepository, IDisposable
+public sealed class DapperIncidentCandidateRepository : DapperRepositoryBase, IIncidentCandidateRepository
 {
     private const string CreateSchemaSql =
         """
@@ -198,45 +199,18 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
         ORDER BY alert_id;
         """;
 
-    private readonly IAppDbConnectionFactory _connectionFactory;
-    private readonly SemaphoreSlim _schemaSemaphore = new(1, 1);
-    private bool _initialized;
 
     public DapperIncidentCandidateRepository(IAppDbConnectionFactory connectionFactory)
+        : base(connectionFactory, CreateSchemaSql)
     {
-        _connectionFactory = connectionFactory;
     }
 
-    public async Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
-    {
-        if (_initialized)
-        {
-            return;
-        }
-
-        await _schemaSemaphore.WaitAsync(cancellationToken);
-        try
-        {
-            if (_initialized)
-            {
-                return;
-            }
-
-            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
-            await connection.ExecuteAsync(new CommandDefinition(CreateSchemaSql, cancellationToken: cancellationToken));
-            _initialized = true;
-        }
-        finally
-        {
-            _schemaSemaphore.Release();
-        }
-    }
 
     public async Task<IReadOnlyList<IncidentCandidateRecord>> ListAsync(CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<CandidateRow>(
             new CommandDefinition(ListSql, cancellationToken: cancellationToken));
@@ -250,7 +224,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<CandidateRow>(
             new CommandDefinition(ListByStatusSql, new { Status = status }, cancellationToken: cancellationToken));
@@ -265,7 +239,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<CandidateRow>(
             new CommandDefinition(ListByEntitySql, new { EntityType = entityType, EntityValue = entityValue }, cancellationToken: cancellationToken));
@@ -279,7 +253,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         var row = await connection.QuerySingleOrDefaultAsync<CandidateRow>(
             new CommandDefinition(GetSql, new { Id = id }, cancellationToken: cancellationToken));
@@ -296,7 +270,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpsertSql,
@@ -327,7 +301,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpdateStatusSql,
@@ -350,7 +324,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         foreach (var link in links)
@@ -377,7 +351,7 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<CandidateAlertLink>(
             new CommandDefinition(ListAlertLinksSql, new { CandidateId = candidateId }, cancellationToken: cancellationToken));
@@ -402,7 +376,6 @@ public sealed class DapperIncidentCandidateRepository : IIncidentCandidateReposi
             Parse(row.CreatedAtUtc),
             Parse(row.UpdatedAtUtc));
 
-    public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 
     private sealed class CandidateRow
     {

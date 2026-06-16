@@ -1,11 +1,12 @@
 
 using Dapper;
+using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using AppIQueryHistoryRepository = DeltaZulu.Platform.Domain.Analytics.QueryHistory.IQueryHistoryRepository;
 using AppQueryHistoryRecord = DeltaZulu.Platform.Domain.Analytics.QueryHistory.QueryHistoryRecord;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.QueryHistory;
-public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, IApplicationPersistenceRepository, IDisposable
+public sealed class DapperQueryHistoryRepository : DapperRepositoryBase, AppIQueryHistoryRepository
 {
     private const string CreateSchemaSql =
         """
@@ -65,39 +66,12 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
         DELETE FROM query_history;
         """;
 
-    private readonly IAppDbConnectionFactory _connectionFactory;
-    private readonly SemaphoreSlim _schemaSemaphore = new(1, 1);
-    private bool _initialized;
 
     public DapperQueryHistoryRepository(IAppDbConnectionFactory connectionFactory)
+        : base(connectionFactory, CreateSchemaSql)
     {
-        _connectionFactory = connectionFactory;
     }
 
-    public async Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
-    {
-        if (_initialized)
-        {
-            return;
-        }
-
-        await _schemaSemaphore.WaitAsync(cancellationToken);
-        try
-        {
-            if (_initialized)
-            {
-                return;
-            }
-
-            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
-            await connection.ExecuteAsync(new CommandDefinition(CreateSchemaSql, cancellationToken: cancellationToken));
-            _initialized = true;
-        }
-        finally
-        {
-            _schemaSemaphore.Release();
-        }
-    }
 
     public async Task<IReadOnlyList<AppQueryHistoryRecord>> ListRecentAsync(
         int limit = 50,
@@ -110,7 +84,7 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<QueryHistoryRow>(
             new CommandDefinition(ListRecentSql, new { Limit = limit }, cancellationToken: cancellationToken));
@@ -126,7 +100,7 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             InsertSql,
@@ -146,7 +120,7 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(ClearSql, cancellationToken: cancellationToken));
     }
@@ -186,5 +160,4 @@ public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, I
         public string? DiagnosticSummary { get; init; }
     }
 
-    public void Dispose() => _schemaSemaphore.Dispose();
 }

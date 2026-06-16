@@ -1,12 +1,38 @@
 using Dapper;
+using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Domain.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.CuratedAnalytics;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.CuratedAnalytics;
 
-public sealed class DapperCuratedAnalyticRepository : ICuratedAnalyticRepository, IApplicationPersistenceRepository, IDisposable
+public sealed class DapperCuratedAnalyticRepository : DapperRepositoryBase, ICuratedAnalyticRepository
 {
+
+    private const string CreateSchemaSql =
+        """
+        CREATE TABLE IF NOT EXISTS curated_analytics (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT NULL,
+            query_text TEXT NOT NULL,
+            purpose INTEGER NOT NULL DEFAULT 0,
+            required_views TEXT NULL,
+            required_fields TEXT NULL,
+            expected_result_shape TEXT NULL,
+            entity_mappings_json TEXT NULL,
+            known_false_positives TEXT NULL,
+            severity_hint INTEGER NULL,
+            confidence_hint INTEGER NULL,
+            risk_hint INTEGER NULL,
+            notes TEXT NULL,
+            promoted_to_detection_slug TEXT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            last_run_at TEXT NULL
+        );
+        """;
+
     private const string Columns =
         """
             id AS Id,
@@ -29,68 +55,16 @@ public sealed class DapperCuratedAnalyticRepository : ICuratedAnalyticRepository
             last_run_at AS LastRunAt
         """;
 
-    private readonly IAppDbConnectionFactory _connectionFactory;
-    private readonly SemaphoreSlim _schemaSemaphore = new(1, 1);
-    private bool _initialized;
-
     public DapperCuratedAnalyticRepository(IAppDbConnectionFactory connectionFactory)
+        : base(connectionFactory, CreateSchemaSql)
     {
-        _connectionFactory = connectionFactory;
-    }
-
-    public async Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
-    {
-        if (_initialized)
-        {
-            return;
-        }
-
-        await _schemaSemaphore.WaitAsync(cancellationToken);
-        try
-        {
-            if (_initialized)
-            {
-                return;
-            }
-
-            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
-            await connection.ExecuteAsync(new CommandDefinition(
-                """
-                CREATE TABLE IF NOT EXISTS curated_analytics (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    description TEXT NULL,
-                    query_text TEXT NOT NULL,
-                    purpose INTEGER NOT NULL DEFAULT 0,
-                    required_views TEXT NULL,
-                    required_fields TEXT NULL,
-                    expected_result_shape TEXT NULL,
-                    entity_mappings_json TEXT NULL,
-                    known_false_positives TEXT NULL,
-                    severity_hint INTEGER NULL,
-                    confidence_hint INTEGER NULL,
-                    risk_hint INTEGER NULL,
-                    notes TEXT NULL,
-                    promoted_to_detection_slug TEXT NULL,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    last_run_at TEXT NULL
-                );
-                """,
-                cancellationToken: cancellationToken));
-            _initialized = true;
-        }
-        finally
-        {
-            _schemaSemaphore.Release();
-        }
     }
 
     public async Task<IReadOnlyList<CuratedAnalyticRecord>> ListAsync(CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
         var rows = await connection.QueryAsync<Row>(
             new CommandDefinition(
                 $"SELECT {Columns} FROM curated_analytics ORDER BY updated_at DESC, name ASC;",
@@ -127,7 +101,7 @@ public sealed class DapperCuratedAnalyticRepository : ICuratedAnalyticRepository
                 OR description LIKE @SearchPattern ESCAPE '\' COLLATE NOCASE
             """;
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         var totalCount = await connection.ExecuteScalarAsync<int>(
             new CommandDefinition(
@@ -153,7 +127,7 @@ public sealed class DapperCuratedAnalyticRepository : ICuratedAnalyticRepository
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
         var row = await connection.QuerySingleOrDefaultAsync<Row>(
             new CommandDefinition(
                 $"SELECT {Columns} FROM curated_analytics WHERE id = @Id;",
@@ -172,7 +146,7 @@ public sealed class DapperCuratedAnalyticRepository : ICuratedAnalyticRepository
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
         await connection.ExecuteAsync(new CommandDefinition(
             """
             INSERT INTO curated_analytics (
@@ -239,7 +213,7 @@ public sealed class DapperCuratedAnalyticRepository : ICuratedAnalyticRepository
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
         await connection.ExecuteAsync(new CommandDefinition(
             "DELETE FROM curated_analytics WHERE id = @Id;",
             new { Id = id },
@@ -252,14 +226,13 @@ public sealed class DapperCuratedAnalyticRepository : ICuratedAnalyticRepository
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
         await connection.ExecuteAsync(new CommandDefinition(
             "UPDATE curated_analytics SET last_run_at = @RunAt, updated_at = @RunAt WHERE id = @Id;",
             new { Id = id, RunAt = Format(runAt) },
             cancellationToken: cancellationToken));
     }
 
-    public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 
     private static CuratedAnalyticRecord ToRecord(Row row) => new(
         row.Id,

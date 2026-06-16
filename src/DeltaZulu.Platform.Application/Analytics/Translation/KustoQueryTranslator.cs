@@ -755,7 +755,8 @@ internal sealed class KustoQueryTranslator
         var left = TranslateScalarExpr(leftNode);
 
         var listNode = children
-            .FirstOrDefault(c => c.GetType().Name == "ExpressionList")
+            .OfType<ExpressionList>()
+            .FirstOrDefault()
             ?? throw new NotSupportedException("IN expression requires a parenthesized expression list");
 
         var directItems = KustoSyntaxHelpers.ExtractDirectExpressionListItems(listNode).ToList();

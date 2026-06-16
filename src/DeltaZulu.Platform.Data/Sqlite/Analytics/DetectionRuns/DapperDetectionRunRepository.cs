@@ -1,10 +1,11 @@
 
 using Dapper;
+using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.DetectionRuns;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.DetectionRuns;
-public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IApplicationPersistenceRepository, IDisposable
+public sealed class DapperDetectionRunRepository : DapperRepositoryBase, IDetectionRunRepository
 {
     private const string CreateSchemaSql =
         """
@@ -94,39 +95,12 @@ public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IApp
             completed_at_utc = excluded.completed_at_utc;
         """;
 
-    private readonly IAppDbConnectionFactory _connectionFactory;
-    private readonly SemaphoreSlim _schemaSemaphore = new(1, 1);
-    private bool _initialized;
 
     public DapperDetectionRunRepository(IAppDbConnectionFactory connectionFactory)
+        : base(connectionFactory, CreateSchemaSql)
     {
-        _connectionFactory = connectionFactory;
     }
 
-    public async Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
-    {
-        if (_initialized)
-        {
-            return;
-        }
-
-        await _schemaSemaphore.WaitAsync(cancellationToken);
-        try
-        {
-            if (_initialized)
-            {
-                return;
-            }
-
-            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
-            await connection.ExecuteAsync(new CommandDefinition(CreateSchemaSql, cancellationToken: cancellationToken));
-            _initialized = true;
-        }
-        finally
-        {
-            _schemaSemaphore.Release();
-        }
-    }
 
     public async Task<IReadOnlyList<DetectionRunRecord>> ListByDetectionAsync(string detectionId, CancellationToken cancellationToken = default)
     {
@@ -134,7 +108,7 @@ public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IApp
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<DetectionRunRow>(
             new CommandDefinition(ListByDetectionSql, new { DetectionId = detectionId }, cancellationToken: cancellationToken));
@@ -148,7 +122,7 @@ public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IApp
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         var row = await connection.QuerySingleOrDefaultAsync<DetectionRunRow>(
             new CommandDefinition(GetSql, new { Id = id }, cancellationToken: cancellationToken));
@@ -166,7 +140,7 @@ public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IApp
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpsertSql,
@@ -203,7 +177,6 @@ public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IApp
             Parse(row.StartedAtUtc),
             ParseNullable(row.CompletedAtUtc));
 
-    public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 
     private sealed class DetectionRunRow
     {

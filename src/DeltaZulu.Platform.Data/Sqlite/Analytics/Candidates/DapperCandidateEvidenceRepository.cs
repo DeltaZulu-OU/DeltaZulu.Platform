@@ -1,10 +1,11 @@
 
 using Dapper;
+using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.Candidates;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.Candidates;
-public sealed class DapperCandidateEvidenceRepository : ICandidateEvidenceRepository, IApplicationPersistenceRepository, IDisposable
+public sealed class DapperCandidateEvidenceRepository : DapperRepositoryBase, ICandidateEvidenceRepository
 {
     private const string CreateSchemaSql =
         """
@@ -43,39 +44,12 @@ public sealed class DapperCandidateEvidenceRepository : ICandidateEvidenceReposi
         );
         """;
 
-    private readonly IAppDbConnectionFactory _connectionFactory;
-    private readonly SemaphoreSlim _schemaSemaphore = new(1, 1);
-    private bool _initialized;
 
     public DapperCandidateEvidenceRepository(IAppDbConnectionFactory connectionFactory)
+        : base(connectionFactory, CreateSchemaSql)
     {
-        _connectionFactory = connectionFactory;
     }
 
-    public async Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
-    {
-        if (_initialized)
-        {
-            return;
-        }
-
-        await _schemaSemaphore.WaitAsync(cancellationToken);
-        try
-        {
-            if (_initialized)
-            {
-                return;
-            }
-
-            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
-            await connection.ExecuteAsync(new CommandDefinition(CreateSchemaSql, cancellationToken: cancellationToken));
-            _initialized = true;
-        }
-        finally
-        {
-            _schemaSemaphore.Release();
-        }
-    }
 
     public async Task<IReadOnlyList<CandidateEvidenceRecord>> ListByCandidateAsync(string candidateId, CancellationToken cancellationToken = default)
     {
@@ -83,7 +57,7 @@ public sealed class DapperCandidateEvidenceRepository : ICandidateEvidenceReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<EvidenceRow>(
             new CommandDefinition(ListByCandidateSql, new { CandidateId = candidateId }, cancellationToken: cancellationToken));
@@ -99,7 +73,7 @@ public sealed class DapperCandidateEvidenceRepository : ICandidateEvidenceReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         await ExecuteInsertAsync(connection, evidence, cancellationToken);
     }
@@ -115,7 +89,7 @@ public sealed class DapperCandidateEvidenceRepository : ICandidateEvidenceReposi
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         foreach (var item in evidence)
@@ -150,7 +124,6 @@ public sealed class DapperCandidateEvidenceRepository : ICandidateEvidenceReposi
             row.ContentJson,
             Parse(row.CollectedAtUtc));
 
-    public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 
     private sealed class EvidenceRow
     {

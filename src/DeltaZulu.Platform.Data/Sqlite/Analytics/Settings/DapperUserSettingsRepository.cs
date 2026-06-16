@@ -1,11 +1,12 @@
 
 using Dapper;
+using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using AppIUserSettingsRepository = DeltaZulu.Platform.Domain.Analytics.Settings.IUserSettingsRepository;
 using AppUserSettingsDefaults = DeltaZulu.Platform.Domain.Analytics.Settings.UserSettingsDefaults;
 using AppUserSettingsRecord = DeltaZulu.Platform.Domain.Analytics.Settings.UserSettingsRecord;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.Settings;
-public sealed class DapperUserSettingsRepository : AppIUserSettingsRepository, IApplicationPersistenceRepository, IDisposable
+public sealed class DapperUserSettingsRepository : DapperRepositoryBase, AppIUserSettingsRepository
 {
     private const string CreateSchemaSql =
         """
@@ -37,45 +38,18 @@ public sealed class DapperUserSettingsRepository : AppIUserSettingsRepository, I
         WHERE id = 1;
         """;
 
-    private readonly IAppDbConnectionFactory _connectionFactory;
-    private readonly SemaphoreSlim _schemaSemaphore = new(1, 1);
-    private bool _initialized;
 
     public DapperUserSettingsRepository(IAppDbConnectionFactory connectionFactory)
+        : base(connectionFactory, CreateSchemaSql)
     {
-        _connectionFactory = connectionFactory;
     }
 
-    public async Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
-    {
-        if (_initialized)
-        {
-            return;
-        }
-
-        await _schemaSemaphore.WaitAsync(cancellationToken);
-        try
-        {
-            if (_initialized)
-            {
-                return;
-            }
-
-            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
-            await connection.ExecuteAsync(new CommandDefinition(CreateSchemaSql, cancellationToken: cancellationToken));
-            _initialized = true;
-        }
-        finally
-        {
-            _schemaSemaphore.Release();
-        }
-    }
 
     public async Task<AppUserSettingsRecord> LoadAsync(CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         var row = await connection.QuerySingleOrDefaultAsync<UserSettingsRow>(
             new CommandDefinition(SelectSql, cancellationToken: cancellationToken));
@@ -96,7 +70,7 @@ public sealed class DapperUserSettingsRepository : AppIUserSettingsRepository, I
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         await connection.ExecuteAsync(new CommandDefinition(
             UpdateSql,
@@ -120,7 +94,6 @@ public sealed class DapperUserSettingsRepository : AppIUserSettingsRepository, I
         return checked((int)value.Value);
     }
 
-    public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 
     private sealed class UserSettingsRow
     {

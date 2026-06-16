@@ -1,10 +1,11 @@
 
 using Dapper;
+using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.AlertEntities;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.AlertEntities;
-public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IApplicationPersistenceRepository, IDisposable
+public sealed class DapperAlertEntityRepository : DapperRepositoryBase, IAlertEntityRepository
 {
     private const string CreateSchemaSql =
         """
@@ -79,39 +80,12 @@ public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IAppli
         );
         """;
 
-    private readonly IAppDbConnectionFactory _connectionFactory;
-    private readonly SemaphoreSlim _schemaSemaphore = new(1, 1);
-    private bool _initialized;
 
     public DapperAlertEntityRepository(IAppDbConnectionFactory connectionFactory)
+        : base(connectionFactory, CreateSchemaSql)
     {
-        _connectionFactory = connectionFactory;
     }
 
-    public async Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
-    {
-        if (_initialized)
-        {
-            return;
-        }
-
-        await _schemaSemaphore.WaitAsync(cancellationToken);
-        try
-        {
-            if (_initialized)
-            {
-                return;
-            }
-
-            await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
-            await connection.ExecuteAsync(new CommandDefinition(CreateSchemaSql, cancellationToken: cancellationToken));
-            _initialized = true;
-        }
-        finally
-        {
-            _schemaSemaphore.Release();
-        }
-    }
 
     public async Task<IReadOnlyList<AlertEntityRecord>> ListByAlertAsync(string alertId, CancellationToken cancellationToken = default)
     {
@@ -119,7 +93,7 @@ public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IAppli
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<AlertEntityRow>(
             new CommandDefinition(ListByAlertSql, new { AlertId = alertId }, cancellationToken: cancellationToken));
@@ -134,7 +108,7 @@ public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IAppli
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
         var rows = await connection.QueryAsync<AlertEntityRow>(
             new CommandDefinition(ListByEntityValueSql, new { EntityType = entityType, EntityValue = entityValue }, cancellationToken: cancellationToken));
@@ -153,7 +127,7 @@ public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IAppli
 
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         foreach (var entity in entities)
@@ -193,7 +167,6 @@ public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IAppli
             row.IsHighFanout != 0,
             Parse(row.CreatedAtUtc));
 
-    public void Dispose() => ((IDisposable)_schemaSemaphore).Dispose();
 
     private sealed class AlertEntityRow
     {
