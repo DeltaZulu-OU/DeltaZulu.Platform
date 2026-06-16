@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Web.Analytics.Dashboards;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Web;
+
 [TestClass]
 public sealed class DashboardJsonTransferTests
 {
@@ -47,8 +47,7 @@ public sealed class DashboardJsonTransferTests
     {
         var now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        return new DashboardDefinition
-        {
+        return new DashboardDefinition {
             Id = "operations",
             Name = "Operations",
             Description = "Operational dashboard",

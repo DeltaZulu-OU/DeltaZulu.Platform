@@ -20,8 +20,7 @@ public sealed class PocUserContext
 
     public PocUserPersona CurrentPersona { get; private set; }
 
-    public PocUser CurrentUser => CurrentPersona switch
-    {
+    public PocUser CurrentUser => CurrentPersona switch {
         PocUserPersona.Reviewer => Reviewer,
         _ => Analyst,
     };

@@ -523,10 +523,10 @@ body.hunt-splitter-active {
     border-bottom: 1px solid var(--border);
 }
 
-    .hunt-tab-button[disabled] {
-        opacity: .5;
-        cursor: not-allowed;
-    }
+.hunt-tab-button[disabled] {
+    opacity: .5;
+    cursor: not-allowed;
+}
 
 .hunt-results-content {
     display: flex;
@@ -1632,12 +1632,12 @@ body.hunt-splitter-active {
     color: var(--dz-code-text, #FFFFFF);
 }
 
-.dz-code-drawer .hunt-drawer-content code {
-    background: transparent;
-    color: inherit;
-    padding: 0;
-    border: 0;
-}
+    .dz-code-drawer .hunt-drawer-content code {
+        background: transparent;
+        color: inherit;
+        padding: 0;
+        border: 0;
+    }
 
 .kql-keyword,
 .yaml-key {
@@ -2903,10 +2903,10 @@ body.hunt-splitter-active {
 
 /* .hunt-topbar — authoritative definition is in the adaptation section above */
 
-    .hunt-topbar .mud-toolbar {
-        min-height: 60px;
-        gap: 18px;
-    }
+.hunt-topbar .mud-toolbar {
+    min-height: 60px;
+    gap: 18px;
+}
 
 .hunt-brand {
     display: inline-flex;
@@ -2986,9 +2986,9 @@ body.hunt-splitter-active {
 
 /* .hunt-settings-link — authoritative definition in adaptation section */
 
-    .hunt-settings-link:hover {
-        color: var(--dz-product-text);
-    }
+.hunt-settings-link:hover {
+    color: var(--dz-product-text);
+}
 
 .hunt-main-content,
 .hunt-main {

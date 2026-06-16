@@ -1,6 +1,5 @@
-
-using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Analytics;
+using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 using DeltaZulu.Platform.Domain.Analytics.SavedQueries;
@@ -11,6 +10,7 @@ using DeltaZulu.Platform.Web.Analytics.Rendering;
 using Microsoft.Extensions.Logging;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Web;
+
 [TestClass]
 public sealed class DashboardWidgetRunnerTests
 {
@@ -72,8 +72,7 @@ public sealed class DashboardWidgetRunnerTests
             now);
 
         var runner = CreateRunner(fakeRunner, savedQueries, visualizations);
-        var widget = CreateWidget() with
-        {
+        var widget = CreateWidget() with {
             QueryText = string.Empty,
             VisualizationId = "visualization-1"
         };
@@ -139,8 +138,7 @@ public sealed class DashboardWidgetRunnerTests
     {
         var fakeRunner = new FakeRenderedQueryRunner(CreateRenderedResult(CreateSuccessfulQueryResult(), CreateRenderableChart()));
         var runner = CreateRunner(fakeRunner);
-        var widget = CreateWidget() with
-        {
+        var widget = CreateWidget() with {
             QueryText = string.Empty,
             VisualizationId = "missing-visualization"
         };
@@ -190,8 +188,7 @@ public sealed class DashboardWidgetRunnerTests
     {
         var fakeRunner = new FakeRenderedQueryRunner(CreateRenderedResult(CreateSuccessfulQueryResult(), CreateRenderableChart()));
         var runner = CreateRunner(fakeRunner);
-        var widget = CreateWidget() with
-        {
+        var widget = CreateWidget() with {
             Kind = DashboardWidgetKind.Markdown,
             QueryText = string.Empty
         };
@@ -260,8 +257,7 @@ public sealed class DashboardWidgetRunnerTests
             logger ?? new RecordingLogger<DashboardWidgetRunner>());
 
     private static DashboardWidgetDefinition CreateWidget()
-        => new()
-        {
+        => new() {
             Id = "widget-1",
             Title = "Widget 1",
             QueryText = "ProcessEvent | summarize LaunchCount = count() by AccountName | render barchart xcolumn=AccountName ycolumns=LaunchCount"

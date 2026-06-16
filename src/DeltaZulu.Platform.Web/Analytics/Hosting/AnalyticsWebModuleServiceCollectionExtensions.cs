@@ -1,8 +1,10 @@
 using DeltaZulu.Platform.Application.Analytics.Validation;
-using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Analytics;
 using DeltaZulu.Platform.Data.Analytics.Execution;
+using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
+using DeltaZulu.Platform.Domain.Analytics.Catalog;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
 using DeltaZulu.Platform.Web.Analytics.Dashboards.DependencyInjection;
@@ -11,10 +13,9 @@ using DeltaZulu.Platform.Web.Analytics.Library;
 using DeltaZulu.Platform.Web.Analytics.Rendering;
 using DeltaZulu.Platform.Web.Analytics.Services;
 using MudBlazor.Services;
-using DeltaZulu.Platform.Domain.Analytics.Catalog;
-using DeltaZulu.Platform.Domain.Analytics.Execution;
 
 namespace DeltaZulu.Platform.Web.Analytics.Hosting;
+
 public static class AnalyticsWebModuleServiceCollectionExtensions
 {
     private static readonly string[] AppStateTables = [

@@ -1,8 +1,8 @@
-
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using Kusto.Language.Syntax;
 
 namespace DeltaZulu.Platform.Application.Analytics.Translation;
+
 /// <summary>Translates projection aliases and ordered expressions using scalar translation.</summary>
 internal sealed class KustoProjectionTranslator
 {
@@ -22,8 +22,7 @@ internal sealed class KustoProjectionTranslator
         }
 
         var scalar = _translateScalarExpr(expr);
-        var name = scalar switch
-        {
+        var name = scalar switch {
             ColumnRef column => column.Name,
             _ when expr is FunctionCallExpression function => function.Name.SimpleName + "_",
             _ => expr.ToString().Replace("\"", "").Trim()

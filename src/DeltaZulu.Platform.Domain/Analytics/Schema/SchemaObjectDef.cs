@@ -1,4 +1,3 @@
-
 using DeltaZulu.Platform.Domain.Analytics.Mapping;
 
 namespace DeltaZulu.Platform.Domain.Analytics.Schema;

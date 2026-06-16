@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Data.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 namespace DeltaZulu.Platform.Data.DuckDb;
+
 public sealed class QueryStreamResult
 {
     public IReadOnlyList<ResultColumn> Columns { get; init; } = [];
@@ -20,8 +20,7 @@ public sealed class QueryStreamResult
         string? plannerStatsJson,
         string? sqlShapeStatsJson,
         List<string>? debugTrace,
-        DiagnosticBag diagnostics) => new()
-        {
+        DiagnosticBag diagnostics) => new() {
             Success = true,
             Columns = columns,
             RowCount = rowCount,
@@ -37,8 +36,7 @@ public sealed class QueryStreamResult
         List<string>? debugTrace = null,
         string? generatedSql = null,
         string? plannerStatsJson = null,
-        string? sqlShapeStatsJson = null) => new()
-        {
+        string? sqlShapeStatsJson = null) => new() {
             Success = false,
             DebugTrace = debugTrace ?? [],
             Diagnostics = diagnostics,

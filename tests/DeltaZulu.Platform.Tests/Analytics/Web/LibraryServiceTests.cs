@@ -1,4 +1,3 @@
-
 using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
 using DeltaZulu.Platform.Domain.Analytics.QueryHistory;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
@@ -9,6 +8,7 @@ using DeltaZulu.Platform.Web.Analytics.Dashboards.Persistence;
 using DeltaZulu.Platform.Web.Analytics.Services;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Web;
+
 [TestClass]
 public sealed class LibraryServiceTests
 {
@@ -39,8 +39,7 @@ public sealed class LibraryServiceTests
             now.AddMinutes(-2),
             now.AddMinutes(-1)), TestContext.CancellationToken);
 
-        await dashboards.SaveAsync(new DashboardDefinition
-        {
+        await dashboards.SaveAsync(new DashboardDefinition {
             Id = "dashboard-1",
             Name = "SOC overview",
             Description = "Daily view",
@@ -157,8 +156,7 @@ public sealed class LibraryServiceTests
         var now = new DateTime(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
         var dashboards = new InMemoryDashboardRepository();
 
-        await dashboards.SaveAsync(new DashboardDefinition
-        {
+        await dashboards.SaveAsync(new DashboardDefinition {
             Id = "dashboard-1",
             Name = "SOC overview",
             CreatedAtUtc = now,
@@ -310,8 +308,7 @@ public sealed class LibraryServiceTests
         public Task<IReadOnlyList<DashboardSummary>> ListAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<DashboardSummary>>(
                 _dashboards.Values
-                    .Select(dashboard => new DashboardSummary
-                    {
+                    .Select(dashboard => new DashboardSummary {
                         Id = dashboard.Id,
                         Name = dashboard.Name,
                         Description = dashboard.Description,
@@ -331,8 +328,7 @@ public sealed class LibraryServiceTests
     private sealed class FakeRenderDirectiveParser : IRenderDirectiveParser
     {
         public RenderDirectiveParseResult Parse(string queryText)
-            => new()
-            {
+            => new() {
                 QueryTextWithoutRender = queryText,
                 Directive = RenderDirective.Table()
             };

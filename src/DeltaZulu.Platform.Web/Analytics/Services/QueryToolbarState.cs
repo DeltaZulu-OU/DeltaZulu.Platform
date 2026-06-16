@@ -1,8 +1,8 @@
-
 using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace DeltaZulu.Platform.Web.Analytics.Services;
+
 public sealed partial class QueryToolbarState
 {
     private const string SqlPrefix = "select";

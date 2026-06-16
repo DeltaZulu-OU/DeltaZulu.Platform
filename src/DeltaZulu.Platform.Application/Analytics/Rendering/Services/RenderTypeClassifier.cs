@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Application.Analytics.Rendering.Tabular;
 
 namespace DeltaZulu.Platform.Application.Analytics.Rendering.Services;
+
 public static class RenderTypeClassifier
 {
     private static readonly HashSet<string> NumericTypeNames = new(StringComparer.OrdinalIgnoreCase)
@@ -45,8 +45,7 @@ public static class RenderTypeClassifier
         var isNumeric = IsNumeric(normalizedTypeName, clrType);
         var isTemporal = IsTemporal(normalizedTypeName, clrType);
 
-        return new RenderColumn
-        {
+        return new RenderColumn {
             Name = name,
             TypeName = typeName,
             ClrType = clrType,

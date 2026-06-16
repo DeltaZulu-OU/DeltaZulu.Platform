@@ -1,8 +1,8 @@
-
 using DeltaZulu.Platform.Application.Analytics.Rendering;
 using DeltaZulu.Platform.Web.Analytics.Services;
 
 namespace DeltaZulu.Platform.Web.Analytics.Rendering;
+
 public static class AnalyticsRenderWebServiceCollectionExtensions
 {
     public static IServiceCollection AddAnalyticsRenderWeb(this IServiceCollection services)

@@ -23,8 +23,7 @@ public static class MedallionTestData
     public const string WindowsSysmonTable = "bronze.windows_sysmon_event";
 
     public static readonly IReadOnlyDictionary<string, long> ExpectedRowsByTable =
-        new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
-        {
+        new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase) {
             [WindowsSysmonTable] = WindowsSysmonRows,
             [WindowsSecurityTable] = WindowsSecurityRows,
             [DnsServerTable] = DnsServerRows
@@ -76,8 +75,7 @@ string.Join(Environment.NewLine + Environment.NewLine, GetSeedSqlByTable().Value
     public static string GetSeedSql() => GetMedallionSeedSql();
 
     public static IReadOnlyDictionary<string, string> GetSeedSqlByTable() =>
-                    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                    {
+                    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
                         [WindowsSysmonTable] = GetWindowsSysmonSeedSql(),
                         [WindowsSecurityTable] = GetWindowsSecuritySeedSql(),
                         [DnsServerTable] = GetDnsServerSeedSql()

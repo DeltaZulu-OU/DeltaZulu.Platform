@@ -1,9 +1,9 @@
-
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
 namespace DeltaZulu.Platform.Data.Seeding;
+
 /// <summary>
 /// <para>Builds compact deterministic seed SQL for development and test fixtures.</para>
 /// <para>
@@ -246,8 +246,7 @@ internal static class MockSeedSqlGenerator
                 ? "NT AUTHORITY\\SYSTEM"
                 : Users[i % (Users.Length - 1)];
 
-            var raw = new Dictionary<string, string?>
-            {
+            var raw = new Dictionary<string, string?> {
                 ["EventID"] = "1",
                 ["EventRecordID"] = (1000 + i).ToString(CultureInfo.InvariantCulture),
                 ["UtcTime"] = FormatIso(timestamp),
@@ -273,8 +272,7 @@ internal static class MockSeedSqlGenerator
             var host = Workstations[i % Workstations.Length];
             var user = Users[i % (Users.Length - 1)];
 
-            var raw = new Dictionary<string, string?>
-            {
+            var raw = new Dictionary<string, string?> {
                 ["EventID"] = "3",
                 ["EventRecordID"] = (3000 + i).ToString(CultureInfo.InvariantCulture),
                 ["UtcTime"] = FormatIso(timestamp),
@@ -307,8 +305,7 @@ internal static class MockSeedSqlGenerator
         for (var i = 0; i < 100; i++)
         {
             var timestamp = baseTime.AddHours(7).AddMinutes(i);
-            var eventId = (i % 10) switch
-            {
+            var eventId = (i % 10) switch {
                 0 or 1 or 2 or 3 => "4624",
                 4 or 5 => "4625",
                 6 => "4672",
@@ -350,8 +347,7 @@ internal static class MockSeedSqlGenerator
                 : "NOERROR";
             var clientIp = $"10.0.1.{20 + (i % 30)}";
 
-            var raw = new Dictionary<string, string?>
-            {
+            var raw = new Dictionary<string, string?> {
                 ["EventID"] = i % 11 == 0 ? "257" : "256",
                 ["EventRecordID"] = (7000 + i).ToString(CultureInfo.InvariantCulture),
                 ["TimeCreated"] = FormatIso(timestamp),
@@ -393,8 +389,7 @@ internal static class MockSeedSqlGenerator
         DateTime timestamp,
         string targetUser)
     {
-        var baseEvent = new Dictionary<string, string?>
-        {
+        var baseEvent = new Dictionary<string, string?> {
             ["EventID"] = eventId,
             ["EventRecordID"] = (5000 + index).ToString(CultureInfo.InvariantCulture),
             ["TimeCreated"] = FormatIso(timestamp),

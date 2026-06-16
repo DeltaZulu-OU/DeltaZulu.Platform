@@ -84,7 +84,6 @@ pre {
     border-right: 1px solid var(--color-border-default) !important;
 }
 
-
 .dz-side-nav__content {
     display: flex;
     flex-direction: column;

@@ -1,8 +1,8 @@
-
 using System.Globalization;
 using DuckDB.NET.Data;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Spike;
+
 /// <summary>
 /// Phase 0 smoke test: verify DuckDB.NET opens an in-memory database
 /// and executes a trivial query. If this fails, the runtime binding

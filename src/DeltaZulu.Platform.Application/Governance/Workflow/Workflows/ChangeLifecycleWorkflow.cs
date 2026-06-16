@@ -28,8 +28,7 @@ public sealed class ChangeLifecycleWorkflow : WorkflowBase
         builder.Description = "Tracks the PR-like lifecycle of a detection change request.";
 
         // Implementation cycle: ContentEdited → ChecksCompleted → Review → (loop or merge)
-        var implementationCycle = new Sequence
-        {
+        var implementationCycle = new Sequence {
             Activities =
             {
                 new Event(EventContentEdited) { Name = "WaitForContentEdit" },
@@ -73,8 +72,7 @@ public sealed class ChangeLifecycleWorkflow : WorkflowBase
         };
 
         // Post-merge phase: optional Published event, then done
-        var postMergePhase = new Fork
-        {
+        var postMergePhase = new Fork {
             JoinMode = ForkJoinMode.WaitAny,
             Branches =
             {
@@ -83,8 +81,7 @@ public sealed class ChangeLifecycleWorkflow : WorkflowBase
             }
         };
 
-        builder.Root = new Sequence
-        {
+        builder.Root = new Sequence {
             Activities =
             {
                 new WriteLine("Change lifecycle started."),

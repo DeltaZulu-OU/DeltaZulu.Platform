@@ -1,12 +1,11 @@
-
 using Dapper;
-using DeltaZulu.Platform.Data.Sqlite.Analytics;
-using AppISavedQueryRepository = DeltaZulu.Platform.Domain.Analytics.SavedQueries.ISavedQueryRepository;
-using AppSavedQueryRecord = DeltaZulu.Platform.Domain.Analytics.SavedQueries.SavedQueryRecord;
-using AppSavedQueryPage = DeltaZulu.Platform.Domain.Analytics.PageResult<DeltaZulu.Platform.Domain.Analytics.SavedQueries.SavedQueryRecord>;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
+using AppISavedQueryRepository = DeltaZulu.Platform.Domain.Analytics.SavedQueries.ISavedQueryRepository;
+using AppSavedQueryPage = DeltaZulu.Platform.Domain.Analytics.PageResult<DeltaZulu.Platform.Domain.Analytics.SavedQueries.SavedQueryRecord>;
+using AppSavedQueryRecord = DeltaZulu.Platform.Domain.Analytics.SavedQueries.SavedQueryRecord;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.SavedQueries;
+
 public sealed class DapperSavedQueryRepository : DapperRepositoryBase, AppISavedQueryRepository
 {
     private const string CreateSchemaSql =
@@ -119,12 +118,10 @@ public sealed class DapperSavedQueryRepository : DapperRepositoryBase, AppISaved
         WHERE id = @Id;
         """;
 
-
     public DapperSavedQueryRepository(IAppDbConnectionFactory connectionFactory)
         : base(connectionFactory, CreateSchemaSql)
     {
     }
-
 
     public async Task<IReadOnlyList<AppSavedQueryRecord>> ListAsync(CancellationToken cancellationToken = default)
     {
@@ -151,8 +148,7 @@ public sealed class DapperSavedQueryRepository : DapperRepositoryBase, AppISaved
 
         var boundedLimit = Math.Min(limit, 100);
         var normalizedSearch = NormalizeLikeSearch(searchText);
-        var parameters = new
-        {
+        var parameters = new {
             SearchText = normalizedSearch,
             SearchPattern = normalizedSearch is null ? null : $"%{EscapeLikePattern(normalizedSearch)}%",
             Offset = offset,
@@ -248,7 +244,6 @@ public sealed class DapperSavedQueryRepository : DapperRepositoryBase, AppISaved
             Parse(row.CreatedAt),
             Parse(row.UpdatedAt),
             ParseNullable(row.LastRunAt));
-
 
     private sealed class SavedQueryRow
     {

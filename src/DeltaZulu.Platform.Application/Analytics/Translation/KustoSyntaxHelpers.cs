@@ -1,7 +1,7 @@
-
 using Kusto.Language.Syntax;
 
 namespace DeltaZulu.Platform.Application.Analytics.Translation;
+
 /// <summary>Adapts Kusto.Language SDK list and path syntax shapes for translators.</summary>
 internal static class KustoSyntaxHelpers
 {
@@ -26,8 +26,7 @@ internal static class KustoSyntaxHelpers
         return result;
     }
 
-    public static Expression? UnwrapSeparated(SyntaxNode node) => node switch
-    {
+    public static Expression? UnwrapSeparated(SyntaxNode node) => node switch {
         SeparatedElement<Expression> separated => separated.Element,
         Expression expr => expr,
         _ => null

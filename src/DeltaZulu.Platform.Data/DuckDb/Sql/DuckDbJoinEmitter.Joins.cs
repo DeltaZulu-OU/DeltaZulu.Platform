@@ -49,8 +49,7 @@ internal sealed partial class DuckDbJoinEmitter
             _context.JoinRightAlias = null;
         }
 
-        var joinKind = join.Kind switch
-        {
+        var joinKind = join.Kind switch {
             JoinKind.Inner => "INNER JOIN",
             JoinKind.LeftOuter => "LEFT JOIN",
             JoinKind.RightOuter => "RIGHT JOIN",

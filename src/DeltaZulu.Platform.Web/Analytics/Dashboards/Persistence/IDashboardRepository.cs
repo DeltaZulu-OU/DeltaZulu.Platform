@@ -1,4 +1,5 @@
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards.Persistence;
+
 public interface IDashboardRepository
 {
     Task<IReadOnlyList<DashboardSummary>> ListAsync(CancellationToken ct = default);

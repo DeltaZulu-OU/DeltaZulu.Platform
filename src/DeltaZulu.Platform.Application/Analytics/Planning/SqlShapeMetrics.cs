@@ -1,4 +1,3 @@
-
 using System.Text.RegularExpressions;
 
 namespace DeltaZulu.Platform.Application.Analytics.Planning;

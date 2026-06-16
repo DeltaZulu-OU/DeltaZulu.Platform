@@ -1,8 +1,8 @@
-
 using System.Globalization;
 using DeltaZulu.Platform.Web.Analytics.Services;
 
 namespace DeltaZulu.Platform.Web.Analytics.Library;
+
 public sealed class LibraryPageState
 {
     public const int PageSize = 12;
@@ -46,8 +46,7 @@ public sealed class LibraryPageState
         => !Loading && FilteredItems.Count > PageSize;
 
     public string FilterTitle
-        => KindFilter switch
-        {
+        => KindFilter switch {
             LibraryItemKind.SavedQuery => "Saved queries",
             LibraryItemKind.Visualization => "Visualizations",
             LibraryItemKind.Dashboard => "Dashboards",
@@ -137,8 +136,7 @@ public sealed class LibraryPageState
 public static class LibraryLabels
 {
     public static string KindLabel(LibraryItemKind kind)
-        => kind switch
-        {
+        => kind switch {
             LibraryItemKind.SavedQuery => "Saved query",
             LibraryItemKind.Visualization => "Visualization",
             LibraryItemKind.Dashboard => "Dashboard",
@@ -146,8 +144,7 @@ public static class LibraryLabels
         };
 
     public static string StatusLabel(LibraryItemStatus status)
-        => status switch
-        {
+        => status switch {
             LibraryItemStatus.Ok => "OK",
             LibraryItemStatus.MissingDependency => "Missing dependency",
             _ => status.ToString()

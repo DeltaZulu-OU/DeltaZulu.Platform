@@ -1,10 +1,9 @@
-
 using Dapper;
-using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.Candidates;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.Candidates;
+
 public sealed class DapperCandidateEvidenceRepository : DapperRepositoryBase, ICandidateEvidenceRepository
 {
     private const string CreateSchemaSql =
@@ -44,12 +43,10 @@ public sealed class DapperCandidateEvidenceRepository : DapperRepositoryBase, IC
         );
         """;
 
-
     public DapperCandidateEvidenceRepository(IAppDbConnectionFactory connectionFactory)
         : base(connectionFactory, CreateSchemaSql)
     {
     }
-
 
     public async Task<IReadOnlyList<CandidateEvidenceRecord>> ListByCandidateAsync(string candidateId, CancellationToken cancellationToken = default)
     {
@@ -123,7 +120,6 @@ public sealed class DapperCandidateEvidenceRepository : DapperRepositoryBase, IC
             row.EvidenceType,
             row.ContentJson,
             Parse(row.CollectedAtUtc));
-
 
     private sealed class EvidenceRow
     {

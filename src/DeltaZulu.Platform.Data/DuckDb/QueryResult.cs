@@ -34,8 +34,7 @@ public sealed class QueryResult
             readonlyColumnData[i] = columnData[i];
         }
 
-        return new QueryResult
-        {
+        return new QueryResult {
             Success = true,
             Columns = columns,
             ColumnData = readonlyColumnData,
@@ -49,8 +48,7 @@ public sealed class QueryResult
 
     public static QueryResult FromDiagnostics(
         DiagnosticBag diagnostics,
-        List<string>? debugTrace = null) => new()
-        {
+        List<string>? debugTrace = null) => new() {
             Success = false,
             DebugTrace = debugTrace ?? [],
             Diagnostics = diagnostics

@@ -1,11 +1,10 @@
-
 using Dapper;
-using DeltaZulu.Platform.Data.Sqlite.Analytics;
+using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 using AppIQueryHistoryRepository = DeltaZulu.Platform.Domain.Analytics.QueryHistory.IQueryHistoryRepository;
 using AppQueryHistoryRecord = DeltaZulu.Platform.Domain.Analytics.QueryHistory.QueryHistoryRecord;
-using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.QueryHistory;
+
 public sealed class DapperQueryHistoryRepository : DapperRepositoryBase, AppIQueryHistoryRepository
 {
     private const string CreateSchemaSql =
@@ -66,12 +65,10 @@ public sealed class DapperQueryHistoryRepository : DapperRepositoryBase, AppIQue
         DELETE FROM query_history;
         """;
 
-
     public DapperQueryHistoryRepository(IAppDbConnectionFactory connectionFactory)
         : base(connectionFactory, CreateSchemaSql)
     {
     }
-
 
     public async Task<IReadOnlyList<AppQueryHistoryRecord>> ListRecentAsync(
         int limit = 50,
@@ -159,5 +156,4 @@ public sealed class DapperQueryHistoryRepository : DapperRepositoryBase, AppIQue
         public long? DurationMs { get; init; }
         public string? DiagnosticSummary { get; init; }
     }
-
 }

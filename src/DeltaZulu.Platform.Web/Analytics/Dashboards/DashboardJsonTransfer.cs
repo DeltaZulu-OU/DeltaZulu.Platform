@@ -1,11 +1,10 @@
-
 using System.Text.Json;
 
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards;
+
 public static class DashboardJsonTransfer
 {
-    private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
-    {
+    private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web) {
         WriteIndented = true
     };
 
@@ -38,8 +37,7 @@ public static class DashboardJsonTransfer
         }
 
         var now = nowUtc ?? DateTime.UtcNow;
-        var copy = imported with
-        {
+        var copy = imported with {
             Id = Guid.NewGuid().ToString("N"),
             Name = BuildImportedName(imported.Name),
             CreatedAtUtc = now,

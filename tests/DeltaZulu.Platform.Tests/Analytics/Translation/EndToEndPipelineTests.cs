@@ -8,6 +8,7 @@ using DeltaZulu.Platform.Domain.Analytics.Schema;
 using DeltaZulu.Platform.Tests.Analytics.Fixtures;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Translation;
+
 [TestClass]
 public sealed class EndToEndPipelineTests
 {

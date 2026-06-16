@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Application.Analytics.Samples;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Web;
+
 [TestClass]
 public sealed class SchemaBrowserSampleQueryGuardTests
 {

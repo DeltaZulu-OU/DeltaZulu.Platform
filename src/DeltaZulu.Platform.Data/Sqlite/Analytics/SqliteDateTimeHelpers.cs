@@ -21,8 +21,7 @@ public static class SqliteDateTimeHelpers
     public static string? NormalizeLikeSearch(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
-    {
+    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch {
         DateTimeKind.Utc => value,
         DateTimeKind.Local => value.ToUniversalTime(),
         _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)

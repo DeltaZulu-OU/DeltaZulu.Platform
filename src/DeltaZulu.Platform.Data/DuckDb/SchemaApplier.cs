@@ -1,8 +1,8 @@
-
 using Dapper;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 
 namespace DeltaZulu.Platform.Data.DuckDb;
+
 /// <summary>
 /// <para>
 /// Applies generated DDL to DuckDB and validates the resulting schema
@@ -144,8 +144,7 @@ public sealed class SchemaApplier
     private static string NormalizeType(string type)
     {
         var upper = type.ToUpperInvariant().Trim();
-        return upper switch
-        {
+        return upper switch {
             "TEXT" or "STRING" => "VARCHAR",
             "INT8" or "LONG" => "BIGINT",
             "INT4" or "INT" or "SIGNED" => "INTEGER",

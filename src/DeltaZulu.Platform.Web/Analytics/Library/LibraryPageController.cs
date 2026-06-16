@@ -1,8 +1,8 @@
-
 using DeltaZulu.Platform.Web.Analytics.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace DeltaZulu.Platform.Web.Analytics.Library;
+
 public sealed class LibraryPageController
 {
     private readonly EditorBus _editorBus;

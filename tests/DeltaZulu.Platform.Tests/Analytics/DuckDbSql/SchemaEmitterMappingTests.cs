@@ -1,10 +1,10 @@
-
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Analytics.Mapping;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 using static DeltaZulu.Platform.Domain.Analytics.Mapping.MapDsl;
 
 namespace DeltaZulu.Platform.Tests.Analytics.DuckDbSql;
+
 [TestClass]
 public sealed class SchemaEmitterMappingTests
 {

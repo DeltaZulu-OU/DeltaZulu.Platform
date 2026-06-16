@@ -1,10 +1,10 @@
-
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.AlertEntities;
 using DeltaZulu.Platform.Domain.Analytics.AlertEntities;
 using Microsoft.Data.Sqlite;
 
 namespace DeltaZulu.Platform.Tests.Analytics;
+
 [TestClass]
 public sealed class AlertEntityRepositoryTests
 {

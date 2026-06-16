@@ -1,6 +1,7 @@
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Application.Analytics.Planning;
+
 public sealed partial class RelationalPlanner
 {
     /// <summary>
@@ -118,8 +119,7 @@ public sealed partial class RelationalPlanner
         // tabular let values) where the live set cannot be tracked precisely. A
         // null set conservatively disables inlining, because no column can be
         // proven dead.
-        private static RelNode Rewrite(RelNode node, HashSet<string>? required, ref int attempted, ref int applied) => node switch
-        {
+        private static RelNode Rewrite(RelNode node, HashSet<string>? required, ref int attempted, ref int applied) => node switch {
             FilterNode f when f.Input is ExtendNode ext => RewriteFilterOverExtend(f, ext, required, ref attempted, ref applied),
             FilterNode f => f with { Input = Rewrite(f.Input, PassThrough(required, f.Predicate), ref attempted, ref applied) },
             // A projection redefines the output schema to its aliases, so the
@@ -132,13 +132,11 @@ public sealed partial class RelationalPlanner
             SortNode s => s with { Input = Rewrite(s.Input, PassThrough(required, s.Sorts.Select(x => x.Expression)), ref attempted, ref applied) },
             LimitNode l => l with { Input = Rewrite(l.Input, required, ref attempted, ref applied) },
             SampleNode sm => sm with { Input = Rewrite(sm.Input, required, ref attempted, ref applied) },
-            JoinNode j => j with
-            {
+            JoinNode j => j with {
                 Left = Rewrite(j.Left, null, ref attempted, ref applied),
                 Right = Rewrite(j.Right, null, ref attempted, ref applied)
             },
-            LetBindingNode lb => lb with
-            {
+            LetBindingNode lb => lb with {
                 Body = Rewrite(lb.Body, required, ref attempted, ref applied),
                 TabularValue = lb.TabularValue is null ? null : Rewrite(lb.TabularValue, null, ref attempted, ref applied)
             },

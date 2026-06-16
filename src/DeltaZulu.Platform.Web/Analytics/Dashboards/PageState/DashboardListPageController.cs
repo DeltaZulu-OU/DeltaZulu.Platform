@@ -1,9 +1,9 @@
-
 using DeltaZulu.Platform.Web.Analytics.Dashboards.Persistence;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards.PageState;
+
 public sealed class DashboardListPageController
 {
     private readonly IDashboardRepository _dashboardRepository;
@@ -49,8 +49,7 @@ public sealed class DashboardListPageController
         State.Error = null;
 
         var now = DateTime.UtcNow;
-        var dashboard = new DashboardDefinition
-        {
+        var dashboard = new DashboardDefinition {
             Id = Guid.NewGuid().ToString("N"),
             Name = "New dashboard",
             Description = "Local dashboard",

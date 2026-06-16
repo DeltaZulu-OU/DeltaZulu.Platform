@@ -102,8 +102,7 @@ public sealed class ChangeRequest : Entity<ChangeRequestId>
         IEnumerable<Review> reviews)
     {
         var c = new ChangeRequest(id, key, title, detectionId, authorId, workflowProfileId,
-            baseVersionId, linkedIssueId, createdAt)
-        {
+            baseVersionId, linkedIssueId, createdAt) {
             Status = status,
             IsStale = isStale,
             StaleReason = staleReason,

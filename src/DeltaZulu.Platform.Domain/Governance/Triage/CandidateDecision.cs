@@ -65,8 +65,7 @@ public sealed class CandidateDecision : Entity<CandidateDecisionId>
         UserId analystId,
         string reason,
         IncidentId? resultingIncidentId,
-        DateTimeOffset createdAt) => new CandidateDecision(id, candidateId, type, analystId, reason, createdAt)
-        {
+        DateTimeOffset createdAt) => new CandidateDecision(id, candidateId, type, analystId, reason, createdAt) {
             ResultingIncidentId = resultingIncidentId
         };
 }

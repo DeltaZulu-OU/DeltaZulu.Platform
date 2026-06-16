@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Web.Analytics.Dashboards.Persistence;
 
 namespace DeltaZulu.Platform.Web.Analytics.Services;
+
 /// <summary>
 /// Web-facing aggregate over saved queries, visualizations, and dashboards.
 /// This is intentionally a UI/application composition service; it does not move
@@ -125,8 +125,7 @@ public sealed class LibraryService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
-        return kind switch
-        {
+        return kind switch {
             LibraryItemKind.SavedQuery => _queries.DeleteSavedQueryAsync(id, cancellationToken),
             LibraryItemKind.Visualization => _visualizations.DeleteVisualizationAsync(id, cancellationToken),
             LibraryItemKind.Dashboard => _dashboards.DeleteAsync(id, cancellationToken),

@@ -1,8 +1,8 @@
-
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 using DeltaZulu.Platform.Web.Analytics.Rendering;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Render;
+
 [TestClass]
 public sealed class EChartsRenderOptionsBuilderTests
 {

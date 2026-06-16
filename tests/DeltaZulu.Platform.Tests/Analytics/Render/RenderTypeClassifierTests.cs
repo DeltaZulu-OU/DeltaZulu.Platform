@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Application.Analytics.Rendering.Services;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Render;
+
 [TestClass]
 public sealed class RenderTypeClassifierTests
 {

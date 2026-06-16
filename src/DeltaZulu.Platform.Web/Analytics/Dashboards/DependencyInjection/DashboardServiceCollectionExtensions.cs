@@ -1,9 +1,9 @@
-
 using DeltaZulu.Platform.Web.Analytics.Dashboards.PageState;
 using DeltaZulu.Platform.Web.Analytics.Dashboards.Persistence;
 using DeltaZulu.Platform.Web.Analytics.Dashboards.Runtime;
 
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards.DependencyInjection;
+
 public static class DashboardServiceCollectionExtensions
 {
     public static IServiceCollection AddDashboards(this IServiceCollection services)

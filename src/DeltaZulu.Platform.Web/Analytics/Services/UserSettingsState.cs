@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Domain.Analytics.Settings;
 
 namespace DeltaZulu.Platform.Web.Analytics.Services;
+
 public sealed class UserSettingsState
 {
     private readonly IUserSettingsRepository _settings;

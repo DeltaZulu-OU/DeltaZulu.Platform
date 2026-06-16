@@ -1,4 +1,3 @@
-
 using System.Globalization;
 using System.Text.Json;
 using DeltaZulu.Platform.Application.Analytics.Planning;
@@ -9,6 +8,7 @@ using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DuckDB.NET.Data;
 
 namespace DeltaZulu.Platform.Data.Analytics;
+
 public sealed partial class QueryRuntime
 {
     public QueryResult ExecuteDataOnly(string kql) => ExecuteDataOnly(kql, maxRows: null);

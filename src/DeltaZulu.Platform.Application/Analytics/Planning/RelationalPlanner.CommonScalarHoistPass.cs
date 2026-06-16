@@ -1,6 +1,7 @@
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Application.Analytics.Planning;
+
 public sealed partial class RelationalPlanner
 {
     private sealed class CommonScalarHoistPass : IPlannerPass
@@ -19,8 +20,7 @@ public sealed partial class RelationalPlanner
             return rewritten;
         }
 
-        private static int EstimateScalarComplexity(ScalarExpr expression) => expression switch
-        {
+        private static int EstimateScalarComplexity(ScalarExpr expression) => expression switch {
             ColumnRef => 1,
             LiteralScalar => 1,
             UnaryScalar u => 1 + EstimateScalarComplexity(u.Operand),
@@ -39,8 +39,7 @@ public sealed partial class RelationalPlanner
             return !changed ? input == e.Input ? e : e with { Input = input } : new ExtendNode(input, rewrittenExt);
         }
 
-        private static RelNode RewriteNode(RelNode node, ref int attempted, ref int applied) => node switch
-        {
+        private static RelNode RewriteNode(RelNode node, ref int attempted, ref int applied) => node switch {
             ProjectNode p => RewriteProject(p, ref attempted, ref applied),
             ExtendNode e => RewriteExtend(e, ref attempted, ref applied),
             FilterNode f => f with { Input = RewriteNode(f.Input, ref attempted, ref applied) },

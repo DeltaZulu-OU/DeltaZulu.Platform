@@ -126,8 +126,7 @@ internal sealed class IssueRepository(DapperSession session) : IIssueRepository
                 tlpLevel, labelList);
         }
 
-        private static IssueStatus ParseStatus(string status) => status switch
-        {
+        private static IssueStatus ParseStatus(string status) => status switch {
             // Legacy 5-state issue lifecycle values retained for databases seeded or created
             // before ADR-0018 expanded the issue workflow state machine.
             "Open" => IssueStatus.New,

@@ -17,8 +17,7 @@ public sealed record RenderDirective
     public string? FallbackReason { get; init; }
 
     public static RenderDirective Table(string? reason = null)
-        => new()
-        {
+        => new() {
             Kind = RenderKind.Table,
             IsFallback = reason is not null,
             FallbackReason = reason

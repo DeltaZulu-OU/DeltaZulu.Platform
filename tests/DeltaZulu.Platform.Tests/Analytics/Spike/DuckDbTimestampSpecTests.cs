@@ -1,8 +1,8 @@
-
 using System.Globalization;
 using DuckDB.NET.Data;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Spike;
+
 /// <summary>
 /// <para>
 /// Spec verification tests: confirm that every DuckDB function used as a

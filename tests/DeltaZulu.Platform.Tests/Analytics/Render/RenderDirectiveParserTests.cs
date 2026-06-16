@@ -1,8 +1,8 @@
-
 using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Render;
+
 [TestClass]
 public sealed class RenderDirectiveParserTests
 {

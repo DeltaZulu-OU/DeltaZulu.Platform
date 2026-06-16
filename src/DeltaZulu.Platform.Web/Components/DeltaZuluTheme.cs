@@ -34,10 +34,8 @@ public static class DeltaZuluTheme
     // Typography
     private const string FontSans = "'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
-    public static MudTheme Create() => new()
-    {
-        PaletteLight = new PaletteLight
-        {
+    public static MudTheme Create() => new() {
+        PaletteLight = new PaletteLight {
             Primary = Accent,
             PrimaryDarken = AccentHover,
             Secondary = Slate,
@@ -81,106 +79,91 @@ public static class DeltaZuluTheme
             RippleOpacity = 0.08,
         },
 
-        Typography = new Typography
-        {
-            Default = new DefaultTypography
-            {
+        Typography = new Typography {
+            Default = new DefaultTypography {
                 FontFamily = [FontSans],
                 FontSize = "1rem",
                 LineHeight = "1.50",
                 LetterSpacing = "normal",
                 FontWeight = "400",
             },
-            H1 = new H1Typography
-            {
+            H1 = new H1Typography {
                 FontFamily = [FontSans],
                 FontSize = "2.5rem",
                 LineHeight = "1.08",
                 LetterSpacing = "-0.030em",
                 FontWeight = "700",
             },
-            H2 = new H2Typography
-            {
+            H2 = new H2Typography {
                 FontFamily = [FontSans],
                 FontSize = "1.75rem",
                 LineHeight = "1.12",
                 LetterSpacing = "-0.020em",
                 FontWeight = "700",
             },
-            H3 = new H3Typography
-            {
+            H3 = new H3Typography {
                 FontFamily = [FontSans],
                 FontSize = "1.25rem",
                 LineHeight = "1.20",
                 LetterSpacing = "-0.010em",
                 FontWeight = "700",
             },
-            H4 = new H4Typography
-            {
+            H4 = new H4Typography {
                 FontFamily = [FontSans],
                 FontSize = "1.25rem",
                 LineHeight = "1.20",
                 LetterSpacing = "-0.010em",
                 FontWeight = "600",
             },
-            H5 = new H5Typography
-            {
+            H5 = new H5Typography {
                 FontFamily = [FontSans],
                 FontSize = "1.125rem",
                 LineHeight = "1.25",
                 FontWeight = "600",
             },
-            H6 = new H6Typography
-            {
+            H6 = new H6Typography {
                 FontFamily = [FontSans],
                 FontSize = "1rem",
                 LineHeight = "1.30",
                 FontWeight = "600",
             },
-            Subtitle1 = new Subtitle1Typography
-            {
+            Subtitle1 = new Subtitle1Typography {
                 FontFamily = [FontSans],
                 FontSize = "1rem",
                 LineHeight = "1.50",
                 FontWeight = "500",
             },
-            Subtitle2 = new Subtitle2Typography
-            {
+            Subtitle2 = new Subtitle2Typography {
                 FontFamily = [FontSans],
                 FontSize = "0.875rem",
                 LineHeight = "1.45",
                 FontWeight = "600",
             },
-            Body1 = new Body1Typography
-            {
+            Body1 = new Body1Typography {
                 FontFamily = [FontSans],
                 FontSize = "1rem",
                 LineHeight = "1.50",
                 FontWeight = "400",
             },
-            Body2 = new Body2Typography
-            {
+            Body2 = new Body2Typography {
                 FontFamily = [FontSans],
                 FontSize = "0.875rem",
                 LineHeight = "1.45",
                 FontWeight = "400",
             },
-            Button = new ButtonTypography
-            {
+            Button = new ButtonTypography {
                 FontFamily = [FontSans],
                 FontSize = "0.875rem",
                 FontWeight = "600",
                 LetterSpacing = "0.010em",
             },
-            Caption = new CaptionTypography
-            {
+            Caption = new CaptionTypography {
                 FontFamily = [FontSans],
                 FontSize = "0.8125rem",
                 LineHeight = "1.30",
                 FontWeight = "400",
             },
-            Overline = new OverlineTypography
-            {
+            Overline = new OverlineTypography {
                 FontFamily = [FontSans],
                 FontSize = "0.8125rem",
                 LineHeight = "1.30",
@@ -189,14 +172,12 @@ public static class DeltaZuluTheme
             },
         },
 
-        LayoutProperties = new LayoutProperties
-        {
+        LayoutProperties = new LayoutProperties {
             DefaultBorderRadius = "0px",
             DrawerWidthLeft = "260px",
         },
 
-        Shadows = new Shadow
-        {
+        Shadows = new Shadow {
             Elevation =
             [
                 "none",

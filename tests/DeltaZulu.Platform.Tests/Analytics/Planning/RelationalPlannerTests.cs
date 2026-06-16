@@ -1,8 +1,8 @@
-
 using DeltaZulu.Platform.Application.Analytics.Planning;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Planning;
+
 [TestClass]
 public sealed class RelationalPlannerTests
 {
@@ -617,8 +617,7 @@ public sealed class RelationalPlannerTests
             return match;
         }
 
-        return node switch
-        {
+        return node switch {
             LimitNode n => FindFirst<T>(n.Input),
             SortNode n => FindFirst<T>(n.Input),
             ProjectNode n => FindFirst<T>(n.Input),

@@ -1,8 +1,8 @@
-
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 
 namespace DeltaZulu.Platform.Tests.Analytics.DuckDbSql;
+
 [TestClass]
 public sealed class SchemaEmitterCanonicalViewTests
 {

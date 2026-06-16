@@ -1,9 +1,9 @@
-
 using System.Globalization;
 using DeltaZulu.Platform.Data.Seeding;
 using DuckDB.NET.Data;
 
 namespace DeltaZulu.Platform.Tests.Analytics;
+
 [TestClass]
 public sealed class MockDataSeederTests
 {

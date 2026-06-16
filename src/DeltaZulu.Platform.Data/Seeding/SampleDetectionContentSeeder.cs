@@ -571,7 +571,6 @@ ProcessEvent
         return written;
     }
 
-
     /// <summary>
     /// Seeds the accepted-content Git repository with canonical sample detection files.
     /// The Detection Detail Files tab reads accepted content through the Git-backed
@@ -753,7 +752,6 @@ ProcessEvent
         new("suspicious-command-line-download", "Suspicious command line download utility usage", "Detects command lines that use common download utilities or PowerShell download primitives."),
         new("dns-high-query-volume-per-name", "High DNS query volume for a single name", "Summarizes DNS telemetry to find device and name pairs with unusually high query counts."),
     };
-
 
     private sealed record SampleDetectionContentFile(string RelativePath, string Content);
 

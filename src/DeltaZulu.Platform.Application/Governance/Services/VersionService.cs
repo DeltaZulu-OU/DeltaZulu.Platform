@@ -157,8 +157,7 @@ public sealed class VersionService(
 
     private static VersionFileDiff CreateDiff(string logicalPath, ContentFile? before, ContentFile? after)
     {
-        var status = (before, after) switch
-        {
+        var status = (before, after) switch {
             (null, not null) => VersionFileDiffStatus.Added,
             (not null, null) => VersionFileDiffStatus.Removed,
             (not null, not null) when before.Content != after.Content || before.IsBinary != after.IsBinary => VersionFileDiffStatus.Modified,

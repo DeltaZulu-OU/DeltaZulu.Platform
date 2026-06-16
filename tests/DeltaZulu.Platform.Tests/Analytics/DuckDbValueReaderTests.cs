@@ -1,8 +1,8 @@
-
 using DeltaZulu.Platform.Data.DuckDb;
 using DuckDB.NET.Data;
 
 namespace DeltaZulu.Platform.Tests.Analytics;
+
 [TestClass]
 public sealed class DuckDbValueReaderTests
 {

@@ -1,10 +1,10 @@
-
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 using Vizor.ECharts;
 
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards.Runtime;
+
 public sealed record DashboardWidgetRunResult
 {
     public string WidgetId { get; init; } = string.Empty;

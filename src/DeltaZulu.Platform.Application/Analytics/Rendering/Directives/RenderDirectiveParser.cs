@@ -1,8 +1,8 @@
-
 using System.Text.RegularExpressions;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 
 namespace DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
+
 public sealed partial class RenderDirectiveParser : IRenderDirectiveParser
 {
     private static readonly HashSet<string> SupportedKinds = new(StringComparer.OrdinalIgnoreCase)
@@ -17,8 +17,7 @@ public sealed partial class RenderDirectiveParser : IRenderDirectiveParser
         var match = RenderRegex().Match(queryText);
         if (!match.Success)
         {
-            return new RenderDirectiveParseResult
-            {
+            return new RenderDirectiveParseResult {
                 QueryTextWithoutRender = queryText,
                 HasRenderDirective = ContainsRenderToken(queryText),
                 Directive = ContainsRenderToken(queryText)
@@ -30,8 +29,7 @@ public sealed partial class RenderDirectiveParser : IRenderDirectiveParser
         var tail = match.Groups["tail"].Value;
         if (ContainsPipeToken(tail))
         {
-            return new RenderDirectiveParseResult
-            {
+            return new RenderDirectiveParseResult {
                 QueryTextWithoutRender = queryText,
                 HasRenderDirective = true,
                 Directive = RenderDirective.Table("Render clause must be terminal and use key=value properties.")
@@ -46,8 +44,7 @@ public sealed partial class RenderDirectiveParser : IRenderDirectiveParser
 
         if (!SupportedKinds.Contains(kindRaw))
         {
-            return new RenderDirectiveParseResult
-            {
+            return new RenderDirectiveParseResult {
                 QueryTextWithoutRender = queryText[..match.Index].TrimEnd(),
                 HasRenderDirective = true,
                 Directive = RenderDirective.Table($"Unsupported render kind '{kindRaw}'.")
@@ -58,24 +55,20 @@ public sealed partial class RenderDirectiveParser : IRenderDirectiveParser
         var (properties, malformedProperty) = ParseProperties(legacyProperties, withProperties);
         if (malformedProperty is not null)
         {
-            return new RenderDirectiveParseResult
-            {
+            return new RenderDirectiveParseResult {
                 QueryTextWithoutRender = queryText[..match.Index].TrimEnd(),
                 HasRenderDirective = true,
                 Directive = RenderDirective.Table($"Malformed render property '{malformedProperty}'. Expected key=value.")
             };
         }
 
-        return new RenderDirectiveParseResult
-        {
+        return new RenderDirectiveParseResult {
             QueryTextWithoutRender = queryText[..match.Index].TrimEnd(),
             HasRenderDirective = true,
-            Directive = new RenderDirective
-            {
+            Directive = new RenderDirective {
                 Kind = ParseKind(kindRaw),
                 Title = Get(properties, "title"),
-                Binding = new RenderBinding
-                {
+                Binding = new RenderBinding {
                     XColumn = Get(properties, "xcolumn"),
                     YColumns = SplitCsv(Get(properties, "ycolumns")),
                     SeriesColumn = Get(properties, "series")
@@ -86,8 +79,7 @@ public sealed partial class RenderDirectiveParser : IRenderDirectiveParser
         };
     }
 
-    private static RenderKind ParseKind(string raw) => raw.ToLowerInvariant() switch
-    {
+    private static RenderKind ParseKind(string raw) => raw.ToLowerInvariant() switch {
         "table" => RenderKind.Table,
         "card" => RenderKind.Card,
         "timechart" => RenderKind.Timechart,

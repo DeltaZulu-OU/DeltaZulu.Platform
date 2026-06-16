@@ -1,6 +1,7 @@
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Application.Analytics.Planning;
+
 public sealed partial class RelationalPlanner
 {
     private sealed class ProjectionPruningPass : IPlannerPass
@@ -132,8 +133,7 @@ public sealed partial class RelationalPlanner
                     return j with { Left = RewriteNode(j.Left, new HashSet<string>(StringComparer.OrdinalIgnoreCase), ref attempted, ref applied), Right = RewriteNode(j.Right, new HashSet<string>(StringComparer.OrdinalIgnoreCase), ref attempted, ref applied) };
 
                 case LetBindingNode lb:
-                    return lb with
-                    {
+                    return lb with {
                         Body = RewriteNode(lb.Body, required, ref attempted, ref applied),
                         TabularValue = lb.TabularValue is null ? null : RewriteNode(lb.TabularValue, new HashSet<string>(StringComparer.OrdinalIgnoreCase), ref attempted, ref applied)
                     };

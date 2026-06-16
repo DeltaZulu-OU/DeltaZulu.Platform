@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Application.Analytics.Planning;
+
 public sealed record NoOpRelationalPlanner(PlannerRunStats? LastRunStats = null) : IRelationalPlanner, IPlannerTelemetry
 {
     public PlannerRunStats? LastRunStats { get; private set; } = LastRunStats;

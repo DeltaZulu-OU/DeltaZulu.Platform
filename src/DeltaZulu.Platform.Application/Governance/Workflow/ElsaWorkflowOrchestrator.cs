@@ -31,13 +31,11 @@ public sealed partial class ElsaWorkflowOrchestrator(
         try
         {
             var client = await runtime.CreateClientAsync(ct);
-            await client.CreateAndRunInstanceAsync(new CreateAndRunWorkflowInstanceRequest
-            {
+            await client.CreateAndRunInstanceAsync(new CreateAndRunWorkflowInstanceRequest {
                 WorkflowDefinitionHandle = WorkflowDefinitionHandle.ByDefinitionId(
                     nameof(ChangeLifecycleWorkflow), VersionOptions.Published),
                 CorrelationId = ChangeCorrelationId(changeId),
-                Input = new Dictionary<string, object>
-                {
+                Input = new Dictionary<string, object> {
                     ["ChangeId"] = changeId.ToString(),
                     ["WorkflowProfile"] = profileId.ToString(),
                 },
@@ -79,8 +77,7 @@ public sealed partial class ElsaWorkflowOrchestrator(
             await runtime.TriggerWorkflowsAsync(
                 activityTypeName: "Elsa.Event",
                 bookmarkPayload: new { EventName = eventName },
-                options: new TriggerWorkflowsOptions
-                {
+                options: new TriggerWorkflowsOptions {
                     CorrelationId = ChangeCorrelationId(changeId),
                     Input = input ?? new Dictionary<string, object>(),
                 });

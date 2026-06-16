@@ -1,9 +1,9 @@
-
 using DeltaZulu.Platform.Domain.Analytics.Mapping;
 using DeltaZulu.Platform.Domain.Analytics.Schema.Definitions.Medallion.Golden;
 using static DeltaZulu.Platform.Domain.Analytics.Mapping.MapDsl;
 
 namespace DeltaZulu.Platform.Domain.Analytics.Schema.Definitions.Medallion.Silver;
+
 /// <summary>
 /// <para>Active Phase 1A Silver parser contributors.</para>
 /// <para>

@@ -1,10 +1,10 @@
-
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.QueryHistory;
 using Microsoft.Data.Sqlite;
 using AppQueryHistoryRecord = DeltaZulu.Platform.Domain.Analytics.QueryHistory.QueryHistoryRecord;
 
 namespace DeltaZulu.Platform.Tests.Analytics;
+
 [TestClass]
 public sealed class QueryHistoryRepositoryTests
 {

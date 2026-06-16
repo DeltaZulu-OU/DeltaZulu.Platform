@@ -1,8 +1,8 @@
-
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 
 namespace DeltaZulu.Platform.Tests.Analytics;
+
 [TestClass]
 public sealed class SchemaApplierDapperTests
 {

@@ -1,4 +1,5 @@
 namespace DeltaZulu.Platform.Domain.Analytics.Schema.Definitions.Medallion.Bronze;
+
 /// <summary>
 /// <para>Active Phase 1A source-family Bronze table definitions.</para>
 /// <para>

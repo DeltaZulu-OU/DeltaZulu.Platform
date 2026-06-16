@@ -1,7 +1,7 @@
-
 using System.Text.RegularExpressions;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Sql;
+
 internal sealed partial class DuckDbSqlShapeRewriter
 {
     private readonly DuckDbStageRegistry _stages;
@@ -559,8 +559,7 @@ internal sealed partial class DuckDbSqlShapeRewriter
         }
 
         columns = m.Groups["proj"].Value;
-        terminalTopK = terminalTopK with
-        {
+        terminalTopK = terminalTopK with {
             Source = $"{m.Groups["source"].Value}{groupBy}"
         };
 
@@ -603,8 +602,7 @@ internal sealed partial class DuckDbSqlShapeRewriter
         }
 
         columns = m.Groups["proj"].Value;
-        terminalOrder = terminalOrder with
-        {
+        terminalOrder = terminalOrder with {
             Source = $"{m.Groups["source"].Value}{groupBy}"
         };
 
@@ -685,8 +683,7 @@ internal sealed partial class DuckDbSqlShapeRewriter
         }
 
         columns = projection;
-        terminalOrder = terminalOrder with
-        {
+        terminalOrder = terminalOrder with {
             Source = $"{aggregateSource}{aggregateGroupBy} HAVING {predicate}"
         };
 

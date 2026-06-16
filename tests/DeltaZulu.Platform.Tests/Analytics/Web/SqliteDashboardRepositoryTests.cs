@@ -1,4 +1,3 @@
-
 using Dapper;
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Web.Analytics.Dashboards;
@@ -6,6 +5,7 @@ using DeltaZulu.Platform.Web.Analytics.Dashboards.Persistence;
 using Microsoft.Data.Sqlite;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Web;
+
 [TestClass]
 public sealed class SqliteDashboardRepositoryTests
 {
@@ -102,8 +102,7 @@ public sealed class SqliteDashboardRepositoryTests
 
         await repository.SaveAsync(dashboard, TestContext.CancellationToken);
 
-        var updated = dashboard with
-        {
+        var updated = dashboard with {
             Name = "Updated",
             Description = "Changed description",
             UpdatedAtUtc = created.AddMinutes(5)
@@ -162,8 +161,7 @@ public sealed class SqliteDashboardRepositoryTests
         var created = createdAtUtc ?? new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc);
         var updated = updatedAtUtc ?? created;
 
-        return new DashboardDefinition
-        {
+        return new DashboardDefinition {
             Id = id,
             Name = name,
             Description = "Test dashboard",

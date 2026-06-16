@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Web.Analytics.Dashboards.Runtime;
 
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards.PageState;
+
 public sealed class DashboardPageState
 {
     public Dictionary<string, DashboardWidgetRunResult> WidgetResults { get; } =

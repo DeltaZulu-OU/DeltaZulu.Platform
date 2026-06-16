@@ -1,8 +1,8 @@
-
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using Kusto.Language.Syntax;
 
 namespace DeltaZulu.Platform.Application.Analytics.Translation;
+
 /// <summary>Reads operator literals while preserving translator diagnostics.</summary>
 internal static class KustoLiteralReader
 {

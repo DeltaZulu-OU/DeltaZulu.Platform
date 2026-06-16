@@ -1,8 +1,8 @@
-
 using System.Security.Cryptography;
 using System.Text;
 
 namespace DeltaZulu.Platform.Data.Seeding;
+
 /// <summary>
 /// Stable seed fixture hashing utility.
 /// </summary>

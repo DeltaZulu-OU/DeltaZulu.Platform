@@ -4,6 +4,7 @@ using DeltaZulu.Platform.Domain.Analytics.Schema;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Validation;
+
 [TestClass]
 public sealed class KqlQuerySyntaxValidatorTests
 {

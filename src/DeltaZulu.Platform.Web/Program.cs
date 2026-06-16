@@ -52,21 +52,20 @@ builder.Services.AddGovernanceGitAcceptedContentStore(options =>
         : Path.Combine(builder.Environment.ContentRootPath, acceptedContentRepositoryPath));
 
 if (builder.Configuration.GetValue<bool>("DemoSeed:Enabled"))
-    {
+{
     DemoSeeder.Seed(connectionString);
-    }
+}
 
 var seedSampleDetectionCatalog = builder.Configuration.GetValue<bool?>("SampleDetectionContent:SeedGovernanceCatalog")
     ?? builder.Environment.IsDevelopment();
 if (seedSampleDetectionCatalog)
-    {
+{
     SampleDetectionContentSeeder.SeedGovernanceCatalog(connectionString);
     SampleDetectionContentSeeder.SeedAcceptedContentRepository(acceptedContentRepositoryPath, overwrite: false);
 }
 
 // --- Analytics module services ---
-builder.Services.AddAnalyticsWebModule(new AnalyticsModuleOptions
-{
+builder.Services.AddAnalyticsWebModule(new AnalyticsModuleOptions {
     DuckDbPath = ResolveConfiguredPath(
         builder.Configuration["Analytics:DuckDbPath"],
         builder.Environment.ContentRootPath,
@@ -94,8 +93,7 @@ app.UseRouting();
 app.UseAntiforgery();
 
 // Bootstrap Analytics module (DuckDB schema, application persistence)
-await app.BootstrapAnalyticsModuleAsync(new AnalyticsModuleOptions
-{
+await app.BootstrapAnalyticsModuleAsync(new AnalyticsModuleOptions {
     BootstrapDuckDbSchema = true,
     BootstrapApplicationPersistence = true,
     SeedDevelopmentMedallionSources = app.Environment.IsDevelopment(),

@@ -3,6 +3,7 @@ using DeltaZulu.Platform.Domain.Analytics.Schema;
 using Kusto.Language;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Spike;
+
 /// <summary>
 /// Phase 0 spike: prove that Kusto.Language semantic analysis works with the
 /// active medallion catalog exposed to users.

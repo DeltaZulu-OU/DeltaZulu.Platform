@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Web.Analytics.Dashboards;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Web;
+
 [TestClass]
 public sealed class DashboardModelValidatorRenderIntentTests
 {
@@ -44,8 +44,7 @@ public sealed class DashboardModelValidatorRenderIntentTests
     [TestMethod]
     public void Validate_QueryWidgetWithVisualizationId_DoesNotRequireInlineRenderCommand()
     {
-        var dashboard = CreateDashboard(new DashboardWidgetDefinition
-        {
+        var dashboard = CreateDashboard(new DashboardWidgetDefinition {
             Id = "widget-1",
             Title = "Widget 1",
             Kind = DashboardWidgetKind.Query,
@@ -63,8 +62,7 @@ public sealed class DashboardModelValidatorRenderIntentTests
     }
 
     private static DashboardDefinition CreateDashboard(DashboardWidgetDefinition widget)
-        => new()
-        {
+        => new() {
             Id = "dashboard-1",
             Name = "Dashboard",
             Refresh = DashboardRefreshPolicy.Manual(),
@@ -74,8 +72,7 @@ public sealed class DashboardModelValidatorRenderIntentTests
         };
 
     private static DashboardWidgetDefinition CreateQueryWidget(string queryText)
-        => new()
-        {
+        => new() {
             Id = "widget-1",
             Title = "Widget 1",
             Kind = DashboardWidgetKind.Query,
@@ -85,8 +82,7 @@ public sealed class DashboardModelValidatorRenderIntentTests
         };
 
     private static DashboardLayout CreateLayout()
-        => new()
-        {
+        => new() {
             X = 0,
             Y = 0,
             Width = 4,

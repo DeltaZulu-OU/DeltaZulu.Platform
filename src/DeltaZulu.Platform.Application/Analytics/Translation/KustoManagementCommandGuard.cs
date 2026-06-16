@@ -1,7 +1,7 @@
-
 using Kusto.Language.Syntax;
 
 namespace DeltaZulu.Platform.Application.Analytics.Translation;
+
 /// <summary>Blocks executable Kusto management dot-commands before translation.</summary>
 internal static class KustoManagementCommandGuard
 {

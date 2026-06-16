@@ -14,8 +14,7 @@ public sealed record DashboardRefreshPolicy
             throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "Refresh interval must be greater than zero.");
         }
 
-        return new DashboardRefreshPolicy
-        {
+        return new DashboardRefreshPolicy {
             Enabled = true,
             IntervalSeconds = seconds
         };

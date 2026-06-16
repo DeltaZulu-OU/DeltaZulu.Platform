@@ -69,8 +69,7 @@ public sealed partial class Detection : Entity<DetectionId>
     public static Detection Reconstitute(
         DetectionId id, string slug, string title, string summary,
         DetectionLifecycle lifecycle, VersionId? currentVersionId,
-        DateTimeOffset createdAt, DateTimeOffset updatedAt) => new Detection(id, slug, title, summary, createdAt)
-        {
+        DateTimeOffset createdAt, DateTimeOffset updatedAt) => new Detection(id, slug, title, summary, createdAt) {
             Lifecycle = lifecycle,
             CurrentVersionId = currentVersionId,
             UpdatedAt = updatedAt

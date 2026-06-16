@@ -40,8 +40,7 @@ public sealed class Review : Entity<ReviewId>
     public static Review Reconstitute(
         ReviewId id, ChangeRequestId changeRequestId, UserId reviewerId,
         ReviewDecision decision, string comment, DateTimeOffset createdAt,
-        bool isSuperseded, DateTimeOffset? supersededAt) => new Review(id, changeRequestId, reviewerId, decision, comment, createdAt, skip: true)
-        {
+        bool isSuperseded, DateTimeOffset? supersededAt) => new Review(id, changeRequestId, reviewerId, decision, comment, createdAt, skip: true) {
             IsSuperseded = isSuperseded,
             SupersededAt = supersededAt
         };

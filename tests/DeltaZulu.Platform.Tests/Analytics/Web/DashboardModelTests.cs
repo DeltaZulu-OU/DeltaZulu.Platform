@@ -1,15 +1,14 @@
-
 using DeltaZulu.Platform.Web.Analytics.Dashboards;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Web;
+
 [TestClass]
 public sealed class DashboardModelTests
 {
     [TestMethod]
     public void DashboardDefinition_Defaults_AreUsableForNewDashboard()
     {
-        var dashboard = new DashboardDefinition
-        {
+        var dashboard = new DashboardDefinition {
             Name = "Operations"
         };
         Assert.IsFalse(string.IsNullOrWhiteSpace(dashboard.Id));
@@ -21,8 +20,7 @@ public sealed class DashboardModelTests
     [TestMethod]
     public void DashboardWidgetDefinition_Defaults_ToQueryWidgetWithManualRefresh()
     {
-        var widget = new DashboardWidgetDefinition
-        {
+        var widget = new DashboardWidgetDefinition {
             Title = "Processes",
             QueryText = "ProcessEvent | take 10 | render"
         };
@@ -45,8 +43,7 @@ public sealed class DashboardModelTests
     [TestMethod]
     public void Validate_BlankDashboardName_ReturnsError()
     {
-        var dashboard = CreateValidDashboard() with
-        {
+        var dashboard = CreateValidDashboard() with {
             Name = " "
         };
         var errors = DashboardModelValidator.Validate(dashboard);
@@ -56,8 +53,7 @@ public sealed class DashboardModelTests
     [TestMethod]
     public void Validate_BlankWidgetTitle_ReturnsError()
     {
-        var dashboard = CreateValidDashboard() with
-        {
+        var dashboard = CreateValidDashboard() with {
             Widgets =
             [
                 CreateValidWidget() with { Title = " " }
@@ -70,8 +66,7 @@ public sealed class DashboardModelTests
     [TestMethod]
     public void Validate_BlankQueryTextForQueryWidget_ReturnsError()
     {
-        var dashboard = CreateValidDashboard() with
-        {
+        var dashboard = CreateValidDashboard() with {
             Widgets =
             [
                 CreateValidWidget() with { QueryText = " " }
@@ -84,8 +79,7 @@ public sealed class DashboardModelTests
     [TestMethod]
     public void Validate_QueryWidgetWithoutRenderCommand_ReturnsError()
     {
-        var dashboard = CreateValidDashboard() with
-        {
+        var dashboard = CreateValidDashboard() with {
             Widgets =
             [
                 CreateValidWidget() with { QueryText = "ProcessEvent | take 10" }
@@ -102,8 +96,7 @@ public sealed class DashboardModelTests
     [TestMethod]
     public void Validate_BlankQueryTextForMarkdownWidget_IsAllowed()
     {
-        var dashboard = CreateValidDashboard() with
-        {
+        var dashboard = CreateValidDashboard() with {
             Widgets =
             [
                 CreateValidWidget() with
@@ -121,8 +114,7 @@ public sealed class DashboardModelTests
     public void Validate_DuplicateWidgetIds_ReturnsError()
     {
         var widget = CreateValidWidget();
-        var dashboard = CreateValidDashboard() with
-        {
+        var dashboard = CreateValidDashboard() with {
             Widgets =
             [
                 widget,
@@ -136,8 +128,7 @@ public sealed class DashboardModelTests
     [TestMethod]
     public void Validate_InvalidLayoutDimensions_ReturnsErrors()
     {
-        var dashboard = CreateValidDashboard() with
-        {
+        var dashboard = CreateValidDashboard() with {
             Widgets =
             [
                 CreateValidWidget() with
@@ -163,8 +154,7 @@ public sealed class DashboardModelTests
     [TestMethod]
     public void Validate_EnabledRefreshWithoutInterval_ReturnsError()
     {
-        var dashboard = CreateValidDashboard() with
-        {
+        var dashboard = CreateValidDashboard() with {
             Widgets =
             [
                 CreateValidWidget() with
@@ -184,8 +174,7 @@ public sealed class DashboardModelTests
     public void RefreshPolicy_EveryRejectsNonPositiveInterval() => Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => DashboardRefreshPolicy.Every(0));
 
     private static DashboardDefinition CreateValidDashboard()
-        => new()
-        {
+        => new() {
             Name = "Security overview",
             Widgets =
             [
@@ -194,8 +183,7 @@ public sealed class DashboardModelTests
         };
 
     private static DashboardWidgetDefinition CreateValidWidget()
-        => new()
-        {
+        => new() {
             Title = "Recent processes",
             QueryText = "ProcessEvent | take 10 | render"
         };

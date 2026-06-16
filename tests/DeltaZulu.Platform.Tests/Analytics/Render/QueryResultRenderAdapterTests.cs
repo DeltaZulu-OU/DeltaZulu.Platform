@@ -1,9 +1,9 @@
-
-using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Analytics;
+using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Web.Analytics.Rendering;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Render;
+
 [TestClass]
 public sealed class QueryResultRenderAdapterTests
 {
@@ -11,8 +11,7 @@ public sealed class QueryResultRenderAdapterTests
     public void Constructor_ClassifiesQueryResultColumns()
     {
         var timestamp = new DateTime(2026, 6, 3, 12, 0, 0, DateTimeKind.Utc);
-        var result = new QueryResult
-        {
+        var result = new QueryResult {
             Success = true,
             Columns =
             [
@@ -46,8 +45,7 @@ public sealed class QueryResultRenderAdapterTests
     [TestMethod]
     public void GetValue_DelegatesToQueryResult()
     {
-        var result = new QueryResult
-        {
+        var result = new QueryResult {
             Success = true,
             Columns =
             [

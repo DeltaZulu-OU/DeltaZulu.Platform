@@ -1,10 +1,10 @@
-
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Sql;
+
 internal sealed class DuckDbScalarEmitter
 {
     private readonly DuckDbEmitterContext _context;
@@ -20,8 +20,7 @@ internal sealed class DuckDbScalarEmitter
 
     #region Scalar expressions
 
-    internal string EmitScalar(ScalarExpr expr) => expr switch
-    {
+    internal string EmitScalar(ScalarExpr expr) => expr switch {
         // Check scalar let binding before emitting as a column identifier.
         // KQL: let cutoff = ago(7d); T | where Timestamp > cutoff
         // Without substitution: WHERE Timestamp > cutoff (undefined column)
@@ -50,8 +49,7 @@ internal sealed class DuckDbScalarEmitter
             return "NULL";
         }
 
-        return lit.Kind switch
-        {
+        return lit.Kind switch {
             LiteralKind.String => $"'{DuckDbSqlText.EscapeString(lit.Value.ToString()!)}'",
             LiteralKind.Bool => Convert.ToBoolean(lit.Value, CultureInfo.InvariantCulture) ? "TRUE" : "FALSE",
             LiteralKind.Timespan => EmitTimespan(lit.Value),
@@ -73,8 +71,7 @@ internal sealed class DuckDbScalarEmitter
 
         // For LIKE/ILIKE pattern operators, the right-hand side must be a
         // literal-escaped pattern — % and _ in the search term are not wildcards.
-        var escaped = bin.Op switch
-        {
+        var escaped = bin.Op switch {
             ScalarBinaryOp.Contains or ScalarBinaryOp.NotContains
             or ScalarBinaryOp.ContainsCs or ScalarBinaryOp.NotContainsCs
             or ScalarBinaryOp.StartsWith or ScalarBinaryOp.NotStartsWith
@@ -85,8 +82,7 @@ internal sealed class DuckDbScalarEmitter
             _ => right
         };
 
-        return bin.Op switch
-        {
+        return bin.Op switch {
             ScalarBinaryOp.Eq => $"({left} = {right})",
             ScalarBinaryOp.Neq => $"({left} != {right})",
             ScalarBinaryOp.Lt => $"({left} < {right})",
@@ -155,8 +151,7 @@ internal sealed class DuckDbScalarEmitter
     private string EmitUnary(UnaryScalar un)
     {
         var operand = EmitScalar(un.Operand);
-        return un.Op switch
-        {
+        return un.Op switch {
             ScalarUnaryOp.Not => $"NOT ({operand})",
             ScalarUnaryOp.Negate => $"(-{operand})",
             _ => throw new NotSupportedException($"Unsupported unary op: {un.Op}")
@@ -184,8 +179,7 @@ internal sealed class DuckDbScalarEmitter
             escapedCi = $"lower(regexp_escape({EmitScalar(rhs)}))";
         }
 
-        return bin.Op switch
-        {
+        return bin.Op switch {
             ScalarBinaryOp.Has =>
                 $"regexp_matches(lower({left}), '(^|[^[:alnum:]])' || {escapedCi} || '([^[:alnum:]]|$)')",
             ScalarBinaryOp.NotHas =>
@@ -234,8 +228,7 @@ internal sealed class DuckDbScalarEmitter
         var fnName = MapWindowFunction(win.FunctionName);
         var args = win.Args.Select(EmitScalar).ToList();
 
-        var fnCall = fnName switch
-        {
+        var fnCall = fnName switch {
             "count" when args.Count == 0 => "count(*)",
             _ when args.Count == 0 => $"{fnName}()",
             _ => $"{fnName}({string.Join(", ", args)})"
@@ -274,8 +267,7 @@ internal sealed class DuckDbScalarEmitter
         return sb.ToString();
     }
 
-    private static string MapWindowFunction(string kustoName) => kustoName.ToLowerInvariant() switch
-    {
+    private static string MapWindowFunction(string kustoName) => kustoName.ToLowerInvariant() switch {
         "lag" => "lag",
         "lead" => "lead",
         "row_number" => "row_number",
@@ -289,8 +281,7 @@ internal sealed class DuckDbScalarEmitter
         _ => kustoName
     };
 
-    private string EmitWindowBound(WindowBound bound) => bound.Kind switch
-    {
+    private string EmitWindowBound(WindowBound bound) => bound.Kind switch {
         WindowBoundKind.UnboundedPreceding => "UNBOUNDED PRECEDING",
         WindowBoundKind.Preceding when bound.Offset is not null =>
             $"{EmitScalar(bound.Offset)} PRECEDING",
@@ -376,8 +367,7 @@ internal sealed class DuckDbScalarEmitter
         // Spec §11.3: KQL defaults are DESC NULLS LAST and ASC NULLS FIRST.
         // DuckDB defaults are ASC NULLS LAST (mismatches ASC case).
         // Always emit explicit NULLS ordering to match KQL semantics.
-        var nulls = sort.Nulls switch
-        {
+        var nulls = sort.Nulls switch {
             NullOrder.First => " NULLS FIRST",
             NullOrder.Last => " NULLS LAST",
             // KQL default: asc → NULLS FIRST, desc → NULLS LAST
@@ -535,8 +525,7 @@ internal sealed class DuckDbScalarEmitter
 
     private static string EmitTimestampLiteral(DateTime value)
     {
-        var utc = value.Kind switch
-        {
+        var utc = value.Kind switch {
             DateTimeKind.Local => value.ToUniversalTime(),
             DateTimeKind.Utc => value,
             _ => value

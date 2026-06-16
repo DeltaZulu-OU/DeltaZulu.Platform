@@ -6,6 +6,7 @@ using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Translation;
+
 /// <summary>
 /// Red-green-refactor harness for KQL → RelNode translation.
 /// Each test specifies a KQL input and asserts the shape of the

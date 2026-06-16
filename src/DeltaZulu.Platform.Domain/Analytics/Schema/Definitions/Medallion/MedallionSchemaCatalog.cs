@@ -3,6 +3,7 @@ using DeltaZulu.Platform.Domain.Analytics.Schema.Definitions.Medallion.Golden;
 using DeltaZulu.Platform.Domain.Analytics.Schema.Definitions.Medallion.Silver;
 
 namespace DeltaZulu.Platform.Domain.Analytics.Schema.Definitions.Medallion;
+
 /// <summary>
 /// <para>C#-first catalog for the medallion schema path.</para>
 /// <para>

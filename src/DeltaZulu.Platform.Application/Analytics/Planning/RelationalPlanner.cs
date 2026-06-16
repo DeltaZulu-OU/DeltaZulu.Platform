@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Application.Analytics.Planning;
+
 public sealed record PlannerContext(bool Enabled, int MaxIterations = 3, int MaxRuleApplications = 10_000);
 
 public sealed record PlannerRunStats(
@@ -337,22 +337,18 @@ public sealed partial class RelationalPlanner : IRelationalPlanner, IPlannerTele
             return expr;
         }
 
-        return expr switch
-        {
+        return expr switch {
             ColumnRef c when aliasToSource.TryGetValue(c.Name, out var src) => new ColumnRef(src),
             BinaryScalar b => b with { Left = RemapColumns(b.Left, aliasToSource), Right = RemapColumns(b.Right, aliasToSource) },
             UnaryScalar u => u with { Operand = RemapColumns(u.Operand, aliasToSource) },
             FunctionCall f => f with { Args = RemapArgs(f.Args, aliasToSource) },
-            CaseScalar c => c with
-            {
+            CaseScalar c => c with {
                 Branches = RemapBranches(c.Branches, aliasToSource),
                 Else = RemapColumns(c.Else, aliasToSource)
             },
-            WindowScalarExpr w => w with
-            {
+            WindowScalarExpr w => w with {
                 Args = RemapArgs(w.Args, aliasToSource),
-                Window = w.Window with
-                {
+                Window = w.Window with {
                     PartitionBy = RemapArgs(w.Window.PartitionBy, aliasToSource),
                     OrderBy = RemapSorts(w.Window.OrderBy, aliasToSource)
                 }
@@ -398,8 +394,7 @@ public sealed partial class RelationalPlanner : IRelationalPlanner, IPlannerTele
         return true;
     }
 
-    private static string ScalarKey(ScalarExpr expr) => expr switch
-    {
+    private static string ScalarKey(ScalarExpr expr) => expr switch {
         // Column names are case-insensitive in KQL; qualifier distinguishes join sides.
         ColumnRef c => $"col:{c.Qualifier}:{c.Name.ToLowerInvariant()}",
         LiteralScalar l => $"lit:{l.Kind}:{l.Value}",
@@ -461,22 +456,18 @@ public sealed partial class RelationalPlanner : IRelationalPlanner, IPlannerTele
             return expr;
         }
 
-        return expr switch
-        {
+        return expr switch {
             ColumnRef c when c.Qualifier is null && string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase) => replacement,
             BinaryScalar b => b with { Left = SubstituteColumn(b.Left, name, replacement), Right = SubstituteColumn(b.Right, name, replacement) },
             UnaryScalar u => u with { Operand = SubstituteColumn(u.Operand, name, replacement) },
             FunctionCall f => f with { Args = SubstituteArgs(f.Args, name, replacement) },
-            CaseScalar cs => cs with
-            {
+            CaseScalar cs => cs with {
                 Branches = SubstituteBranches(cs.Branches, name, replacement),
                 Else = SubstituteColumn(cs.Else, name, replacement)
             },
-            WindowScalarExpr w => w with
-            {
+            WindowScalarExpr w => w with {
                 Args = SubstituteArgs(w.Args, name, replacement),
-                Window = w.Window with
-                {
+                Window = w.Window with {
                     PartitionBy = SubstituteArgs(w.Window.PartitionBy, name, replacement),
                     OrderBy = SubstituteSorts(w.Window.OrderBy, name, replacement)
                 }

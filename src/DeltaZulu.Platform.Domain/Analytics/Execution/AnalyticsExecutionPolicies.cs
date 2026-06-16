@@ -8,8 +8,7 @@ public static class AnalyticsExecutionPolicies
     public const int ScheduledDetectionMaxMaterializedRows = 10_000;
     public const int RecoveryMaxMaterializedRows = 10_000;
 
-    public static int GetMaxMaterializedRows(ExecutionPurpose purpose) => purpose switch
-    {
+    public static int GetMaxMaterializedRows(ExecutionPurpose purpose) => purpose switch {
         ExecutionPurpose.Interactive => InteractiveMaxMaterializedRows,
         ExecutionPurpose.Dashboard => DashboardMaxMaterializedRows,
         ExecutionPurpose.ValidationDryRun => ValidationDryRunMaxMaterializedRows,

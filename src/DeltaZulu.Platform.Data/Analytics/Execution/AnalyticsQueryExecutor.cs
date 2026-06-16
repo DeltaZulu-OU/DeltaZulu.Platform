@@ -168,8 +168,7 @@ public sealed partial class AnalyticsQueryExecutor : IAnalyticsQueryExecutor, ID
             readonlyColumnData[i] = columnData[i];
         }
 
-        return new AnalyticsQueryResult
-        {
+        return new AnalyticsQueryResult {
             Success = true,
             Columns = columns,
             ColumnData = readonlyColumnData,
@@ -183,8 +182,7 @@ public sealed partial class AnalyticsQueryExecutor : IAnalyticsQueryExecutor, ID
 
     private static AnalyticsQueryResult FromDiagnostics(
         DiagnosticBag diagnostics,
-        List<string>? debugTrace = null) => new()
-        {
+        List<string>? debugTrace = null) => new() {
             Success = false,
             DebugTrace = debugTrace ?? [],
             Diagnostics = diagnostics

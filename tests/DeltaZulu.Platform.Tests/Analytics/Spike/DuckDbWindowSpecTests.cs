@@ -1,9 +1,9 @@
-
 using System.Globalization;
 using DeltaZulu.Platform.Data.DuckDb;
 using DuckDB.NET.Data;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Spike;
+
 /// <summary>
 /// <para>
 /// Spec verification tests: confirm that every DuckDB window function used
@@ -328,8 +328,7 @@ public sealed class DuckDbWindowSpecTests
 
     private static long AsInt64(object? v) => v is null
             ? throw new InvalidOperationException("Value is null")
-            : v switch
-            {
+            : v switch {
                 long l => l,
                 int i => i,
                 short s => s,

@@ -1,7 +1,6 @@
-
 using System.Diagnostics;
-using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Analytics;
+using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 using DeltaZulu.Platform.Domain.Analytics.SavedQueries;
@@ -14,6 +13,7 @@ using DeltaZulu.Platform.Web.Analytics.Rendering;
 using Microsoft.Extensions.Logging;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Web;
+
 [TestClass]
 public sealed class DashboardPageControllerTests
 {
@@ -164,8 +164,7 @@ public sealed class DashboardPageControllerTests
 
         await controller.LoadAsync(dashboard.Id);
         controller.StartEditMode();
-        controller.State.WidgetResults[widget.Id] = new DashboardWidgetRunResult
-        {
+        controller.State.WidgetResults[widget.Id] = new DashboardWidgetRunResult {
             WidgetId = widget.Id,
             Status = DashboardWidgetRunStatus.Succeeded,
             StartedAtUtc = DateTime.UtcNow
@@ -182,12 +181,10 @@ public sealed class DashboardPageControllerTests
     [TestMethod]
     public async Task SaveWidgetLayoutAsync_OverlappingLayout_SetsSaveErrorAndDoesNotSave()
     {
-        var first = CreateWidget("widget-1") with
-        {
+        var first = CreateWidget("widget-1") with {
             Layout = new DashboardLayout { X = 0, Y = 0, Width = 4, Height = 3, MinimumWidth = 1, MinimumHeight = 1 }
         };
-        var second = CreateWidget("widget-2") with
-        {
+        var second = CreateWidget("widget-2") with {
             Layout = new DashboardLayout { X = 5, Y = 0, Width = 4, Height = 3, MinimumWidth = 1, MinimumHeight = 1 }
         };
 
@@ -211,12 +208,10 @@ public sealed class DashboardPageControllerTests
     [TestMethod]
     public async Task SaveWidgetLayoutsAsync_MultipleNonOverlappingChanges_StagesAtomically()
     {
-        var first = CreateWidget("widget-1") with
-        {
+        var first = CreateWidget("widget-1") with {
             Layout = new DashboardLayout { X = 0, Y = 0, Width = 4, Height = 3, MinimumWidth = 1, MinimumHeight = 1 }
         };
-        var second = CreateWidget("widget-2") with
-        {
+        var second = CreateWidget("widget-2") with {
             Layout = new DashboardLayout { X = 5, Y = 0, Width = 4, Height = 3, MinimumWidth = 1, MinimumHeight = 1 }
         };
 
@@ -299,8 +294,7 @@ public sealed class DashboardPageControllerTests
     }
 
     private static DashboardDefinition CreateDashboard(string name = "Dashboard", IReadOnlyList<DashboardWidgetDefinition>? widgets = null)
-        => new()
-        {
+        => new() {
             Id = "dashboard-1",
             Name = name,
             Refresh = DashboardRefreshPolicy.Manual(),
@@ -310,14 +304,12 @@ public sealed class DashboardPageControllerTests
         };
 
     private static DashboardWidgetDefinition CreateWidget(string id)
-        => new()
-        {
+        => new() {
             Id = id,
             Title = id,
             Kind = DashboardWidgetKind.Query,
             QueryText = "ProcessEvent | take 10 | render",
-            Layout = new DashboardLayout
-            {
+            Layout = new DashboardLayout {
                 X = 0,
                 Y = 0,
                 Width = 4,
@@ -384,8 +376,7 @@ public sealed class DashboardPageControllerTests
         public Task<IReadOnlyList<DashboardSummary>> ListAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<DashboardSummary>>(
                 _dashboards.Values
-                    .Select(dashboard => new DashboardSummary
-                    {
+                    .Select(dashboard => new DashboardSummary {
                         Name = dashboard.Name,
                         Description = dashboard.Description,
                         WidgetCount = dashboard.Widgets.Count

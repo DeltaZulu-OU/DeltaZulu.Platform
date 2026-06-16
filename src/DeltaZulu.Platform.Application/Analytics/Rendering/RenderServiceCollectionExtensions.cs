@@ -1,9 +1,9 @@
-
 using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
 using DeltaZulu.Platform.Application.Analytics.Rendering.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DeltaZulu.Platform.Application.Analytics.Rendering;
+
 public static class RenderServiceCollectionExtensions
 {
     public static IServiceCollection AddAnalyticsRender(this IServiceCollection services)

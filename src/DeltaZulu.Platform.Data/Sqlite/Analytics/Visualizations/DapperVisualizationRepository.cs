@@ -1,11 +1,10 @@
-
 using Dapper;
-using DeltaZulu.Platform.Data.Sqlite.Analytics;
+using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 using AppIVisualizationRepository = DeltaZulu.Platform.Domain.Analytics.Visualizations.IVisualizationRepository;
 using AppVisualizationRecord = DeltaZulu.Platform.Domain.Analytics.Visualizations.VisualizationRecord;
-using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.Visualizations;
+
 public sealed class DapperVisualizationRepository : DapperRepositoryBase, AppIVisualizationRepository
 {
     private const string CreateSchemaSql =
@@ -111,12 +110,10 @@ public sealed class DapperVisualizationRepository : DapperRepositoryBase, AppIVi
         WHERE id = @Id;
         """;
 
-
     public DapperVisualizationRepository(IAppDbConnectionFactory connectionFactory)
         : base(connectionFactory, CreateSchemaSql)
     {
     }
-
 
     public async Task<IReadOnlyList<AppVisualizationRecord>> ListAsync(CancellationToken cancellationToken = default)
     {
@@ -208,7 +205,6 @@ public sealed class DapperVisualizationRepository : DapperRepositoryBase, AppIVi
             row.SpecJson,
             Parse(row.CreatedAt),
             Parse(row.UpdatedAt));
-
 
     private sealed class VisualizationRow
     {

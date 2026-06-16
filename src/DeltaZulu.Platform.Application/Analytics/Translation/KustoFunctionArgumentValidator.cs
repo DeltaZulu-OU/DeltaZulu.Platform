@@ -1,9 +1,9 @@
-
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using Kusto.Language.Symbols;
 using Kusto.Language.Syntax;
 
 namespace DeltaZulu.Platform.Application.Analytics.Translation;
+
 /// <summary>Applies function-specific arity and literal argument rules.</summary>
 internal static class KustoFunctionArgumentValidator
 {

@@ -1,10 +1,10 @@
-
 using DeltaZulu.Platform.Domain.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.QueryHistory;
 using DeltaZulu.Platform.Domain.Analytics.SavedQueries;
 using DeltaZulu.Platform.Domain.Analytics.Visualizations;
 
 namespace DeltaZulu.Platform.Web.Analytics.Services;
+
 /// <summary>
 /// Application-facing service for saved queries and recent query history.
 /// This keeps editor components from depending directly on persistence repositories.

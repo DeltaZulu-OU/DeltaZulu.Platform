@@ -5,6 +5,7 @@ using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Translation;
+
 /// <summary>
 /// Edge case, error path, and adversarial tests for the KQL-to-RelNode translator.
 /// These verify that the translator rejects malformed, blocked, or adversarial KQL

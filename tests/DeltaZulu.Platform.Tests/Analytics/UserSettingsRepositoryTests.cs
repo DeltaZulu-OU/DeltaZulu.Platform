@@ -1,10 +1,10 @@
-
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Settings;
 using DeltaZulu.Platform.Domain.Analytics.Settings;
 using Microsoft.Data.Sqlite;
 
 namespace DeltaZulu.Platform.Tests.Analytics;
+
 [TestClass]
 public sealed class UserSettingsRepositoryTests
 {

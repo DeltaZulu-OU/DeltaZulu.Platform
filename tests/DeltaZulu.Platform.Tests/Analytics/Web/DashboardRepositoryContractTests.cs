@@ -1,8 +1,8 @@
-
 using DeltaZulu.Platform.Web.Analytics.Dashboards;
 using DeltaZulu.Platform.Web.Analytics.Dashboards.Persistence;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Web;
+
 [TestClass]
 public sealed class DashboardRepositoryContractTests
 {
@@ -10,8 +10,7 @@ public sealed class DashboardRepositoryContractTests
     public async Task RepositoryContract_SaveGetListDelete_WorksWithInMemoryImplementation()
     {
         IDashboardRepository repository = new InMemoryDashboardRepository();
-        var dashboard = new DashboardDefinition
-        {
+        var dashboard = new DashboardDefinition {
             Name = "SOC overview",
             Widgets =
             [
@@ -47,8 +46,7 @@ public sealed class DashboardRepositoryContractTests
     public async Task RepositoryContract_SaveInvalidDashboard_ThrowsRepositoryException()
     {
         IDashboardRepository repository = new InMemoryDashboardRepository();
-        var invalid = new DashboardDefinition
-        {
+        var invalid = new DashboardDefinition {
             Name = " "
         };
         await Assert.ThrowsExactlyAsync<DashboardRepositoryException>(() => repository.SaveAsync(invalid, TestContext.CancellationToken));
@@ -74,8 +72,7 @@ public sealed class DashboardRepositoryContractTests
         {
             IReadOnlyList<DashboardSummary> summaries = _dashboards.Values
                 .OrderBy(dashboard => dashboard.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(dashboard => new DashboardSummary
-                {
+                .Select(dashboard => new DashboardSummary {
                     Id = dashboard.Id,
                     Name = dashboard.Name,
                     Description = dashboard.Description,

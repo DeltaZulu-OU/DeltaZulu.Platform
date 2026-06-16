@@ -1,6 +1,7 @@
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Application.Analytics.Planning;
+
 public sealed partial class RelationalPlanner
 {
     private sealed class LookupOutputBindingPass : IPlannerPass
@@ -105,8 +106,7 @@ public sealed partial class RelationalPlanner
             return map;
         }
 
-        private static HashSet<string> OutputNames(RelNode node) => node switch
-        {
+        private static HashSet<string> OutputNames(RelNode node) => node switch {
             ProjectNode p => ToCaseInsensitiveSet(p.Projections.Select(x => x.Alias)),
             ExtendNode e => AddAliases(OutputNames(e.Input), e.Extensions.Select(x => x.Alias)),
             AggregateNode a => AddAliases(
@@ -121,8 +121,7 @@ public sealed partial class RelationalPlanner
             _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         };
 
-        private static RelNode Rewrite(RelNode node, ref int applied) => node switch
-        {
+        private static RelNode Rewrite(RelNode node, ref int applied) => node switch {
             ProjectNode p => RewriteProject(p, ref applied),
             FilterNode f => RewriteFilter(f, ref applied),
             SortNode s => RewriteSort(s, ref applied),
@@ -132,8 +131,7 @@ public sealed partial class RelationalPlanner
             SampleNode s => s with { Input = Rewrite(s.Input, ref applied) },
             DistinctNode d => d with { Input = Rewrite(d.Input, ref applied) },
             JoinNode j => j with { Left = Rewrite(j.Left, ref applied), Right = Rewrite(j.Right, ref applied) },
-            LetBindingNode lb => lb with
-            {
+            LetBindingNode lb => lb with {
                 Body = Rewrite(lb.Body, ref applied),
                 TabularValue = lb.TabularValue is null ? null : Rewrite(lb.TabularValue, ref applied)
             },
@@ -169,8 +167,7 @@ public sealed partial class RelationalPlanner
 
             return ReferenceEquals(input, a.Input) && groupBy is null && aggregates is null
                 ? a
-                : (a with
-                {
+                : (a with {
                     Input = input,
                     GroupBy = groupBy ?? a.GroupBy,
                     Aggregates = aggregates ?? a.Aggregates
@@ -231,8 +228,7 @@ public sealed partial class RelationalPlanner
                     return new ColumnRef(c.Name, q);
 
                 case BinaryScalar b:
-                    return b with
-                    {
+                    return b with {
                         Left = RewriteScalar(b.Left, owner, ref applied),
                         Right = RewriteScalar(b.Right, owner, ref applied)
                     };

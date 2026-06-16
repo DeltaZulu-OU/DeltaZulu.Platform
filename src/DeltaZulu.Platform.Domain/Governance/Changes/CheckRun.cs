@@ -48,8 +48,7 @@ public sealed class CheckRun : Entity<CheckRunId>
     public static CheckRun Reconstitute(
         CheckRunId id, ChangeRequestId changeRequestId, string name, bool isBlocking,
         CheckStatus status, DateTimeOffset? startedAt, DateTimeOffset? completedAt,
-        string summary, string detailsJson, string logsExcerpt) => new CheckRun(id, changeRequestId, name, isBlocking, skip: true)
-        {
+        string summary, string detailsJson, string logsExcerpt) => new CheckRun(id, changeRequestId, name, isBlocking, skip: true) {
             Status = status,
             StartedAt = startedAt,
             CompletedAt = completedAt,

@@ -15,15 +15,13 @@ public sealed class ContentLibraryArtifactTests
             "queries/saved/signin.kql",
             "Sign-in triage");
 
-        var accepted = draft with
-        {
+        var accepted = draft with {
             Type = ContentLibraryArtifactType.DetectionQuery,
             State = ContentLibraryArtifactState.AcceptedContent,
             LogicalPath = "detections/signin/rule.kql",
         };
 
-        var runtime = draft with
-        {
+        var runtime = draft with {
             Type = ContentLibraryArtifactType.Visualization,
             State = ContentLibraryArtifactState.RuntimeOnly,
             LogicalPath = "runtime/dashboards/signin.json",

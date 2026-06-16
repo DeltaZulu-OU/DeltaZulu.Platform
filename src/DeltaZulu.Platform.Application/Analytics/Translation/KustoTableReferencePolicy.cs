@@ -3,6 +3,7 @@ using DeltaZulu.Platform.Domain.Analytics.Policy;
 using Kusto.Language.Syntax;
 
 namespace DeltaZulu.Platform.Application.Analytics.Translation;
+
 /// <summary>Enforces the approved, unqualified KQL table-reference boundary.</summary>
 internal sealed class KustoTableReferencePolicy
 {

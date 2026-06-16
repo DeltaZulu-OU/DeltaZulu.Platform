@@ -1,8 +1,8 @@
-
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 using Vizor.ECharts;
 
 namespace DeltaZulu.Platform.Web.Analytics.Rendering;
+
 public sealed class EChartsRenderOptionsBuilder
 {
     public ChartOptions Build(RenderChartModel chart)
@@ -22,8 +22,7 @@ public sealed class EChartsRenderOptionsBuilder
             case RenderKind.Barchart:
             case RenderKind.Columnchart:
                 trigger = TooltipTrigger.Axis;
-                series.AddRange(chart.Series.Select(s => new BarSeries
-                {
+                series.AddRange(chart.Series.Select(s => new BarSeries {
                     Name = s.Name,
                     Stack = chart.IsStacked ? "total" : null,
                     Data = s.Values
@@ -32,8 +31,7 @@ public sealed class EChartsRenderOptionsBuilder
 
             case RenderKind.Piechart:
                 trigger = TooltipTrigger.Item;
-                series.AddRange(chart.Series.Select(s => new PieSeries
-                {
+                series.AddRange(chart.Series.Select(s => new PieSeries {
                     Name = s.Name,
                     Radius = new CircleRadius("65%"),
                     Data = BuildPieData(chart, s)
@@ -43,8 +41,7 @@ public sealed class EChartsRenderOptionsBuilder
             case RenderKind.Timechart:
             case RenderKind.Linechart:
                 trigger = TooltipTrigger.Axis;
-                series.AddRange(chart.Series.Select(s => new LineSeries
-                {
+                series.AddRange(chart.Series.Select(s => new LineSeries {
                     Name = s.Name,
                     Smooth = true,
                     Data = s.Values
@@ -53,8 +50,7 @@ public sealed class EChartsRenderOptionsBuilder
 
             case RenderKind.Areachart:
                 trigger = TooltipTrigger.Axis;
-                series.AddRange(chart.Series.Select(s => new LineSeries
-                {
+                series.AddRange(chart.Series.Select(s => new LineSeries {
                     Name = s.Name,
                     Smooth = true,
                     Stack = chart.IsStacked ? "total" : null,
@@ -65,8 +61,7 @@ public sealed class EChartsRenderOptionsBuilder
 
             case RenderKind.Scatterchart:
                 trigger = TooltipTrigger.Item;
-                series.AddRange(chart.Series.Select(s => new ScatterSeries
-                {
+                series.AddRange(chart.Series.Select(s => new ScatterSeries {
                     Name = s.Name,
                     Data = s.Values
                 }));
@@ -76,8 +71,7 @@ public sealed class EChartsRenderOptionsBuilder
                 throw new NotSupportedException($"Render kind '{chart.Kind}' is not yet supported in the chart adapter.");
         }
 
-        var options = new ChartOptions
-        {
+        var options = new ChartOptions {
             Tooltip = new Tooltip { Trigger = trigger, Show = true },
             Legend = new Legend { Show = ParseLegendVisibility(chart.Legend) == LegendVisibility.Visible },
             Series = series
@@ -90,8 +84,7 @@ public sealed class EChartsRenderOptionsBuilder
             return options;
         }
 
-        options.XAxis = new XAxis
-        {
+        options.XAxis = new XAxis {
             Type = AxisType.Category,
             Data = chart.XLabels.Select(v => new AxisData { Value = v }).ToList()
         };
@@ -115,8 +108,7 @@ public sealed class EChartsRenderOptionsBuilder
             return LegendVisibility.Visible;
         }
 
-        return normalized.ToLowerInvariant() switch
-        {
+        return normalized.ToLowerInvariant() switch {
             "hidden" or "hide" or "none" or "off" => LegendVisibility.Hidden,
             _ => LegendVisibility.Visible
         };

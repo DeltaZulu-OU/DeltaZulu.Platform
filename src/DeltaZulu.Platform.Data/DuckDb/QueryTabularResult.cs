@@ -1,6 +1,6 @@
-
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 namespace DeltaZulu.Platform.Data.DuckDb;
+
 public sealed class QueryTabularResult
 {
     public IReadOnlyList<IReadOnlyList<object?>> ColumnData { get; init; } = [];
@@ -21,8 +21,7 @@ public sealed class QueryTabularResult
         string? plannerStatsJson,
         string? sqlShapeStatsJson,
         IReadOnlyList<string>? debugTrace,
-        DiagnosticBag diagnostics) => new()
-        {
+        DiagnosticBag diagnostics) => new() {
             Success = true,
             RowCount = rowCount,
             Columns = columns,
@@ -36,8 +35,7 @@ public sealed class QueryTabularResult
 
     public static QueryTabularResult FromDiagnostics(
         DiagnosticBag diagnostics,
-        IReadOnlyList<string>? debugTrace = null) => new()
-        {
+        IReadOnlyList<string>? debugTrace = null) => new() {
             Success = false,
             DebugTrace = debugTrace ?? [],
             Diagnostics = diagnostics

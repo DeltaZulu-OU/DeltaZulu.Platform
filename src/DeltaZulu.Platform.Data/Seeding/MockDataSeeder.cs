@@ -11,8 +11,7 @@ public static class MockDataSeeder
     private const string DnsServerTable = "bronze.dns_server_event";
 
     private static readonly IReadOnlyDictionary<string, long> ExpectedRowsByTable =
-        new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
-        {
+        new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase) {
             [WindowsSysmonTable] = 320,
             [WindowsSecurityTable] = 100,
             [DnsServerTable] = 80
@@ -22,8 +21,7 @@ public static class MockDataSeeder
         string? catalogVersion = null,
         DateTimeOffset? nowUtc = null)
     {
-        var sourceNameByTable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
+        var sourceNameByTable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
             [WindowsSysmonTable] = "Windows Sysmon",
             [WindowsSecurityTable] = "Windows Security",
             [DnsServerTable] = "DNS Server"
@@ -45,8 +43,7 @@ public static class MockDataSeeder
     {
         var seedNowUtc = NormalizeNowUtc(nowUtc);
 
-        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
             [WindowsSysmonTable] = GetWindowsSysmonSeedSql(seedNowUtc),
             [WindowsSecurityTable] = GetWindowsSecuritySeedSql(seedNowUtc),
             [DnsServerTable] = GetDnsServerSeedSql(seedNowUtc)

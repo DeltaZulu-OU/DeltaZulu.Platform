@@ -12,8 +12,7 @@ public sealed class QueryExecutionDryRunCheckTests
     private static CheckContext Ctx(params DraftFileSnapshot[] files) =>
         new(ChangeRequestId.New(), "test-det", WorkflowProfileId.ControlledReview, files);
 
-    private static AnalyticsQueryResult Ok() => new()
-    {
+    private static AnalyticsQueryResult Ok() => new() {
         Success = true,
         Columns = [new AnalyticsResultColumn("C", "VARCHAR")],
         ColumnData = [["v"]],
@@ -133,7 +132,10 @@ public sealed class QueryExecutionDryRunCheckTests
         private readonly Func<AnalyticsQueryRequest, AnalyticsQueryResult> _handler;
         public AnalyticsQueryRequest? LastRequest { get; private set; }
 
-        public StubExecutor(AnalyticsQueryResult result) : this(_ => result) { }
+        public StubExecutor(AnalyticsQueryResult result) : this(_ => result)
+        {
+        }
+
         public StubExecutor(Func<AnalyticsQueryRequest, AnalyticsQueryResult> handler)
         {
             _handler = handler;

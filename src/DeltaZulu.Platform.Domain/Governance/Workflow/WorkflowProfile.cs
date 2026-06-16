@@ -90,8 +90,7 @@ public sealed class WorkflowProfile
     /// Resolves the gate policy for a profile id. Throws for profiles that are reserved in the
     /// enum but not yet implemented in the POC.
     /// </summary>
-    public static WorkflowProfile For(WorkflowProfileId id) => id switch
-    {
+    public static WorkflowProfile For(WorkflowProfileId id) => id switch {
         WorkflowProfileId.QuickLab => new WorkflowProfile(
             id: WorkflowProfileId.QuickLab,
             requiresPassingChecks: false,

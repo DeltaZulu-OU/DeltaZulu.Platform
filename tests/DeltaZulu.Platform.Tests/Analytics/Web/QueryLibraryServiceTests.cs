@@ -1,10 +1,10 @@
-
 using DeltaZulu.Platform.Domain.Analytics.QueryHistory;
 using DeltaZulu.Platform.Domain.Analytics.SavedQueries;
 using DeltaZulu.Platform.Domain.Analytics.Visualizations;
 using DeltaZulu.Platform.Web.Analytics.Services;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Web;
+
 [TestClass]
 public sealed class QueryLibraryServiceTests
 {

@@ -1,8 +1,8 @@
-
 using System.Text;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Sql;
+
 internal sealed partial class DuckDbRelNodeEmitter
 {
     internal string Emit(RelNode node)
@@ -130,8 +130,7 @@ internal sealed partial class DuckDbRelNodeEmitter
         return sqlText;
     }
 
-    private static bool HasLimit(RelNode node) => node switch
-    {
+    private static bool HasLimit(RelNode node) => node switch {
         LimitNode => true,
         // Transparent pass-through nodes: the root limit still propagates
         FilterNode f => HasLimit(f.Input),

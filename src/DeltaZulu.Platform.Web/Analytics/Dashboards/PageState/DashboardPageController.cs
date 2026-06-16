@@ -1,8 +1,8 @@
-
 using DeltaZulu.Platform.Web.Analytics.Dashboards.Persistence;
 using DeltaZulu.Platform.Web.Analytics.Dashboards.Runtime;
 
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards.PageState;
+
 public sealed partial class DashboardPageController : IDisposable
 {
     private readonly IDashboardRepository _dashboardRepository;
@@ -105,8 +105,7 @@ public sealed partial class DashboardPageController : IDisposable
         var token = cts.Token;
         _runningWidgets[widget.Id] = cts;
 
-        State.WidgetResults[widget.Id] = new DashboardWidgetRunResult
-        {
+        State.WidgetResults[widget.Id] = new DashboardWidgetRunResult {
             WidgetId = widget.Id,
             Status = DashboardWidgetRunStatus.Running,
             StartedAtUtc = DateTime.UtcNow
@@ -127,8 +126,7 @@ public sealed partial class DashboardPageController : IDisposable
             if (IsActiveRun(widget.Id, cts))
             {
                 var startedAtUtc = DateTime.UtcNow;
-                State.WidgetResults[widget.Id] = new DashboardWidgetRunResult
-                {
+                State.WidgetResults[widget.Id] = new DashboardWidgetRunResult {
                     WidgetId = widget.Id,
                     Status = DashboardWidgetRunStatus.Cancelled,
                     StartedAtUtc = startedAtUtc,

@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Application.Analytics.Planning;
+
 internal interface IPlannerPass
 {
     string Name { get; }

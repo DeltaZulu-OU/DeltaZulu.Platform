@@ -1,9 +1,9 @@
-
 using System.Text.Json;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 using DeltaZulu.Platform.Domain.Analytics.Visualizations;
 
 namespace DeltaZulu.Platform.Web.Analytics.Visualizations;
+
 public static class VisualizationDirectiveMapper
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -43,14 +43,12 @@ public static class VisualizationDirectiveMapper
             return false;
         }
 
-        directive = new RenderDirective
-        {
+        directive = new RenderDirective {
             Kind = kind,
             Title = NormalizeOptionalText(spec.Title),
             Legend = NormalizeOptionalText(spec.Legend),
             IsStacked = spec.IsStacked,
-            Binding = new RenderBinding
-            {
+            Binding = new RenderBinding {
                 XColumn = NormalizeOptionalText(spec.XColumn),
                 YColumns = NormalizeColumnList(spec.YColumns),
                 SeriesColumn = NormalizeOptionalText(spec.SeriesColumn)

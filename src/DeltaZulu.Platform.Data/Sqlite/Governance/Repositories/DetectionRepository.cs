@@ -79,8 +79,7 @@ internal sealed class DetectionRepository(DapperSession session) : IDetectionRep
             DateTimeOffset.Parse(created_at),
             DateTimeOffset.Parse(updated_at));
 
-        private static DetectionLifecycle ParseLifecycle(string lifecycle) => lifecycle switch
-        {
+        private static DetectionLifecycle ParseLifecycle(string lifecycle) => lifecycle switch {
             "Conceived" => DetectionLifecycle.Draft,
             _ => Enum.Parse<DetectionLifecycle>(lifecycle),
         };

@@ -1,4 +1,3 @@
-
 using System.Collections.Concurrent;
 using System.Globalization;
 using DeltaZulu.Platform.Application.Analytics.Planning;
@@ -9,6 +8,7 @@ using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using DuckDB.NET.Data;
 
 namespace DeltaZulu.Platform.Data.Analytics;
+
 /// <summary>
 /// <para>
 /// Orchestrates the full query pipeline:
@@ -294,8 +294,7 @@ public sealed partial class QueryRuntime
         }
     }
 
-    private static int CountJoins(RelNode node) => node switch
-    {
+    private static int CountJoins(RelNode node) => node switch {
         JoinNode j => 1 + CountJoins(j.Left) + CountJoins(j.Right),
         FilterNode f => CountJoins(f.Input),
         ProjectNode p => CountJoins(p.Input),
@@ -320,8 +319,7 @@ public sealed partial class QueryRuntime
         return columns;
     }
 
-    private static bool IsSimpleScalar(ScalarExpr expr) => expr switch
-    {
+    private static bool IsSimpleScalar(ScalarExpr expr) => expr switch {
         ColumnRef => true,
         LiteralScalar => true,
         StarExpr => true,
@@ -330,8 +328,7 @@ public sealed partial class QueryRuntime
         _ => false
     };
 
-    private static bool IsSimpleShape(RelNode node) => node switch
-    {
+    private static bool IsSimpleShape(RelNode node) => node switch {
         ScanNode => true,
         FilterNode f => IsSimpleShape(f.Input) && IsSimpleScalar(f.Predicate),
         ProjectNode p => IsSimpleShape(p.Input) && AreSimpleProjections(p.Projections),

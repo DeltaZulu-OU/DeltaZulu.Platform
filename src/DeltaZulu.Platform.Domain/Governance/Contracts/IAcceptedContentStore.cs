@@ -1,6 +1,7 @@
 namespace DeltaZulu.Platform.Domain.Governance.Contracts;
 
 #pragma warning disable CS1574 // XML comment has cref attribute that could not be resolved
+
 /// <summary>
 /// Abstraction over the Git-backed accepted content store. The application layer talks to
 /// this interface; <c>Governance.Infrastructure</c> implements it with LibGit2Sharp.

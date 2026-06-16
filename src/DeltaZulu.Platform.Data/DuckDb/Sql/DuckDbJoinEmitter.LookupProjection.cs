@@ -1,31 +1,27 @@
-
 using System.Text;
 using System.Text.RegularExpressions;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Sql;
+
 internal sealed partial class DuckDbJoinEmitter
 {
     internal bool TryRenderProjectedLookupSortTake(RelNode node, out string sql)
     {
         sql = string.Empty;
 
-        if (node is not LimitNode
-            {
-                Input: SortNode
-                {
-                    Input: ProjectNode
-                    {
-                        Input: JoinNode
-                        {
-                            Flavor: JoinFlavor.Lookup,
-                            Kind: JoinKind.LeftOuter
-                        } join
-                    } project,
-                    Sorts: var sorts
-                },
-                Count: var limit
-            })
+        if (node is not LimitNode {
+            Input: SortNode {
+                Input: ProjectNode {
+                    Input: JoinNode {
+                        Flavor: JoinFlavor.Lookup,
+                        Kind: JoinKind.LeftOuter
+                    } join
+                } project,
+                Sorts: var sorts
+            },
+            Count: var limit
+        })
         {
             return false;
         }
@@ -131,8 +127,7 @@ internal sealed partial class DuckDbJoinEmitter
             : _scalarEmitter.EmitScalar(sort.Expression);
 
         var direction = sort.Direction == SortDirection.Desc ? " DESC" : " ASC";
-        var nulls = sort.Nulls switch
-        {
+        var nulls = sort.Nulls switch {
             NullOrder.First => " NULLS FIRST",
             NullOrder.Last => " NULLS LAST",
             _ => sort.Direction == SortDirection.Asc ? " NULLS FIRST" : " NULLS LAST"
@@ -179,8 +174,7 @@ internal sealed partial class DuckDbJoinEmitter
                     Walk(right);
                     break;
 
-                case BinaryScalar
-                {
+                case BinaryScalar {
                     Op: ScalarBinaryOp.Eq,
                     Left: ColumnRef { Qualifier: JoinSide.Left } left,
                     Right: ColumnRef { Qualifier: JoinSide.Right } right
@@ -188,8 +182,7 @@ internal sealed partial class DuckDbJoinEmitter
                     keys.Add(left.Name);
                     break;
 
-                case BinaryScalar
-                {
+                case BinaryScalar {
                     Op: ScalarBinaryOp.Eq,
                     Left: ColumnRef { Qualifier: JoinSide.Right } right,
                     Right: ColumnRef { Qualifier: JoinSide.Left } left
@@ -308,8 +301,7 @@ internal sealed partial class DuckDbJoinEmitter
 
             if (terminalTopK is not null)
             {
-                terminalTopK = terminalTopK with
-                {
+                terminalTopK = terminalTopK with {
                     Source = plainJoinSource,
                     OrderBy = RenameJoinAliases(terminalTopK.OrderBy)
                 };
@@ -317,8 +309,7 @@ internal sealed partial class DuckDbJoinEmitter
 
             if (terminalOrder is not null)
             {
-                terminalOrder = terminalOrder with
-                {
+                terminalOrder = terminalOrder with {
                     Source = plainJoinSource,
                     OrderBy = RenameJoinAliases(terminalOrder.OrderBy)
                 };

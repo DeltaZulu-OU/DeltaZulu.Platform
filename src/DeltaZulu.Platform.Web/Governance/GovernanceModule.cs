@@ -6,8 +6,7 @@ namespace DeltaZulu.Platform.Web.Governance;
 
 public sealed class GovernanceModule : IPlatformModule
 {
-    public PlatformModuleDescriptor Descriptor { get; } = new()
-    {
+    public PlatformModuleDescriptor Descriptor { get; } = new() {
         Id = "governance",
         DisplayName = "Detection Content Governance",
         Badge = "POC",

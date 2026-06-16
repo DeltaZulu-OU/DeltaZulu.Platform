@@ -34,9 +34,9 @@ public sealed class CandidateDecisionTests
 
     [TestMethod]
     public void Record_ReasonTooLong_Throws() => Assert.ThrowsExactly<DomainException>(() =>
-                                                          CandidateDecision.Record(
-                                                              CandidateDecisionId.New(), CandidateId,
-                                                              CandidateDecisionType.Approve, Analyst, new string('x', 4001), Now));
+                                                              CandidateDecision.Record(
+                                                                  CandidateDecisionId.New(), CandidateId,
+                                                                  CandidateDecisionType.Approve, Analyst, new string('x', 4001), Now));
 
     [TestMethod]
     public void LinkIncident_OnApproval_Succeeds()

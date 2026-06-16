@@ -1,10 +1,10 @@
-
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.SavedQueries;
 using Microsoft.Data.Sqlite;
 using AppSavedQueryRecord = DeltaZulu.Platform.Domain.Analytics.SavedQueries.SavedQueryRecord;
 
 namespace DeltaZulu.Platform.Tests.Analytics;
+
 [TestClass]
 public sealed class SavedQueryRepositoryTests
 {
@@ -165,7 +165,6 @@ public sealed class SavedQueryRepositoryTests
             DeleteDatabaseFiles(dbPath);
         }
     }
-
 
     [TestMethod]
     public async Task SearchAsync_FiltersAndPaginatesInDatabaseOrder()

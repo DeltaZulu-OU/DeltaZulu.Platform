@@ -18,8 +18,7 @@ internal sealed partial class DuckDbRelNodeEmitter
         _joinEmitter = joinEmitter;
     }
 
-    internal (string Source, string? Columns) EmitNode(RelNode node) => node switch
-    {
+    internal (string Source, string? Columns) EmitNode(RelNode node) => node switch {
         ScanNode scan => EmitScan(scan),
         FilterNode filter => EmitFilter(filter),
         ProjectNode project => EmitProject(project),

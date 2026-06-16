@@ -63,7 +63,7 @@ public sealed class SharedDetectionContentContractTests
 
     [TestMethod]
     public void AcceptedDetectionContentRef_RejectsNullSlug() => Assert.ThrowsExactly<ArgumentNullException>(() =>
-                                                                          new AcceptedDetectionContentRef(DetectionContentId.New(), null!, null, null));
+                                                                              new AcceptedDetectionContentRef(DetectionContentId.New(), null!, null, null));
 
     [TestMethod]
     public void DetectionContentFile_RejectsTraversalRepositoryPath()

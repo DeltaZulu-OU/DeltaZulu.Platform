@@ -1,14 +1,13 @@
-
 using System.Text.Json;
 using Dapper;
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards.Persistence;
+
 public sealed class SqliteDashboardRepository : IDashboardRepository, IDisposable
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
-    {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) {
         WriteIndented = false
     };
 
@@ -135,8 +134,7 @@ public sealed class SqliteDashboardRepository : IDashboardRepository, IDisposabl
     }
 
     private static DashboardSummary ToSummary(DashboardSummaryRow row)
-        => new()
-        {
+        => new() {
             Id = row.Id,
             Name = row.Name,
             Description = row.Description,

@@ -1,4 +1,3 @@
-
 using System.Globalization;
 using System.Text.RegularExpressions;
 using DeltaZulu.Platform.Application.Analytics.Translation;
@@ -9,6 +8,7 @@ using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Emitter;
+
 /// <summary>
 /// <para>
 /// Red-green-refactor harness for RelNode → DuckDB SQL emission.
@@ -775,9 +775,9 @@ public sealed partial class DuckDbQueryEmitterTests
     [TestMethod]
     [Description("Unknown function names are rejected")]
     public void Func_Unknown_ThrowsNotSupported() => Assert.ThrowsExactly<NotSupportedException>(() =>
-                                                                                                          _emitter.Emit(new ExtendNode(
-                                                                                                              new ScanNode("ProcessEvent"),
-                                                                                                              [new ProjectionExpr("r", new FunctionCall("custom_function_xyz",
+                                                                                                              _emitter.Emit(new ExtendNode(
+                                                                                                                  new ScanNode("ProcessEvent"),
+                                                                                                                  [new ProjectionExpr("r", new FunctionCall("custom_function_xyz",
                     [new ColumnRef("FileName"), new LiteralScalar(42, LiteralKind.Int)]))])));
 
     [TestMethod]
@@ -1743,8 +1743,7 @@ public sealed partial class DuckDbQueryEmitterTests
             return match;
         }
 
-        return node switch
-        {
+        return node switch {
             LimitNode n => FindFirst<T>(n.Input),
             SortNode n => FindFirst<T>(n.Input),
             ProjectNode n => FindFirst<T>(n.Input),

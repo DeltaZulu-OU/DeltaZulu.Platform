@@ -104,7 +104,6 @@ public sealed class PackageVersionBaselineTests
 
         Assert.DoesNotContain(reference => reference.Contains("Platform.Web", StringComparison.OrdinalIgnoreCase), projectReferences,
             "The Application layer must not reference the Web layer.");
-
     }
 
     private static bool IsFloatingVersion(string version) =>

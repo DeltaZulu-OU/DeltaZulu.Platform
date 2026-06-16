@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Web.Analytics.Dashboards.Markdown;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Web;
+
 [TestClass]
 public sealed class DashboardMarkdownRendererTests
 {

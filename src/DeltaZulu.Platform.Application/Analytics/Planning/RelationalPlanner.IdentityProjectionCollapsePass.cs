@@ -1,6 +1,7 @@
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Application.Analytics.Planning;
+
 public sealed partial class RelationalPlanner
 {
     private sealed class IdentityProjectionCollapsePass : IPlannerPass
@@ -16,8 +17,7 @@ public sealed partial class RelationalPlanner
             return rewritten;
         }
 
-        private static RelNode RewriteNode(RelNode node, ref int attempted, ref int applied) => node switch
-        {
+        private static RelNode RewriteNode(RelNode node, ref int attempted, ref int applied) => node switch {
             ProjectNode p => RewriteProject(p, ref attempted, ref applied),
             FilterNode f => f with { Input = RewriteNode(f.Input, ref attempted, ref applied) },
             ExtendNode e => e with { Input = RewriteNode(e.Input, ref attempted, ref applied) },
@@ -26,8 +26,7 @@ public sealed partial class RelationalPlanner
             LimitNode l => l with { Input = RewriteNode(l.Input, ref attempted, ref applied) },
             DistinctNode d => d with { Input = RewriteNode(d.Input, ref attempted, ref applied) },
             JoinNode j => j with { Left = RewriteNode(j.Left, ref attempted, ref applied), Right = RewriteNode(j.Right, ref attempted, ref applied) },
-            LetBindingNode lb => lb with
-            {
+            LetBindingNode lb => lb with {
                 Body = RewriteNode(lb.Body, ref attempted, ref applied),
                 TabularValue = lb.TabularValue is null ? null : RewriteNode(lb.TabularValue, ref attempted, ref applied)
             },

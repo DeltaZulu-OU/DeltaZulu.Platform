@@ -63,16 +63,22 @@ public sealed class CuratedAnalyticServiceTests
         private readonly Dictionary<string, CuratedAnalyticRecord> _store = new();
 
         public Task EnsureInitializedAsync(CancellationToken ct = default) => Task.CompletedTask;
+
         public Task<IReadOnlyList<CuratedAnalyticRecord>> ListAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<CuratedAnalyticRecord>>(_store.Values.ToArray());
+
         public Task<PageResult<CuratedAnalyticRecord>> SearchAsync(string? s, int offset, int limit, CancellationToken ct = default)
             => Task.FromResult(new PageResult<CuratedAnalyticRecord>([], 0, offset, limit));
+
         public Task<CuratedAnalyticRecord?> GetAsync(string id, CancellationToken ct = default)
             => Task.FromResult(_store.GetValueOrDefault(id));
+
         public Task SaveAsync(CuratedAnalyticRecord record, CancellationToken ct = default)
         { _store[record.Id] = record; return Task.CompletedTask; }
+
         public Task DeleteAsync(string id, CancellationToken ct = default)
         { _store.Remove(id); return Task.CompletedTask; }
+
         public Task MarkRunAsync(string id, DateTime runAt, CancellationToken ct = default) => Task.CompletedTask;
     }
 
@@ -81,14 +87,19 @@ public sealed class CuratedAnalyticServiceTests
         private readonly Dictionary<string, SavedQueryRecord> _store = seed.ToDictionary(q => q.Id);
 
         public Task EnsureInitializedAsync(CancellationToken ct = default) => Task.CompletedTask;
+
         public Task<IReadOnlyList<SavedQueryRecord>> ListAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<SavedQueryRecord>>(_store.Values.ToArray());
+
         public Task<SavedQueryRecord?> GetAsync(string id, CancellationToken ct = default)
             => Task.FromResult(_store.GetValueOrDefault(id));
+
         public Task SaveAsync(SavedQueryRecord query, CancellationToken ct = default)
         { _store[query.Id] = query; return Task.CompletedTask; }
+
         public Task DeleteAsync(string id, CancellationToken ct = default)
         { _store.Remove(id); return Task.CompletedTask; }
+
         public Task MarkRunAsync(string id, DateTime runAt, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

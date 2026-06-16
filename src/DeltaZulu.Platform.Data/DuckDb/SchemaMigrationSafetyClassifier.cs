@@ -17,8 +17,7 @@ public sealed class SchemaMigrationSafetyClassifier
             .ToArray();
     }
 
-    private static SchemaMigrationSafetyAssessment ClassifyOne(SchemaProvenanceDrift drift) => drift.Status switch
-    {
+    private static SchemaMigrationSafetyAssessment ClassifyOne(SchemaProvenanceDrift drift) => drift.Status switch {
         SchemaProvenanceDriftStatus.Unchanged => new(
             drift.ObjectName,
             drift.ObjectKind,

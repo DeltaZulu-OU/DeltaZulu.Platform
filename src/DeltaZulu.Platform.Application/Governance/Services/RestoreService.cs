@@ -99,8 +99,7 @@ public sealed class RestoreService(
 
     private static DraftContentType InferContentType(string logicalPath, ContentFile file) => file.IsBinary
             ? DraftContentType.StaticAsset
-            : logicalPath switch
-            {
+            : logicalPath switch {
                 "detection.yaml" => DraftContentType.DetectionMetadata,
                 "rule.kql" => DraftContentType.AnalyticsQuery,
                 _ when logicalPath.StartsWith("tests/", StringComparison.Ordinal) => DraftContentType.TestDefinition,

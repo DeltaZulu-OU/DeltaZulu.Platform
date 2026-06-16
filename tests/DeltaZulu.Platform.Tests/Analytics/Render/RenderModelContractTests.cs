@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Render;
+
 [TestClass]
 public sealed class RenderModelContractTests
 {

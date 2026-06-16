@@ -101,7 +101,6 @@ public sealed class SampleDetectionContentSeederTests
         }
     }
 
-
     [TestMethod]
     public void SeedGovernanceCatalog_WritesDetectionsAndAcceptedVersions()
     {

@@ -1,10 +1,9 @@
-
 using Dapper;
-using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.AlertEntities;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.AlertEntities;
+
 public sealed class DapperAlertEntityRepository : DapperRepositoryBase, IAlertEntityRepository
 {
     private const string CreateSchemaSql =
@@ -80,12 +79,10 @@ public sealed class DapperAlertEntityRepository : DapperRepositoryBase, IAlertEn
         );
         """;
 
-
     public DapperAlertEntityRepository(IAppDbConnectionFactory connectionFactory)
         : base(connectionFactory, CreateSchemaSql)
     {
     }
-
 
     public async Task<IReadOnlyList<AlertEntityRecord>> ListByAlertAsync(string alertId, CancellationToken cancellationToken = default)
     {
@@ -166,7 +163,6 @@ public sealed class DapperAlertEntityRepository : DapperRepositoryBase, IAlertEn
             row.CriticalityWeight,
             row.IsHighFanout != 0,
             Parse(row.CreatedAtUtc));
-
 
     private sealed class AlertEntityRow
     {

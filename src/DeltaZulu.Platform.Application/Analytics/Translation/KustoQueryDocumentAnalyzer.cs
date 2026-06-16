@@ -4,6 +4,7 @@ using Kusto.Language;
 using Kusto.Language.Syntax;
 
 namespace DeltaZulu.Platform.Application.Analytics.Translation;
+
 /// <summary>Parses KQL, imports diagnostics, and validates document-level policy boundaries.</summary>
 internal sealed class KustoQueryDocumentAnalyzer
 {

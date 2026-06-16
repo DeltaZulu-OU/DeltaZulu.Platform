@@ -4,6 +4,7 @@ using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using Kusto.Language.Syntax;
 
 namespace DeltaZulu.Platform.Application.Analytics.Translation;
+
 /// <summary>
 /// <para>Translates analyzed Kusto AST into a RelNode intermediate query model.</para>
 /// <para>Pipeline: KQL string → Kusto.Language ParseAndAnalyze → this translator → RelNode tree</para>
@@ -138,8 +139,7 @@ internal sealed class KustoQueryTranslator
         return body;
     }
 
-    private RelNode? TranslateStatement(SyntaxNode node) => node switch
-    {
+    private RelNode? TranslateStatement(SyntaxNode node) => node switch {
         ExpressionStatement es => TranslateExpression(es.Expression),
         LetStatement => Reject(node, "Standalone let statement without a following query expression."),
         _ => Reject(node, $"Unsupported statement type: {node.Kind}")
@@ -149,8 +149,7 @@ internal sealed class KustoQueryTranslator
 
     #region Expression level
 
-    private RelNode? TranslateExpression(Expression expr) => expr switch
-    {
+    private RelNode? TranslateExpression(Expression expr) => expr switch {
         PipeExpression pipe => TranslatePipe(pipe),
         NameReference name => TranslateTableRef(name),
         PathExpression path => TranslateTableRefExpression(path),
@@ -366,8 +365,7 @@ internal sealed class KustoQueryTranslator
                 parts.Add(TranslateJoinCondition(condition));
             }
 
-            predicate = parts.Count switch
-            {
+            predicate = parts.Count switch {
                 0 => new LiteralScalar(true, LiteralKind.Bool),
                 1 => parts[0],
                 _ => parts.Skip(1).Aggregate(parts[0],
@@ -443,8 +441,7 @@ internal sealed class KustoQueryTranslator
             return null;
         }
 
-        var predicate = parts.Count switch
-        {
+        var predicate = parts.Count switch {
             1 => parts[0],
             _ => parts.Skip(1).Aggregate(parts[0],
                 (acc, p) => new BinaryScalar(acc, ScalarBinaryOp.And, p))
@@ -453,8 +450,7 @@ internal sealed class KustoQueryTranslator
         return new JoinNode(input, right, JoinKind.LeftOuter, predicate, JoinFlavor.Lookup);
     }
 
-    private RelNode? TranslateOperator(QueryOperator op, RelNode input) => op switch
-    {
+    private RelNode? TranslateOperator(QueryOperator op, RelNode input) => op switch {
         FilterOperator filter => TranslateFilter(filter, input),
         ProjectOperator proj => TranslateProject(proj, input),
         ExtendOperator ext => TranslateExtend(ext, input),
@@ -575,8 +571,7 @@ internal sealed class KustoQueryTranslator
 
     #region Scalar expressions
 
-    private static ScalarExpr TranslateLiteral(LiteralExpression lit) => lit.Kind switch
-    {
+    private static ScalarExpr TranslateLiteral(LiteralExpression lit) => lit.Kind switch {
         SyntaxKind.StringLiteralExpression =>
             new LiteralScalar(lit.LiteralValue, LiteralKind.String),
         SyntaxKind.LongLiteralExpression =>
@@ -611,8 +606,7 @@ internal sealed class KustoQueryTranslator
         var left = TranslateScalarExpr(bin.Left);
         var right = TranslateScalarExpr(bin.Right);
 
-        var op = bin.Kind switch
-        {
+        var op = bin.Kind switch {
             SyntaxKind.EqualExpression => ScalarBinaryOp.Eq,
             SyntaxKind.NotEqualExpression => ScalarBinaryOp.Neq,
             SyntaxKind.LessThanExpression => ScalarBinaryOp.Lt,
@@ -721,8 +715,7 @@ internal sealed class KustoQueryTranslator
 
         if (name is "row_number" or "row_cumsum" or "row_rank_dense" or "row_rank_min")
         {
-            var sqlFn = name switch
-            {
+            var sqlFn = name switch {
                 "row_number" => "row_number",
                 "row_cumsum" => "sum",
                 "row_rank_dense" => "dense_rank",
@@ -797,8 +790,7 @@ internal sealed class KustoQueryTranslator
             return between;
         }
 
-        return expr switch
-        {
+        return expr switch {
             InExpression inExpr => TranslateInExpression(inExpr),
             LiteralExpression lit => TranslateLiteral(lit),
             NameReference name => new ColumnRef(name.SimpleName),
@@ -835,8 +827,7 @@ internal sealed class KustoQueryTranslator
         var operand = TranslateScalarExpr(un.Expression);
         // KQL only has unary plus and minus as PrefixUnaryExpression.
         // KQL 'not(expr)' is a FunctionCallExpression handled in TranslateFunctionCall.
-        return un.Kind switch
-        {
+        return un.Kind switch {
             SyntaxKind.UnaryMinusExpression => new UnaryScalar(ScalarUnaryOp.Negate, operand),
             // Unary plus is the identity operation: +x == x. Returning a Negate
             // here would flip the sign and silently corrupt the value.

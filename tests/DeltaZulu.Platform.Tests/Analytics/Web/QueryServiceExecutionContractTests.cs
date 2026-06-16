@@ -50,8 +50,7 @@ public sealed class QueryServiceExecutionContractTests
     {
         var bag = new DiagnosticBag();
         bag.AddError(DiagnosticPhase.Translate, "Unsupported operator.");
-        var executor = new CapturingAnalyticsQueryExecutor(new AnalyticsQueryResult
-        {
+        var executor = new CapturingAnalyticsQueryExecutor(new AnalyticsQueryResult {
             Success = false,
             Diagnostics = bag
         });
@@ -67,8 +66,7 @@ public sealed class QueryServiceExecutionContractTests
         Assert.AreEqual("Unsupported operator.", history.LastRecord.DiagnosticSummary);
     }
 
-    private static AnalyticsQueryResult CreateResult() => new()
-    {
+    private static AnalyticsQueryResult CreateResult() => new() {
         Success = true,
         Columns = [new AnalyticsResultColumn("AccountName", "VARCHAR")],
         ColumnData = [["alice"]],

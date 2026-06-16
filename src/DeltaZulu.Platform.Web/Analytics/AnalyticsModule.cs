@@ -7,8 +7,7 @@ namespace DeltaZulu.Platform.Web.Analytics;
 
 public sealed class AnalyticsModule : IPlatformModule
 {
-    public PlatformModuleDescriptor Descriptor { get; } = new()
-    {
+    public PlatformModuleDescriptor Descriptor { get; } = new() {
         Id = "analytics",
         DisplayName = "Analytics",
         RoutePrefix = "/analytics",

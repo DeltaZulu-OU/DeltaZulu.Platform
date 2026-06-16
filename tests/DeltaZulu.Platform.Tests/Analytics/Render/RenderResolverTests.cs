@@ -1,9 +1,9 @@
-
 using DeltaZulu.Platform.Application.Analytics.Rendering.Services;
 using DeltaZulu.Platform.Application.Analytics.Rendering.Tabular;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Render;
+
 [TestClass]
 public sealed class RenderResolverTests
 {
@@ -173,12 +173,10 @@ public sealed class RenderResolverTests
         string? title = null,
         string? legend = null,
         bool isStacked = false)
-        => new()
-        {
+        => new() {
             Kind = RenderKind.Barchart,
             Title = title,
-            Binding = new RenderBinding
-            {
+            Binding = new RenderBinding {
                 XColumn = xColumn,
                 YColumns = yColumns ?? [],
                 SeriesColumn = seriesColumn

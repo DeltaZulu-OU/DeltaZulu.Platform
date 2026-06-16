@@ -1,4 +1,3 @@
-
 using System.Text.Json;
 using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
@@ -7,6 +6,7 @@ using DeltaZulu.Platform.Domain.Analytics.Visualizations;
 using DeltaZulu.Platform.Web.Analytics.Dashboards.Persistence;
 
 namespace DeltaZulu.Platform.Web.Analytics.Services;
+
 /// <summary>
 /// Application-facing service for saved visualization definitions.
 /// This keeps UI components from depending directly on visualization persistence rows
@@ -235,8 +235,7 @@ public sealed class VisualizationLibraryService
     }
 
     private static VisualizationSpec ToVisualizationSpec(RenderDirective directive)
-        => new()
-        {
+        => new() {
             Title = NormalizeOptionalText(directive.Title),
             XColumn = NormalizeOptionalText(directive.Binding.XColumn),
             YColumns = NormalizeColumnList(directive.Binding.YColumns),
@@ -246,8 +245,7 @@ public sealed class VisualizationLibraryService
         };
 
     private static VisualizationSpec NormalizeSpec(VisualizationSpec spec)
-        => new()
-        {
+        => new() {
             Title = NormalizeOptionalText(spec.Title),
             XColumn = NormalizeOptionalText(spec.XColumn),
             YColumns = NormalizeColumnList(spec.YColumns),

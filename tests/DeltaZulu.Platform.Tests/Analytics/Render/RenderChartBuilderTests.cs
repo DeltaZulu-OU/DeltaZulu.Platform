@@ -1,9 +1,9 @@
-
 using DeltaZulu.Platform.Application.Analytics.Rendering.Services;
 using DeltaZulu.Platform.Application.Analytics.Rendering.Tabular;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Render;
+
 [TestClass]
 public sealed class RenderChartBuilderTests
 {
@@ -96,8 +96,7 @@ public sealed class RenderChartBuilderTests
     [TestMethod]
     public void Build_NullXLabelsBecomePlaceholder()
     {
-        var result = new RenderTabularResult
-        {
+        var result = new RenderTabularResult {
             Columns =
             [
                 RenderTypeClassifier.Classify("AccountName", "VARCHAR"),
@@ -119,8 +118,7 @@ public sealed class RenderChartBuilderTests
     [TestMethod]
     public void Build_DateXLabelsUseStableFormat()
     {
-        var result = new RenderTabularResult
-        {
+        var result = new RenderTabularResult {
             Columns =
             [
                 RenderTypeClassifier.Classify("Timestamp", "TIMESTAMP"),
@@ -142,8 +140,7 @@ public sealed class RenderChartBuilderTests
     [TestMethod]
     public void Build_NumericConversion_HandlesSupportedValuesAndInvalidStrings()
     {
-        var result = new RenderTabularResult
-        {
+        var result = new RenderTabularResult {
             Columns =
             [
                 RenderTypeClassifier.Classify("Label", "VARCHAR"),
@@ -165,8 +162,7 @@ public sealed class RenderChartBuilderTests
     [TestMethod]
     public void Build_MissingNumericY_FallsBackToTable()
     {
-        var result = new RenderTabularResult
-        {
+        var result = new RenderTabularResult {
             Columns =
             [
                 RenderTypeClassifier.Classify("AccountName", "VARCHAR"),
@@ -191,8 +187,7 @@ public sealed class RenderChartBuilderTests
     public void Build_MoreThanMaxPoints_DownsamplesAndWarns()
     {
         const int inputPoints = 700;
-        var result = new RenderTabularResult
-        {
+        var result = new RenderTabularResult {
             Columns =
             [
                 RenderTypeClassifier.Classify("Label", "VARCHAR"),
@@ -215,8 +210,7 @@ public sealed class RenderChartBuilderTests
     }
 
     private static RenderTabularResult SamplePlainResult()
-        => new()
-        {
+        => new() {
             Columns =
             [
                 RenderTypeClassifier.Classify("AccountName", "VARCHAR"),
@@ -231,8 +225,7 @@ public sealed class RenderChartBuilderTests
         };
 
     private static RenderTabularResult SampleMultiMetricResult()
-        => new()
-        {
+        => new() {
             Columns =
             [
                 RenderTypeClassifier.Classify("AccountName", "VARCHAR"),
@@ -249,8 +242,7 @@ public sealed class RenderChartBuilderTests
         };
 
     private static RenderTabularResult SampleGroupedResult()
-        => new()
-        {
+        => new() {
             Columns =
             [
                 RenderTypeClassifier.Classify("AccountName", "VARCHAR"),
@@ -267,8 +259,7 @@ public sealed class RenderChartBuilderTests
         };
 
     private static RenderTabularResult SampleGroupedMultiMetricResult()
-        => new()
-        {
+        => new() {
             Columns =
             [
                 RenderTypeClassifier.Classify("AccountName", "VARCHAR"),
@@ -291,11 +282,9 @@ public sealed class RenderChartBuilderTests
         string? xColumn = null,
         IReadOnlyList<string>? yColumns = null,
         string? seriesColumn = null)
-        => new()
-        {
+        => new() {
             Kind = kind,
-            Binding = new RenderBinding
-            {
+            Binding = new RenderBinding {
                 XColumn = xColumn,
                 YColumns = yColumns ?? [],
                 SeriesColumn = seriesColumn

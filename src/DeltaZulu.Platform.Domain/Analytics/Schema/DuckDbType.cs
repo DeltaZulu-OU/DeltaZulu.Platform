@@ -19,8 +19,7 @@ public enum DuckDbType
 
 public static class DuckDbTypeExtensions
 {
-    public static string ToSql(this DuckDbType type) => type switch
-    {
+    public static string ToSql(this DuckDbType type) => type switch {
         DuckDbType.Varchar => "VARCHAR",
         DuckDbType.BigInt => "BIGINT",
         DuckDbType.Integer => "INTEGER",

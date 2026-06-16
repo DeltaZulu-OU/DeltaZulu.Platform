@@ -1,5 +1,4 @@
 using Dapper;
-using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Domain.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.CuratedAnalytics;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
@@ -8,7 +7,6 @@ namespace DeltaZulu.Platform.Data.Sqlite.Analytics.CuratedAnalytics;
 
 public sealed class DapperCuratedAnalyticRepository : DapperRepositoryBase, ICuratedAnalyticRepository
 {
-
     private const string CreateSchemaSql =
         """
         CREATE TABLE IF NOT EXISTS curated_analytics (
@@ -86,8 +84,7 @@ public sealed class DapperCuratedAnalyticRepository : DapperRepositoryBase, ICur
 
         var boundedLimit = Math.Min(limit, 100);
         var normalizedSearch = NormalizeLikeSearch(searchText);
-        var parameters = new
-        {
+        var parameters = new {
             SearchText = normalizedSearch,
             SearchPattern = normalizedSearch is null ? null : $"%{EscapeLikePattern(normalizedSearch)}%",
             Offset = offset,
@@ -183,8 +180,7 @@ public sealed class DapperCuratedAnalyticRepository : DapperRepositoryBase, ICur
                 updated_at = excluded.updated_at,
                 last_run_at = excluded.last_run_at;
             """,
-            new
-            {
+            new {
                 record.Id,
                 record.Name,
                 record.Description,
@@ -232,7 +228,6 @@ public sealed class DapperCuratedAnalyticRepository : DapperRepositoryBase, ICur
             new { Id = id, RunAt = Format(runAt) },
             cancellationToken: cancellationToken));
     }
-
 
     private static CuratedAnalyticRecord ToRecord(Row row) => new(
         row.Id,

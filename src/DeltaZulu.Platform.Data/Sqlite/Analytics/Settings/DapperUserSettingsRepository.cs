@@ -1,11 +1,10 @@
-
 using Dapper;
-using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using AppIUserSettingsRepository = DeltaZulu.Platform.Domain.Analytics.Settings.IUserSettingsRepository;
 using AppUserSettingsDefaults = DeltaZulu.Platform.Domain.Analytics.Settings.UserSettingsDefaults;
 using AppUserSettingsRecord = DeltaZulu.Platform.Domain.Analytics.Settings.UserSettingsRecord;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.Settings;
+
 public sealed class DapperUserSettingsRepository : DapperRepositoryBase, AppIUserSettingsRepository
 {
     private const string CreateSchemaSql =
@@ -38,12 +37,10 @@ public sealed class DapperUserSettingsRepository : DapperRepositoryBase, AppIUse
         WHERE id = 1;
         """;
 
-
     public DapperUserSettingsRepository(IAppDbConnectionFactory connectionFactory)
         : base(connectionFactory, CreateSchemaSql)
     {
     }
-
 
     public async Task<AppUserSettingsRecord> LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -93,7 +90,6 @@ public sealed class DapperUserSettingsRepository : DapperRepositoryBase, AppIUse
 
         return checked((int)value.Value);
     }
-
 
     private sealed class UserSettingsRow
     {

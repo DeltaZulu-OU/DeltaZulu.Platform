@@ -80,8 +80,7 @@ internal sealed class PassingAnalyticsQueryExecutor : IAnalyticsQueryExecutor
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var result = new AnalyticsQueryResult
-        {
+        var result = new AnalyticsQueryResult {
             Success = true
         };
 

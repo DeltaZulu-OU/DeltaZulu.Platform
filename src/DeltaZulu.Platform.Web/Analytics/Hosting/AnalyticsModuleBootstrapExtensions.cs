@@ -1,10 +1,10 @@
-
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.Seeding;
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 
 namespace DeltaZulu.Platform.Web.Analytics.Hosting;
+
 public static partial class AnalyticsModuleBootstrapExtensions
 {
     public static async Task BootstrapAnalyticsModuleAsync(

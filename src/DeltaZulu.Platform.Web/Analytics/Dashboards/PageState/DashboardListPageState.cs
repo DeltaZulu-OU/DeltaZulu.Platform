@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Web.Analytics.Dashboards.Persistence;
 
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards.PageState;
+
 public sealed class DashboardListPageState
 {
     public const int PageSize = 8;

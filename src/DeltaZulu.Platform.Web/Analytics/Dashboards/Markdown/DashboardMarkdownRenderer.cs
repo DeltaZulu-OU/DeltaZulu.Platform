@@ -1,9 +1,9 @@
-
 using System.Net;
 using System.Text.RegularExpressions;
 using Markdig;
 
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards.Markdown;
+
 public static partial class DashboardMarkdownRenderer
 {
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()

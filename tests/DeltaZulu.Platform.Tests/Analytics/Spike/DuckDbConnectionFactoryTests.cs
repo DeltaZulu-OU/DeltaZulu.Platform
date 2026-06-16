@@ -4,6 +4,7 @@ using DeltaZulu.Platform.Data.DuckDb;
 using Microsoft.Data.Sqlite;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Spike;
+
 [TestClass]
 public sealed class DuckDbConnectionFactoryTests
 {

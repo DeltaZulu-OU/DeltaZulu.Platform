@@ -1,9 +1,9 @@
-
 using System.Globalization;
 using DeltaZulu.Platform.Application.Analytics.Rendering.Tabular;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 
 namespace DeltaZulu.Platform.Application.Analytics.Rendering.Services;
+
 public sealed class RenderChartBuilder : IRenderChartBuilder
 {
     private const int MaxChartPoints = 500;
@@ -234,8 +234,7 @@ public sealed class RenderChartBuilder : IRenderChartBuilder
     }
 
     private static string FormatXLabel(object? value)
-        => value switch
-        {
+        => value switch {
             null => "(null)",
             DateTime dateTime => dateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
             DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
@@ -249,8 +248,7 @@ public sealed class RenderChartBuilder : IRenderChartBuilder
             return 0;
         }
 
-        return value switch
-        {
+        return value switch {
             byte b => b,
             sbyte sb => sb,
             short s => s,

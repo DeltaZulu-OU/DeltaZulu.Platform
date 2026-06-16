@@ -23,8 +23,7 @@ public static class KustoTypeExtensions
     /// <summary>
     /// Returns the Kusto type name as used in schema declarations (e.g. "(col: string)").
     /// </summary>
-    public static string ToKustoName(this KustoType type) => type switch
-    {
+    public static string ToKustoName(this KustoType type) => type switch {
         KustoType.String => "string",
         KustoType.Long => "long",
         KustoType.Int => "int",
@@ -41,8 +40,7 @@ public static class KustoTypeExtensions
     /// <summary>
     /// Default DuckDB type mapping for a Kusto type.
     /// </summary>
-    public static DuckDbType ToDefaultDuckDbType(this KustoType type) => type switch
-    {
+    public static DuckDbType ToDefaultDuckDbType(this KustoType type) => type switch {
         KustoType.String => DuckDbType.Varchar,
         KustoType.Long => DuckDbType.BigInt,
         KustoType.Int => DuckDbType.Integer,

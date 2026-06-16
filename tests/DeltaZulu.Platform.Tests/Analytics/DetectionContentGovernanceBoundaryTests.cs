@@ -1,5 +1,5 @@
-
 namespace DeltaZulu.Platform.Tests.Analytics;
+
 [TestClass]
 public sealed class DetectionContentGovernanceBoundaryTests
 {

@@ -1,4 +1,3 @@
-
 using DeltaZulu.Platform.Application.Analytics.Samples;
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.QueryHistory;
@@ -9,6 +8,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DeltaZulu.Platform.Tests.Analytics;
+
 [TestClass]
 public sealed class ApplicationPersistenceBootstrapTests
 {

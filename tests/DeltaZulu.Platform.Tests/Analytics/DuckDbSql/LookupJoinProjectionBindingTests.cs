@@ -5,6 +5,7 @@ using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 
 namespace DeltaZulu.Platform.Tests.Analytics.DuckDbSql;
+
 [TestClass]
 public sealed class LookupJoinProjectionBindingTests
 {

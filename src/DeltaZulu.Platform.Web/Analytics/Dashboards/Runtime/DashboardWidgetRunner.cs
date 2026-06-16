@@ -1,4 +1,3 @@
-
 using System.Diagnostics;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
@@ -8,6 +7,7 @@ using DeltaZulu.Platform.Web.Analytics.Rendering;
 using DeltaZulu.Platform.Web.Analytics.Visualizations;
 
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards.Runtime;
+
 public sealed partial class DashboardWidgetRunner
 {
     private readonly EChartsRenderOptionsBuilder _chartOptionsBuilder;
@@ -51,8 +51,7 @@ public sealed partial class DashboardWidgetRunner
                 CreateError($"Widget kind '{widget.Kind}' is not executable."));
         }
 
-        var validationErrors = DashboardModelValidator.Validate(new DashboardDefinition
-        {
+        var validationErrors = DashboardModelValidator.Validate(new DashboardDefinition {
             Id = "runner-validation",
             Name = "Runner validation",
             Widgets = [widget],
@@ -92,8 +91,7 @@ public sealed partial class DashboardWidgetRunner
 
             LogWidgetRunDebug(widget, status, stopwatch.Elapsed, execution, rendered);
 
-            return new DashboardWidgetRunResult
-            {
+            return new DashboardWidgetRunResult {
                 WidgetId = widget.Id,
                 Status = status,
                 QueryResult = rendered.QueryResult,
@@ -125,8 +123,7 @@ public sealed partial class DashboardWidgetRunner
             stopwatch.Stop();
             var duration = stopwatch.Elapsed;
             LogWidgetRunDebug(widget, DashboardWidgetRunStatus.Cancelled, duration);
-            return new DashboardWidgetRunResult
-            {
+            return new DashboardWidgetRunResult {
                 WidgetId = widget.Id,
                 Status = DashboardWidgetRunStatus.Cancelled,
                 Diagnostics = [CreateError("Widget execution was cancelled.")],
@@ -229,8 +226,7 @@ public sealed partial class DashboardWidgetRunner
         string widgetId,
         DateTime startedAtUtc,
         TimeSpan duration,
-        params QueryDiagnostic[] diagnostics) => new()
-        {
+        params QueryDiagnostic[] diagnostics) => new() {
             WidgetId = widgetId,
             Status = DashboardWidgetRunStatus.Failed,
             Diagnostics = diagnostics,

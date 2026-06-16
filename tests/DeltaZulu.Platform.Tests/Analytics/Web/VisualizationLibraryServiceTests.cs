@@ -1,4 +1,3 @@
-
 using System.Text.Json;
 using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
@@ -9,6 +8,7 @@ using DeltaZulu.Platform.Web.Analytics.Dashboards.Persistence;
 using DeltaZulu.Platform.Web.Analytics.Services;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Web;
+
 [TestClass]
 public sealed class VisualizationLibraryServiceTests
 {
@@ -37,8 +37,7 @@ public sealed class VisualizationLibraryServiceTests
             name: " Launches by account ",
             description: " Chart for account launch counts ",
             kind: RenderKind.Barchart,
-            spec: new VisualizationSpec
-            {
+            spec: new VisualizationSpec {
                 Title = " Launches by account ",
                 XColumn = " AccountName ",
                 YColumns = [" LaunchCount ", "LaunchCount", " "],
@@ -134,8 +133,7 @@ public sealed class VisualizationLibraryServiceTests
             null,
             nameof(RenderKind.Barchart),
             JsonSerializer.Serialize(
-                new VisualizationSpec
-                {
+                new VisualizationSpec {
                     Title = "Events by account",
                     XColumn = "AccountName",
                     YColumns = ["Count"],
@@ -303,8 +301,7 @@ public sealed class VisualizationLibraryServiceTests
     public async Task DeleteVisualizationAsync_UsedByDashboard_ThrowsAndKeepsRecord()
     {
         var visualizations = new InMemoryVisualizationRepository();
-        var dashboards = new InMemoryDashboardRepository(new DashboardDefinition
-        {
+        var dashboards = new InMemoryDashboardRepository(new DashboardDefinition {
             Id = "dashboard-1",
             Name = "SOC Overview",
             Widgets =
@@ -447,8 +444,7 @@ public sealed class VisualizationLibraryServiceTests
         public Task<IReadOnlyList<DashboardSummary>> ListAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<DashboardSummary>>(
                 _dashboards.Values
-                    .Select(dashboard => new DashboardSummary
-                    {
+                    .Select(dashboard => new DashboardSummary {
                         Id = dashboard.Id,
                         Name = dashboard.Name,
                         Description = dashboard.Description,

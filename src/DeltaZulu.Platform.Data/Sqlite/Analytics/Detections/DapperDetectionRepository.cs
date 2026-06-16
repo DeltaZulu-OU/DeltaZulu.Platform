@@ -1,10 +1,9 @@
-
 using Dapper;
-using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.Detections;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.Detections;
+
 public sealed class DapperDetectionRepository : DapperRepositoryBase, IDetectionRecordRepository
 {
     private const string CreateSchemaSql =
@@ -197,12 +196,10 @@ public sealed class DapperDetectionRepository : DapperRepositoryBase, IDetection
         WHERE id = @Id;
         """;
 
-
     public DapperDetectionRepository(IAppDbConnectionFactory connectionFactory)
         : base(connectionFactory, CreateSchemaSql)
     {
     }
-
 
     public async Task<IReadOnlyList<DetectionRecord>> ListAsync(CancellationToken cancellationToken = default)
     {
@@ -348,7 +345,6 @@ public sealed class DapperDetectionRepository : DapperRepositoryBase, IDetection
             row.TestMetadataJson,
             Parse(row.CreatedAtUtc),
             Parse(row.UpdatedAtUtc));
-
 
     private sealed class DetectionRow
     {

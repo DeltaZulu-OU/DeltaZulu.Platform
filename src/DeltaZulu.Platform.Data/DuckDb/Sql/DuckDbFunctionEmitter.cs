@@ -20,8 +20,7 @@ internal sealed class DuckDbFunctionEmitter
         var args = fn.Args.Select(_emitScalar).ToList();
         var name = fn.Name.ToLowerInvariant();
 
-        return name switch
-        {
+        return name switch {
             // String functions
             "tolower" => $"lower({args[0]})",
             "toupper" => $"upper({args[0]})",
@@ -205,8 +204,7 @@ to_json(
         // Try to extract the part name from the first argument (should be a string literal)
         if (rawArgs.Count >= 1 && rawArgs[0] is LiteralScalar { Value: string partName })
         {
-            var unit = partName.ToLowerInvariant() switch
-            {
+            var unit = partName.ToLowerInvariant() switch {
                 "year" => "years",
                 "quarter" => "months", // 3 months — multiply below
                 "month" => "months",

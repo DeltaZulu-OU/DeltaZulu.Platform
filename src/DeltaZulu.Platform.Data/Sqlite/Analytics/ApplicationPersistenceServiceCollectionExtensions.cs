@@ -1,4 +1,3 @@
-
 using DeltaZulu.Platform.Data.Seeding;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.AlertEntities;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Alerts;
@@ -23,6 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 using IUserSettingsRepository = DeltaZulu.Platform.Domain.Analytics.Settings.IUserSettingsRepository;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics;
+
 public static class ApplicationPersistenceServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationPersistence(

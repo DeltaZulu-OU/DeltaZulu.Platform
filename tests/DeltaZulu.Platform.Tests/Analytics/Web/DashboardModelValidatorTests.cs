@@ -1,7 +1,7 @@
-
 using DeltaZulu.Platform.Web.Analytics.Dashboards;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Web;
+
 [TestClass]
 public sealed class DashboardModelValidatorTests
 {
@@ -21,8 +21,7 @@ public sealed class DashboardModelValidatorTests
     public void Validate_QueryWidgetWithVisualizationId_ReturnsNoExecutionSourceError()
     {
         var dashboard = CreateDashboard(
-            CreateWidget("w1", new DashboardLayout()) with
-            {
+            CreateWidget("w1", new DashboardLayout()) with {
                 QueryText = string.Empty,
                 VisualizationId = "visualization-1"
             });
@@ -38,8 +37,7 @@ public sealed class DashboardModelValidatorTests
     public void Validate_QueryWidgetWithoutQueryTextOrVisualizationId_ReturnsError()
     {
         var dashboard = CreateDashboard(
-            CreateWidget("w1", new DashboardLayout()) with
-            {
+            CreateWidget("w1", new DashboardLayout()) with {
                 QueryText = string.Empty
             });
 
@@ -54,8 +52,7 @@ public sealed class DashboardModelValidatorTests
     public void Validate_QueryWidgetWithQueryTextAndVisualizationId_ReturnsError()
     {
         var dashboard = CreateDashboard(
-            CreateWidget("w1", new DashboardLayout()) with
-            {
+            CreateWidget("w1", new DashboardLayout()) with {
                 VisualizationId = "visualization-1"
             });
 
@@ -70,8 +67,7 @@ public sealed class DashboardModelValidatorTests
     public void Validate_WidgetLayoutBeyondGridColumns_ReturnsError()
     {
         var dashboard = CreateDashboard(
-            CreateWidget("w1", new DashboardLayout
-            {
+            CreateWidget("w1", new DashboardLayout {
                 X = 10,
                 Y = 0,
                 Width = 3,
@@ -91,8 +87,7 @@ public sealed class DashboardModelValidatorTests
     public void Validate_WidgetWidthBeyondGridColumns_ReturnsError()
     {
         var dashboard = CreateDashboard(
-            CreateWidget("w1", new DashboardLayout
-            {
+            CreateWidget("w1", new DashboardLayout {
                 X = 0,
                 Y = 0,
                 Width = 13,
@@ -112,8 +107,7 @@ public sealed class DashboardModelValidatorTests
     public void Validate_OverlappingWidgetLayouts_ReturnsError()
     {
         var dashboard = CreateDashboard(
-            CreateWidget("w1", new DashboardLayout
-            {
+            CreateWidget("w1", new DashboardLayout {
                 X = 0,
                 Y = 0,
                 Width = 4,
@@ -121,8 +115,7 @@ public sealed class DashboardModelValidatorTests
                 MinimumWidth = 1,
                 MinimumHeight = 1
             }),
-            CreateWidget("w2", new DashboardLayout
-            {
+            CreateWidget("w2", new DashboardLayout {
                 X = 3,
                 Y = 2,
                 Width = 4,
@@ -142,8 +135,7 @@ public sealed class DashboardModelValidatorTests
     public void Validate_TouchingWidgetLayouts_ReturnsNoOverlapError()
     {
         var dashboard = CreateDashboard(
-            CreateWidget("w1", new DashboardLayout
-            {
+            CreateWidget("w1", new DashboardLayout {
                 X = 0,
                 Y = 0,
                 Width = 4,
@@ -151,8 +143,7 @@ public sealed class DashboardModelValidatorTests
                 MinimumWidth = 1,
                 MinimumHeight = 1
             }),
-            CreateWidget("w2", new DashboardLayout
-            {
+            CreateWidget("w2", new DashboardLayout {
                 X = 4,
                 Y = 0,
                 Width = 4,
@@ -169,8 +160,7 @@ public sealed class DashboardModelValidatorTests
     }
 
     private static DashboardDefinition CreateDashboard(params DashboardWidgetDefinition[] widgets)
-        => new()
-        {
+        => new() {
             Id = "dashboard-1",
             Name = "Dashboard",
             Refresh = DashboardRefreshPolicy.Manual(),
@@ -180,8 +170,7 @@ public sealed class DashboardModelValidatorTests
         };
 
     private static DashboardWidgetDefinition CreateWidget(string id, DashboardLayout layout)
-        => new()
-        {
+        => new() {
             Id = id,
             Title = id,
             Kind = DashboardWidgetKind.Query,

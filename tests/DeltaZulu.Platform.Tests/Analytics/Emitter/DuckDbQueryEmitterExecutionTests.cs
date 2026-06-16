@@ -1,10 +1,10 @@
-
 using System.Globalization;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using DuckDB.NET.Data;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Emitter;
+
 /// <summary>
 /// <para>
 /// End-to-end verification: emit SQL from RelNode trees, then execute against

@@ -3,6 +3,7 @@ using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Application.Analytics.Translation;
+
 /// <summary>
 /// Backward-compatible public entry point for KQL-to-<see cref="RelNode"/> translation.
 /// Translation behavior lives in the internal <see cref="KustoQueryTranslator"/> facade so

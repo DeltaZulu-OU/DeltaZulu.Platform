@@ -8,8 +8,7 @@ public sealed class RenderTabularResultTests
     [TestMethod]
     public void GetValue_ReturnsColumnMajorValue()
     {
-        var result = new RenderTabularResult
-        {
+        var result = new RenderTabularResult {
             Columns =
             [
                 new RenderColumn { Name = "AccountName", TypeName = "VARCHAR", IsCategorical = true },
