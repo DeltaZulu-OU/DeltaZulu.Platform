@@ -79,7 +79,7 @@ public sealed class EChartsRenderOptionsBuilder
         var options = new ChartOptions
         {
             Tooltip = new Tooltip { Trigger = trigger, Show = true },
-            Legend = new Legend { Show = ShouldShowLegend(chart) },
+            Legend = new Legend { Show = ParseLegendVisibility(chart.Legend) == LegendVisibility.Visible },
             Series = series
         };
 
@@ -104,11 +104,22 @@ public sealed class EChartsRenderOptionsBuilder
     {
         ArgumentNullException.ThrowIfNull(chart);
 
-        var legend = chart.Legend?.Trim();
-        return !string.Equals(legend, "hidden", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(legend, "hide", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(legend, "none", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(legend, "off", StringComparison.OrdinalIgnoreCase);
+        return ParseLegendVisibility(chart.Legend) == LegendVisibility.Visible;
+    }
+
+    private static LegendVisibility ParseLegendVisibility(string? legend)
+    {
+        var normalized = legend?.Trim();
+        if (string.IsNullOrEmpty(normalized))
+        {
+            return LegendVisibility.Visible;
+        }
+
+        return normalized.ToLowerInvariant() switch
+        {
+            "hidden" or "hide" or "none" or "off" => LegendVisibility.Hidden,
+            _ => LegendVisibility.Visible
+        };
     }
 
     private static List<object> BuildPieData(RenderChartModel chart, RenderSeries series)
