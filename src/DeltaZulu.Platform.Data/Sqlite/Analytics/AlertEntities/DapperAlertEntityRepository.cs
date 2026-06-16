@@ -4,7 +4,7 @@ using DeltaZulu.Platform.Domain.Analytics.AlertEntities;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.AlertEntities;
-public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IDisposable
+public sealed class DapperAlertEntityRepository : IAlertEntityRepository, IApplicationPersistenceRepository, IDisposable
 {
     private const string CreateSchemaSql =
         """

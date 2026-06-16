@@ -5,7 +5,7 @@ using AppQueryHistoryRecord = DeltaZulu.Platform.Domain.Analytics.QueryHistory.Q
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.QueryHistory;
-public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, IDisposable
+public sealed class DapperQueryHistoryRepository : AppIQueryHistoryRepository, IApplicationPersistenceRepository, IDisposable
 {
     private const string CreateSchemaSql =
         """

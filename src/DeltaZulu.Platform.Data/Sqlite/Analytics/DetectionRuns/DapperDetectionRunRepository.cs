@@ -4,7 +4,7 @@ using DeltaZulu.Platform.Domain.Analytics.DetectionRuns;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.DetectionRuns;
-public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IDisposable
+public sealed class DapperDetectionRunRepository : IDetectionRunRepository, IApplicationPersistenceRepository, IDisposable
 {
     private const string CreateSchemaSql =
         """

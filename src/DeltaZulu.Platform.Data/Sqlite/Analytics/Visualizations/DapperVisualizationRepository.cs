@@ -5,7 +5,7 @@ using AppVisualizationRecord = DeltaZulu.Platform.Domain.Analytics.Visualization
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.Visualizations;
-public sealed class DapperVisualizationRepository : AppIVisualizationRepository, IDisposable
+public sealed class DapperVisualizationRepository : AppIVisualizationRepository, IApplicationPersistenceRepository, IDisposable
 {
     private const string CreateSchemaSql =
         """

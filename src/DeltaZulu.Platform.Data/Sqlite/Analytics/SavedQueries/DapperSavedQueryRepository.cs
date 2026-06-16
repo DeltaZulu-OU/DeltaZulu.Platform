@@ -6,7 +6,7 @@ using AppSavedQueryPage = DeltaZulu.Platform.Domain.Analytics.PageResult<DeltaZu
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.SavedQueries;
-public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IDisposable
+public sealed class DapperSavedQueryRepository : AppISavedQueryRepository, IApplicationPersistenceRepository, IDisposable
 {
     private const string CreateSchemaSql =
         """

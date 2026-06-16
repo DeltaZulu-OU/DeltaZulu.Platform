@@ -5,7 +5,7 @@ using AppUserSettingsDefaults = DeltaZulu.Platform.Domain.Analytics.Settings.Use
 using AppUserSettingsRecord = DeltaZulu.Platform.Domain.Analytics.Settings.UserSettingsRecord;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.Settings;
-public sealed class DapperUserSettingsRepository : AppIUserSettingsRepository, IDisposable
+public sealed class DapperUserSettingsRepository : AppIUserSettingsRepository, IApplicationPersistenceRepository, IDisposable
 {
     private const string CreateSchemaSql =
         """

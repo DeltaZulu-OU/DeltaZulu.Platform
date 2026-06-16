@@ -5,7 +5,7 @@ using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics.CuratedAnalytics;
 
-public sealed class DapperCuratedAnalyticRepository : ICuratedAnalyticRepository, IDisposable
+public sealed class DapperCuratedAnalyticRepository : ICuratedAnalyticRepository, IApplicationPersistenceRepository, IDisposable
 {
     private const string Columns =
         """

@@ -82,8 +82,7 @@ public sealed partial class QueryService(
                     result.Success ? result.RowCount : null,
                     durationMs, diagnosticSummary), ct);
         }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             LogQueryHistoryFailure(ex);
         }

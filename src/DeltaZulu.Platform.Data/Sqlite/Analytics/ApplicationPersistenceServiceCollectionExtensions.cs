@@ -41,17 +41,26 @@ public static class ApplicationPersistenceServiceCollectionExtensions
 
     private static void AddApplicationRepositories(IServiceCollection services)
     {
-        services.AddSingleton<IUserSettingsRepository, DapperUserSettingsRepository>();
-        services.AddSingleton<ISavedQueryRepository, DapperSavedQueryRepository>();
-        services.AddSingleton<ICuratedAnalyticRepository, DapperCuratedAnalyticRepository>();
-        services.AddSingleton<IQueryHistoryRepository, DapperQueryHistoryRepository>();
-        services.AddSingleton<IVisualizationRepository, DapperVisualizationRepository>();
-        services.AddSingleton<IDetectionRecordRepository, DapperDetectionRepository>();
-        services.AddSingleton<IDetectionRunRepository, DapperDetectionRunRepository>();
-        services.AddSingleton<IAlertRepository, DapperAlertRepository>();
-        services.AddSingleton<IAlertEntityRepository, DapperAlertEntityRepository>();
-        services.AddSingleton<IIncidentCandidateRepository, DapperIncidentCandidateRepository>();
-        services.AddSingleton<ICandidateEvidenceRepository, DapperCandidateEvidenceRepository>();
+        AddApplicationRepository<IUserSettingsRepository, DapperUserSettingsRepository>(services);
+        AddApplicationRepository<ISavedQueryRepository, DapperSavedQueryRepository>(services);
+        AddApplicationRepository<ICuratedAnalyticRepository, DapperCuratedAnalyticRepository>(services);
+        AddApplicationRepository<IQueryHistoryRepository, DapperQueryHistoryRepository>(services);
+        AddApplicationRepository<IVisualizationRepository, DapperVisualizationRepository>(services);
+        AddApplicationRepository<IDetectionRecordRepository, DapperDetectionRepository>(services);
+        AddApplicationRepository<IDetectionRunRepository, DapperDetectionRunRepository>(services);
+        AddApplicationRepository<IAlertRepository, DapperAlertRepository>(services);
+        AddApplicationRepository<IAlertEntityRepository, DapperAlertEntityRepository>(services);
+        AddApplicationRepository<IIncidentCandidateRepository, DapperIncidentCandidateRepository>(services);
+        AddApplicationRepository<ICandidateEvidenceRepository, DapperCandidateEvidenceRepository>(services);
+    }
+
+    private static void AddApplicationRepository<TRepository, TImplementation>(IServiceCollection services)
+        where TRepository : class
+        where TImplementation : class, TRepository, IApplicationPersistenceRepository
+    {
+        services.AddSingleton<TRepository, TImplementation>();
+        services.AddSingleton<IApplicationPersistenceRepository>(sp =>
+            (IApplicationPersistenceRepository)sp.GetRequiredService<TRepository>());
     }
 
     public static async Task InitializeApplicationPersistenceAsync(
@@ -60,38 +69,12 @@ public static class ApplicationPersistenceServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        var settings = services.GetRequiredService<IUserSettingsRepository>();
-        await settings.EnsureInitializedAsync(cancellationToken);
+        foreach (var repository in services.GetServices<IApplicationPersistenceRepository>())
+        {
+            await repository.EnsureInitializedAsync(cancellationToken);
+        }
 
         var savedQueries = services.GetRequiredService<ISavedQueryRepository>();
-        await savedQueries.EnsureInitializedAsync(cancellationToken);
         await SampleSavedQuerySeeder.SeedMissingAsync(savedQueries, cancellationToken);
-
-        var curatedAnalytics = services.GetRequiredService<ICuratedAnalyticRepository>();
-        await curatedAnalytics.EnsureInitializedAsync(cancellationToken);
-
-        var queryHistory = services.GetRequiredService<IQueryHistoryRepository>();
-        await queryHistory.EnsureInitializedAsync(cancellationToken);
-
-        var visualizations = services.GetRequiredService<IVisualizationRepository>();
-        await visualizations.EnsureInitializedAsync(cancellationToken);
-
-        var detections = services.GetRequiredService<IDetectionRecordRepository>();
-        await detections.EnsureInitializedAsync(cancellationToken);
-
-        var detectionRuns = services.GetRequiredService<IDetectionRunRepository>();
-        await detectionRuns.EnsureInitializedAsync(cancellationToken);
-
-        var alerts = services.GetRequiredService<IAlertRepository>();
-        await alerts.EnsureInitializedAsync(cancellationToken);
-
-        var alertEntities = services.GetRequiredService<IAlertEntityRepository>();
-        await alertEntities.EnsureInitializedAsync(cancellationToken);
-
-        var candidates = services.GetRequiredService<IIncidentCandidateRepository>();
-        await candidates.EnsureInitializedAsync(cancellationToken);
-
-        var candidateEvidence = services.GetRequiredService<ICandidateEvidenceRepository>();
-        await candidateEvidence.EnsureInitializedAsync(cancellationToken);
     }
 }
