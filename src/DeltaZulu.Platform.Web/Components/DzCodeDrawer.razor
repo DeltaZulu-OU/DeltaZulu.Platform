@@ -1,5 +1,5 @@
 ﻿@namespace DeltaZulu.Platform.Web.Components
-@inject IJSRuntime JS
+@inject ClipboardService Clipboard
 
 @if (Open)
 {
@@ -117,7 +117,7 @@
             return;
         }
 
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", EffectiveCopyText);
+        await Clipboard.CopyTextAsync(EffectiveCopyText);
     }
 
 

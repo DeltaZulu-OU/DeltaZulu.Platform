@@ -1,3 +1,4 @@
+using DeltaZulu.Blazor.Interop;
 using DeltaZulu.Platform.Application.Governance;
 using DeltaZulu.Platform.Application.Governance.Validation;
 using DeltaZulu.Platform.Application.Governance.Workflow;
@@ -18,6 +19,7 @@ builder.Services
     .AddInteractiveServerComponents();
 
 builder.Services.AddMudServices();
+builder.Services.AddDzBlazorInterop();
 builder.Services.AddSingleton(TimeProvider.System);
 
 // --- Platform module registry ---

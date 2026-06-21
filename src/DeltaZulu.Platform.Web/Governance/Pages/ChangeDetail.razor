@@ -23,7 +23,7 @@
 @inject IDialogService DialogService
 @inject NavigationManager Nav
 @inject PocUserContext UserContext
-@inject IJSRuntime JS
+@inject DeltaZulu.Platform.Web.Analytics.Services.WidgetEditorInterop WidgetEditor
 @implements IAsyncDisposable
 
 <PageTitle>Proposal — @(_change?.Key ?? "Loading")</PageTitle>
@@ -536,11 +536,7 @@
 
         try
         {
-            _kqlEditorReady = await JS.InvokeAsync<bool>(
-                "huntingDashboardWidgetEditor.initialize",
-                _kqlEditorElementId,
-                _newContent,
-                "kql");
+            _kqlEditorReady = await WidgetEditor.InitializeAsync(_kqlEditorElementId, _newContent, "kql");
             if (_kqlEditorReady)
             {
                 StateHasChanged();
@@ -798,7 +794,7 @@
 
         if (_newContentType == DraftContentType.AnalyticsQuery && _kqlEditorReady)
         {
-            return await JS.InvokeAsync<string>("huntingDashboardWidgetEditor.getValue", _kqlEditorElementId);
+            return await WidgetEditor.GetValueAsync(_kqlEditorElementId);
         }
 
         return _newContent;
@@ -808,7 +804,7 @@
     {
         if (_newContentType == DraftContentType.AnalyticsQuery && _kqlEditorReady)
         {
-            _newContent = await JS.InvokeAsync<string>("huntingDashboardWidgetEditor.getValue", _kqlEditorElementId);
+            _newContent = await WidgetEditor.GetValueAsync(_kqlEditorElementId);
             await DisposeKqlEditorAsync();
         }
 
@@ -903,15 +899,8 @@
     {
         if (!_kqlEditorReady) return;
 
-        try
-        {
-            await JS.InvokeVoidAsync("huntingDashboardWidgetEditor.dispose", _kqlEditorElementId);
-        }
-        catch (JSException) { }
-        finally
-        {
-            _kqlEditorReady = false;
-        }
+        _kqlEditorReady = false;
+        await WidgetEditor.TryDisposeAsync(_kqlEditorElementId);
     }
 
     public async ValueTask DisposeAsync() => await DisposeKqlEditorAsync();

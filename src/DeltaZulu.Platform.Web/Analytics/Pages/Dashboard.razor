@@ -1,9 +1,10 @@
 @page "/analytics/dashboards/{DashboardId}"
 @namespace DeltaZulu.Platform.Web.Analytics.Pages
 @using DeltaZulu.Platform.Web.Analytics.Components.Dashboards
+@using DeltaZulu.Platform.Web.Analytics.Dashboards
 @using DeltaZulu.Platform.Web.Analytics.Dashboards.PageState
 @inject DashboardPageController Controller
-@inject IJSRuntime JS
+@inject DashboardTransferInterop DashboardTransfer
 @inject NavigationManager Navigation
 @implements IDisposable
 
@@ -138,10 +139,7 @@
 
         try
         {
-            await JS.InvokeVoidAsync(
-                "huntingDashboardTransfer.downloadJson",
-                dashboardExport.FileName,
-                dashboardExport.Json);
+            await DashboardTransfer.DownloadAsync(dashboardExport.FileName, dashboardExport.Json);
         }
         catch (Exception ex)
         {

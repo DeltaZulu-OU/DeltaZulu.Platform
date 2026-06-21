@@ -1,10 +1,11 @@
 @namespace DeltaZulu.Platform.Web.Analytics.Components.Dashboards
 @using DeltaZulu.Platform.Domain.Analytics.Visualizations
 @using DeltaZulu.Platform.Web.Analytics.Dashboards
-@inject IJSRuntime JS
+@using DeltaZulu.Platform.Web.Analytics.Services
 @inject ILogger<DashboardWidgetEditor> Logger
-@inject DeltaZulu.Platform.Web.Analytics.Services.QueryLibraryService QueryLibrary
-@inject DeltaZulu.Platform.Web.Analytics.Services.VisualizationLibraryService VisualizationLibrary
+@inject QueryLibraryService QueryLibrary
+@inject VisualizationLibraryService VisualizationLibrary
+@inject WidgetEditorInterop WidgetEditor
 @implements IAsyncDisposable
 
 @if (IsOpen)
@@ -290,8 +291,7 @@ Lorem *ipsum* **dolor** sit amet.
 
         try
         {
-            _monacoReady = await JS.InvokeAsync<bool>(
-                "huntingDashboardWidgetEditor.initialize",
+            _monacoReady = await WidgetEditor.InitializeAsync(
                 _editorElementId,
                 EditorLanguage == "kql" ? _queryText : _markdownText,
                 EditorLanguage);
@@ -507,10 +507,7 @@ Lorem *ipsum* **dolor** sit amet.
     {
         try
         {
-            await JS.InvokeAsync<bool>(
-                "huntingDashboardWidgetEditor.setLanguage",
-                _editorElementId,
-                EditorLanguage);
+            await WidgetEditor.SetLanguageAsync(_editorElementId, EditorLanguage);
         }
         catch (JSDisconnectedException ex)
         {
@@ -555,9 +552,7 @@ Lorem *ipsum* **dolor** sit amet.
 
         try
         {
-            _queryText = await JS.InvokeAsync<string>(
-                "huntingDashboardWidgetEditor.getValue",
-                _editorElementId);
+            _queryText = await WidgetEditor.GetValueAsync(_editorElementId);
         }
         catch (JSDisconnectedException ex)
         {
@@ -614,37 +609,7 @@ Lorem *ipsum* **dolor** sit amet.
         }
 
         MarkEditorDisposed();
-
-        try
-        {
-            await JS.InvokeVoidAsync(
-                "huntingDashboardWidgetEditor.dispose",
-                _editorElementId);
-        }
-        catch (JSDisconnectedException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "dispose");
-        }
-        catch (TaskCanceledException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "dispose");
-        }
-        catch (OperationCanceledException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "dispose");
-        }
-        catch (JSException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "dispose");
-        }
-        catch (ObjectDisposedException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "dispose");
-        }
-        catch (InvalidOperationException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "dispose");
-        }
+        await WidgetEditor.TryDisposeAsync(_editorElementId);
     }
 
     private async Task RequestRenderAsync()
