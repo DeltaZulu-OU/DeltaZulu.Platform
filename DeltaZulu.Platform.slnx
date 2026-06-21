@@ -7,6 +7,7 @@
 
   <!-- Platform layers (Clean Architecture) -->
   <Project Path="src/DeltaZulu.Platform.Domain/DeltaZulu.Platform.Domain.csproj" />
+  <Project Path="src/DeltaZulu.Blazor.Interop/DeltaZulu.Blazor.Interop.csproj" />
   <Project Path="src/DeltaZulu.Platform.Application/DeltaZulu.Platform.Application.csproj" />
   <Project Path="src/DeltaZulu.Platform.Data/DeltaZulu.Platform.Data.csproj" />
   <Project Path="src/DeltaZulu.Platform.Web/DeltaZulu.Platform.Web.csproj" />

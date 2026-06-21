@@ -26,6 +26,6 @@ public sealed class WidgetEditorInterop(IJSRuntime js)
     /// Disposes the editor instance, swallowing any lifecycle exceptions (disconnected circuit,
     /// cancellation, etc.). Safe to call from component DisposeAsync / cleanup paths.
     /// </summary>
-    public ValueTask TryDisposeAsync(string elementId) =>
+    public ValueTask<bool> TryDisposeAsync(string elementId) =>
         js.TryInvokeVoidAsync("huntingDashboardWidgetEditor.dispose", elementId);
 }

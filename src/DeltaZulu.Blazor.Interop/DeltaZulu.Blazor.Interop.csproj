@@ -5,4 +5,9 @@
     <AssemblyName>DeltaZulu.Blazor.Interop</AssemblyName>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components" />
+    <PackageReference Include="Microsoft.JSInterop" />
+  </ItemGroup>
+
 </Project>
