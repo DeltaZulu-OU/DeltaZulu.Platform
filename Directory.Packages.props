@@ -2,7 +2,7 @@
   <ItemGroup>
     <!-- Shared -->
     <PackageVersion Include="Dapper" Version="2.1.79" />
-    <PackageVersion Include="Markdig" Version="1.2.0" />
+    <PackageVersion Include="Markdig" Version="1.3.2" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.9" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
@@ -23,7 +23,7 @@
     <PackageVersion Include="Microsoft.Azure.Kusto.Language" Version="12.4.0" />
     <PackageVersion Include="Vizor.ECharts" Version="0.9.7" />
     <!-- Workbench-specific -->
-    <PackageVersion Include="Elsa" Version="3.7.0" />
+    <PackageVersion Include="Elsa" Version="3.7.1" />
     <PackageVersion Include="LibGit2Sharp" Version="0.31.0" />
     <PackageVersion Include="YamlDotNet" Version="18.0.0" />
   </ItemGroup>
