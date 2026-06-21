@@ -1,22 +1,21 @@
 using DeltaZulu.Platform.Web.Analytics.Dashboards.Persistence;
 using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards.PageState;
 
 public sealed class DashboardListPageController
 {
     private readonly IDashboardRepository _dashboardRepository;
-    private readonly IJSRuntime _js;
+    private readonly DashboardTransferInterop _transfer;
     private readonly NavigationManager _navigation;
 
     public DashboardListPageController(
         IDashboardRepository dashboardRepository,
-        IJSRuntime js,
+        DashboardTransferInterop transfer,
         NavigationManager navigation)
     {
         _dashboardRepository = dashboardRepository ?? throw new ArgumentNullException(nameof(dashboardRepository));
-        _js = js ?? throw new ArgumentNullException(nameof(js));
+        _transfer = transfer ?? throw new ArgumentNullException(nameof(transfer));
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
     }
 
@@ -76,7 +75,7 @@ public sealed class DashboardListPageController
 
         try
         {
-            var json = await _js.InvokeAsync<string?>("huntingDashboardTransfer.pickJson", cancellationToken);
+            var json = await _transfer.PickAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(json))
             {
                 return;

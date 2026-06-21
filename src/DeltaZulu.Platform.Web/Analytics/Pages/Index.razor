@@ -893,9 +893,9 @@
             return;
         }
 
-        var size = await JS.InvokeAsync<DeltaZulu.Platform.Web.Analytics.Services.ChartHostSize>("huntingCharts.getElementSize", _chartHost);
-        var width = size.Width;
-        var height = size.Height;
+        var rect = await _chartHost.GetBoundingClientRectAsync(JS);
+        var width = rect.Width;
+        var height = rect.Height;
         var widthPx = Math.Max(320, (int)Math.Round(width, MidpointRounding.AwayFromZero));
         var heightPx = Math.Max(320, (int)Math.Round(height, MidpointRounding.AwayFromZero));
         if (widthPx == _lastMeasuredChartWidthPx && heightPx == _lastMeasuredChartHeightPx)

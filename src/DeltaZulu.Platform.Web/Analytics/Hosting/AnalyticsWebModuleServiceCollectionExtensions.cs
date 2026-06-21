@@ -7,6 +7,7 @@ using DeltaZulu.Platform.Domain.Analytics.Catalog;
 using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
+using DeltaZulu.Platform.Web.Analytics.Dashboards;
 using DeltaZulu.Platform.Web.Analytics.Dashboards.DependencyInjection;
 using DeltaZulu.Platform.Web.Analytics.Dashboards.PageState;
 using DeltaZulu.Platform.Web.Analytics.Library;
@@ -119,6 +120,8 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         services.AddAnalyticsRenderWeb();
         services.AddScoped<EditorBus>();
         services.AddScoped<LanguageService>();
+        services.AddScoped<WidgetEditorInterop>();
+        services.AddScoped<DashboardTransferInterop>();
 
         return services;
     }

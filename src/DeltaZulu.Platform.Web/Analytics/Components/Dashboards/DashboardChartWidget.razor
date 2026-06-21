@@ -82,30 +82,7 @@
     {
         if (_resizeRegistered)
         {
-            try
-            {
-                await JS.InvokeVoidAsync("huntingDashboardCharts.dispose", _surfaceId);
-            }
-            catch (JSDisconnectedException ex)
-            {
-                LogChartInteropLifecycleDebug(ex, "dispose");
-            }
-            catch (TaskCanceledException ex)
-            {
-                LogChartInteropLifecycleDebug(ex, "dispose");
-            }
-            catch (OperationCanceledException ex)
-            {
-                LogChartInteropLifecycleDebug(ex, "dispose");
-            }
-            catch (JSException ex)
-            {
-                LogChartInteropLifecycleDebug(ex, "dispose");
-            }
-            catch (InvalidOperationException ex)
-            {
-                LogChartInteropLifecycleDebug(ex, "dispose");
-            }
+            await JS.TryInvokeVoidAsync("huntingDashboardCharts.dispose", _surfaceId);
         }
 
         _resizeRegistered = false;
@@ -118,42 +95,6 @@
             return;
         }
 
-        try
-        {
-            await JS.InvokeVoidAsync("huntingDashboardCharts.observe", _surfaceId);
-            _resizeRegistered = true;
-        }
-        catch (JSDisconnectedException ex)
-        {
-            _resizeRegistered = false;
-            LogChartInteropLifecycleDebug(ex, "observe");
-        }
-        catch (TaskCanceledException ex)
-        {
-            _resizeRegistered = false;
-            LogChartInteropLifecycleDebug(ex, "observe");
-        }
-        catch (OperationCanceledException ex)
-        {
-            _resizeRegistered = false;
-            LogChartInteropLifecycleDebug(ex, "observe");
-        }
-        catch (JSException ex)
-        {
-            _resizeRegistered = false;
-            LogChartInteropLifecycleDebug(ex, "observe");
-        }
-        catch (InvalidOperationException ex)
-        {
-            _resizeRegistered = false;
-            LogChartInteropLifecycleDebug(ex, "observe");
-        }
+        _resizeRegistered = await JS.TryInvokeVoidAsync("huntingDashboardCharts.observe", _surfaceId);
     }
-
-    private void LogChartInteropLifecycleDebug(Exception exception, string operation)
-        => Logger.LogDebug(
-            exception,
-            "Dashboard chart JS interop {Operation} was skipped or cancelled for {SurfaceId}.",
-            operation,
-            _surfaceId);
 }

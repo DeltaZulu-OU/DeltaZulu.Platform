@@ -2,7 +2,6 @@
 @using DeltaZulu.Platform.Web.Analytics.Dashboards
 @using DeltaZulu.Platform.Web.Analytics.Dashboards.Runtime
 @inject IJSRuntime JS
-@inject ILogger<DashboardGrid> Logger
 @implements IAsyncDisposable
 
 <section id="@_gridElementId"
@@ -127,34 +126,8 @@
     {
         if (_layoutInteropInitialized)
         {
-            try
-            {
-                await JS.InvokeVoidAsync("huntingDashboardGridLayout.dispose", _gridElementId);
-            }
-            catch (JSDisconnectedException ex)
-            {
-                LogGridInteropLifecycleDebug(ex, "dispose");
-            }
-            catch (TaskCanceledException ex)
-            {
-                LogGridInteropLifecycleDebug(ex, "dispose");
-            }
-            catch (OperationCanceledException ex)
-            {
-                LogGridInteropLifecycleDebug(ex, "dispose");
-            }
-            catch (JSException ex)
-            {
-                LogGridInteropLifecycleDebug(ex, "dispose");
-            }
-            catch (InvalidOperationException ex)
-            {
-                LogGridInteropLifecycleDebug(ex, "dispose");
-            }
-            finally
-            {
-                _layoutInteropInitialized = false;
-            }
+            await JS.TryInvokeVoidAsync("huntingDashboardGridLayout.dispose", _gridElementId);
+            _layoutInteropInitialized = false;
         }
 
         _dotNetReference?.Dispose();
@@ -169,39 +142,10 @@
 
         _dotNetReference ??= DotNetObjectReference.Create(this);
 
-        try
-        {
-            await JS.InvokeVoidAsync(
-                "huntingDashboardGridLayout.initialize",
-                _gridElementId,
-                _dotNetReference);
-            _layoutInteropInitialized = true;
-        }
-        catch (JSDisconnectedException ex)
-        {
-            _layoutInteropInitialized = false;
-            LogGridInteropLifecycleDebug(ex, "initialize");
-        }
-        catch (TaskCanceledException ex)
-        {
-            _layoutInteropInitialized = false;
-            LogGridInteropLifecycleDebug(ex, "initialize");
-        }
-        catch (OperationCanceledException ex)
-        {
-            _layoutInteropInitialized = false;
-            LogGridInteropLifecycleDebug(ex, "initialize");
-        }
-        catch (JSException ex)
-        {
-            _layoutInteropInitialized = false;
-            LogGridInteropLifecycleDebug(ex, "initialize");
-        }
-        catch (InvalidOperationException ex)
-        {
-            _layoutInteropInitialized = false;
-            LogGridInteropLifecycleDebug(ex, "initialize");
-        }
+        _layoutInteropInitialized = await JS.TryInvokeVoidAsync(
+            "huntingDashboardGridLayout.initialize",
+            _gridElementId,
+            _dotNetReference);
     }
 
     [JSInvokable]
@@ -320,10 +264,4 @@
     private DashboardWidgetRunResult? GetResult(DashboardWidgetDefinition widget)
         => Results.TryGetValue(widget.Id, out var result) ? result : null;
 
-    private void LogGridInteropLifecycleDebug(Exception exception, string operation)
-        => Logger.LogDebug(
-            exception,
-            "Dashboard grid JS interop {Operation} was skipped or cancelled for {GridElementId}.",
-            operation,
-            _gridElementId);
 }

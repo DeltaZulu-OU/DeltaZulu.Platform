@@ -1,7 +1,7 @@
 @namespace DeltaZulu.Platform.Web.Analytics.Components
 @using DeltaZulu.Platform.Domain.Analytics.Schema
 @inject DeltaZulu.Platform.Domain.Analytics.Catalog.ApprovedViewCatalog Catalog
-@inject IJSRuntime JS
+@inject ClipboardService Clipboard
 
 <button class="hunt-btn hunt-btn-helper"
         @onclick="Open"
@@ -343,7 +343,7 @@
             return;
         }
 
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", GeneratedQuery);
+        await Clipboard.CopyTextAsync(GeneratedQuery);
     }
 
     private void ClearBuilder()
