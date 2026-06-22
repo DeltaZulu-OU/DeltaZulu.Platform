@@ -151,16 +151,19 @@ incident-candidate validity.
 
 ### Data.DuckDb
 
-`DeltaZulu.Platform.Data.DuckDb` owns DuckDB-specific infrastructure:
+`DeltaZulu.Platform.Data.DuckDb` owns DuckDB-specific infrastructure for threat hunting and
+historical analytics:
 
 - DuckDB SQL emission, query runtime, schema application, schema provenance tracking, and drift
   detection.
-- Separated from `DeltaZulu.Platform.Data` to enable adding alternative analytics backends (e.g.,
-  Proton for near-real-time execution) without touching SQLite repositories or Git storage.
+- DuckDB is the execution engine for interactive KQL queries, dashboards, and investigations. It
+  is not used for detection execution — all detections (NRT and scheduled) target Timeplus Proton.
+- Separated from `DeltaZulu.Platform.Data` to keep the DuckDB runtime isolated from SQLite
+  repositories and Git storage.
 - `IRelationalQueryEmitter` and `IRelationalQueryEmitterFactory` in the Domain layer define the
   backend-neutral compilation contract; `DeltaZulu.Platform.Data.DuckDb` provides the DuckDB
-  implementation, and `DeltaZulu.Platform.Application` provides the Proton implementation for NRT
-  detection DDL generation (see [NRT detection architecture](#near-real-time-nrt-detection-architecture)).
+  implementation for hunting, and `DeltaZulu.Platform.Application` provides the Proton
+  implementation for detection DDL generation (see [Detection execution architecture](#detection-execution-architecture)).
 
 ### Data
 
@@ -263,8 +266,8 @@ Analytics is the consolidated successor to the imported Hunting runtime. Its cor
 
 - Analysts query governed Golden contracts, not internal Bronze/Silver/runtime tables.
 - KQL is parsed with Microsoft Kusto tooling and translated through a controlled relational
-  intermediate model before target SQL is emitted. DuckDB SQL is emitted for interactive and batch
-  execution; Proton SQL is emitted for NRT detection materialized views.
+  intermediate model before target SQL is emitted. DuckDB SQL is emitted for threat hunting and
+  historical analytics; Proton SQL is emitted for detection execution (both NRT and scheduled).
 - Unsupported KQL constructs are rejected with structured diagnostics rather than silently
   approximated.
 - Runtime SQL is transient execution detail, not source-controlled detection content.
@@ -274,10 +277,10 @@ Analytics is the consolidated successor to the imported Hunting runtime. Its cor
 - Curated analytics are target reusable analytical objects with query text, purpose, expected result
   shape, required schemas, entity mappings, known false positives, severity/confidence/risk hints, and
   notes. Current saved-query history is not a substitute for this semantic model.
-- The target shared analytics execution contract supports multiple execution purposes: Interactive,
-  Dashboard, ValidationDryRun, ScheduledDetection, and Recovery. Alerting must not call the current
-  Web `QueryService` directly because UI safety limits, history recording, and scheduled detection
-  policies are different concerns.
+- The DuckDB-backed shared analytics execution contract supports interactive queries, dashboards,
+  and validation dry runs. Detection execution is a separate path through Proton and is not part of
+  this contract. The only link between hunting and detection is the business-logic pivot where an
+  analyst promotes a saved query to a detection content proposal.
 
 The detailed KQL semantics and support matrix remain in the domain-specific analytics documents linked
 from `docs/README.md`.
@@ -304,11 +307,15 @@ Governance rules:
 
 ## Operations architecture
 
-Operations is the target module for scheduled detection execution and security operations state. The
-current codebase has scaffolded records/repositories, but it has not crossed the operational threshold:
-there is no registered Operations module, no scheduled/manual runner, no alert materialization service,
-no approved operations KQL views, no Operations UI, and no enrichment/suppression/correlation/triage
-feedback loop yet.
+Operations is the target module for detection execution and security operations state. The current
+codebase has scaffolded records/repositories, but it has not crossed the operational threshold: there
+is no registered Operations module, no alert materialization service, no approved operations KQL
+views, no Operations UI, and no enrichment/suppression/correlation/triage feedback loop yet.
+
+All detection execution — both near-real-time and scheduled — runs on Timeplus Proton. DuckDB is the
+threat-hunting and historical-analytics engine only; it is not part of the detection execution path.
+The two engines share KQL as the analyst-facing language and the RelNode IR as the internal
+representation, but they target different SQL dialects and serve different purposes.
 
 - Executable detection definitions are projections from accepted detection content. They include
   detection identity, accepted version, rule hash, query text, severity, confidence, risk score,
@@ -325,44 +332,86 @@ feedback loop yet.
   evidence, scoring factors, and rationale. They are not confirmed incidents.
 - Triage decisions are analyst or system decisions about alerts or candidates, preserved as operational
   and audit state.
-- Batch alerting is scheduled or manually triggered against DuckDB. Near-real-time alerting is
-  continuous via Proton materialized views (see [NRT detection architecture](#near-real-time-nrt-detection-architecture)).
 - Operations state must be exposed through approved read-only analytical views such as DetectionRun,
   AlertEvent, AlertEntity, AlertEnrichment, and IncidentCandidate. Because alerts are SQLite-backed
   operational records, the implementation must choose a controlled DuckDB-facing projection or view
   strategy rather than leaving alert querying as repository-backed UI lists only.
 
-## Near-real-time (NRT) detection architecture
+### Engine responsibilities
 
-NRT detections are a complementary detection path alongside scheduled batch detections. Where batch
-detections execute periodically against DuckDB with bounded result sets, NRT detections run
-continuously as Timeplus Proton materialized views over streaming event data. Both paths produce
-alerts through the same domain model; they differ only in execution substrate and latency profile.
+```mermaid
+flowchart LR
+    subgraph Proton["Timeplus Proton — detection engine"]
+        NRT["NRT detections<br/>Materialized views"]
+        Sched["Scheduled detections<br/>Timeplus scheduled tasks"]
+    end
+    subgraph DuckDB["DuckDB — hunting engine"]
+        Hunt["Threat hunting<br/>Interactive KQL queries"]
+        Hist["Historical analytics<br/>Dashboards, investigations"]
+    end
+    subgraph Platform["Platform — business logic bridge"]
+        Pivot["Saved query → detection content"]
+    end
 
-### Concept
+    Hunt -.->|analyst promotes<br/>valuable query| Pivot
+    Pivot -.->|detection authored<br/>as KQL + YAML| NRT
+    Pivot -.->|detection authored<br/>as KQL + YAML| Sched
+```
 
-An NRT rule pairs a KQL query with threshold metadata. The platform compiles KQL into
-Proton-compatible SQL and wraps it in a `CREATE MATERIALIZED VIEW` DDL statement. A .NET mediation
-daemon monitors materialized view row counts and creates alerts when the threshold is crossed.
+The only connection between DuckDB and Proton is at the business-logic level: an analyst running a
+threat-hunting query in DuckDB may discover a valuable detection pattern and pivot from a saved query
+to a detection content proposal. This is a governance workflow — the analyst authors detection
+metadata (YAML) and the KQL query, which the platform compiles into Proton SQL. There is no runtime
+coupling between the hunting and detection engines.
 
-The platform does not connect to Proton directly. It generates DDL strings that are applied to a
-Proton instance externally. This keeps the streaming runtime fully decoupled from the analytical
-platform: the platform owns rule authoring, compilation, and persistence; Proton owns stateful
-stream processing.
+### Hunting → detection pivot
+
+The pivot from saved query to detection content is a user-initiated action, not an automated
+pipeline. The analyst:
+
+1. Writes and refines a KQL query during a threat hunt (executed against DuckDB).
+2. Saves the query for reuse.
+3. Decides the query has detection value and initiates a detection content proposal.
+4. Authors detection metadata (severity, confidence, MITRE mappings, threshold, schedule).
+5. The platform compiles the KQL to Proton SQL and wraps it in materialized view or scheduled task DDL.
+6. The detection enters the governance review pipeline before deployment.
+
+## Detection execution architecture
+
+All detection execution targets Timeplus Proton. The platform compiles KQL detection content into
+Proton-compatible SQL and generates deployment artifacts (materialized view DDL or scheduled task
+definitions). Proton handles stateful stream processing, windowed aggregation, and scheduled
+execution natively. A .NET mediation daemon bridges Proton alert output back to the platform's
+operational state store.
+
+### Two detection modes
+
+| | NRT detections | Scheduled detections |
+|---|---|---|
+| Execution model | Continuous materialized view | Timeplus scheduled task |
+| Latency | Sub-second to seconds | Cron-driven (minutes to hours) |
+| State management | Proton MV internal state | Lookback window per execution |
+| Proton artifact | `CREATE MATERIALIZED VIEW` | Scheduled task definition |
+| Threshold evaluation | Row count in MV ≥ t | Result count per run ≥ t |
+| Use case | High-urgency, low-latency alerts | Periodic pattern detection, compliance |
+
+Both modes share the same compilation pipeline (KQL → RelNode → ProtonSQL), the same detection
+metadata model (YAML), and the same alert materialization path into the platform's SQLite store.
 
 ### Streaming medallion pipeline
 
-Raw events flow through a four-tier medallion architecture inside Timeplus Proton before reaching
-detection materialized views. Each tier is a Proton materialized view that transforms and
-normalizes the event stream.
+Raw events flow through a medallion architecture inside Timeplus Proton before reaching detection
+artifacts. Each tier is a Proton materialized view that transforms and normalizes the event stream.
 
 ```mermaid
 flowchart LR
     B["Bronze Stream<br/>Raw JSON ingestion"] -->|MV: field extraction| S["Silver<br/>Typed columns"]
     S -->|MV: schema normalization| G["Gold<br/>Common security schema"]
-    G -->|MV per rule| D["Detection MVs<br/>Compiled KQL logic"]
-    D -->|poll + threshold| T[".NET Mediation Daemon"]
-    T -->|alert rows| A["Alert Storage<br/>SQLite / DuckDB"]
+    G -->|MV per rule| NRT["NRT Detection MVs"]
+    G -->|scheduled task| SCH["Scheduled Detection Tasks"]
+    NRT -->|threshold trigger| A["Alert dispatch stream"]
+    SCH -->|result threshold| A
+    A -->|.NET daemon| DB["Alert Storage<br/>SQLite"]
 ```
 
 **Bronze.** Raw JSON payloads land in high-throughput Proton streams with no schema enforcement.
@@ -375,14 +424,24 @@ usernames, event codes) to eliminate redundant downstream parsing. Field extract
 sources (Windows AD, Linux SSH, cloud authentication) converge to predictable column names,
 enabling detection rules to be source-agnostic.
 
-**Detection.** Per-rule materialized views apply the compiled KQL logic against Gold streams. Each
-view is generated by the NRT rule compiler from the analyst's KQL query and deployed as a
-`CREATE MATERIALIZED VIEW` statement. Windowed aggregations use Proton `tumble()` or `hop()`
-functions for stateful evaluation.
+**Detection.** NRT rules produce per-rule materialized views running continuously against Gold
+streams. Scheduled rules produce Timeplus scheduled tasks that execute periodically with defined
+lookback windows. Both are generated by the platform's KQL compiler from analyst-authored detection
+content.
+
+### Proton storage tiers
+
+Proton supports in-memory streams for low-latency processing and S3-compatible storage for
+historical retention and cache-backed replay. The medallion tiers can be configured per-stream:
+
+- **Bronze/Silver**: in-memory for throughput, with optional S3 spillover for retention.
+- **Gold**: in-memory primary with S3-backed historical storage for scheduled detection lookback.
+- **Detection MVs**: in-memory only (stateful processing happens in Proton's internal MV engine).
+- **Alert dispatch**: in-memory stream consumed by the .NET mediation daemon.
 
 ### KQL compilation pipeline
 
-The NRT compiler reuses the same KQL parsing and RelNode IR that powers interactive DuckDB
+The detection compiler reuses the same KQL parsing and RelNode IR that powers interactive DuckDB
 queries, but emits Proton/ClickHouse-dialect SQL instead of DuckDB SQL.
 
 ```mermaid
@@ -391,7 +450,8 @@ flowchart TD
     KC --> RN["RelNode IR<br/>(Domain)"]
     RN --> PE["ProtonSqlQueryEmitter<br/>(Application)"]
     PE --> SQL["Proton SELECT SQL"]
-    SQL --> DDL["CREATE MATERIALIZED VIEW DDL<br/>mv_nrt_{ruleId}"]
+    SQL --> NRT_DDL["NRT: CREATE MATERIALIZED VIEW<br/>mv_nrt_{ruleId}"]
+    SQL --> SCHED_DDL["Scheduled: Task definition<br/>with cron + lookback"]
 ```
 
 Key dialect differences from DuckDB emission:
@@ -410,17 +470,17 @@ Key dialect differences from DuckDB emission:
 ### Threshold evaluation and alert materialization
 
 The .NET mediation daemon is a background service that bridges the streaming and analytical worlds.
-It polls detection materialized views in Proton and compares row counts against each rule's
-threshold. When a view accumulates ≥ t rows (where t is the rule's configured threshold), the
-daemon materializes alerts into the platform's SQLite alert store.
+For NRT rules, it polls detection materialized views and compares row counts against each rule's
+threshold. For scheduled detections, Proton's scheduled task framework handles execution timing and
+the daemon consumes the alert dispatch stream.
 
 ```mermaid
 sequenceDiagram
-    participant P as Proton MV
-    participant D as .NET Daemon
+    participant P as Proton (MV / Scheduled Task)
+    participant D as .NET Mediation Daemon
     participant S as SQLite Alert Store
 
-    loop Poll interval
+    loop NRT: poll interval
         D->>P: SELECT count(*) FROM mv_nrt_{ruleId}
         P-->>D: row_count
         alt row_count >= threshold
@@ -429,15 +489,20 @@ sequenceDiagram
             D->>S: INSERT INTO alerts (rule, evidence, ...)
         end
     end
+
+    loop Scheduled: alert dispatch stream
+        P->>D: Alert rows from scheduled task output
+        D->>S: INSERT INTO alerts (rule, evidence, ...)
+    end
 ```
 
-The daemon is not yet implemented. Current NRT code covers rule authoring, KQL-to-Proton
-compilation, and rule persistence. The mediation daemon, Proton connectivity, and alert
-materialization are target work.
+Neither the mediation daemon nor the scheduled detection path is implemented yet. Current code
+covers NRT rule authoring, KQL-to-Proton compilation, and rule persistence. The mediation daemon,
+Proton connectivity, scheduled task generation, and alert materialization are target work.
 
 ### Clean architecture placement
 
-NRT code follows the same layer boundaries as the rest of the platform:
+Detection execution code follows the same layer boundaries as the rest of the platform:
 
 ```mermaid
 flowchart TB
@@ -479,7 +544,7 @@ Proton connection, and no runtime dependencies. It is a translation concern anal
 infrastructure project and should consume `IRelationalQueryEmitter` from Domain via DI — the
 emitter can move at that point without affecting the compilation pipeline.
 
-**No diamond dependencies.** The NRT dependency graph is strictly layered:
+**No diamond dependencies.** The detection execution dependency graph is strictly layered:
 
 ```text
 Web (Nrt.razor)
@@ -505,26 +570,27 @@ security semantics.
 | Validation | Run ordered checks, pause/retry/cancel, record workflow step identity. | Decide check meaning, blocking status, schema validity, entity validity, and merge readiness. |
 | Review | Pause for human review, resume on decision. | Enforce approval rules, self-approval constraints, stale approval rules, and review record validity. |
 | Acceptance | Coordinate accepted-content write, projection, stale sibling changes, and recovery markers. | Enforce immutable versioning, accepted content integrity, executable projection rules, and merge invariants. |
-| Scheduled execution | Trigger due executable detections, compute workflow retries, record recoverable failures. | Compute execution windows, execute approved KQL, preserve run semantics, and enforce result policy. |
-| Alert processing | Coordinate enrichment, suppression, entity extraction, and correlation handoff. | Define alert evidence integrity, entity mapping, suppression semantics, and status transitions. |
+| Alert processing | Coordinate enrichment, suppression, entity extraction, and correlation handoff after the .NET mediation daemon receives alerts from Proton. | Define alert evidence integrity, entity mapping, suppression semantics, and status transitions. |
 | Candidate correlation | Trigger deterministic grouping and scoring. | Own correlation algorithm, scoring factors, deduplication, rationale, and candidate lifecycle validity. |
 | Triage | Pause for analyst decisions and resume after action. | Enforce candidate state transitions, alert status transitions, disposition rules, and audit records. |
 | Recovery | List and retry recoverable failed states. | Prevent invariant bypass, preserve auditability, and reconcile committed state safely. |
 
 ## Shared analytics execution
 
-The most important cross-cutting architectural contract is the shared analytics execution service.
-Interactive queries, dashboard widgets, validation checks, scheduled detection runs, and recovery must
-not grow separate KQL execution paths. This is the first implementation gap to close before alerting: the
-current Web query service can continue to adapt UI behavior, but the common contract belongs in the
-Application layer and should expose purpose-specific policies:
+The most important cross-cutting architectural contract on the DuckDB side is the shared analytics
+execution service. Interactive queries, dashboard widgets, and validation checks must not grow
+separate KQL-to-DuckDB execution paths. This is an implementation gap: the current Web query
+service can continue to adapt UI behavior, but the common contract belongs in the Application layer
+and should expose purpose-specific policies:
 
 - **Interactive**: bounded result tables, full diagnostics, query history recording.
 - **Dashboard**: bounded results per widget, refresh policy enforcement.
 - **ValidationDryRun**: semantic-only or dry-run checks, no alert materialization.
-- **ScheduledDetection**: accepted detection metadata, execution window enforcement, alert
-  materialization according to detection policy.
 - **Recovery**: re-execution with reconciliation context.
+
+Detection execution (both NRT and scheduled) does not use this contract. Detections are compiled to
+Proton SQL and executed by Timeplus Proton, not DuckDB. The shared analytics execution service is
+strictly a hunting and analytical-investigation concern.
 
 ## Data ownership
 
@@ -568,18 +634,22 @@ Application layer and should expose purpose-specific policies:
 - Users write KQL, not SQL, for normal analytical workflows.
 - The approved catalog is the boundary for user-queryable telemetry views.
 - Operations state can be exposed through approved read-only analytical views.
-- DuckDB is the embedded MVP execution engine and should be hidden from normal users. The
-  `IRelationalQueryEmitter` contract in the Domain layer is the backend-neutral boundary;
-  `DeltaZulu.Platform.Data.DuckDb` provides the DuckDB implementation for interactive/batch
-  execution, and `DeltaZulu.Platform.Application` provides the Proton implementation for NRT
-  detection DDL generation.
+- DuckDB is the threat-hunting and historical-analytics engine. It powers interactive KQL queries,
+  dashboards, and investigations. It is not part of the detection execution path.
+- Timeplus Proton is the detection execution engine. Both NRT (materialized views) and scheduled
+  (Timeplus scheduled tasks) detections compile to Proton SQL and run inside Proton. The platform
+  generates deployment artifacts but does not manage the Proton runtime.
+- The `IRelationalQueryEmitter` contract in the Domain layer is the backend-neutral compilation
+  boundary; `DeltaZulu.Platform.Data.DuckDb` provides the DuckDB implementation for hunting,
+  and `DeltaZulu.Platform.Application` provides the Proton implementation for detection DDL.
+- The only connection between hunting (DuckDB) and detection (Proton) is at the business-logic
+  level: an analyst can pivot from a saved threat-hunting query to a detection content proposal.
+  There is no runtime coupling between the two engines.
 - Dashboard widgets reuse approved analytics, visualizations, alerts, detection runs, and candidates.
 - Dashboard, table, drawer, and state components should be canonical `Dz*` primitives before module pages
   invent local variants.
 - Detection governance is intentionally PR-like in the domain, but user-facing language remains
   detection/change/check/review/history.
-- Batch alerting is scheduled or manually triggered. NRT alerting runs continuously via Proton
-  materialized views with a .NET mediation daemon bridging the streaming and analytical worlds.
 - Alert and incident-candidate workflows are first-class security operations, not merely future
   persistence primitives.
 
