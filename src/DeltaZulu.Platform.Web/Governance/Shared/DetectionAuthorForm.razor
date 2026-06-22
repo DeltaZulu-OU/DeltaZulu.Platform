@@ -1,0 +1,500 @@
+@namespace DeltaZulu.Platform.Web.Governance.Components.Shared
+@using DeltaZulu.Platform.Web.Components
+@using DeltaZulu.Platform.Web.Analytics.Services
+@using Microsoft.JSInterop
+@using MudBlazor
+@inject WidgetEditorInterop WidgetEditor
+@implements IAsyncDisposable
+
+@* ── Trigger type toggle ── *@
+<MudGrid Spacing="2">
+    <MudItem xs="12">
+        <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small">
+            <MudButton Color="@(_triggerType == TriggerKind.Nrt ? Color.Primary : Color.Default)"
+                       Variant="@(_triggerType == TriggerKind.Nrt ? Variant.Filled : Variant.Outlined)"
+                       OnClick="@(() => SetTrigger(TriggerKind.Nrt))">
+                NRT (Near Real-Time)
+            </MudButton>
+            <MudButton Color="@(_triggerType == TriggerKind.Scheduled ? Color.Primary : Color.Default)"
+                       Variant="@(_triggerType == TriggerKind.Scheduled ? Variant.Filled : Variant.Outlined)"
+                       OnClick="@(() => SetTrigger(TriggerKind.Scheduled))">
+                Scheduled
+            </MudButton>
+        </MudButtonGroup>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary ml-2">
+            @(_triggerType == TriggerKind.Nrt
+                ? "Always-on stream detection via materialized view."
+                : "Periodic query run on a cron schedule.")
+        </MudText>
+    </MudItem>
+
+    @* ── Core identity ── *@
+    <MudItem xs="12" md="6">
+        <MudTextField Value="_id" ValueChanged="OnIdChanged" Label="Detection ID" Dense="true"
+                      HelperText="Stable identifier, e.g. dz-suspicious-command-line-download"
+                      Immediate="true" Variant="Variant.Outlined" T="string" />
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <MudTextField Value="_title" ValueChanged="OnTitleChanged" Label="Title" Dense="true"
+                      HelperText="Short analyst-facing name" Immediate="true" Variant="Variant.Outlined" T="string" />
+    </MudItem>
+
+    @* ── Severity / Confidence / Risk ── *@
+    <MudItem xs="12" md="3">
+        <MudSelect Value="_severity" ValueChanged="OnSeverityChanged" T="string"
+                   Label="Severity" Dense="true" Variant="Variant.Outlined">
+            @foreach (var s in SeverityOptions)
+            {
+                <MudSelectItem Value="@s">@Capitalize(s)</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" md="3">
+        <MudSelect Value="_confidence" ValueChanged="OnConfidenceChanged" T="string"
+                   Label="Confidence" Dense="true" Variant="Variant.Outlined">
+            @foreach (var c in ConfidenceOptions)
+            {
+                <MudSelectItem Value="@c">@Capitalize(c)</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" md="3">
+        <MudNumericField Value="_riskScore" ValueChanged="OnRiskScoreChanged" T="int"
+                         Label="Risk score" Dense="true" Min="0" Max="100" Variant="Variant.Outlined" />
+    </MudItem>
+
+    @* ── Description ── *@
+    <MudItem xs="12">
+        <MudTextField Value="_description" ValueChanged="OnDescriptionChanged" Label="Description"
+                      Lines="3" Dense="true" Immediate="true" Variant="Variant.Outlined" T="string"
+                      HelperText="What does this detection find? Include analyst guidance." />
+    </MudItem>
+
+    @* ── Trigger-specific fields ── *@
+    @if (_triggerType == TriggerKind.Nrt)
+    {
+        <MudItem xs="12" md="4">
+            <MudNumericField Value="_nrtThreshold" ValueChanged="OnNrtThresholdChanged" T="int"
+                             Label="Alert threshold (result rows)" Dense="true"
+                             Min="1" HelperText="Minimum matching rows to raise an alert."
+                             Variant="Variant.Outlined" />
+        </MudItem>
+    }
+    else
+    {
+        <MudItem xs="12">
+            <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">Schedule</MudText>
+            <DzCronPicker Value="@_scheduleExpression" ValueChanged="OnScheduleChanged" />
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudSelect Value="_lookback" ValueChanged="OnLookbackChanged" T="string"
+                       Label="Lookback window" Dense="true" Variant="Variant.Outlined">
+                @foreach (var lb in LookbackOptions)
+                {
+                    <MudSelectItem Value="@lb">@lb</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudNumericField Value="_maxAlertsPerRun" ValueChanged="OnMaxAlertsChanged" T="int"
+                             Label="Max alerts per run" Dense="true" Min="1" Max="10000"
+                             Variant="Variant.Outlined" />
+        </MudItem>
+    }
+
+    @* ── KQL query ── *@
+    <MudItem xs="12">
+        <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">KQL Query</MudText>
+        <div class="dashboard-editor-text-shell">
+            @if (!_kqlEditorReady)
+            {
+                <MudTextField Value="_kqlQuery" ValueChanged="OnKqlChanged"
+                              Label="KQL" Lines="10" Immediate="true"
+                              HelperText="Monaco editor loads when available." Variant="Variant.Outlined" T="string" />
+            }
+            <div id="@_editorId" class="@EditorCssClass"></div>
+        </div>
+    </MudItem>
+
+    @* ── MITRE / entity mappings (advanced) ── *@
+    <MudItem xs="12">
+        <MudExpansionPanels Elevation="0" Class="mt-1">
+            <MudExpansionPanel Text="MITRE, entity mappings &amp; notes" Dense="true">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="6">
+                        <MudTextField Value="_tacticsCsv" ValueChanged="OnTacticsChanged"
+                                      Label="MITRE tactics (comma-separated)" Dense="true"
+                                      HelperText="e.g. Lateral Movement, Initial Access"
+                                      Immediate="true" Variant="Variant.Outlined" T="string" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudTextField Value="_techniquesCsv" ValueChanged="OnTechniquesChanged"
+                                      Label="MITRE techniques (comma-separated)" Dense="true"
+                                      HelperText="e.g. T1021.001, T1059.001"
+                                      Immediate="true" Variant="Variant.Outlined" T="string" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField Value="_entityMappingsText" ValueChanged="OnEntityMappingsChanged"
+                                      Label="Entity mappings (one per line: type:field)" Dense="true"
+                                      Lines="3" Immediate="true" Variant="Variant.Outlined" T="string"
+                                      HelperText="e.g. host:DeviceName" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField Value="_falsePositiveNotes" ValueChanged="OnFpNotesChanged"
+                                      Label="False positive notes" Dense="true" Lines="2"
+                                      Immediate="true" Variant="Variant.Outlined" T="string" />
+                    </MudItem>
+                </MudGrid>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+    </MudItem>
+
+</MudGrid>
+
+@code {
+    [Parameter] public string? DetectionSlug { get; set; }
+    [Parameter] public string? DetectionTitle { get; set; }
+
+    private enum TriggerKind { Nrt, Scheduled }
+
+    private static readonly string[] SeverityOptions = ["informational", "low", "medium", "high", "critical"];
+    private static readonly string[] ConfidenceOptions = ["low", "medium", "high"];
+    private static readonly string[] LookbackOptions = ["15m", "30m", "1h", "4h", "6h", "12h", "1d", "3d", "7d"];
+
+    private TriggerKind _triggerType = TriggerKind.Nrt;
+    private string _id = "";
+    private string _title = "";
+    private string _description = "";
+    private string _severity = "medium";
+    private string _confidence = "high";
+    private int _riskScore = 50;
+    private int _nrtThreshold = 1;
+    private string _scheduleExpression = "0 * * * *";
+    private string _lookback = "1h";
+    private int _maxAlertsPerRun = 100;
+    private string _kqlQuery = "";
+    private string _tacticsCsv = "";
+    private string _techniquesCsv = "";
+    private string _entityMappingsText = "";
+    private string _falsePositiveNotes = "";
+
+    private bool _kqlEditorReady;
+    private bool _kqlEditorNeedsInit;
+    private readonly string _editorId = $"detection-author-{Guid.NewGuid():N}";
+    private string EditorCssClass => _kqlEditorReady
+        ? "dashboard-editor-monaco"
+        : "dashboard-editor-monaco dashboard-editor-monaco--initializing";
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(_id) && DetectionSlug is not null)
+            _id = DetectionSlug;
+        if (string.IsNullOrWhiteSpace(_title) && DetectionTitle is not null)
+            _title = DetectionTitle;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender && !_kqlEditorNeedsInit) return;
+
+        _kqlEditorNeedsInit = false;
+
+        if (_kqlEditorReady)
+        {
+            await WidgetEditor.TryDisposeAsync(_editorId);
+            _kqlEditorReady = false;
+        }
+
+        try
+        {
+            _kqlEditorReady = await WidgetEditor.InitializeAsync(_editorId, _kqlQuery, "kql");
+            if (_kqlEditorReady)
+                StateHasChanged();
+        }
+        catch (JSException)
+        {
+            _kqlEditorReady = false;
+        }
+    }
+
+    /// <summary>Loads YAML content into form fields. Called by ChangeDetail when editing an existing file.</summary>
+    public void LoadFromYaml(string yaml)
+    {
+        if (string.IsNullOrWhiteSpace(yaml)) return;
+
+        var fields = ParseYaml(yaml);
+
+        _id = fields.GetValueOrDefault("id", _id);
+        _title = fields.GetValueOrDefault("title", _title);
+        _description = fields.GetValueOrDefault("description", _description);
+        _severity = fields.GetValueOrDefault("severity", _severity).ToLowerInvariant();
+        _confidence = fields.GetValueOrDefault("confidence", _confidence).ToLowerInvariant();
+        _kqlQuery = fields.GetValueOrDefault("query", _kqlQuery);
+
+        if (int.TryParse(fields.GetValueOrDefault("risk_score", ""), out var rs))
+            _riskScore = rs;
+
+        var triggerRaw = fields.GetValueOrDefault("trigger_type", "nrt").ToLowerInvariant();
+        _triggerType = triggerRaw == "scheduled" ? TriggerKind.Scheduled : TriggerKind.Nrt;
+
+        if (_triggerType == TriggerKind.Nrt)
+        {
+            if (int.TryParse(fields.GetValueOrDefault("threshold", ""), out var thr))
+                _nrtThreshold = thr;
+        }
+        else
+        {
+            _scheduleExpression = fields.GetValueOrDefault("schedule", _scheduleExpression);
+            _lookback = fields.GetValueOrDefault("lookback", _lookback);
+            if (int.TryParse(fields.GetValueOrDefault("max_alerts_per_run", ""), out var max))
+                _maxAlertsPerRun = max;
+        }
+
+        _tacticsCsv = fields.GetValueOrDefault("tactics_csv", _tacticsCsv);
+        _techniquesCsv = fields.GetValueOrDefault("techniques_csv", _techniquesCsv);
+        _entityMappingsText = fields.GetValueOrDefault("entity_mappings_text", _entityMappingsText);
+        _falsePositiveNotes = fields.GetValueOrDefault("false_positive_notes_text", _falsePositiveNotes);
+
+        _kqlEditorNeedsInit = true;
+    }
+
+    /// <summary>Returns the generated YAML. The Monaco value is fetched via JS interop if the editor is ready.</summary>
+    public async Task<string> GetYamlAsync()
+    {
+        if (_kqlEditorReady)
+            _kqlQuery = await WidgetEditor.GetValueAsync(_editorId);
+        return BuildYaml(_kqlQuery);
+    }
+
+    private void SetTrigger(TriggerKind kind) => _triggerType = kind;
+
+    private void OnIdChanged(string v) => _id = v;
+    private void OnTitleChanged(string v) => _title = v;
+    private void OnDescriptionChanged(string v) => _description = v;
+    private void OnSeverityChanged(string v) => _severity = v;
+    private void OnConfidenceChanged(string v) => _confidence = v;
+    private void OnRiskScoreChanged(int v) => _riskScore = v;
+    private void OnNrtThresholdChanged(int v) => _nrtThreshold = v;
+    private void OnScheduleChanged(string v) => _scheduleExpression = v;
+    private void OnLookbackChanged(string v) => _lookback = v;
+    private void OnMaxAlertsChanged(int v) => _maxAlertsPerRun = v;
+    private void OnKqlChanged(string v) => _kqlQuery = v;
+    private void OnTacticsChanged(string v) => _tacticsCsv = v;
+    private void OnTechniquesChanged(string v) => _techniquesCsv = v;
+    private void OnEntityMappingsChanged(string v) => _entityMappingsText = v;
+    private void OnFpNotesChanged(string v) => _falsePositiveNotes = v;
+
+    private string BuildYaml(string kql)
+    {
+        var sb = new System.Text.StringBuilder();
+
+        sb.AppendLine($"id: {YStr(_id)}");
+        sb.AppendLine($"title: {YStr(_title)}");
+        sb.AppendLine($"description: >-");
+        foreach (var line in (_description ?? "").Split('\n'))
+            sb.AppendLine($"  {line.TrimEnd()}");
+        sb.AppendLine($"severity: {_severity}");
+        sb.AppendLine($"confidence: {_confidence}");
+        sb.AppendLine($"risk_score: {_riskScore}");
+        sb.AppendLine("content_type: detection");
+        sb.AppendLine("query_language: kql");
+        sb.AppendLine($"trigger_type: {(_triggerType == TriggerKind.Nrt ? "nrt" : "scheduled")}");
+
+        if (_triggerType == TriggerKind.Nrt)
+        {
+            sb.AppendLine($"threshold: {_nrtThreshold}");
+        }
+        else
+        {
+            sb.AppendLine($"schedule: '{_scheduleExpression}'");
+            sb.AppendLine($"lookback: {_lookback}");
+            sb.AppendLine($"max_alerts_per_run: {_maxAlertsPerRun}");
+        }
+
+        sb.AppendLine("query: |");
+        var kqlTrimmed = (kql ?? "").TrimEnd();
+        if (string.IsNullOrWhiteSpace(kqlTrimmed))
+        {
+            sb.AppendLine("  # KQL query goes here");
+        }
+        else
+        {
+            foreach (var line in kqlTrimmed.Split('\n'))
+                sb.AppendLine($"  {line.TrimEnd()}");
+        }
+
+        var tactics = SplitCsv(_tacticsCsv);
+        if (tactics.Length > 0)
+        {
+            sb.AppendLine("tactics:");
+            foreach (var t in tactics)
+                sb.AppendLine($"  - {t}");
+        }
+
+        var techniques = SplitCsv(_techniquesCsv);
+        if (techniques.Length > 0)
+        {
+            sb.AppendLine("techniques:");
+            foreach (var t in techniques)
+                sb.AppendLine($"  - {t}");
+        }
+
+        var entityLines = (_entityMappingsText ?? "")
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (entityLines.Length > 0)
+        {
+            sb.AppendLine("entity_mappings:");
+            foreach (var line in entityLines)
+            {
+                var colon = line.IndexOf(':', StringComparison.Ordinal);
+                if (colon > 0)
+                {
+                    var type = line[..colon].Trim();
+                    var field = line[(colon + 1)..].Trim();
+                    sb.AppendLine($"  - type: {type}");
+                    sb.AppendLine($"    field: {field}");
+                }
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(_falsePositiveNotes))
+        {
+            sb.AppendLine("false_positive_notes:");
+            foreach (var line in _falsePositiveNotes.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                sb.AppendLine($"  - {line}");
+        }
+
+        return sb.ToString();
+    }
+
+    // Parses a YAML string into a flat dictionary. Handles scalar fields,
+    // literal blocks (query: |), and list fields converted to CSV/text blobs.
+    private static Dictionary<string, string> ParseYaml(string yaml)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var lines = yaml.Split('\n');
+        var i = 0;
+
+        while (i < lines.Length)
+        {
+            var line = lines[i];
+            var colonIdx = line.IndexOf(':', StringComparison.Ordinal);
+            if (colonIdx <= 0 || line.TrimStart().StartsWith('-') || line.TrimStart().StartsWith('#'))
+            {
+                i++;
+                continue;
+            }
+
+            var key = line[..colonIdx].Trim();
+            var rest = line[(colonIdx + 1)..].Trim();
+
+            // Literal block (| or |-) and folded block (> or >-)
+            if (rest is "|" or "|-" or ">" or ">-")
+            {
+                var blockLines = new List<string>();
+                i++;
+                while (i < lines.Length && (lines[i].StartsWith("  ") || string.IsNullOrWhiteSpace(lines[i])))
+                {
+                    blockLines.Add(lines[i].Length >= 2 ? lines[i][2..] : "");
+                    i++;
+                }
+                // Folded blocks join lines with spaces; literal blocks preserve newlines
+                result[key] = rest is ">" or ">-"
+                    ? string.Join(' ', blockLines.Select(l => l.TrimEnd())).Trim()
+                    : string.Join('\n', blockLines).TrimEnd();
+                continue;
+            }
+
+            // entity_mappings is a list of {type, field} objects — handle before flat-list check
+            if (key == "entity_mappings" && string.IsNullOrWhiteSpace(rest))
+            {
+                var mappingItems = new List<string>();
+                i++;
+                string? currentType = null;
+                while (i < lines.Length && (lines[i].TrimStart().StartsWith("- ") || lines[i].StartsWith("    ")))
+                {
+                    var ml = lines[i].TrimStart();
+                    if (ml.StartsWith("- type:"))
+                        currentType = ml["- type:".Length..].Trim();
+                    else if (ml.StartsWith("type:"))
+                        currentType = ml["type:".Length..].Trim();
+                    else if (ml.StartsWith("field:") && currentType is not null)
+                    {
+                        mappingItems.Add($"{currentType}:{ml["field:".Length..].Trim()}");
+                        currentType = null;
+                    }
+                    i++;
+                }
+                result["entity_mappings_text"] = string.Join('\n', mappingItems);
+                continue;
+            }
+
+            // Flat list (simple scalar values per line)
+            if (string.IsNullOrWhiteSpace(rest) && i + 1 < lines.Length && lines[i + 1].TrimStart().StartsWith("- "))
+            {
+                var items = new List<string>();
+                i++;
+                while (i < lines.Length && lines[i].TrimStart().StartsWith("- "))
+                {
+                    items.Add(lines[i].TrimStart()[2..].Trim());
+                    i++;
+                }
+                if (key is "tactics" or "techniques")
+                    result[$"{key}_csv"] = string.Join(", ", items);
+                else if (key == "false_positive_notes")
+                    result["false_positive_notes_text"] = string.Join('\n', items);
+                continue;
+            }
+
+            // Nested mapping — handle known keys, skip unknown
+            if (string.IsNullOrWhiteSpace(rest))
+            {
+                if (key == "schedule")
+                {
+                    i++;
+                    while (i < lines.Length && lines[i].StartsWith("  "))
+                    {
+                        var nested = lines[i].TrimStart();
+                        var nc = nested.IndexOf(':', StringComparison.Ordinal);
+                        if (nc > 0)
+                        {
+                            var nk = nested[..nc].Trim();
+                            var nv = nested[(nc + 1)..].Trim().Trim('\'').Trim('"');
+                            if (nk == "expression")
+                                result["schedule"] = nv;
+                        }
+                        i++;
+                    }
+                    continue;
+                }
+                i++;
+                continue;
+            }
+
+            // Plain scalar
+            var scalarVal = rest.Trim('\'').Trim('"');
+            result[key] = scalarVal;
+            i++;
+        }
+
+        return result;
+    }
+
+    private static string YStr(string value)
+    {
+        var escaped = (value ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"");
+        return $"\"{escaped}\"";
+    }
+
+    private static string[] SplitCsv(string csv) =>
+        (csv ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private static string Capitalize(string s) =>
+        string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s[1..];
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_kqlEditorReady)
+            await WidgetEditor.TryDisposeAsync(_editorId);
+    }
+}

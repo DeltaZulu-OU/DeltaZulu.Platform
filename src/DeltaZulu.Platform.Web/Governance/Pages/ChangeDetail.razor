@@ -135,32 +135,9 @@
                         <MudItem xs="12">
                             @if (_newContentType == DraftContentType.DetectionMetadata)
                             {
-                                <MudGrid Spacing="2">
-                                    <MudItem xs="12" md="4">
-                                        <MudTextField @bind-Value="_metadataId" Label="ID" HelperText="Stable detection identifier." Immediate="true" />
-                                    </MudItem>
-                                    <MudItem xs="12" md="4">
-                                        <MudTextField @bind-Value="_metadataTitle" Label="Title" Immediate="true" />
-                                    </MudItem>
-                                    <MudItem xs="12" md="4">
-                                        <MudSelect @bind-Value="_metadataSeverity" Label="Severity" T="string">
-                                            @foreach (var severity in MetadataSeverityOptions)
-                                            {
-                                                <MudSelectItem Value="@severity">@severity</MudSelectItem>
-                                            }
-                                        </MudSelect>
-                                    </MudItem>
-                                    <MudItem xs="12">
-                                        <MudTextField @bind-Value="_metadataDescription" Label="Description" Lines="3" HelperText="Stored as detection.yaml when you save." />
-                                    </MudItem>
-                                    <MudItem xs="12">
-                                        <MudExpansionPanels Elevation="0">
-                                            <MudExpansionPanel Text="Show YAML" Dense="true">
-                                                <DzCodeBlock Content="@BuildMetadataYaml()" Light="true" Compact="true" MaxHeightPx="320" />
-                                            </MudExpansionPanel>
-                                        </MudExpansionPanels>
-                                    </MudItem>
-                                </MudGrid>
+                                <DetectionAuthorForm @ref="_detectionForm"
+                                                     DetectionSlug="@_detection?.Slug"
+                                                     DetectionTitle="@_detection?.Title" />
                             }
                             else if (_newContentType == DraftContentType.AnalyticsQuery)
                             {
@@ -213,6 +190,29 @@
                                     else if (file.ContentType == DraftContentType.StaticAsset)
                                     {
                                         <MudText Typo="Typo.caption" Class="mud-text-secondary">Binary asset — @file.SizeChars chars (base64)</MudText>
+                                    }
+                                    else if (file.ContentType == DraftContentType.DetectionMetadata)
+                                    {
+                                        @{
+                                            var d = ParseDetectionDisplay(file.Content);
+                                        }
+                                        <div class="dz-detection-read-view">
+                                            <MudGrid Spacing="1" Class="mb-2">
+                                                <MudItem xs="6" md="3"><DzDetailItem Label="ID" Value="@d.Id" Mono="true" /></MudItem>
+                                                <MudItem xs="6" md="2"><DzDetailItem Label="Severity" Value="@d.Severity" /></MudItem>
+                                                <MudItem xs="6" md="2"><DzDetailItem Label="Confidence" Value="@d.Confidence" /></MudItem>
+                                                <MudItem xs="6" md="2"><DzDetailItem Label="Trigger" Value="@d.TriggerType" /></MudItem>
+                                                @if (!string.IsNullOrWhiteSpace(d.Schedule))
+                                                {
+                                                    <MudItem xs="12" md="3"><DzDetailItem Label="Schedule" Value="@d.Schedule" Mono="true" /></MudItem>
+                                                }
+                                            </MudGrid>
+                                            @if (!string.IsNullOrWhiteSpace(d.KqlPreview))
+                                            {
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Query</MudText>
+                                                <DzCodeBlock Content="@d.KqlPreview" Light="true" Compact="true" MaxHeightPx="200" />
+                                            }
+                                        </div>
                                     }
                                     else
                                     {
@@ -479,19 +479,18 @@
     // Draft vs accepted comparison
     private List<DraftAcceptedComparison> _draftComparisons = [];
 
-    // Add file
+    // Add/edit file
     private bool _showAddFile;
     private string _newPath = "";
     private DraftContentType _newContentType = DraftContentType.DetectionMetadata;
     private string _newContent = "";
-    private string _metadataId = "";
-    private string _metadataTitle = "";
-    private string _metadataDescription = "";
-    private string _metadataSeverity = "medium";
     private bool _kqlEditorReady;
     private bool _kqlEditorNeedsInitialize;
     private readonly string _kqlEditorElementId = $"governance-kql-editor-{Guid.NewGuid():N}";
-    private static readonly string[] MetadataSeverityOptions = ["informational", "low", "medium", "high", "critical"];
+
+    // Detection author form
+    private DetectionAuthorForm? _detectionForm;
+    private string? _pendingFormYaml;
 
     // Edit file
     private string? _editingFile;
@@ -517,6 +516,15 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_pendingFormYaml is not null && _detectionForm is not null)
+        {
+            var yaml = _pendingFormYaml;
+            _pendingFormYaml = null;
+            _detectionForm.LoadFromYaml(yaml);
+            StateHasChanged();
+            return;
+        }
+
         if (!_showAddFile || _newContentType != DraftContentType.AnalyticsQuery)
         {
             if (_kqlEditorReady)
@@ -590,9 +598,10 @@
             return;
         }
 
-        if (_newContentType == DraftContentType.DetectionMetadata && string.IsNullOrWhiteSpace(_newContent))
+        if (_newContentType == DraftContentType.DetectionMetadata)
         {
-            LoadMetadataForm(string.Empty);
+            if (string.IsNullOrWhiteSpace(_newPath))
+                _newPath = "detection.yaml";
         }
         else if (_newContentType == DraftContentType.AnalyticsQuery)
         {
@@ -613,7 +622,6 @@
             _editingFile = null;
             _newPath = "";
             _newContent = "";
-            ClearMetadataForm();
             await DisposeKqlEditorAsync();
             Snackbar.Add("Draft file saved.", Severity.Success);
             await LoadAsync();
@@ -688,13 +696,10 @@
         _newPath = file.Path.Value;
         _newContentType = file.ContentType;
         _newContent = file.Content;
+
         if (file.ContentType == DraftContentType.DetectionMetadata)
         {
-            LoadMetadataForm(file.Content);
-        }
-        else
-        {
-            ClearMetadataForm();
+            _pendingFormYaml = file.Content;
         }
 
         _showAddFile = true;
@@ -787,9 +792,9 @@
 
     private async Task<string> GetDraftEditorContentAsync()
     {
-        if (_newContentType == DraftContentType.DetectionMetadata)
+        if (_newContentType == DraftContentType.DetectionMetadata && _detectionForm is not null)
         {
-            return BuildMetadataYaml();
+            return await _detectionForm.GetYamlAsync();
         }
 
         if (_newContentType == DraftContentType.AnalyticsQuery && _kqlEditorReady)
@@ -812,7 +817,8 @@
 
         if (contentType == DraftContentType.DetectionMetadata)
         {
-            LoadMetadataForm(_newContent);
+            if (string.IsNullOrWhiteSpace(_newPath))
+                _newPath = "detection.yaml";
         }
         else if (contentType == DraftContentType.AnalyticsQuery)
         {
@@ -830,66 +836,73 @@
         {
             _kqlEditorNeedsInitialize = true;
         }
-        else if (inferredContentType == DraftContentType.DetectionMetadata)
-        {
-            LoadMetadataForm(_newContent);
-        }
     }
 
-    private string BuildMetadataYaml() => string.Join('\n', new[]
-    {
-        $"id: {YamlScalar(_metadataId)}",
-        $"title: {YamlScalar(_metadataTitle)}",
-        $"description: {YamlScalar(_metadataDescription)}",
-        $"severity: {YamlScalar(_metadataSeverity)}",
-    }) + "\n";
+    private record DetectionDisplay(
+        string Id, string Severity, string Confidence, string TriggerType, string? Schedule, string? KqlPreview);
 
-    private void LoadMetadataForm(string content)
+    private static DetectionDisplay ParseDetectionDisplay(string yaml)
     {
-        if (string.IsNullOrWhiteSpace(content) && _detection is not null)
+        var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        string? kqlBlock = null;
+        var lines = yaml.Split('\n');
+        var i = 0;
+
+        while (i < lines.Length)
         {
-            _metadataId = _detection.Slug;
-            _metadataTitle = _detection.Title;
-            _metadataDescription = _detection.Summary;
-            _metadataSeverity = "medium";
-            return;
-        }
+            var line = lines[i];
+            var colon = line.IndexOf(':', StringComparison.Ordinal);
+            if (colon <= 0 || line.TrimStart().StartsWith('-') || line.TrimStart().StartsWith('#'))
+            {
+                i++;
+                continue;
+            }
 
-        var values = ParseFlatYaml(content);
-        _metadataId = values.GetValueOrDefault("id", _metadataId);
-        _metadataTitle = values.GetValueOrDefault("title", _metadataTitle);
-        _metadataDescription = values.GetValueOrDefault("description", _metadataDescription);
-        _metadataSeverity = values.GetValueOrDefault("severity", _metadataSeverity);
-    }
+            var key = line[..colon].Trim();
+            var rest = line[(colon + 1)..].Trim();
 
-    private void ClearMetadataForm()
-    {
-        _metadataId = "";
-        _metadataTitle = "";
-        _metadataDescription = "";
-        _metadataSeverity = "medium";
-    }
+            if (key == "query" && (rest is "|" or "|-"))
+            {
+                var block = new System.Text.StringBuilder();
+                i++;
+                while (i < lines.Length && (lines[i].StartsWith("  ") || string.IsNullOrWhiteSpace(lines[i])))
+                {
+                    block.AppendLine(lines[i].Length >= 2 ? lines[i][2..] : "");
+                    i++;
+                }
+                kqlBlock = block.ToString().TrimEnd();
+                continue;
+            }
 
-    private static Dictionary<string, string> ParseFlatYaml(string content)
-    {
-        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var line in content.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            var index = line.IndexOf(':', StringComparison.Ordinal);
-            if (index <= 0) continue;
-            var key = line[..index].Trim();
-            var value = line[(index + 1)..].Trim().Trim('"');
-            values[key] = value.Replace("\\\"", "\"", StringComparison.Ordinal);
+            if (!string.IsNullOrWhiteSpace(rest))
+            {
+                fields[key] = rest.Trim('\'').Trim('"');
+            }
+
+            i++;
         }
 
-        return values;
+        var scheduleRaw = fields.GetValueOrDefault("schedule");
+        var schedule = scheduleRaw is not null
+            ? $"{scheduleRaw}  (lookback: {fields.GetValueOrDefault("lookback", "?")})"
+            : null;
+
+        var kqlPreview = kqlBlock is not null
+            ? string.Join('\n', kqlBlock.Split('\n').Take(8))
+            : null;
+
+        return new DetectionDisplay(
+            Id: fields.GetValueOrDefault("id", "—"),
+            Severity: Capitalize(fields.GetValueOrDefault("severity", "—")),
+            Confidence: Capitalize(fields.GetValueOrDefault("confidence", "—")),
+            TriggerType: Capitalize(fields.GetValueOrDefault("trigger_type",
+                fields.ContainsKey("schedule") ? "scheduled" : "—")),
+            Schedule: schedule,
+            KqlPreview: kqlPreview);
     }
 
-    private static string YamlScalar(string value)
-    {
-        var normalized = value?.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) ?? string.Empty;
-        return $"\"{normalized}\"";
-    }
+    private static string Capitalize(string s) =>
+        string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s[1..];
 
     private string KqlEditorCssClass => _kqlEditorReady
         ? "dashboard-editor-monaco"

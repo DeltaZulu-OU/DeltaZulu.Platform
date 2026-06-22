@@ -7,14 +7,10 @@ confidence: Medium
 risk_score: 60
 content_type: detection
 query_language: kql
-query_file: query.kql
-schedule:
-  type: cron
-  expression: '0 */1 * * *'
+trigger_type: scheduled
+schedule: '0 */1 * * *'
 lookback: 1d
-materialization:
-  mode: per_result_row
-  max_alerts_per_run: 100
+max_alerts_per_run: 100
 source:
   repository: Sentinel-Queries-main sample extract
   original_path: Defender for Endpoint/Device-PowershellConnectingtoInternet.kql
@@ -25,6 +21,15 @@ description: >-
   installation can produce similar telemetry.
 required_tables:
   - NetworkSession
+query: |
+  NetworkSession
+  | where Timestamp > ago(1d)
+  | where InitiatingProcessCommandLine contains "powershell"
+  | where RemoteIPType =~ "Public"
+  | where AccountName !~ "system"
+  | where AccountName !~ "local service"
+  | project Timestamp, DeviceName, AccountName, InitiatingProcessCommandLine, LocalIP, RemoteIP, RemotePort, RemoteUrl
+  | sort by Timestamp desc
 tactics:
   - Command and Control
   - Execution

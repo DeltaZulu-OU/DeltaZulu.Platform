@@ -1,0 +1,189 @@
+@namespace DeltaZulu.Platform.Web.Components
+@using MudBlazor
+
+<MudGrid Spacing="2" Class="dz-cron-picker">
+
+    <MudItem xs="12" md="3">
+        <MudSelect Value="_frequency" T="CronFrequency" Label="Frequency" Dense="true"
+                   ValueChanged="OnFrequencyChanged" Variant="Variant.Outlined">
+            <MudSelectItem Value="CronFrequency.Hourly">Hourly</MudSelectItem>
+            <MudSelectItem Value="CronFrequency.Daily">Daily</MudSelectItem>
+            <MudSelectItem Value="CronFrequency.Weekly">Weekly</MudSelectItem>
+            <MudSelectItem Value="CronFrequency.Monthly">Monthly</MudSelectItem>
+            <MudSelectItem Value="CronFrequency.Custom">Custom expression</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+
+    @if (_frequency == CronFrequency.Weekly)
+    {
+        <MudItem xs="12" md="3">
+            <MudSelect Value="_dayOfWeek" T="int" Label="Day of week" Dense="true"
+                       ValueChanged="OnDayOfWeekChanged" Variant="Variant.Outlined">
+                <MudSelectItem Value="1">Monday</MudSelectItem>
+                <MudSelectItem Value="2">Tuesday</MudSelectItem>
+                <MudSelectItem Value="3">Wednesday</MudSelectItem>
+                <MudSelectItem Value="4">Thursday</MudSelectItem>
+                <MudSelectItem Value="5">Friday</MudSelectItem>
+                <MudSelectItem Value="6">Saturday</MudSelectItem>
+                <MudSelectItem Value="0">Sunday</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+    }
+
+    @if (_frequency == CronFrequency.Monthly)
+    {
+        <MudItem xs="12" md="2">
+            <MudNumericField Value="_dayOfMonth" T="int" Label="Day of month" Dense="true"
+                             Min="1" Max="28" ValueChanged="OnDayOfMonthChanged" Variant="Variant.Outlined" />
+        </MudItem>
+    }
+
+    @if (_frequency is CronFrequency.Daily or CronFrequency.Weekly or CronFrequency.Monthly)
+    {
+        <MudItem xs="6" md="2">
+            <MudNumericField Value="_hour" T="int" Label="Hour (UTC)" Dense="true"
+                             Min="0" Max="23" ValueChanged="OnHourChanged" Variant="Variant.Outlined" />
+        </MudItem>
+    }
+
+    @if (_frequency is not CronFrequency.Custom)
+    {
+        <MudItem xs="6" md="2">
+            <MudNumericField Value="_minute" T="int" Label="Minute" Dense="true"
+                             Min="0" Max="59" ValueChanged="OnMinuteChanged" Variant="Variant.Outlined" />
+        </MudItem>
+    }
+
+    @if (_frequency == CronFrequency.Custom)
+    {
+        <MudItem xs="12" md="7">
+            <MudTextField Value="_customExpression" Label="Cron expression" Dense="true"
+                          HelperText="5-part expression: minute hour day month weekday"
+                          Immediate="true" ValueChanged="OnCustomExpressionChanged" Variant="Variant.Outlined" T="string" />
+        </MudItem>
+    }
+
+    <MudItem xs="12">
+        <MudText Typo="Typo.caption" Class="mud-text-secondary dz-cron-preview">
+            <code>@Value</code>
+            @if (!string.IsNullOrWhiteSpace(_description))
+            {
+                <span> — @_description</span>
+            }
+        </MudText>
+    </MudItem>
+
+</MudGrid>
+
+@code {
+    [Parameter] public string Value { get; set; } = "0 * * * *";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    private enum CronFrequency { Hourly, Daily, Weekly, Monthly, Custom }
+
+    private CronFrequency _frequency = CronFrequency.Hourly;
+    private int _minute;
+    private int _hour = 3;
+    private int _dayOfWeek = 1;
+    private int _dayOfMonth = 1;
+    private string _customExpression = "0 * * * *";
+    private string _description = "";
+
+    protected override void OnParametersSet() => ParseInto(Value);
+
+    private async Task OnFrequencyChanged(CronFrequency f)
+    {
+        _frequency = f;
+        if (f == CronFrequency.Custom)
+            _customExpression = Build();
+        await NotifyAsync();
+    }
+
+    private async Task OnDayOfWeekChanged(int v) { _dayOfWeek = v; await NotifyAsync(); }
+    private async Task OnDayOfMonthChanged(int v) { _dayOfMonth = v; await NotifyAsync(); }
+    private async Task OnHourChanged(int v) { _hour = v; await NotifyAsync(); }
+    private async Task OnMinuteChanged(int v) { _minute = v; await NotifyAsync(); }
+    private async Task OnCustomExpressionChanged(string v) { _customExpression = v; await NotifyAsync(); }
+
+    private Task NotifyAsync()
+    {
+        Value = Build();
+        RefreshDescription();
+        return ValueChanged.InvokeAsync(Value);
+    }
+
+    private void ParseInto(string cron)
+    {
+        if (string.IsNullOrWhiteSpace(cron)) return;
+
+        var p = cron.Trim().Split(' ');
+        if (p.Length != 5)
+        {
+            _frequency = CronFrequency.Custom;
+            _customExpression = cron;
+            RefreshDescription();
+            return;
+        }
+
+        if (p[1] == "*" && p[2] == "*" && p[3] == "*" && p[4] == "*")
+        {
+            _frequency = CronFrequency.Hourly;
+            int.TryParse(p[0], out _minute);
+        }
+        else if (p[2] == "*" && p[3] == "*" && p[4] == "*")
+        {
+            _frequency = CronFrequency.Daily;
+            int.TryParse(p[0], out _minute);
+            int.TryParse(p[1], out _hour);
+        }
+        else if (p[2] == "*" && p[3] == "*" && int.TryParse(p[4], out var dow))
+        {
+            _frequency = CronFrequency.Weekly;
+            int.TryParse(p[0], out _minute);
+            int.TryParse(p[1], out _hour);
+            _dayOfWeek = dow;
+        }
+        else if (int.TryParse(p[2], out var dom) && p[3] == "*" && p[4] == "*")
+        {
+            _frequency = CronFrequency.Monthly;
+            int.TryParse(p[0], out _minute);
+            int.TryParse(p[1], out _hour);
+            _dayOfMonth = dom;
+        }
+        else
+        {
+            _frequency = CronFrequency.Custom;
+            _customExpression = cron;
+        }
+
+        RefreshDescription();
+    }
+
+    private string Build() => _frequency switch
+    {
+        CronFrequency.Hourly  => $"{_minute} * * * *",
+        CronFrequency.Daily   => $"{_minute} {_hour} * * *",
+        CronFrequency.Weekly  => $"{_minute} {_hour} * * {_dayOfWeek}",
+        CronFrequency.Monthly => $"{_minute} {_hour} {_dayOfMonth} * *",
+        CronFrequency.Custom  => _customExpression,
+        _                     => "0 * * * *",
+    };
+
+    private void RefreshDescription()
+    {
+        _description = _frequency switch
+        {
+            CronFrequency.Hourly  => $"Every hour at minute {_minute}",
+            CronFrequency.Daily   => $"Daily at {_hour:D2}:{_minute:D2} UTC",
+            CronFrequency.Weekly  => $"Weekly on {DayName(_dayOfWeek)} at {_hour:D2}:{_minute:D2} UTC",
+            CronFrequency.Monthly => $"Monthly on day {_dayOfMonth} at {_hour:D2}:{_minute:D2} UTC",
+            _                     => "",
+        };
+    }
+
+    private static string DayName(int d) => d switch
+    {
+        1 => "Monday", 2 => "Tuesday", 3 => "Wednesday", 4 => "Thursday",
+        5 => "Friday", 6 => "Saturday", 0 => "Sunday", _ => "?",
+    };
+}

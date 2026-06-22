@@ -7,14 +7,10 @@ confidence: Medium
 risk_score: 80
 content_type: detection
 query_language: kql
-query_file: query.kql
-schedule:
-  type: cron
-  expression: '0 */1 * * *'
+trigger_type: scheduled
+schedule: '0 */1 * * *'
 lookback: 1d
-materialization:
-  mode: per_result_row
-  max_alerts_per_run: 100
+max_alerts_per_run: 100
 source:
   repository: Sentinel-Queries-main sample extract
   original_path: Active Directory/SecurityEvent-AccountPreAuthChanges.kql
@@ -24,6 +20,14 @@ description: >-
   This should be reviewed quickly because it can increase AS-REP roasting exposure.
 required_tables:
   - UserManagement
+query: |
+  UserManagement
+  | where Timestamp > ago(7d)
+  | where EventId == 4738
+  | where AccountType =~ "User"
+  | where UserAccountControl has "2096"
+  | project Timestamp, TargetAccount, ActorAccount, UserAccountControl, DeviceName, SourceType
+  | sort by Timestamp desc
 tactics:
   - Credential Access
   - Persistence

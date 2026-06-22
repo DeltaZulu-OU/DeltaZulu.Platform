@@ -7,14 +7,10 @@ confidence: Medium
 risk_score: 35
 content_type: detection
 query_language: kql
-query_file: query.kql
-schedule:
-  type: cron
-  expression: '0 */1 * * *'
+trigger_type: scheduled
+schedule: '0 */1 * * *'
 lookback: 1d
-materialization:
-  mode: per_result_row
-  max_alerts_per_run: 100
+max_alerts_per_run: 100
 source:
   repository: Sentinel-Queries-main sample extract
   original_path: Derived from DNS anomaly patterns in sample extract
@@ -25,6 +21,12 @@ description: >-
   tuned per environment.
 required_tables:
   - Dns
+query: |
+  Dns
+  | where Timestamp > ago(1h)
+  | summarize QueryCount=count() by DeviceName, QueryName
+  | where QueryCount > 50
+  | sort by QueryCount desc
 tactics:
   - Command and Control
 techniques:
