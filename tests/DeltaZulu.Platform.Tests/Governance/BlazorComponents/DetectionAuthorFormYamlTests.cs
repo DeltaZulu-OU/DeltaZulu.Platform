@@ -1,8 +1,8 @@
 using Bunit;
+using DeltaZulu.Platform.Tests.Components;
 using DeltaZulu.Platform.Web.Analytics.Services;
 using DeltaZulu.Platform.Web.Governance.Components.Shared;
 using Microsoft.Extensions.DependencyInjection;
-using MudBlazor.Services;
 
 namespace DeltaZulu.Platform.Tests.Governance.BlazorComponents;
 
@@ -81,10 +81,8 @@ public sealed class DetectionAuthorFormYamlTests
 
     private static BunitContext CreateContext()
     {
-        var context = new BunitContext();
-        context.Services.AddMudServices();
+        var context = MudBlazorTestContext.Create();
         context.Services.AddScoped<WidgetEditorInterop>();
-        context.JSInterop.Mode = JSRuntimeMode.Loose;
         return context;
     }
 

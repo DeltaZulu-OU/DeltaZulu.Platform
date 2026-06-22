@@ -1,6 +1,5 @@
 using Bunit;
 using DeltaZulu.Platform.Web.Components;
-using MudBlazor.Services;
 
 namespace DeltaZulu.Platform.Tests.Components;
 
@@ -10,9 +9,7 @@ public sealed class DzCronPickerTests
     [TestMethod]
     public async Task HourlyCron_ShowsHourlyDescription()
     {
-        await using var context = new BunitContext();
-        context.Services.AddMudServices();
-        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        await using var context = MudBlazorTestContext.Create();
 
         var cut = context.Render<DzCronPicker>(p => p.Add(c => c.Value, "0 * * * *"));
 
@@ -24,9 +21,7 @@ public sealed class DzCronPickerTests
     [TestMethod]
     public async Task DailyCron_ShowsDailyDescription()
     {
-        await using var context = new BunitContext();
-        context.Services.AddMudServices();
-        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        await using var context = MudBlazorTestContext.Create();
 
         var cut = context.Render<DzCronPicker>(p => p.Add(c => c.Value, "30 3 * * *"));
 
@@ -38,9 +33,7 @@ public sealed class DzCronPickerTests
     [TestMethod]
     public async Task WeeklyCron_ShowsWeeklyDescriptionWithDayName()
     {
-        await using var context = new BunitContext();
-        context.Services.AddMudServices();
-        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        await using var context = MudBlazorTestContext.Create();
 
         var cut = context.Render<DzCronPicker>(p => p.Add(c => c.Value, "0 3 * * 1"));
 
@@ -51,9 +44,7 @@ public sealed class DzCronPickerTests
     [TestMethod]
     public async Task MonthlyCron_ShowsMonthlyDescription()
     {
-        await using var context = new BunitContext();
-        context.Services.AddMudServices();
-        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        await using var context = MudBlazorTestContext.Create();
 
         var cut = context.Render<DzCronPicker>(p => p.Add(c => c.Value, "0 3 15 * *"));
 
@@ -64,9 +55,7 @@ public sealed class DzCronPickerTests
     [TestMethod]
     public async Task NonStandardCron_TreatedAsCustomWithNoHumanDescription()
     {
-        await using var context = new BunitContext();
-        context.Services.AddMudServices();
-        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        await using var context = MudBlazorTestContext.Create();
 
         var cut = context.Render<DzCronPicker>(p => p.Add(c => c.Value, "*/5 * * * *"));
 
@@ -79,9 +68,7 @@ public sealed class DzCronPickerTests
     [TestMethod]
     public async Task CronPreview_ShowsExpressionInCodeElement()
     {
-        await using var context = new BunitContext();
-        context.Services.AddMudServices();
-        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        await using var context = MudBlazorTestContext.Create();
 
         var cut = context.Render<DzCronPicker>(p => p.Add(c => c.Value, "0 9 * * 5"));
 
@@ -100,9 +87,7 @@ public sealed class DzCronPickerTests
     [DataRow("0 3 28 * *",  "Monthly on day 28 at 03:00 UTC")]
     public async Task CronParsing_ProducesCorrectDescription(string cron, string expectedDescription)
     {
-        await using var context = new BunitContext();
-        context.Services.AddMudServices();
-        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        await using var context = MudBlazorTestContext.Create();
 
         var cut = context.Render<DzCronPicker>(p => p.Add(c => c.Value, cron));
 

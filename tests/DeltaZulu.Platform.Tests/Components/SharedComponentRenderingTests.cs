@@ -1,6 +1,5 @@
 using Bunit;
 using DeltaZulu.Platform.Web.Components;
-using MudBlazor.Services;
 
 namespace DeltaZulu.Platform.Tests.Components;
 
@@ -79,9 +78,7 @@ public sealed class SharedComponentRenderingTests
     [DataRow("unknown", "dz-status-chip--neutral")]
     public async Task DzStatusChip_MapsToneToCssClass(string tone, string expectedClass)
     {
-        await using var context = new BunitContext();
-        context.Services.AddMudServices();
-        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        await using var context = MudBlazorTestContext.Create();
 
         var cut = context.Render<DzStatusChip>(parameters => parameters
             .Add(p => p.Label, "Ready")
