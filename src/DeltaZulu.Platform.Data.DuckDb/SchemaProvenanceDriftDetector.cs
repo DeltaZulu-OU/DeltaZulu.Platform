@@ -1,3 +1,4 @@
+using DeltaZulu.Platform.Data.DuckDb.DuckDb;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 

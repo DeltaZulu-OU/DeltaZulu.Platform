@@ -1,11 +1,12 @@
 using DeltaZulu.Platform.Application.Analytics.Planning;
-using DeltaZulu.Platform.Data.Analytics;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Analytics.Catalog;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 using DeltaZulu.Platform.Tests.Analytics.Fixtures;
+using DeltaZulu.Platform.Data.DuckDb.DuckDb;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Translation;
 

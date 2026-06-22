@@ -28,9 +28,8 @@ DeltaZulu.Platform.Tests        (net10.0) → all projects
 **Problem:** `DeltaZulu.Platform.Data.csproj` has a `<ProjectReference>` to `DeltaZulu.Platform.Application`. In Clean Architecture, Data (infrastructure) should depend only on Domain (and optionally Application abstractions defined in Domain). The current graph creates an upward dependency from infrastructure into application logic.
 
 **Where:**
-- `src/DeltaZulu.Platform.Data/DuckDb/QueryRuntime.cs` — `using DeltaZulu.Platform.Application.Analytics.Catalog`, `.Planning`
-- `src/DeltaZulu.Platform.Data/DuckDb/QueryRuntime.DataOnly.cs` — `using DeltaZulu.Platform.Application.Analytics.Planning`, `.Translation`
-- `src/DeltaZulu.Platform.Data/Analytics/Execution/AnalyticsQueryExecutor.cs` — `using DeltaZulu.Platform.Application.Analytics.Execution`
+- `src/DeltaZulu.Platform.Data.DuckDb/DuckDb/QueryRuntime.cs` — `using DeltaZulu.Platform.Application.Analytics.Planning`
+- `src/DeltaZulu.Platform.Data.DuckDb/DuckDb/QueryRuntime.DataOnly.cs` — `using DeltaZulu.Platform.Application.Analytics.Planning`, `.Translation`
 - `src/DeltaZulu.Platform.Data/Seeding/SampleSavedQuerySeeder.cs` — `using DeltaZulu.Platform.Application.Analytics.Samples`
 
 **Why it matters:** This creates a near-circular dependency (Web → Data → Application → Domain, and Web → Application → Domain). It prevents the Application layer from being tested without the Data layer, and couples infrastructure to application-level orchestration.
@@ -224,7 +223,7 @@ await runs.EnsureInitializedAsync(cancellationToken);
 
 **Problem:** `TryEstimateReferencedVolume()` catches all exceptions (including `OutOfMemoryException`, `ThreadAbortException`) without logging, typing, or context.
 
-**Where:** `src/DeltaZulu.Platform.Data/DuckDb/QueryRuntime.cs` (lines 535–539)
+**Where:** `src/DeltaZulu.Platform.Data.DuckDb/DuckDb/QueryRuntime.cs` (lines 535–539)
 
 ```csharp
 catch
@@ -252,10 +251,9 @@ catch
 
 ---
 
-#### M9. Namespace mismatch — `QueryRuntime` and `RenderDirectiveParser`
+#### M9. Namespace mismatch — `RenderDirectiveParser`
 
-**Problem:** Two additional namespace/folder mismatches beyond S2:
-- `src/DeltaZulu.Platform.Data/DuckDb/QueryRuntime.cs` — folder `DuckDb`, namespace `DeltaZulu.Platform.Data.Analytics`
+**Problem:** One additional namespace/folder mismatch beyond S2:
 - `src/DeltaZulu.Platform.Application/Analytics/Rendering/Directives/RenderDirectiveParser.cs` — folder `Rendering.Directives`, namespace `Application.Analytics.Render.Directives` (missing "ing")
 
 **Where:** Listed above

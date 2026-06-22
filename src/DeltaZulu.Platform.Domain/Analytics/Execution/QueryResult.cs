@@ -1,7 +1,6 @@
-using DeltaZulu.Platform.Data.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 
-namespace DeltaZulu.Platform.Data.DuckDb;
+namespace DeltaZulu.Platform.Domain.Analytics.Execution;
 /// <summary>
 /// Result of a query execution — either data or diagnostics.
 /// </summary>
@@ -56,3 +55,8 @@ public sealed class QueryResult
 
     public object? GetValue(int row, int column) => ColumnData[column][row];
 }
+
+/// <summary>
+/// Column metadata from a query result.
+/// </summary>
+public sealed record ResultColumn(string Name, string TypeName);

@@ -1,4 +1,6 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using DeltaZulu.Platform.Domain.Analytics.Compilation;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Sql;
@@ -11,7 +13,7 @@ namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 /// and the most recently published statistics snapshot.
 /// </para>
 /// </summary>
-public sealed partial class DuckDbQueryEmitter
+public sealed partial class DuckDbQueryEmitter : IRelationalQueryEmitter
 {
     private readonly DuckDbEmitterOptions _options;
 
@@ -21,6 +23,8 @@ public sealed partial class DuckDbQueryEmitter
     }
 
     public EmitterRunStats? LastRunStats { get; private set; }
+
+    public string TargetDialect => "duckdb";
 
     public sealed record EmitterRunStats(
         int StageAdds,
@@ -50,6 +54,12 @@ public sealed partial class DuckDbQueryEmitter
         var sql = relNodeEmitter.Emit(node);
         LastRunStats = context.BuildRunStats();
         return sql;
+    }
+    EmittedQuery IRelationalQueryEmitter.Emit(RelNode node)
+    {
+        var sql = Emit(node);
+        var statsJson = LastRunStats is null ? null : JsonSerializer.Serialize(LastRunStats);
+        return new EmittedQuery(sql, TargetDialect, statsJson);
     }
 
     [GeneratedRegex(@"__kql_stage_\d+")]
