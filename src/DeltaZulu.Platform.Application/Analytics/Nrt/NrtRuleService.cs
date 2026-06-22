@@ -1,10 +1,9 @@
-using DeltaZulu.Platform.Application.Analytics.Nrt;
 using DeltaZulu.Platform.Domain.Analytics.Nrt;
 
-namespace DeltaZulu.Platform.Web.Analytics.Nrt;
+namespace DeltaZulu.Platform.Application.Analytics.Nrt;
 
 /// <summary>
-/// Application-layer service for managing NRT detection rules in the web host.
+/// Application-layer service for managing NRT detection rules.
 /// Orchestrates compilation (KQL → ProtonSQL MV DDL) and persistence.
 /// </summary>
 public sealed class NrtRuleService
