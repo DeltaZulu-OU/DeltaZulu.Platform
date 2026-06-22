@@ -400,13 +400,16 @@ metadata model (YAML), and the same alert materialization path into the platform
 
 ### Streaming medallion pipeline
 
-Raw events flow through a medallion architecture inside Timeplus Proton before reaching detection
-artifacts. Each tier is a Proton materialized view that transforms and normalizes the event stream.
+Raw events flow through a three-tier medallion architecture inside Timeplus Proton before reaching
+detection artifacts. Each tier is a **native Proton stream** (not a view) — the Proton ingestion
+pipeline owns the ETL and writes directly into the target stream at each tier. No aggregation or
+view logic occurs at the Bronze/Silver/Gold boundary; schema normalization and field extraction are
+handled by the ingestion pipeline before records land in those streams.
 
 ```mermaid
 flowchart LR
-    B["Bronze Stream<br/>Raw JSON ingestion"] -->|MV: field extraction| S["Silver<br/>Typed columns"]
-    S -->|MV: schema normalization| G["Gold<br/>Common security schema"]
+    B["Bronze Stream<br/>Raw JSON ingestion"] -->|ETL pipeline| S["Silver Stream<br/>Typed columns"]
+    S -->|ETL pipeline| G["Gold Stream<br/>Common security schema"]
     G -->|MV per rule| NRT["NRT Detection MVs"]
     G -->|scheduled task| SCH["Scheduled Detection Tasks"]
     NRT -->|threshold trigger| A["Alert dispatch stream"]
@@ -417,12 +420,14 @@ flowchart LR
 **Bronze.** Raw JSON payloads land in high-throughput Proton streams with no schema enforcement.
 The Bronze tier is the ingestion sink for collectors, brokers, and development seeders.
 
-**Silver.** Materialized views parse JSON and extract typed columns (timestamps, IP addresses,
-usernames, event codes) to eliminate redundant downstream parsing. Field extraction happens once.
+**Silver.** Typed columns extracted by the ETL pipeline — timestamps, IP addresses, usernames,
+event codes. Field extraction happens once in the ingestion layer and the results are persisted
+directly into the Silver stream. There is no Silver MV or Silver view.
 
-**Gold.** Normalization views map vendor-specific fields to a common security schema. Distinct log
-sources (Windows AD, Linux SSH, cloud authentication) converge to predictable column names,
-enabling detection rules to be source-agnostic.
+**Gold.** Vendor-specific fields mapped to the common security schema by the ingestion pipeline.
+Distinct log sources (Windows AD, Linux SSH, cloud authentication) converge to predictable column
+names. There is no Gold MV or Gold view — the Gold stream is a plain Proton stream populated by
+the ingestion ETL.
 
 **Detection.** NRT rules produce per-rule materialized views running continuously against Gold
 streams. Scheduled rules produce Timeplus scheduled tasks that execute periodically with defined
@@ -442,7 +447,8 @@ historical retention and cache-backed replay. The medallion tiers can be configu
 ### KQL compilation pipeline
 
 The detection compiler reuses the same KQL parsing and RelNode IR that powers interactive DuckDB
-queries, but emits Proton/ClickHouse-dialect SQL instead of DuckDB SQL.
+queries, but emits Proton/ClickHouse-dialect SQL instead of DuckDB SQL. Typed DDL builders then
+wrap that SQL in the appropriate Proton artifact without any raw string interpolation.
 
 ```mermaid
 flowchart TD
@@ -450,9 +456,32 @@ flowchart TD
     KC --> RN["RelNode IR<br/>(Domain)"]
     RN --> PE["ProtonSqlQueryEmitter<br/>(Application)"]
     PE --> SQL["Proton SELECT SQL"]
-    SQL --> NRT_DDL["NRT: CREATE MATERIALIZED VIEW<br/>mv_nrt_{ruleId}"]
-    SQL --> SCHED_DDL["Scheduled: Task definition<br/>with cron + lookback"]
+    SQL --> MV["MaterializedViewDdl.Build()<br/>(Application.Analytics.Proton)"]
+    SQL --> ST["ScheduledTaskDdl.Build()<br/>(Application.Analytics.Proton)"]
+    MV --> NRT_DDL["CREATE MATERIALIZED VIEW<br/>mv_nrt_{ruleId}"]
+    ST --> SCHED_DDL["CREATE OR REPLACE TASK<br/>sched_{ruleId}"]
 ```
+
+### Proton DDL builders
+
+All Proton deployment artifacts are produced through typed C# builders in the
+`DeltaZulu.Platform.Application.Analytics.Proton` namespace. Raw Proton SQL strings are never
+assembled by hand; the builders validate required fields and emit correct DDL.
+
+| Builder | Proton artifact | Key clauses |
+|---|---|---|
+| `MaterializedViewDdl` | `CREATE MATERIALIZED VIEW` | `INTO`, `SETTINGS` (checkpoint, DLQ, recovery, memory weight) |
+| `ScheduledTaskDdl` | `CREATE OR REPLACE TASK` | `SCHEDULE`, `TIMEOUT`, `INTO` |
+| `AlertDdl` | `CREATE ALERT` | `BATCH N EVENTS WITH TIMEOUT`, `LIMIT M ALERTS PER`, `CALL` |
+| `ProtonInterval` | Inline time literals | `5s`, `2m`, `1h`, `1d` for SCHEDULE/TIMEOUT/BATCH clauses |
+
+Each builder exposes `Build()` for the creation DDL and complementary methods for lifecycle
+operations (`BuildDrop()`, `BuildPause()`, `BuildResume()`, `BuildAlterSetting()`, etc.). This
+ensures every Proton DDL string is generated through a single, testable path regardless of which
+module or service needs the artifact.
+
+`NrtRuleCompiler` uses `MaterializedViewDdl` to produce NRT detection MV DDL. Future scheduled
+detection and alert pipeline code will use `ScheduledTaskDdl` and `AlertDdl` respectively.
 
 Key dialect differences from DuckDB emission:
 
@@ -513,10 +542,14 @@ flowchart TB
         IEmitter["IRelationalQueryEmitter"]
     end
     subgraph Application["Application — orchestration and translation"]
-        Service["NrtRuleService"]
-        Compiler["NrtRuleCompiler"]
-        ProtonEmitter["ProtonSqlQueryEmitter"]
-        KqlCompiler["KustoQueryCompiler"]
+        Service["NrtRuleService<br/>(Analytics.Nrt)"]
+        Compiler["NrtRuleCompiler<br/>(Analytics.Nrt)"]
+        ProtonEmitter["ProtonSqlQueryEmitter<br/>(Analytics.Nrt)"]
+        KqlCompiler["KustoQueryCompiler<br/>(Analytics.Translation)"]
+        MvDdl["MaterializedViewDdl<br/>(Analytics.Proton)"]
+        TaskDdl["ScheduledTaskDdl<br/>(Analytics.Proton)"]
+        AlertDdl["AlertDdl<br/>(Analytics.Proton)"]
+        Interval["ProtonInterval<br/>(Analytics.Proton)"]
     end
     subgraph Data["Data — SQLite persistence"]
         DapperRepo["DapperNrtRuleRepository"]
@@ -530,6 +563,10 @@ flowchart TB
     Service --> INrtRepo
     Compiler --> KqlCompiler
     Compiler --> ProtonEmitter
+    Compiler --> MvDdl
+    MvDdl --> Interval
+    TaskDdl --> Interval
+    AlertDdl --> Interval
     ProtonEmitter -.->|implements| IEmitter
     DapperRepo -.->|implements| INrtRepo
 ```
@@ -548,7 +585,8 @@ emitter can move at that point without affecting the compilation pipeline.
 
 ```text
 Web (Nrt.razor)
-  → Application (NrtRuleService, NrtRuleCompiler, ProtonSqlQueryEmitter)
+  → Application (NrtRuleService, NrtRuleCompiler, ProtonSqlQueryEmitter,
+                 MaterializedViewDdl, ScheduledTaskDdl, AlertDdl, ProtonInterval)
     → Domain (NrtRule, INrtRuleRepository, NrtCompilationResult, IRelationalQueryEmitter)
 
 Data (DapperNrtRuleRepository)

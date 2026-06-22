@@ -1,3 +1,4 @@
+using DeltaZulu.Platform.Application.Analytics.Proton;
 using DeltaZulu.Platform.Application.Analytics.Translation;
 using DeltaZulu.Platform.Domain.Analytics.Catalog;
 using DeltaZulu.Platform.Domain.Analytics.Nrt;
@@ -58,12 +59,9 @@ public sealed class NrtRuleCompiler
         }
 
         var safeId = ruleId.Replace("\"", "").Replace("`", "");
-        var mvName = $"mv_nrt_{safeId}";
-        var mvDdl = $"""
-            CREATE MATERIALIZED VIEW IF NOT EXISTS `{mvName}`
-            AS
-            {selectSql}
-            """;
+        var mvDdl = new MaterializedViewDdl($"mv_nrt_{safeId}")
+            .As(selectSql)
+            .Build();
 
         return NrtCompilationResult.Ok(selectSql, mvDdl);
     }
