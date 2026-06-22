@@ -45,7 +45,10 @@ legacy CSS aliases, table/state primitives, and Operations validation surfaces r
 src/
   DeltaZulu.Platform.Domain/       # Core model and contracts
   DeltaZulu.Platform.Application/  # Use cases and application services
-  DeltaZulu.Platform.Data/         # Infrastructure adapters and persistence
+  DeltaZulu.Platform.Ingestion/    # Raw-log pub-sub boundary and NDJSON codec
+  DeltaZulu.Platform.Data.DuckDb/  # DuckDB SQL emission, schema, and runtime
+  DeltaZulu.Platform.Data/         # SQLite repositories, Git store, seed data
+  DeltaZulu.Blazor.Interop/        # Typed Blazor JS interop wrappers
   DeltaZulu.Platform.Web/          # Blazor host, platform shell, UI, components
 
 tests/
@@ -56,16 +59,32 @@ tests/
 
 ```text
 DeltaZulu.Platform.Web
+  -> DeltaZulu.Blazor.Interop
   -> DeltaZulu.Platform.Application
   -> DeltaZulu.Platform.Data
+  -> DeltaZulu.Platform.Data.DuckDb
   -> DeltaZulu.Platform.Domain
+  -> DeltaZulu.Platform.Ingestion
 
 DeltaZulu.Platform.Application
   -> DeltaZulu.Platform.Domain
 
 DeltaZulu.Platform.Data
   -> DeltaZulu.Platform.Application
+  -> DeltaZulu.Platform.Data.DuckDb
   -> DeltaZulu.Platform.Domain
+  -> DeltaZulu.Platform.Ingestion
+
+DeltaZulu.Platform.Data.DuckDb
+  -> DeltaZulu.Platform.Application
+  -> DeltaZulu.Platform.Domain
+  -> DeltaZulu.Platform.Ingestion
+
+DeltaZulu.Platform.Ingestion
+  -> no project references
+
+DeltaZulu.Blazor.Interop
+  -> no project references
 
 DeltaZulu.Platform.Domain
   -> no project references
@@ -115,19 +134,58 @@ timing, branching, retries, timers, and human-in-the-loop steps at this layer, b
 detection logic, alert semantics, evidence integrity, entity meaning, suppression rules, or
 incident-candidate validity.
 
+### Ingestion
+
+`DeltaZulu.Platform.Ingestion` owns the raw-log pub-sub boundary:
+
+- `IRawLogPubSub`, `InMemoryRawLogBus`, and `RawLogBatch`/`RawLogEnvelope` types define the pub-sub
+  contract for raw-log delivery between producers and consumers.
+- `RawLogNdjsonCodec` serializes/deserializes the NDJSON wire format (one envelope per line).
+- Exchange format is NDJSON with channel, ingest metadata, host/provider/source metadata, and the
+  source-shaped `rawLog` JSON payload.
+- Producers today are development seeders; future producers include collectors and broker adapters.
+- Consumers today are the DuckDB Bronze table loaders; future consumers include Golden data-lake
+  writers and near-real-time Proton loaders.
+- Has no project references — it is a standalone boundary that Data, Data.DuckDb, and Web can all
+  depend on without creating circular references.
+
+### Data.DuckDb
+
+`DeltaZulu.Platform.Data.DuckDb` owns DuckDB-specific infrastructure:
+
+- DuckDB SQL emission, query runtime, schema application, schema provenance tracking, and drift
+  detection.
+- Separated from `DeltaZulu.Platform.Data` to enable adding alternative analytics backends (e.g.,
+  Proton for near-real-time execution) without touching SQLite repositories or Git storage.
+- `IRelationalQueryEmitter` and `IRelationalQueryEmitterFactory` in the Application layer define the
+  backend-neutral compilation contract; `DeltaZulu.Platform.Data.DuckDb` provides the DuckDB
+  implementation.
+
 ### Data
 
-`DeltaZulu.Platform.Data` owns infrastructure:
+`DeltaZulu.Platform.Data` owns SQLite and Git infrastructure:
 
-- DuckDB SQL emission/runtime support, schema application, and analytics persistence.
 - SQLite repositories for analytics, governance, and scaffolded operations operational state.
 - Target Operations persistence should move conceptually under a clean operations namespace/database
   boundary and publish approved DuckDB-facing read models for KQL.
 - Git accepted-content store for accepted governance content history.
 - Development/demo seed data.
+- References `DeltaZulu.Platform.Data.DuckDb` to compose the full storage tier.
 
 Data code implements storage and runtime adapters. It should not leak storage details into user-facing
 routes or UI components.
+
+### Blazor.Interop
+
+`DeltaZulu.Blazor.Interop` is a standalone Razor class library providing typed wrappers for Blazor
+JS interop:
+
+- `ClipboardService`, `FileOperationsService`, `JsLifecycleGuard`, `ElementReferenceExtensions`, and
+  `BoundingClientRect` replace raw `IJSRuntime` calls in Razor components with typed, mockable
+  services.
+- A consolidated `interop.js` module bundles all platform interop functions.
+- Has no project references — it is a pure Blazor/JS boundary library.
+- Registered via `AddBlazorInterop()` in `Program.cs`.
 
 ### Web
 
@@ -339,7 +397,9 @@ Application layer and should expose purpose-specific policies:
 - Users write KQL, not SQL, for normal analytical workflows.
 - The approved catalog is the boundary for user-queryable telemetry views.
 - Operations state can be exposed through approved read-only analytical views.
-- DuckDB is the embedded MVP execution engine and should be hidden from normal users.
+- DuckDB is the embedded MVP execution engine and should be hidden from normal users. The
+  `IRelationalQueryEmitter` contract in the Application layer is the backend-neutral boundary;
+  `DeltaZulu.Platform.Data.DuckDb` is the current implementation.
 - Dashboard widgets reuse approved analytics, visualizations, alerts, detection runs, and candidates.
 - Dashboard, table, drawer, and state components should be canonical `Dz*` primitives before module pages
   invent local variants.
@@ -357,4 +417,6 @@ with Analytics decisions in `docs/adr/analytics/` and Governance decisions in `d
 Imported module architecture files are retained only for domain detail and history. If an imported
 document describes standalone `Hunting.*`, `Workbench.*`, `DeltaZulu.Blazor.Components`,
 `DeltaZulu.DetectionContent`, or `Platform.Web.Abstractions` projects as current architecture, this
-file supersedes it.
+file supersedes it. If a document describes DuckDB infrastructure as living inside
+`DeltaZulu.Platform.Data` rather than `DeltaZulu.Platform.Data.DuckDb`, or describes raw-log
+ingestion as lacking a pub-sub boundary, this file supersedes it.

@@ -4,13 +4,15 @@ This roadmap describes the current target after repository consolidation. The hi
 
 ## Current baseline
 
-Repository consolidation is complete:
+Repository consolidation is complete and the solution has been expanded for multi-backend support:
 
 - One runnable Blazor host: `src/DeltaZulu.Platform.Web`.
-- Four source projects: Domain, Application, Data, Web.
+- Seven source projects: Domain, Application, Ingestion, Data.DuckDb, Data, Blazor.Interop, Web.
 - One test project: `tests/DeltaZulu.Platform.Tests`.
 - Analytics and Governance are platform modules, not separately deployed applications.
 - Shared components, design tokens, detection contracts, platform module abstractions, analytics code, governance code, persistence, and tests have been absorbed into the platform projects.
+- DuckDB infrastructure is now in a dedicated `DeltaZulu.Platform.Data.DuckDb` project; raw-log
+  pub-sub is in `DeltaZulu.Platform.Ingestion`; typed Blazor JS interop is in `DeltaZulu.Blazor.Interop`.
 - Design-system adoption is partial: the shell, tokens, and shared components exist, but product identity, radius rules, typography scope, legacy Hunting aliases, dashboard primitives, and evidence-table semantics still need enforcement work.
 
 ## Roadmap position assessment
@@ -33,7 +35,7 @@ The repository is aligned with the revised target at the documentation and conso
 
 | Target area | Current repository state | Gap | Priority |
 |---|---|---|---|
-| Repository consolidation | One runnable Blazor host, four source projects, one test project, and Analytics/Governance as platform modules. | No major consolidation gap. | Closed |
+| Repository consolidation | One runnable Blazor host, seven source projects, one test project, and Analytics/Governance as platform modules. DuckDB infrastructure in Data.DuckDb; raw-log pub-sub in Ingestion; typed JS interop in Blazor.Interop. | No major consolidation gap. | Closed |
 | Product framing| Module separation | Analytics and Governance are separate responsibility areas inside one host. Operations is defined as a target responsibility area. | `OperationsModule`, `/operations` routes, and Operations pages are not implemented, so alert queues, operational dashboards, investigation drawers, and monitoring flows cannot validate the target design. | High |
 | Analytics module | `/analytics` exposes the consolidated analytics workbench, library, dashboards, schema, and visual surfaces. | Threat-hunting workflow, evidence workflow, curated analytics, and alert/candidate analytical pivots are still target surfaces. | Medium |
 | Shared analytics execution | Application-layer `IAnalyticsQueryExecutor` and `ExecutionPurpose` policies exist; interactive, dashboard, and governance validation dry-run execution all route through the shared DuckDB executor. Query-history recording stays in the Web adapter. Boundary tests prove no governance check creates parallel execution paths. | Scheduled-detection and recovery callers deferred to Phase 6. | Closed (Phase 2) |
@@ -98,7 +100,7 @@ These phases represent the minimum implementation sequence from the target user 
 
 ## Phase status
 
-Last assessed: 2026-06-12.
+Last assessed: 2026-06-22.
 
 | Phase | Status | Notes |
 |---:|---|---|
@@ -199,7 +201,7 @@ These priorities apply across all phases and guide day-to-day work ordering:
 | Single platform web host | Complete; `DeltaZulu.Platform.Web` is the only web SDK project. |
 | Domain consolidation | Complete; detection, analytics, and governance domain/contracts live in `DeltaZulu.Platform.Domain`. |
 | Application consolidation | Complete; analytics and governance use cases live in `DeltaZulu.Platform.Application`. |
-| Data consolidation | Complete; DuckDB, SQLite, Git, and seed infrastructure live in `DeltaZulu.Platform.Data`. |
+| Data consolidation | Complete; SQLite, Git, and seed infrastructure live in `DeltaZulu.Platform.Data`. DuckDB SQL infrastructure has been extracted to `DeltaZulu.Platform.Data.DuckDb`; raw-log pub-sub to `DeltaZulu.Platform.Ingestion`. |
 | Web consolidation | Complete; platform shell, shared components, analytics UI, and governance UI live in `DeltaZulu.Platform.Web`. |
 | Test consolidation | Complete; all tests live in `DeltaZulu.Platform.Tests`. |
 
