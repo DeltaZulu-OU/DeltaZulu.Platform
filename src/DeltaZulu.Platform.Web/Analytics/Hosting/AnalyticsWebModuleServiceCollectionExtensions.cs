@@ -1,3 +1,4 @@
+using DeltaZulu.Platform.Application.Analytics.Nrt;
 using DeltaZulu.Platform.Application.Analytics.Validation;
 using DeltaZulu.Platform.Data.DuckDb.Execution;
 using DeltaZulu.Platform.Data.DuckDb;
@@ -10,6 +11,7 @@ using DeltaZulu.Platform.Web.Analytics.Dashboards;
 using DeltaZulu.Platform.Web.Analytics.Dashboards.DependencyInjection;
 using DeltaZulu.Platform.Web.Analytics.Dashboards.PageState;
 using DeltaZulu.Platform.Web.Analytics.Library;
+using DeltaZulu.Platform.Web.Analytics.Nrt;
 using DeltaZulu.Platform.Web.Analytics.Rendering;
 using DeltaZulu.Platform.Web.Analytics.Services;
 using MudBlazor.Services;
@@ -121,6 +123,9 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         services.AddScoped<LanguageService>();
         services.AddScoped<WidgetEditorInterop>();
         services.AddScoped<DashboardTransferInterop>();
+
+        services.AddSingleton<NrtRuleCompiler>();
+        services.AddScoped<NrtRuleService>();
 
         return services;
     }
