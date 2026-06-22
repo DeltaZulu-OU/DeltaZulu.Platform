@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Analytics.Proton;
+namespace DeltaZulu.Platform.Data.Proton.Ddl;
 
 internal static class ProtonDdlHelpers
 {

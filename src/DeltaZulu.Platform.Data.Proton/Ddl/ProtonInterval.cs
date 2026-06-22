@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Application.Analytics.Proton;
+namespace DeltaZulu.Platform.Data.Proton.Ddl;
 
 /// <summary>
 /// Represents a Timeplus Proton time interval in its compact string form (e.g. "5s", "2m", "1h").

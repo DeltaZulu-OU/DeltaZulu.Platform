@@ -1,4 +1,5 @@
 using DeltaZulu.Platform.Application.Analytics.Nrt;
+using DeltaZulu.Platform.Data.Proton;
 using DeltaZulu.Platform.Application.Analytics.Validation;
 using DeltaZulu.Platform.Data.DuckDb.Execution;
 using DeltaZulu.Platform.Data.DuckDb;
@@ -123,6 +124,7 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         services.AddScoped<WidgetEditorInterop>();
         services.AddScoped<DashboardTransferInterop>();
 
+        services.AddProtonDetectionBackend();
         services.AddSingleton<NrtRuleCompiler>();
         services.AddScoped<NrtRuleService>();
 

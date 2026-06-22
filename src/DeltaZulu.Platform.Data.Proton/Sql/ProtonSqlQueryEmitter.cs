@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using DeltaZulu.Platform.Domain.Analytics.Compilation;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
-namespace DeltaZulu.Platform.Application.Analytics.Nrt;
+namespace DeltaZulu.Platform.Data.Proton.Sql;
 
 /// <summary>
 /// Emits Timeplus Proton-compatible SQL from a RelNode query tree.
@@ -385,7 +385,6 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
                 ScalarBinaryOp.Div => $"({left} / {right})",
                 ScalarBinaryOp.Mod => $"({left} % {right})",
 
-                // String matching — case-insensitive (Proton/ClickHouse: ilike or lower+like)
                 ScalarBinaryOp.Contains    => EmitContains(bin, left, right, ci: true, negate: false),
                 ScalarBinaryOp.NotContains => EmitContains(bin, left, right, ci: true, negate: true),
                 ScalarBinaryOp.ContainsCs  => EmitContains(bin, left, right, ci: false, negate: false),
@@ -423,7 +422,6 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
             };
         }
 
-        // Proton: position(lower(x), lower(y)) > 0  or  position(x, y) > 0
         private string EmitContains(BinaryScalar bin, string left, string right, bool ci, bool negate)
         {
             var (l, r) = CiArgs(bin.Right, left, right, ci);
@@ -472,7 +470,6 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
             return negate ? $"(NOT {expr})" : $"({expr})";
         }
 
-        // For case-insensitive, lowercase literal at compile time or wrap in lower()
         private (string L, string R) CiArgs(ScalarExpr rhsExpr, string left, string right, bool ci)
         {
             if (!ci) return (left, right);
@@ -584,7 +581,6 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
             var name = fn.Name.ToLowerInvariant();
 
             return name switch {
-                // String
                 "tolower"             => $"lower({args[0]})",
                 "toupper"             => $"upper({args[0]})",
                 "strlen"              => $"length({args[0]})",
@@ -603,7 +599,6 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
                 "extract"             => $"extract({args[2]}, {args[0]})",
                 "countof"             => $"(length({args[0]}) - length(replaceAll({args[0]}, {args[1]}, '')))",
 
-                // DateTime — Proton/ClickHouse functions
                 "ago"                 => EmitAgo(fn.Args, args),
                 "now"                 => "now()",
                 "bin" when args.Count >= 2 => EmitBin(fn.Args, args),
@@ -629,7 +624,6 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
                 "unixtime_microseconds_todatetime"  => $"fromUnixTimestamp64Micro(to_int64({args[0]}))",
                 "todatetime"          => $"parseDateTimeBestEffort(toString({args[0]}))",
 
-                // Type conversion — ClickHouse style
                 "tostring"    => $"toString({args[0]})",
                 "tolong"      => $"toInt64({args[0]})",
                 "toint"       => $"toInt32({args[0]})",
@@ -646,13 +640,11 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
                 "hash_md5"    => $"hex(MD5({args[0]}))",
                 "translate"   => $"translate({args[2]}, {args[0]}, {args[1]})",
 
-                // Conditional
                 "iff" or "iif" => $"if({args[0]}, {args[1]}, {args[2]})",
                 "coalesce"     => $"coalesce({string.Join(", ", args)})",
                 "max_of"       => $"greatest({string.Join(", ", args)})",
                 "min_of"       => $"least({string.Join(", ", args)})",
 
-                // Null tests
                 "isnull"      => $"({args[0]} IS NULL)",
                 "isnotnull"   => $"({args[0]} IS NOT NULL)",
                 "isempty"     => $"({args[0]} IS NULL OR {args[0]} = '')",
@@ -660,14 +652,12 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
                 "isnan"       => $"isNaN({args[0]})",
                 "isinf"       => $"isInfinite({args[0]})",
 
-                // JSON
                 "parse_json"  => args[0],
                 "bag_keys"    => $"JSONExtractKeys({args[0]})",
                 "bag_has_key" => $"(JSONHas({args[0]}, {args[1]}))",
                 "array_length" => $"length({args[0]})",
                 "array_concat" => $"arrayConcat({args[0]}, {args[1]})",
 
-                // Math
                 "abs"    => $"abs({args[0]})",
                 "ceiling" => $"ceil({args[0]})",
                 "floor"  => $"floor({args[0]})",
@@ -691,14 +681,11 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
                 "atan"   => $"atan({args[0]})",
                 "atan2"  => $"atan2({args[0]}, {args[1]})",
 
-                // "not" is a unary — the translator converts it to UnaryScalar
                 "not" when args.Count == 1 => $"NOT ({args[0]})",
 
-                // prev/next → window functions (already handled as WindowScalarExpr by translator)
                 "prev" => $"lagInFrame({args[0]})",
                 "next" => $"leadInFrame({args[0]})",
 
-                // Aggregates
                 "count"    => args.Count == 0 ? "count()" : $"count({args[0]})",
                 "countif"  => $"countIf({args[0]})",
                 "sum"      => $"sum({args[0]})",
@@ -732,14 +719,9 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
             };
         }
 
-        // KQL ago(7d) → (now() - INTERVAL 7 DAY)
-        private static string EmitAgo(IReadOnlyList<ScalarExpr> rawArgs, List<string> args)
-        {
-            // args[0] is already an emitted INTERVAL string from EmitLiteral for timespans
-            return $"(now() - {args[0]})";
-        }
+        private static string EmitAgo(IReadOnlyList<ScalarExpr> rawArgs, List<string> args) =>
+            $"(now() - {args[0]})";
 
-        // KQL bin(Timestamp, 5m) → toStartOfInterval(Timestamp, INTERVAL 5 MINUTE)
         private static string EmitBin(IReadOnlyList<ScalarExpr> rawArgs, List<string> args)
         {
             if (rawArgs[1] is LiteralScalar { Kind: LiteralKind.Timespan })
@@ -787,10 +769,6 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
             return $"toYear({args[1]})";
         }
 
-        // ------------------------------------------------------------------
-        // Proton INTERVAL literals — KQL timespan → INTERVAL N UNIT
-        // ------------------------------------------------------------------
-
         private static string EmitInterval(object value)
         {
             var ts = value.ToString()!;
@@ -821,10 +799,6 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
 
             return $"INTERVAL {ts} SECOND";
         }
-
-        // ------------------------------------------------------------------
-        // Helpers
-        // ------------------------------------------------------------------
 
         private static string QuoteIdent(string name) =>
             name.All(c => char.IsLetterOrDigit(c) || c == '_') ? name : $"`{name.Replace("`", "``")}`";

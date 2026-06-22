@@ -1,31 +1,29 @@
-using DeltaZulu.Platform.Application.Analytics.Proton;
 using DeltaZulu.Platform.Application.Analytics.Translation;
 using DeltaZulu.Platform.Domain.Analytics.Catalog;
+using DeltaZulu.Platform.Domain.Analytics.Detection;
 using DeltaZulu.Platform.Domain.Analytics.Nrt;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 
 namespace DeltaZulu.Platform.Application.Analytics.Nrt;
 
 /// <summary>
-/// Compiles a KQL query into a Proton/Timeplus materialized view DDL statement
-/// for use as a near-real-time detection rule.
-/// Pipeline: KQL → RelNode (via KustoToRelational) → ProtonSQL (via ProtonSqlQueryEmitter) → MV DDL
+/// Compiles a KQL query into a backend-specific NRT detection artifact (SELECT SQL + deployment DDL).
+/// Pipeline: KQL → RelNode (via KustoQueryCompiler) → SELECT SQL + DDL (via IDetectionCompilationBackend)
+/// The compilation backend is injected so the emitter and DDL format are backend-replaceable.
 /// </summary>
 public sealed class NrtRuleCompiler
 {
     private readonly ApprovedViewCatalog _catalog;
-    private readonly ProtonSqlQueryEmitter _emitter = new();
+    private readonly IDetectionCompilationBackend _backend;
 
-    public NrtRuleCompiler(ApprovedViewCatalog catalog)
+    public NrtRuleCompiler(ApprovedViewCatalog catalog, IDetectionCompilationBackend backend)
     {
         ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(backend);
         _catalog = catalog;
+        _backend = backend;
     }
 
-    /// <summary>
-    /// Compiles <paramref name="kql"/> into a Proton materialized view DDL targeting
-    /// <c>mv_nrt_{ruleId}</c>.
-    /// </summary>
     public NrtCompilationResult Compile(string ruleId, string kql)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ruleId);
@@ -50,19 +48,14 @@ public sealed class NrtRuleCompiler
         string selectSql;
         try
         {
-            var emitted = _emitter.Emit(relNode);
-            selectSql = emitted.Sql;
+            selectSql = _backend.EmitSelectSql(relNode);
         }
         catch (NotSupportedException ex)
         {
-            return NrtCompilationResult.Fail([$"Proton SQL emission failed: {ex.Message}"]);
+            return NrtCompilationResult.Fail([$"Detection SQL emission failed: {ex.Message}"]);
         }
 
-        var safeId = ruleId.Replace("\"", "").Replace("`", "");
-        var mvDdl = new MaterializedViewDdl($"mv_nrt_{safeId}")
-            .As(selectSql)
-            .Build();
-
-        return NrtCompilationResult.Ok(selectSql, mvDdl);
+        var deploymentDdl = _backend.BuildNrtDeploymentDdl(ruleId, selectSql);
+        return NrtCompilationResult.Ok(selectSql, deploymentDdl);
     }
 }

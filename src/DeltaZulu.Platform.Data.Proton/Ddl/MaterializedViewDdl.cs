@@ -1,7 +1,7 @@
 using System.Text;
-using static DeltaZulu.Platform.Application.Analytics.Proton.ProtonDdlHelpers;
+using static DeltaZulu.Platform.Data.Proton.Ddl.ProtonDdlHelpers;
 
-namespace DeltaZulu.Platform.Application.Analytics.Proton;
+namespace DeltaZulu.Platform.Data.Proton.Ddl;
 
 /// <summary>
 /// Fluent builder for Timeplus Proton <c>CREATE MATERIALIZED VIEW</c> DDL.
