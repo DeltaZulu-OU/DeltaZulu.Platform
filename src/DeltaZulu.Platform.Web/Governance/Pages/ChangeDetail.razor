@@ -1,4 +1,5 @@
 @namespace DeltaZulu.Platform.Web.Governance.Components.Pages
+@page "/governance/drafts/{Id}"
 @page "/governance/proposals/{Id}"
 @page "/governance/changes/{Id}"
 @using DeltaZulu.Platform.Web.Governance.Components.Shared
@@ -26,7 +27,7 @@
 @inject DeltaZulu.Platform.Web.Analytics.Services.WidgetEditorInterop WidgetEditor
 @implements IAsyncDisposable
 
-<PageTitle>Proposal — @(_change?.Key ?? "Loading")</PageTitle>
+<PageTitle>Detection draft — @(_change?.Key ?? "Loading")</PageTitle>
 
 @if (_change is null)
 {
@@ -37,7 +38,7 @@
 <MudBreadcrumbs Items="_breadcrumbs" Class="mb-2" />
 
 @* ── Header ── *@
-<DzPageHeader Eyebrow="Proposal"
+<DzPageHeader Eyebrow="Detection draft"
               Title="@($"{_change.Key} {_change.Title}")"
               Description="@ChangeReadinessSummary()">
     <Metadata>
@@ -82,7 +83,7 @@
 @if (_change.IsStale && !IsTerminal)
 {
     <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4">
-        @(_change.StaleReason ?? "A newer version was accepted since this proposal was opened. Review the latest accepted content before proceeding.")
+        @(_change.StaleReason ?? "A newer version was accepted since this detection draft was opened. Review the latest accepted content before proceeding.")
     </MudAlert>
 }
 
@@ -121,9 +122,6 @@
             {
                 <DzPanel Compact="true" Outlined="true" Elevation="0" Class="mb-3">
                     <MudGrid Spacing="2">
-                        <MudItem xs="12" md="4">
-                            <MudTextField Value="_newPath" ValueChanged="OnNewPathChanged" Label="Logical path" HelperText="e.g. detection.yaml, notes/investigation.md" T="string" />
-                        </MudItem>
                         <MudItem xs="12" md="3">
                             <MudSelect Value="_newContentType" ValueChanged="OnContentTypeChanged" Label="Content type" T="DraftContentType">
                                 @foreach (var ct in Enum.GetValues<DraftContentType>())
@@ -132,6 +130,12 @@
                                 }
                             </MudSelect>
                         </MudItem>
+                        @if (_newContentType != DraftContentType.DetectionMetadata)
+                        {
+                            <MudItem xs="12" md="4">
+                                <MudTextField Value="_newPath" ValueChanged="OnNewPathChanged" Label="Logical path" HelperText="e.g. notes/investigation.md" T="string" />
+                            </MudItem>
+                        }
                         <MudItem xs="12">
                             @if (_newContentType == DraftContentType.DetectionMetadata)
                             {
@@ -165,7 +169,7 @@
             @if (_change.DraftFiles.Count == 0)
             {
                 <DzEmptyState Title="No draft files yet."
-                              Description="Add content to begin the proposal."
+                              Description="Add content to begin the detection draft."
                               Icon="@Icons.Material.Outlined.NoteAdd" />
             }
             else
@@ -397,7 +401,7 @@
                     <MudExpansionPanels Class="mb-3">
                         <MudExpansionPanel Text="Switch user for testing" Dense="true">
                             <MudAlert Severity="@(IsCurrentUserAuthor ? Severity.Warning : Severity.Info)" Dense="true" Class="mb-2">
-                                Acting as @UserContext.CurrentUser.DisplayName. Controlled review blocks approval by the proposal author.
+                                Acting as @UserContext.CurrentUser.DisplayName. Controlled review blocks approval by the draft author.
                             </MudAlert>
                             <MudSelect Value="UserContext.CurrentPersona" ValueChanged="SwitchUser" Label="POC user" T="PocUserPersona">
                                 @foreach (var user in UserContext.AvailableUsers)
@@ -497,7 +501,7 @@
     // Delete file
     private string _deletingFilePath = "";
 
-    // Close proposal
+    // Close detection draft
     private string _closeReason = "";
 
     // Review
@@ -573,7 +577,7 @@
 
         _breadcrumbs =
         [
-            new("Proposals", "/governance/proposals"),
+            new("Detection Drafts", "/governance/drafts"),
             new(_change.Key, null, disabled: true),
     ];
 
@@ -599,8 +603,7 @@
 
         if (_newContentType == DraftContentType.DetectionMetadata)
         {
-            if (string.IsNullOrWhiteSpace(_newPath))
-                _newPath = "detection.yaml";
+            _newPath = string.Empty;
         }
         else if (_newContentType == DraftContentType.AnalyticsQuery)
         {
@@ -610,13 +613,22 @@
 
     private async Task SaveDraftFile()
     {
-        if (_change is null || string.IsNullOrWhiteSpace(_newPath)) return;
+        if (_change is null) return;
+        if (_newContentType != DraftContentType.DetectionMetadata && string.IsNullOrWhiteSpace(_newPath)) return;
         _running = true;
         try
         {
-            var content = await GetDraftEditorContentAsync();
-            await ChangeService.UpsertDraftFileAsync(
-                _change.Id, _newPath.Trim(), _newContentType, content, UserContext.CurrentUser.Id);
+            if (_newContentType == DraftContentType.DetectionMetadata && _detectionForm is not null)
+            {
+                var draft = await _detectionForm.GetDraftAsync();
+                await ChangeService.UpsertDetectionDraftAsync(_change.Id, draft, UserContext.CurrentUser.Id);
+            }
+            else
+            {
+                var content = await GetDraftEditorContentAsync();
+                await ChangeService.UpsertDraftFileAsync(
+                    _change.Id, _newPath.Trim(), _newContentType, content, UserContext.CurrentUser.Id);
+            }
             _showAddFile = false;
             _editingFile = null;
             _newPath = "";
@@ -747,14 +759,14 @@
         }
     }
 
-    // ── Close proposal ──
+    // ── Close detection draft ──
 
     private async Task RequestCloseChange()
     {
         var parameters = new DialogParameters<DeltaZulu.Platform.Web.Components.DzConfirmDialog>
         {
-            { x => x.Title, "Close proposal?" },
-            { x => x.Message, "This will close the proposal without accepting. Please provide a reason." },
+            { x => x.Title, "Close detection draft?" },
+            { x => x.Message, "This will close the detection draft without accepting. Please provide a reason." },
             { x => x.ConfirmText, "Confirm close" },
             { x => x.ConfirmColor, Color.Error },
             { x => x.Tone, "error" },
@@ -762,7 +774,7 @@
             { x => x.ReasonLabel, "Reason" },
         };
         var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<DeltaZulu.Platform.Web.Components.DzConfirmDialog>("Close proposal", parameters, options);
+        var dialog = await DialogService.ShowAsync<DeltaZulu.Platform.Web.Components.DzConfirmDialog>("Close detection draft", parameters, options);
         var result = await dialog.Result;
 
         if (result is not null && !result.Canceled)
@@ -780,7 +792,7 @@
         {
             await ChangeService.CloseAsync(_change.Id, _closeReason);
             _closeReason = "";
-            Snackbar.Add("Proposal closed.", Severity.Success);
+            Snackbar.Add("Detection draft closed.", Severity.Success);
             await LoadAsync();
         }
         catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
@@ -791,11 +803,6 @@
 
     private async Task<string> GetDraftEditorContentAsync()
     {
-        if (_newContentType == DraftContentType.DetectionMetadata && _detectionForm is not null)
-        {
-            return await _detectionForm.GetYamlAsync();
-        }
-
         if (_newContentType == DraftContentType.AnalyticsQuery && _kqlEditorReady)
         {
             return await WidgetEditor.GetValueAsync(_kqlEditorElementId);
@@ -816,8 +823,7 @@
 
         if (contentType == DraftContentType.DetectionMetadata)
         {
-            if (string.IsNullOrWhiteSpace(_newPath))
-                _newPath = "detection.yaml";
+            _newPath = string.Empty;
         }
         else if (contentType == DraftContentType.AnalyticsQuery)
         {
@@ -921,7 +927,7 @@
     {
         if (IsTerminal)
         {
-            return "This proposal is completed and retained for review.";
+            return "This detection draft is completed and retained for review.";
         }
 
         if (_readiness is null)

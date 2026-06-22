@@ -10,15 +10,15 @@
 @inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
-<DzPageHeader Title="NRT Detections"
-              Description="Near-real-time detection rules backed by Timeplus Proton materialized views." />
+<DzPageHeader Title="Realtime Detection Rules"
+              Description="Realtime detection rules. Create regular detections from the Detections area and choose realtime or scheduled during editing." />
 
 <div class="nrt-layout">
 
     @* ── Left panel: rule editor ── *@
     <section class="nrt-editor-panel" aria-label="Rule editor">
 
-        <DzPanel Title="@(_editingId is null ? "New NRT Rule" : "Edit Rule")">
+        <DzPanel Title="@(_editingId is null ? "New Realtime Rule" : "Edit Rule")">
 
             <div class="nrt-form">
 
@@ -91,7 +91,7 @@
                     <span class="nrt-label">KQL Query</span>
                     <div class="nrt-editor-actions">
                         <button class="hunt-btn" @onclick="PreviewAsync" disabled="@_busy">
-                            @(_busy ? "Compiling…" : "Compile to Proton SQL")
+                            @(_busy ? "Compiling…" : "Preview deployment SQL")
                         </button>
                         <MudSwitch @bind-Value="_isEnabled" Label="Enabled" Color="Color.Success" />
                     </div>
@@ -111,12 +111,12 @@
                     </div>
                 }
 
-                @* Proton SQL preview *@
+                @* Deployment SQL preview *@
                 @if (_protonDdl is not null)
                 {
                     <div class="nrt-ddl-preview">
                         <div class="nrt-ddl-header">
-                            <span class="nrt-label">Generated Materialized View DDL</span>
+                            <span class="nrt-label">Generated Deployment DDL</span>
                             <button class="hunt-btn hunt-btn-clear" @onclick="CopyDdl">Copy</button>
                         </div>
                         <pre class="nrt-ddl-code">@_protonDdl</pre>
@@ -143,7 +143,7 @@
     </section>
 
     @* ── Right panel: rule list ── *@
-    <section class="nrt-rules-panel" aria-label="Saved NRT rules">
+    <section class="nrt-rules-panel" aria-label="Saved realtime rules">
 
         <DzPanel Title="Saved Rules">
             @if (_loadingRules)
@@ -153,7 +153,7 @@
             else if (_rules.Count == 0)
             {
                 <DzEmptyState Title="No rules yet"
-                              Description="Save your first NRT detection rule using the editor."
+                              Description="Save your first realtime detection rule using the editor."
                               Icon="@Icons.Material.Outlined.Rule"
                               Elevation="0" />
             }
@@ -202,11 +202,11 @@
 <DzCodeDrawer Open="_showDdlDrawer"
               OpenChanged="v => _showDdlDrawer = v"
               Title="@($"DDL — {_ddlDrawerRuleName}")"
-              Subtitle="Apply this DDL to your Timeplus Proton instance."
+              Subtitle="Apply this DDL through the configured deployment pipeline."
               Content="@_ddlDrawerContent"
               EmptyTitle="No DDL available."
               EmptyDescription="Compile the rule first."
-              AriaLabel="Materialized view DDL" />
+              AriaLabel="Deployment DDL" />
 
 @code {
     private bool _editorInitialized;

@@ -3,6 +3,7 @@ using DeltaZulu.Platform.Domain.Governance.Common;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
 using DeltaZulu.Platform.Domain.Governance.Enums;
 using DeltaZulu.Platform.Domain.Governance.Identifiers;
+using System.Text;
 
 namespace DeltaZulu.Platform.Application.Governance.Services;
 
@@ -26,6 +27,89 @@ public sealed class ChangeService(
         changes.Add(change);
         await orchestrator.OnChangeOpenedAsync(change.Id, workflowProfileId, ct);
         return change;
+    }
+
+
+    public Task<ChangeDraftFile> UpsertDetectionDraftAsync(
+        ChangeRequestId changeId, DetectionDraftForm draft, UserId editor, CancellationToken ct = default)
+        => UpsertDraftFileAsync(
+            changeId,
+            "detection.yaml",
+            DraftContentType.DetectionMetadata,
+            BuildDetectionYaml(draft),
+            editor,
+            ct);
+
+    private static string BuildDetectionYaml(DetectionDraftForm draft)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine($"id: {YStr(draft.Id)}");
+        sb.AppendLine($"title: {YStr(draft.Title)}");
+        sb.AppendLine("description: >-");
+        foreach (var line in (draft.Description ?? string.Empty).Split('\n'))
+            sb.AppendLine($"  {line.TrimEnd()}");
+        sb.AppendLine($"severity: {draft.Severity}");
+        sb.AppendLine($"confidence: {draft.Confidence}");
+        sb.AppendLine($"risk_score: {draft.RiskScore}");
+        sb.AppendLine("content_type: detection");
+        sb.AppendLine("query_language: kql");
+        sb.AppendLine($"trigger_type: {draft.TriggerType}");
+
+        if (draft.TriggerType == "nrt")
+        {
+            sb.AppendLine($"threshold: {draft.RealtimeThreshold ?? 1}");
+        }
+        else
+        {
+            sb.AppendLine($"schedule: '{draft.ScheduleExpression ?? "0 * * * *"}'");
+            sb.AppendLine($"lookback: {draft.Lookback ?? "1h"}");
+            sb.AppendLine($"max_alerts_per_run: {draft.MaxAlertsPerRun ?? 100}");
+        }
+
+        sb.AppendLine("query: |");
+        var kql = (draft.KqlQuery ?? string.Empty).TrimEnd();
+        if (string.IsNullOrWhiteSpace(kql))
+        {
+            sb.AppendLine("  # KQL query goes here");
+        }
+        else
+        {
+            foreach (var line in kql.Split('\n'))
+                sb.AppendLine($"  {line.TrimEnd()}");
+        }
+
+        if (draft.MitreAttackTechniques.Count > 0)
+        {
+            sb.AppendLine("techniques:");
+            foreach (var item in draft.MitreAttackTechniques)
+                sb.AppendLine($"  - {item}");
+        }
+
+        if (draft.EntityMappings.Count > 0)
+        {
+            sb.AppendLine("entity_mappings:");
+            foreach (var mapping in draft.EntityMappings)
+            {
+                sb.AppendLine($"  - type: {mapping.Type}");
+                sb.AppendLine($"    field: {mapping.Field}");
+            }
+        }
+
+        if (draft.FalsePositiveNotes.Count > 0)
+        {
+            sb.AppendLine("false_positive_notes:");
+            foreach (var note in draft.FalsePositiveNotes)
+                sb.AppendLine($"  - {note}");
+        }
+
+        return sb.ToString();
+    }
+
+    private static string YStr(string value)
+    {
+        var escaped = (value ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"");
+        return $"\"{escaped}\"";
     }
 
     public async Task<ChangeDraftFile> UpsertDraftFileAsync(

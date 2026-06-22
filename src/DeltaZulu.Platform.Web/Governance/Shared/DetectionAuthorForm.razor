@@ -1,5 +1,6 @@
 @namespace DeltaZulu.Platform.Web.Governance.Components.Shared
 @using DeltaZulu.Platform.Web.Components
+@using DeltaZulu.Platform.Application.Governance.Services
 @using DeltaZulu.Platform.Web.Analytics.Services
 @using Microsoft.JSInterop
 @using MudBlazor
@@ -13,7 +14,7 @@
             <MudButton Color="@(_triggerType == TriggerKind.Nrt ? Color.Primary : Color.Default)"
                        Variant="@(_triggerType == TriggerKind.Nrt ? Variant.Filled : Variant.Outlined)"
                        OnClick="@(() => SetTrigger(TriggerKind.Nrt))">
-                NRT (Near Real-Time)
+                Realtime
             </MudButton>
             <MudButton Color="@(_triggerType == TriggerKind.Scheduled ? Color.Primary : Color.Default)"
                        Variant="@(_triggerType == TriggerKind.Scheduled ? Variant.Filled : Variant.Outlined)"
@@ -23,7 +24,7 @@
         </MudButtonGroup>
         <MudText Typo="Typo.caption" Class="mud-text-secondary ml-2">
             @(_triggerType == TriggerKind.Nrt
-                ? "Always-on stream detection via materialized view."
+                ? "Always-on detection evaluated continuously."
                 : "Periodic query run on a cron schedule.")
         </MudText>
     </MudItem>
@@ -119,18 +120,12 @@
     @* ── MITRE / entity mappings (advanced) ── *@
     <MudItem xs="12">
         <MudExpansionPanels Elevation="0" Class="mt-1">
-            <MudExpansionPanel Text="MITRE, entity mappings &amp; notes" Dense="true">
+            <MudExpansionPanel Text="MITRE ATT&amp;CK, entity mappings &amp; notes" Dense="true">
                 <MudGrid Spacing="2">
-                    <MudItem xs="12" md="6">
-                        <MudTextField Value="_tacticsCsv" ValueChanged="OnTacticsChanged"
-                                      Label="MITRE tactics (comma-separated)" Margin="Margin.Dense"
-                                      HelperText="e.g. Lateral Movement, Initial Access"
-                                      Immediate="true" Variant="Variant.Outlined" T="string" />
-                    </MudItem>
-                    <MudItem xs="12" md="6">
-                        <MudTextField Value="_techniquesCsv" ValueChanged="OnTechniquesChanged"
-                                      Label="MITRE techniques (comma-separated)" Margin="Margin.Dense"
-                                      HelperText="e.g. T1021.001, T1059.001"
+                    <MudItem xs="12">
+                        <MudTextField Value="_mitreAttackCsv" ValueChanged="OnMitreAttackChanged"
+                                      Label="MITRE ATT&amp;CK techniques" Margin="Margin.Dense"
+                                      HelperText="Search or enter names, technique IDs, or sub-technique IDs, e.g. Abuse Elevation Control Mechanism, T1548.002."
                                       Immediate="true" Variant="Variant.Outlined" T="string" />
                     </MudItem>
                     <MudItem xs="12">
@@ -173,8 +168,7 @@
     private string _lookback = "1h";
     private int _maxAlertsPerRun = 100;
     private string _kqlQuery = "";
-    private string _tacticsCsv = "";
-    private string _techniquesCsv = "";
+    private string _mitreAttackCsv = "";
     private string _entityMappingsText = "";
     private string _falsePositiveNotes = "";
 
@@ -250,20 +244,36 @@
                 _maxAlertsPerRun = max;
         }
 
-        _tacticsCsv = fields.GetValueOrDefault("tactics_csv", _tacticsCsv);
-        _techniquesCsv = fields.GetValueOrDefault("techniques_csv", _techniquesCsv);
+        _mitreAttackCsv = MergeMitreAttackFields(fields);
         _entityMappingsText = fields.GetValueOrDefault("entity_mappings_text", _entityMappingsText);
         _falsePositiveNotes = fields.GetValueOrDefault("false_positive_notes_text", _falsePositiveNotes);
 
         _kqlEditorNeedsInit = true;
     }
 
-    /// <summary>Returns the generated YAML. The Monaco value is fetched via JS interop if the editor is ready.</summary>
-    public async Task<string> GetYamlAsync()
+    /// <summary>Returns structured detection content. The backend serializes the canonical YAML.</summary>
+    public async Task<DetectionDraftForm> GetDraftAsync()
     {
         if (_kqlEditorReady)
             _kqlQuery = await WidgetEditor.GetValueAsync(_editorId);
-        return BuildYaml(_kqlQuery);
+
+        return new DetectionDraftForm(
+            Id: _id,
+            Title: _title,
+            Description: _description,
+            Severity: _severity,
+            Confidence: _confidence,
+            RiskScore: _riskScore,
+            TriggerType: _triggerType == TriggerKind.Nrt ? "nrt" : "scheduled",
+            RealtimeThreshold: _triggerType == TriggerKind.Nrt ? _nrtThreshold : null,
+            ScheduleExpression: _triggerType == TriggerKind.Scheduled ? _scheduleExpression : null,
+            Lookback: _triggerType == TriggerKind.Scheduled ? _lookback : null,
+            MaxAlertsPerRun: _triggerType == TriggerKind.Scheduled ? _maxAlertsPerRun : null,
+            KqlQuery: _kqlQuery,
+            MitreAttackTechniques: SplitCsv(_mitreAttackCsv),
+            EntityMappings: ParseEntityMappings(_entityMappingsText),
+            FalsePositiveNotes: (_falsePositiveNotes ?? "")
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
     }
 
     private void SetTrigger(TriggerKind kind) => _triggerType = kind;
@@ -279,93 +289,9 @@
     private void OnLookbackChanged(string v) => _lookback = v;
     private void OnMaxAlertsChanged(int v) => _maxAlertsPerRun = v;
     private void OnKqlChanged(string v) => _kqlQuery = v;
-    private void OnTacticsChanged(string v) => _tacticsCsv = v;
-    private void OnTechniquesChanged(string v) => _techniquesCsv = v;
+    private void OnMitreAttackChanged(string v) => _mitreAttackCsv = v;
     private void OnEntityMappingsChanged(string v) => _entityMappingsText = v;
     private void OnFpNotesChanged(string v) => _falsePositiveNotes = v;
-
-    private string BuildYaml(string kql)
-    {
-        var sb = new System.Text.StringBuilder();
-
-        sb.AppendLine($"id: {YStr(_id)}");
-        sb.AppendLine($"title: {YStr(_title)}");
-        sb.AppendLine($"description: >-");
-        foreach (var line in (_description ?? "").Split('\n'))
-            sb.AppendLine($"  {line.TrimEnd()}");
-        sb.AppendLine($"severity: {_severity}");
-        sb.AppendLine($"confidence: {_confidence}");
-        sb.AppendLine($"risk_score: {_riskScore}");
-        sb.AppendLine("content_type: detection");
-        sb.AppendLine("query_language: kql");
-        sb.AppendLine($"trigger_type: {(_triggerType == TriggerKind.Nrt ? "nrt" : "scheduled")}");
-
-        if (_triggerType == TriggerKind.Nrt)
-        {
-            sb.AppendLine($"threshold: {_nrtThreshold}");
-        }
-        else
-        {
-            sb.AppendLine($"schedule: '{_scheduleExpression}'");
-            sb.AppendLine($"lookback: {_lookback}");
-            sb.AppendLine($"max_alerts_per_run: {_maxAlertsPerRun}");
-        }
-
-        sb.AppendLine("query: |");
-        var kqlTrimmed = (kql ?? "").TrimEnd();
-        if (string.IsNullOrWhiteSpace(kqlTrimmed))
-        {
-            sb.AppendLine("  # KQL query goes here");
-        }
-        else
-        {
-            foreach (var line in kqlTrimmed.Split('\n'))
-                sb.AppendLine($"  {line.TrimEnd()}");
-        }
-
-        var tactics = SplitCsv(_tacticsCsv);
-        if (tactics.Length > 0)
-        {
-            sb.AppendLine("tactics:");
-            foreach (var t in tactics)
-                sb.AppendLine($"  - {t}");
-        }
-
-        var techniques = SplitCsv(_techniquesCsv);
-        if (techniques.Length > 0)
-        {
-            sb.AppendLine("techniques:");
-            foreach (var t in techniques)
-                sb.AppendLine($"  - {t}");
-        }
-
-        var entityLines = (_entityMappingsText ?? "")
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (entityLines.Length > 0)
-        {
-            sb.AppendLine("entity_mappings:");
-            foreach (var line in entityLines)
-            {
-                var colon = line.IndexOf(':', StringComparison.Ordinal);
-                if (colon > 0)
-                {
-                    var type = line[..colon].Trim();
-                    var field = line[(colon + 1)..].Trim();
-                    sb.AppendLine($"  - type: {type}");
-                    sb.AppendLine($"    field: {field}");
-                }
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(_falsePositiveNotes))
-        {
-            sb.AppendLine("false_positive_notes:");
-            foreach (var line in _falsePositiveNotes.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                sb.AppendLine($"  - {line}");
-        }
-
-        return sb.ToString();
-    }
 
     // Parses a YAML string into a flat dictionary. Handles scalar fields,
     // literal blocks (query: |), and list fields converted to CSV/text blobs.
@@ -480,10 +406,31 @@
         return result;
     }
 
-    private static string YStr(string value)
+    private static string MergeMitreAttackFields(Dictionary<string, string> fields)
     {
-        var escaped = (value ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"");
-        return $"\"{escaped}\"";
+        var items = SplitCsv(fields.GetValueOrDefault("techniques_csv", ""))
+            .Concat(SplitCsv(fields.GetValueOrDefault("tactics_csv", "")))
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        return string.Join(", ", items);
+    }
+
+
+    private static IReadOnlyList<DetectionEntityMappingDraft> ParseEntityMappings(string text)
+    {
+        return (text ?? string.Empty)
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(line =>
+            {
+                var colon = line.IndexOf(':', StringComparison.Ordinal);
+                return colon > 0
+                    ? new DetectionEntityMappingDraft(line[..colon].Trim(), line[(colon + 1)..].Trim())
+                    : null;
+            })
+            .Where(mapping => mapping is not null)
+            .Cast<DetectionEntityMappingDraft>()
+            .ToArray();
     }
 
     private static string[] SplitCsv(string csv) =>

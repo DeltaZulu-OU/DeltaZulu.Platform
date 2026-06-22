@@ -1,4 +1,5 @@
 @namespace DeltaZulu.Platform.Web.Governance.Components.Pages
+@page "/governance/drafts"
 @page "/governance/proposals"
 @page "/governance/changes"
 @page "/governance/work"
@@ -14,15 +15,15 @@
 @inject NavigationManager Nav
 @inject PocUserContext UserContext
 
-<PageTitle>Proposals</PageTitle>
+<PageTitle>Detection Drafts</PageTitle>
 
-<DzPageHeader Title="Proposals"
-              Description="Proposed detection content updates. Each proposal carries draft content, checks, reviews, and acceptance state.">
+<DzPageHeader Title="Detection Drafts"
+              Description="A detection draft is an editable, reviewable set of proposed changes to detection content. Accepting a draft creates the next version.">
     <Actions>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Add"
                    OnClick="OpenNewChangeDialog">
-            New proposal
+            New detection draft
         </MudButton>
     </Actions>
 </DzPageHeader>
@@ -39,7 +40,7 @@
             All (@_allChanges.Count)
         </DzFilterChip>
         <DzFilterChip Value="mine" Selected="@(_changeFilter == "mine")" OnClick="@(() => OnChangeFilterChanged("mine"))">
-            My proposals
+            My detection drafts
         </DzFilterChip>
         <DzFilterChip Value="review" Selected="@(_changeFilter == "review")" OnClick="@(() => OnChangeFilterChanged("review"))">
             Awaiting review
@@ -52,14 +53,14 @@
 
 @if (_filteredChanges.Count == 0)
 {
-    <DzEmptyState Title="No proposals match the current filter."
-                  Description="Create a new proposal or adjust the current filter."
+    <DzEmptyState Title="No detection drafts match the current filter."
+                  Description="Create a new detection draft or adjust the current filter."
                   Icon="@Icons.Material.Outlined.FilterAltOff">
         <Actions>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Add"
                        OnClick="OpenNewChangeDialog">
-                New proposal
+                New detection draft
             </MudButton>
         </Actions>
     </DzEmptyState>
@@ -68,7 +69,7 @@ else
 {
     <DzTableShell>
         <MudTable Items="_filteredChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
-                  OnRowClick="@(args => Nav.NavigateTo($"/governance/proposals/{args.Item!.Id}"))"
+                  OnRowClick="@(args => Nav.NavigateTo($"/governance/drafts/{args.Item!.Id}"))"
                   T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
             <HeaderContent>
                 <MudTh>Key</MudTh>
@@ -137,7 +138,7 @@ else
     private async Task OpenNewChangeDialog()
     {
         var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<OpenChangeDialog>("New proposal", options);
+        var dialog = await DialogService.ShowAsync<OpenChangeDialog>("New detection draft", options);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled) await LoadAsync();
     }
