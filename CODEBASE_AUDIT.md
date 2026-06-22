@@ -1,7 +1,7 @@
 # DeltaZulu.Platform — Codebase Audit Report
 
-**Date:** 2026-06-14
-**Scope:** Full repository — 419 C# files, 30,112 lines across 4 source projects + 1 test project
+**Date:** 2026-06-14 (structure updated 2026-06-22)
+**Scope:** Full repository — originally 419 C# files, 30,112 lines across 4 source projects + 1 test project; structure expanded to 7 source projects after DuckDB decoupling and Blazor.Interop introduction (see Solution Structure below)
 
 ---
 
@@ -10,10 +10,18 @@
 ```
 DeltaZulu.Platform.Domain       (net10.0) — no dependencies
 DeltaZulu.Platform.Application  (net10.0) → Domain
-DeltaZulu.Platform.Data         (net10.0) → Domain, Application ⚠️
-DeltaZulu.Platform.Web          (net10.0) → Domain, Application, Data
+DeltaZulu.Platform.Ingestion    (net10.0) — no dependencies
+DeltaZulu.Platform.Data.DuckDb  (net10.0) → Domain, Application, Ingestion ⚠️
+DeltaZulu.Platform.Data         (net10.0) → Domain, Application, Ingestion, Data.DuckDb ⚠️
+DeltaZulu.Blazor.Interop        (net10.0 Razor) — no dependencies
+DeltaZulu.Platform.Web          (net10.0) → Domain, Application, Data, Data.DuckDb, Ingestion, Blazor.Interop
 DeltaZulu.Platform.Tests        (net10.0) → all projects
 ```
+
+**New projects added since initial audit (2026-06-22):**
+- `DeltaZulu.Platform.Ingestion` — raw-log pub-sub boundary extracted to break circular dependency risks. Standalone.
+- `DeltaZulu.Platform.Data.DuckDb` — DuckDB SQL infrastructure extracted from `DeltaZulu.Platform.Data` to enable multi-backend support.
+- `DeltaZulu.Blazor.Interop` — typed Blazor JS interop wrappers extracted from `DeltaZulu.Platform.Web`; consolidates raw `IJSRuntime` calls into typed services.
 
 ---
 
@@ -207,15 +215,15 @@ await runs.EnsureInitializedAsync(cancellationToken);
 
 ---
 
-#### M6. Stringly-typed legend visibility
+#### M6. ~~Stringly-typed legend visibility~~ **RESOLVED**
 
-**Problem:** Legend visibility is determined by comparing a free-text string against 4 magic values (`"hidden"`, `"hide"`, `"none"`, `"off"`).
+**Resolution (2026-06-22):** `LegendVisibility` enum added in
+`src/DeltaZulu.Platform.Web/Analytics/Rendering/LegendVisibility.cs`. String-to-enum parsing now
+happens at the render directive boundary; `EChartsRenderOptionsBuilder` uses the enum throughout.
 
-**Where:** `src/DeltaZulu.Platform.Web/Analytics/Rendering/EChartsRenderOptionsBuilder.cs` (lines 103–111)
+~~**Problem:** Legend visibility is determined by comparing a free-text string against 4 magic values (`"hidden"`, `"hide"`, `"none"`, `"off"`).~~
 
-**Why it matters:** No single source of truth for valid legend values. Content authors have no guidance on which string to use.
-
-**Proposed resolution:** Define a `LegendVisibility` enum (`Visible`, `Hidden`). Parse the string once at the boundary (when loading render directives), then use the enum throughout.
+~~**Where:** `src/DeltaZulu.Platform.Web/Analytics/Rendering/EChartsRenderOptionsBuilder.cs` (lines 103–111)~~
 
 ---
 
@@ -368,7 +376,7 @@ var listNode = children
 | 5 | **M1** — Extract `DapperRepositoryBase` for EnsureInitializedAsync | Moderate | Medium |
 | 6 | **M2** — Replace duplicated DateTime helpers with centralized `SqliteDateTimeHelpers` | Moderate | Low |
 | 7 | **M3** — Extract validation check base class | Moderate | Medium |
-| 8 | **M5/M6** — Replace stringly-typed dispatch with enums | Moderate | Low |
+| 8 | **M5** — Replace stringly-typed time-filter dispatch with enum; **M6** ~~resolved~~ (LegendVisibility enum landed 2026-06-22) | Moderate | Low |
 | 9 | **M7** — Fix bare catch block in QueryRuntime | Moderate | Trivial |
 | 10 | **M9** — Align remaining namespace/folder mismatches | Moderate | Trivial |
 
