@@ -1,9 +1,12 @@
-using DeltaZulu.Platform.Data.Analytics;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Analytics.Catalog;
+using DeltaZulu.Platform.Domain.Analytics.Compilation;
+using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 using DeltaZulu.Platform.Tests.Analytics.Fixtures;
+using DeltaZulu.Platform.Data.DuckDb.DuckDb;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Translation;
 
@@ -86,6 +89,23 @@ public sealed class QueryRuntimeDataOnlyTests
     }
 
     [TestMethod]
+    public void ExecuteDataOnly_UsesInjectedRelationalEmitterDialect()
+    {
+        var runtime = new QueryRuntime(
+            CreateMedallionCatalog(),
+            _factory,
+            defaultLimit: 10_000,
+            developerMode: true,
+            emitterFactory: new ConstantRelationalEmitterFactory("proton-test", "SELECT 42 AS Answer"));
+
+        var result = runtime.ExecuteDataOnly("ProcessEvent | take 1");
+
+        AssertSuccess(result);
+        Assert.AreEqual("SELECT 42 AS Answer", result.GeneratedSql);
+        Assert.AreEqual(42, Convert.ToInt32(result.GetValue(0, 0), System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    [TestMethod]
     public void LegacyExecuteMethods_AreNowDataOnly()
     {
         var result = _runtime.Execute("ProcessEvent | take 1 | render barchart");
@@ -107,5 +127,20 @@ public sealed class QueryRuntimeDataOnlyTests
         var catalog = new ApprovedViewCatalog();
         catalog.RegisterAll(SchemaConventions.CanonicalViews);
         return catalog;
+    }
+
+    private sealed class ConstantRelationalEmitterFactory(string targetDialect, string sql) : IRelationalQueryEmitterFactory
+    {
+        public string TargetDialect => targetDialect;
+
+        public IRelationalQueryEmitter Create(int defaultLimit, bool applyDefaultLimit)
+            => new ConstantRelationalEmitter(TargetDialect, sql);
+    }
+
+    private sealed class ConstantRelationalEmitter(string targetDialect, string sql) : IRelationalQueryEmitter
+    {
+        public string TargetDialect => targetDialect;
+
+        public EmittedQuery Emit(RelNode node) => new(sql, TargetDialect);
     }
 }

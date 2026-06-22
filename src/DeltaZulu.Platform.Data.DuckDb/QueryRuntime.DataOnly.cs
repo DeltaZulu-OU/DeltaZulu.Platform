@@ -2,12 +2,12 @@ using System.Globalization;
 using System.Text.Json;
 using DeltaZulu.Platform.Application.Analytics.Planning;
 using DeltaZulu.Platform.Application.Analytics.Translation;
-using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DuckDB.NET.Data;
 
-namespace DeltaZulu.Platform.Data.Analytics;
+namespace DeltaZulu.Platform.Data.DuckDb;
 
 public sealed partial class QueryRuntime
 {
@@ -19,7 +19,7 @@ public sealed partial class QueryRuntime
         var debugTrace = _developerMode ? new List<string>() : null;
         debugTrace?.Add($"Runtime start (data-only): plannerMaxIterations={_plannerMaxIterations}, timeoutSeconds={_timeoutSeconds}");
 
-        var cacheKey = new CompileCacheKey(kql, _catalog.CatalogVersion, _plannerMaxIterations, _defaultLimit, _policyEpoch, _compilerEpoch);
+        var cacheKey = new CompileCacheKey(_emitterFactory.TargetDialect, kql, _catalog.CatalogVersion, _plannerMaxIterations, _defaultLimit, _policyEpoch, _compilerEpoch);
         if (_compileCacheCapacity > 0 && _compileCache.TryGetValue(cacheKey, out var cacheHit))
         {
             debugTrace?.Add($"Compile cache hit: catalogVersion={cacheKey.CatalogVersion}");
@@ -78,11 +78,11 @@ public sealed partial class QueryRuntime
         string? emitterStats;
         try
         {
-            var emitter = new DuckDbQueryEmitter(_defaultLimit, applyDefaultLimit: false);
-            sql = emitter.Emit(relNode);
+            var emitted = _emitterFactory.Create(_defaultLimit, applyDefaultLimit: false).Emit(relNode);
+            sql = emitted.Sql;
             var shape = SqlShapeMetrics.FromSql(sql);
             sqlShapeStats = JsonSerializer.Serialize(shape);
-            emitterStats = JsonSerializer.Serialize(emitter.LastRunStats);
+            emitterStats = emitted.EmitterStatsJson;
             debugTrace?.Add($"Emit complete: sqlLength={sql.Length}, cteStages={shape.CteStageCount}, selects={shape.SelectCount}, joins={shape.JoinCount}");
             debugTrace?.Add($"Emitter stats: {emitterStats}");
         }
@@ -156,7 +156,7 @@ public sealed partial class QueryRuntime
         var debugTrace = _developerMode ? new List<string>() : null;
         debugTrace?.Add($"Runtime start (streamed data-only): plannerMaxIterations={_plannerMaxIterations}, timeoutSeconds={_timeoutSeconds}");
 
-        var cacheKey = new CompileCacheKey(kql, _catalog.CatalogVersion, _plannerMaxIterations, _defaultLimit, _policyEpoch, _compilerEpoch);
+        var cacheKey = new CompileCacheKey(_emitterFactory.TargetDialect, kql, _catalog.CatalogVersion, _plannerMaxIterations, _defaultLimit, _policyEpoch, _compilerEpoch);
         string sql;
         string? plannerStats = null;
         string? sqlShapeStats;
@@ -190,10 +190,10 @@ public sealed partial class QueryRuntime
                 plannerStats = JsonSerializer.Serialize(telemetry.LastRunStats);
             }
 
-            var emitter = new DuckDbQueryEmitter(_defaultLimit, applyDefaultLimit: false);
-            sql = emitter.Emit(relNode);
+            var emitted = _emitterFactory.Create(_defaultLimit, applyDefaultLimit: false).Emit(relNode);
+            sql = emitted.Sql;
             sqlShapeStats = JsonSerializer.Serialize(SqlShapeMetrics.FromSql(sql));
-            emitterStats = JsonSerializer.Serialize(emitter.LastRunStats);
+            emitterStats = emitted.EmitterStatsJson;
 
             if (_compileCacheCapacity > 0)
             {

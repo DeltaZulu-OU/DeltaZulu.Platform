@@ -1,7 +1,6 @@
 using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
 using DeltaZulu.Platform.Application.Analytics.Rendering.Services;
-using DeltaZulu.Platform.Data.Analytics;
-using DeltaZulu.Platform.Data.DuckDb;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Analytics.Rendering;
 using DeltaZulu.Platform.Web.Analytics.Rendering;

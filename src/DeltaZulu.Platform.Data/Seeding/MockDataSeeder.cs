@@ -53,6 +53,16 @@ public static class MockDataSeeder
     public static string GetMedallionSeedSql(DateTimeOffset? nowUtc = null) =>
         string.Join("\n\n", GetMedallionSeedSqlByTable(nowUtc).Values.Select(EnsureStatementTerminated));
 
+    public static IReadOnlyDictionary<string, string> GetMedallionSeedNdjsonByChannel(
+        DateTimeOffset? nowUtc = null)
+    {
+        return GetMedallionSeedSqlByTable(nowUtc)
+            .ToDictionary(
+                static item => item.Key,
+                static item => SeedSqlRawLogNdjsonConverter.ToNdjson(item.Key, item.Value),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
     public static string GetWindowsSysmonSeedSql(DateTimeOffset? nowUtc = null) =>
         EnsureStatementTerminated(
             MockSeedSqlGenerator.BuildWindowsSysmonSeedSql(

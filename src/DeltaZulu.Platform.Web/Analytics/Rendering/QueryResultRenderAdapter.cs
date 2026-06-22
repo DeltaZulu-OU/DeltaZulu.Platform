@@ -1,6 +1,6 @@
 using DeltaZulu.Platform.Application.Analytics.Rendering.Services;
 using DeltaZulu.Platform.Application.Analytics.Rendering.Tabular;
-using DeltaZulu.Platform.Data.DuckDb;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 
 namespace DeltaZulu.Platform.Web.Analytics.Rendering;
 

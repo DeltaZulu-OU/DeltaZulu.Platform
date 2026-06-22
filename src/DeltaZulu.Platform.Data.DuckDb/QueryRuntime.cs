@@ -1,13 +1,15 @@
 using System.Collections.Concurrent;
 using System.Globalization;
 using DeltaZulu.Platform.Application.Analytics.Planning;
-using DeltaZulu.Platform.Data.DuckDb;
+using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Analytics.Catalog;
+using DeltaZulu.Platform.Domain.Analytics.Compilation;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 using DuckDB.NET.Data;
 
-namespace DeltaZulu.Platform.Data.Analytics;
+namespace DeltaZulu.Platform.Data.DuckDb;
 
 /// <summary>
 /// <para>
@@ -27,6 +29,7 @@ public sealed partial class QueryRuntime
     private readonly ConcurrentQueue<CompileCacheKey> _compileCacheOrder = new();
     private readonly DuckDbConnectionFactory _connectionFactory;
     private readonly int _defaultLimit;
+    private readonly IRelationalQueryEmitterFactory _emitterFactory;
     private readonly bool _developerMode;
     private readonly bool _includeSensitiveDeveloperDetail;
     private readonly IRelationalPlanner _planner;
@@ -50,6 +53,7 @@ public sealed partial class QueryRuntime
         long policyEpoch = 1,
         long compilerEpoch = 1,
         IRelationalPlanner? planner = null,
+        IRelationalQueryEmitterFactory? emitterFactory = null,
         bool plannerGatewayEnabled = false,
         long plannerGatewayMaxEstimatedRows = 50_000,
         int plannerGatewayJoinComplexityThreshold = 2)
@@ -102,6 +106,7 @@ public sealed partial class QueryRuntime
         _developerMode = developerMode;
         _includeSensitiveDeveloperDetail = includeSensitiveDeveloperDetail;
         _planner = planner ?? new RelationalPlanner();
+        _emitterFactory = emitterFactory ?? new DuckDbRelationalQueryEmitterFactory();
         _plannerMaxIterations = plannerMaxIterations;
         _plannerGatewayEnabled = plannerGatewayEnabled;
         _plannerGatewayMaxEstimatedRows = plannerGatewayMaxEstimatedRows;
@@ -497,7 +502,7 @@ public sealed partial class QueryRuntime
         }
     }
 
-    private sealed record CompileCacheKey(string Kql, long CatalogVersion, int PlannerMaxIterations, int DefaultLimit, long PolicyEpoch, long CompilerEpoch);
+    private sealed record CompileCacheKey(string TargetDialect, string Kql, long CatalogVersion, int PlannerMaxIterations, int DefaultLimit, long PolicyEpoch, long CompilerEpoch);
     private sealed record CompileCacheEntry(string Sql, string? PlannerStatsJson, string? SqlShapeStatsJson, string? EmitterStatsJson);
 
     private bool TryEstimateReferencedVolume(RelNode root, out long estimatedRows)
@@ -537,8 +542,3 @@ public sealed partial class QueryRuntime
 
     private sealed record PlannerGatewayDecision(string Decision, string Reason, long? EstimatedRows, int JoinCount);
 }
-
-/// <summary>
-/// Column metadata from a query result.
-/// </summary>
-public sealed record ResultColumn(string Name, string TypeName);

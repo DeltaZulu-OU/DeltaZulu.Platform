@@ -2,7 +2,7 @@ using Dapper;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 
-namespace DeltaZulu.Platform.Data.DuckDb;
+namespace DeltaZulu.Platform.Data.DuckDb.DuckDb;
 
 /// <summary>
 /// Records applied schema-object fingerprints into internal.schema_provenance.

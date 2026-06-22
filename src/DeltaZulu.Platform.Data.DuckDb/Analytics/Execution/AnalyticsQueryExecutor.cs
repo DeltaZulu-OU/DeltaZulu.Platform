@@ -1,9 +1,8 @@
-using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using Microsoft.Extensions.Logging;
 
-namespace DeltaZulu.Platform.Data.Analytics.Execution;
+namespace DeltaZulu.Platform.Data.DuckDb.Execution;
 
 /// <summary>
 /// Shared Analytics execution adapter over the DuckDB runtime. It owns the single

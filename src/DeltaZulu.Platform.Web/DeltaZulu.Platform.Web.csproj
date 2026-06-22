@@ -12,9 +12,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DeltaZulu.Blazor.Interop\DeltaZulu.Blazor.Interop.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Ingestion\DeltaZulu.Platform.Ingestion.csproj" />
     <ProjectReference Include="..\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
     <ProjectReference Include="..\DeltaZulu.Platform.Application\DeltaZulu.Platform.Application.csproj" />
     <ProjectReference Include="..\DeltaZulu.Platform.Data\DeltaZulu.Platform.Data.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Data.DuckDb\DeltaZulu.Platform.Data.DuckDb.csproj" />
   </ItemGroup>
 
   <ItemGroup>

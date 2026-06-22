@@ -4,14 +4,12 @@
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
   </Folder>
-
-  <!-- Platform layers (Clean Architecture) -->
-  <Project Path="src/DeltaZulu.Platform.Domain/DeltaZulu.Platform.Domain.csproj" />
   <Project Path="src/DeltaZulu.Blazor.Interop/DeltaZulu.Blazor.Interop.csproj" />
   <Project Path="src/DeltaZulu.Platform.Application/DeltaZulu.Platform.Application.csproj" />
+  <Project Path="src/DeltaZulu.Platform.Data.DuckDb/DeltaZulu.Platform.Data.DuckDb.csproj" />
   <Project Path="src/DeltaZulu.Platform.Data/DeltaZulu.Platform.Data.csproj" />
+  <Project Path="src/DeltaZulu.Platform.Domain/DeltaZulu.Platform.Domain.csproj" />
+  <Project Path="src/DeltaZulu.Platform.Ingestion/DeltaZulu.Platform.Ingestion.csproj" />
   <Project Path="src/DeltaZulu.Platform.Web/DeltaZulu.Platform.Web.csproj" />
-
-  <!-- Tests -->
   <Project Path="tests/DeltaZulu.Platform.Tests/DeltaZulu.Platform.Tests.csproj" />
 </Solution>

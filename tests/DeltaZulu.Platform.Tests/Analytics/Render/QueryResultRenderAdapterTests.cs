@@ -1,5 +1,4 @@
-using DeltaZulu.Platform.Data.Analytics;
-using DeltaZulu.Platform.Data.DuckDb;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Web.Analytics.Rendering;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Render;
