@@ -187,6 +187,7 @@
     private string _mitreAttackVersion = DeltaZulu.Platform.Web.Analytics.Services.MitreAttackCatalogService.DefaultVersion;
     private string _entityMappingsText = "";
     private string _falsePositiveNotes = "";
+    private EditorBus? _editorBus;
 
     private bool _kqlEditorReady;
     private bool _kqlEditorNeedsInit;
@@ -194,6 +195,16 @@
     private string EditorCssClass => _kqlEditorReady
         ? "dashboard-editor-monaco"
         : "dashboard-editor-monaco dashboard-editor-monaco--initializing";
+
+    protected override void OnInitialized()
+    {
+        _editorBus = (EditorBus?)Services.GetService(typeof(EditorBus));
+        if (_editorBus is null)
+            return;
+
+        _editorBus.InsertRequested += HandleEditorInsertRequested;
+        _editorBus.ReplaceRequested += HandleEditorReplaceRequested;
+    }
 
     protected override void OnParametersSet()
     {
@@ -348,6 +359,24 @@
         _kqlQuery = query ?? string.Empty;
         if (_kqlEditorReady)
             await WidgetEditor.SetValueAsync(_editorId, _kqlQuery);
+    }
+
+    private void HandleEditorReplaceRequested(string query)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await InsertQueryAsync(query);
+            StateHasChanged();
+        });
+    }
+
+    private void HandleEditorInsertRequested(string query)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await AppendQueryAsync(query);
+            StateHasChanged();
+        });
     }
 
     public async Task AppendQueryAsync(string query)
@@ -593,6 +622,12 @@
 
     public async ValueTask DisposeAsync()
     {
+        if (_editorBus is not null)
+        {
+            _editorBus.InsertRequested -= HandleEditorInsertRequested;
+            _editorBus.ReplaceRequested -= HandleEditorReplaceRequested;
+        }
+
         if (_kqlEditorReady)
             await WidgetEditor.TryDisposeAsync(_editorId);
     }

@@ -7,6 +7,9 @@ window.huntingDashboardWidgetEditor = (() => {
         }
 
         if (window.monaco && window.monaco.editor) {
+            if (typeof window.registerKqlLanguage === "function") {
+                await window.registerKqlLanguage();
+            }
             return window.monaco;
         }
 
@@ -75,6 +78,8 @@ window.huntingDashboardWidgetEditor = (() => {
         const editor = editors.get(elementId);
         if (editor) {
             editor.setValue(value || "");
+            editor.focus();
+            window.setTimeout(() => editor.layout(), 0);
         }
     }
 

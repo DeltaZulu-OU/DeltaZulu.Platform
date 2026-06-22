@@ -10,7 +10,7 @@ namespace DeltaZulu.Platform.Tests.Data;
 public sealed class SampleDetectionContentSeederTests
 {
     [TestMethod]
-    public void Seed_WritesSampleYamlAndKqlFiles()
+    public void Seed_WritesUnifiedSampleYamlFiles()
     {
         var root = Path.Combine(Path.GetTempPath(), "deltazulu-sample-detections-" + Guid.NewGuid().ToString("N"));
 
@@ -18,16 +18,19 @@ public sealed class SampleDetectionContentSeederTests
         {
             var written = SampleDetectionContentSeeder.Seed(root);
 
-            Assert.IsGreaterThanOrEqualTo(20, written.Count);
-            Assert.IsTrue(File.Exists(Path.Combine(root, "powershell-execution-policy-change", "detection.yaml")));
-            Assert.IsTrue(File.Exists(Path.Combine(root, "powershell-execution-policy-change", "query.kql")));
+            Assert.IsGreaterThanOrEqualTo(10, written.Count);
+            var metadataPath = Path.Combine(root, "powershell-execution-policy-change", "detection.yaml");
+            var obsoleteQueryPath = Path.Combine(root, "powershell-execution-policy-change", "query.kql");
 
-            var metadata = File.ReadAllText(Path.Combine(root, "powershell-execution-policy-change", "detection.yaml"));
-            var query = File.ReadAllText(Path.Combine(root, "powershell-execution-policy-change", "query.kql"));
+            Assert.IsTrue(File.Exists(metadataPath));
+            Assert.IsFalse(File.Exists(obsoleteQueryPath));
+
+            var metadata = File.ReadAllText(metadataPath);
 
             Assert.Contains("query_language: kql", metadata);
+            Assert.Contains("query: |", metadata);
             Assert.Contains("entity_mappings:", metadata);
-            Assert.Contains("ProcessEvent", query);
+            Assert.Contains("ProcessEvent", metadata);
         }
         finally
         {
@@ -43,12 +46,12 @@ public sealed class SampleDetectionContentSeederTests
         try
         {
             SampleDetectionContentSeeder.Seed(root);
-            var path = Path.Combine(root, "powershell-execution-policy-change", "query.kql");
-            File.WriteAllText(path, "ProcessEvent | take 1");
+            var path = Path.Combine(root, "powershell-execution-policy-change", "detection.yaml");
+            File.WriteAllText(path, "id: custom-detection");
 
             SampleDetectionContentSeeder.Seed(root);
 
-            Assert.AreEqual("ProcessEvent | take 1", File.ReadAllText(path));
+            Assert.AreEqual("id: custom-detection", File.ReadAllText(path));
         }
         finally
         {
@@ -66,16 +69,16 @@ public sealed class SampleDetectionContentSeederTests
             var written = SampleDetectionContentSeeder.SeedAcceptedContentRepository(root);
 
             var metadataPath = Path.Combine(root, "detections", "powershell-execution-policy-change", "detection.yaml");
-            var queryPath = Path.Combine(root, "detections", "powershell-execution-policy-change", "query.kql");
+            var obsoleteQueryPath = Path.Combine(root, "detections", "powershell-execution-policy-change", "query.kql");
 
-            Assert.IsGreaterThanOrEqualTo(20, written.Count);
+            Assert.IsGreaterThanOrEqualTo(10, written.Count);
             Assert.IsTrue(File.Exists(metadataPath));
-            Assert.IsTrue(File.Exists(queryPath));
+            Assert.IsFalse(File.Exists(obsoleteQueryPath));
 
             using var repository = new Repository(root);
             Assert.IsNotNull(repository.Head.Tip);
             Assert.IsNotNull(repository.Head.Tip.Tree["detections/powershell-execution-policy-change/detection.yaml"]);
-            Assert.IsNotNull(repository.Head.Tip.Tree["detections/powershell-execution-policy-change/query.kql"]);
+            Assert.IsNull(repository.Head.Tip.Tree["detections/powershell-execution-policy-change/query.kql"]);
         }
         finally
         {

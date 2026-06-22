@@ -17,8 +17,6 @@ public sealed class GovernanceModule : IPlatformModule
     public IReadOnlyList<DzNavItem> NavigationItems { get; } =
     [
         new("Detections", "/governance/detections", Icons.Material.Outlined.Radar),
-        new("Detection Drafts", "/governance/drafts", Icons.Material.Outlined.Assignment),
-        new("History", "/governance/history", Icons.Material.Outlined.History),
     ];
 
     public IReadOnlyList<PlatformRouteGroup> RouteGroups { get; } =

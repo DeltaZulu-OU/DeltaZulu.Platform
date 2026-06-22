@@ -9,9 +9,7 @@
 @using DeltaZulu.Platform.Domain.Governance.Identifiers
 @using DeltaZulu.Platform.Web.Governance.Services
 @inject DetectionContentService DetectionService
-@inject IDialogService DialogService
 @inject NavigationManager Nav
-@inject PocUserContext UserContext
 
 <PageTitle>Detections</PageTitle>
 
@@ -139,19 +137,7 @@ else
 
     private void OpenNewDetectionPage() => Nav.NavigateTo("/governance/detections/new");
 
-    private async Task OpenChangeForDetection(DetectionId detectionId)
-    {
-        var parameters = new DialogParameters<OpenChangeDialog>
-        {
-            { x => x.DetectionId, detectionId },
-            { x => x.AuthorId, UserContext.CurrentUser.Id },
-        };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<OpenChangeDialog>("Open detection draft", parameters, options);
-        var result = await dialog.Result;
-        if (result is not null && !result.Canceled && result.Data is ChangeRequestId changeId)
-        {
-            Nav.NavigateTo($"/governance/drafts/{changeId}");
-        }
-    }
+    private void OpenChangeForDetection(DetectionId detectionId)
+        => Nav.NavigateTo($"/governance/detections/new?detectionId={detectionId.Value}");
+
 }

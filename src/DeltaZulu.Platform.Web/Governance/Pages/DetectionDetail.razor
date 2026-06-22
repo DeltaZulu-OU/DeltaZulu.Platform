@@ -14,10 +14,8 @@
 @inject ChangeService ChangeService
 @inject VersionService VersionService
 @inject AcceptedContentReadService AcceptedContentReadService
-@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
-@inject PocUserContext UserContext
 
 <PageTitle>Detection — @(_detection?.Title ?? "Loading")</PageTitle>
 
@@ -40,8 +38,8 @@ else
                 </Metadata>
                 <Actions>
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                               StartIcon="@Icons.Material.Outlined.Add" OnClick="OpenChangeDialog">
-                        Open detection draft
+                               StartIcon="@Icons.Material.Outlined.Edit" OnClick="OpenChangeDialog">
+                        Edit
                     </MudButton>
                     @if (_detection.Lifecycle == DetectionLifecycle.Accepted)
                     {
@@ -266,21 +264,10 @@ else
         catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
     }
 
-    private async Task OpenChangeDialog()
+    private void OpenChangeDialog()
     {
         if (_detection is null) return;
-        var parameters = new DialogParameters<OpenChangeDialog>
-        {
-            { x => x.DetectionId, _detection.Id },
-            { x => x.AuthorId, UserContext.CurrentUser.Id },
-        };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<OpenChangeDialog>("Open detection draft", parameters, options);
-        var result = await dialog.Result;
-        if (result is not null && !result.Canceled && result.Data is ChangeRequestId changeId)
-        {
-            Nav.NavigateTo($"/governance/drafts/{changeId}");
-        }
+        Nav.NavigateTo($"/governance/detections/new?detectionId={_detection.Id.Value}");
     }
     
     private async Task OpenAcceptedFileAsync(AcceptedContentFileSummary file)

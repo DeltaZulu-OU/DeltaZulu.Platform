@@ -1,6 +1,5 @@
 @namespace DeltaZulu.Platform.Web.Governance.Components.Pages
 @page "/governance/drafts/{Id}"
-@page "/governance/proposals/{Id}"
 @page "/governance/changes/{Id}"
 @using DeltaZulu.Platform.Web.Governance.Components.Shared
 @using MudBlazor
@@ -577,7 +576,7 @@
 
         _breadcrumbs =
         [
-            new("Detection Drafts", "/governance/drafts"),
+            new("Detections", "/governance/detections"),
             new(_change.Key, null, disabled: true),
     ];
 

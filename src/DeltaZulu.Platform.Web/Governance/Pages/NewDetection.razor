@@ -2,7 +2,9 @@
 @page "/governance/detections/new"
 @using DeltaZulu.Platform.Application.Governance.Services
 @using DeltaZulu.Platform.Domain.Governance.Common
+@using DeltaZulu.Platform.Domain.Governance.Detections
 @using DeltaZulu.Platform.Domain.Governance.Enums
+@using DeltaZulu.Platform.Domain.Governance.Identifiers
 @using DeltaZulu.Platform.Web.Analytics.Components
 @using DeltaZulu.Platform.Web.Governance.Components.Shared
 @using DeltaZulu.Platform.Web.Governance.Services
@@ -10,11 +12,12 @@
 @rendermode InteractiveServer
 @inject DetectionContentService DetectionService
 @inject ChangeService ChangeService
+@inject AcceptedContentReadService AcceptedContentReadService
 @inject PocUserContext UserContext
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 
-<PageTitle>New detection</PageTitle>
+<PageTitle>@PageTitleText</PageTitle>
 
 <div class="threat-hunting-page">
     <aside class="threat-hunting-secondary-nav" aria-label="Detection authoring support">
@@ -33,43 +36,112 @@
     </aside>
 
     <main class="threat-hunting-workbench">
-        <DzPageHeader Eyebrow="Detection content" Title="New detection"
+        <DzPageHeader Eyebrow="Detection content" Title="@PageTitleText"
                       Description="Create realtime or scheduled detection content on a dedicated page with the same schema, query history, and helper workflow as the Analytics dashboard.">
             <Actions>
                 <KqlHelperDrawer InsertRequested="InsertHelperQueryAsync" AppendRequested="AppendHelperQueryAsync" />
             </Actions>
         </DzPageHeader>
 
-        <DzPanel Title="Detection details" Outlined="true">
-            <MudTextField @bind-Value="_slug" Label="Slug" HelperText="Lowercase, hyphens, 3–64 characters."
-                          Required="true" Immediate="true" Class="mb-3 dz-mono-input" />
-            <DetectionAuthorForm @ref="_detectionForm" DetectionSlug="@DetectionIdFromSlug" />
-            @if (_error is not null)
-            {
-                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-3">@_error</MudAlert>
-            }
-            <div class="d-flex justify-end gap-2 mt-4">
-                <MudButton Variant="Variant.Text" OnClick="@(() => Nav.NavigateTo("/governance/detections"))">Cancel</MudButton>
-                <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SubmitAsync" Disabled="@(_submitting || string.IsNullOrWhiteSpace(_slug))">
-                    @if (_submitting) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                    Create detection draft
-                </MudButton>
-            </div>
-        </DzPanel>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            <DzPanel Title="Detection details" Outlined="true">
+                @if (IsExistingDetectionDraft)
+                {
+                    <MudTextField Value="@ExistingDetectionLabel" Label="Detection" ReadOnly="true" Variant="Variant.Outlined" Class="mb-3" />
+                    <MudTextField @bind-Value="_draftKey" Label="Draft key" HelperText="Short tracking key, for example DRAFT-001."
+                                  Required="true" Immediate="true" Variant="Variant.Outlined" Class="mb-3 dz-mono-input" />
+                    <MudTextField @bind-Value="_draftTitle" Label="Draft title" Required="true" Immediate="true" Variant="Variant.Outlined" Class="mb-3" />
+                    <MudSelect @bind-Value="_workflowProfileId" Label="Workflow profile" T="WorkflowProfileId" Variant="Variant.Outlined" Class="mb-3">
+                        <MudSelectItem Value="WorkflowProfileId.QuickLab">Quick lab</MudSelectItem>
+                        <MudSelectItem Value="WorkflowProfileId.ControlledReview">Controlled review</MudSelectItem>
+                    </MudSelect>
+                }
+                else
+                {
+                    <MudTextField @bind-Value="_slug" Label="Slug" HelperText="Lowercase, hyphens, 3–64 characters."
+                                  Required="true" Immediate="true" Class="mb-3 dz-mono-input" />
+                }
+
+                <DetectionAuthorForm @ref="_detectionForm" DetectionSlug="@DetectionFormSlug" DetectionTitle="@_existingDetection?.Title" />
+                @if (_error is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mt-3">@_error</MudAlert>
+                }
+                <div class="d-flex justify-end gap-2 mt-4">
+                    <MudButton Variant="Variant.Text" OnClick="Cancel">Cancel</MudButton>
+                    <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SubmitAsync" Disabled="@(_submitting || !CanSubmit)">
+                        @if (_submitting) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                        @(IsExistingDetectionDraft ? "Start edit" : "Create detection draft")
+                    </MudButton>
+                </div>
+            </DzPanel>
+        }
     </main>
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "detectionId")] public Guid? DetectionId { get; set; }
+
     private string _slug = "";
+    private string _draftKey = "";
+    private string _draftTitle = "";
+    private WorkflowProfileId _workflowProfileId = WorkflowProfileId.QuickLab;
+    private Detection? _existingDetection;
     private DetectionAuthorForm? _detectionForm;
+    private string? _acceptedDetectionYaml;
+    private bool _acceptedYamlLoadedIntoForm;
     private string? _error;
+    private bool _loading = true;
     private bool _submitting;
 
+    private bool IsExistingDetectionDraft => _existingDetection is not null;
+    private string PageTitleText => IsExistingDetectionDraft ? "Edit detection" : "New detection";
+    private string ExistingDetectionLabel => _existingDetection is null ? string.Empty : $"{_existingDetection.Slug} — {_existingDetection.Title}";
     private string DetectionIdFromSlug => string.IsNullOrWhiteSpace(_slug) ? string.Empty : $"dz-{_slug.Trim()}";
+    private string DetectionFormSlug => _existingDetection?.Slug ?? DetectionIdFromSlug;
+    private bool CanSubmit => IsExistingDetectionDraft
+        ? !string.IsNullOrWhiteSpace(_draftKey) && !string.IsNullOrWhiteSpace(_draftTitle)
+        : !string.IsNullOrWhiteSpace(_slug);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _acceptedDetectionYaml = null;
+        _acceptedYamlLoadedIntoForm = false;
+        _existingDetection = DetectionId is Guid id ? await DetectionService.GetByIdAsync(new DetectionId(id)) : null;
+
+        if (_existingDetection is not null)
+        {
+            var acceptedFile = await AcceptedContentReadService.GetAcceptedFileForDetectionAsync(_existingDetection.Id, "detection.yaml");
+            _acceptedDetectionYaml = acceptedFile?.Content;
+            _draftTitle = string.IsNullOrWhiteSpace(_draftTitle) ? $"Edit {_existingDetection.Title}" : _draftTitle;
+            _draftKey = string.IsNullOrWhiteSpace(_draftKey) ? $"EDIT-{_existingDetection.Slug}"[..Math.Min($"EDIT-{_existingDetection.Slug}".Length, 32)] : _draftKey;
+        }
+
+        _loading = false;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (_acceptedYamlLoadedIntoForm || string.IsNullOrWhiteSpace(_acceptedDetectionYaml) || _detectionForm is null)
+        {
+            return;
+        }
+
+        _detectionForm.LoadFromYaml(_acceptedDetectionYaml);
+        _acceptedYamlLoadedIntoForm = true;
+        StateHasChanged();
+    }
 
     private Task LoadQueryIntoForm(string query) => _detectionForm?.InsertQueryAsync(query) ?? Task.CompletedTask;
     private Task InsertHelperQueryAsync(string query) => _detectionForm?.InsertQueryAsync(query) ?? Task.CompletedTask;
     private Task AppendHelperQueryAsync(string query) => _detectionForm?.AppendQueryAsync(query) ?? Task.CompletedTask;
+    private void Cancel() => Nav.NavigateTo(IsExistingDetectionDraft && _existingDetection is not null ? $"/governance/detections/{_existingDetection.Id}" : "/governance/detections");
 
     private async Task SubmitAsync()
     {
@@ -84,19 +156,23 @@
             }
 
             var draft = await _detectionForm.GetDraftAsync();
+            if (_existingDetection is not null)
+            {
+                var change = await ChangeService.OpenChangeAsync(_draftKey.Trim(), _draftTitle.Trim(), _existingDetection.Id, UserContext.CurrentUser.Id, _workflowProfileId);
+                await ChangeService.UpsertDetectionDraftAsync(change.Id, draft, UserContext.CurrentUser.Id);
+                Snackbar.Add($"Opened detection draft {change.Key}.", Severity.Success);
+                Nav.NavigateTo($"/governance/drafts/{change.Id}");
+                return;
+            }
+
             var slug = _slug.Trim();
             var detection = await DetectionService.CreateAsync(slug, draft.Title.Trim(), draft.Description.Trim());
             var draftKey = $"INIT-{slug}"[..Math.Min($"INIT-{slug}".Length, 32)];
-            var change = await ChangeService.OpenChangeAsync(
-                draftKey,
-                $"Initial detection content for {draft.Title.Trim()}",
-                detection.Id,
-                UserContext.CurrentUser.Id,
-                WorkflowProfileId.QuickLab);
-            await ChangeService.UpsertDetectionDraftAsync(change.Id, draft, UserContext.CurrentUser.Id);
+            var initialChange = await ChangeService.OpenChangeAsync(draftKey, $"Initial detection content for {draft.Title.Trim()}", detection.Id, UserContext.CurrentUser.Id, WorkflowProfileId.QuickLab);
+            await ChangeService.UpsertDetectionDraftAsync(initialChange.Id, draft, UserContext.CurrentUser.Id);
 
             Snackbar.Add($"Detection '{slug}' created with initial content draft.", Severity.Success);
-            Nav.NavigateTo($"/governance/drafts/{change.Id}");
+            Nav.NavigateTo($"/governance/drafts/{initialChange.Id}");
         }
         catch (DomainException ex) { _error = ex.Message; }
         finally { _submitting = false; }
