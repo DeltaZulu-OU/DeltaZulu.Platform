@@ -33,7 +33,7 @@
     @if (_frequency == CronFrequency.Monthly)
     {
         <MudItem xs="12" md="2">
-            <MudNumericField Value="_dayOfMonth" T="int" Label="Day of month" Dense="true"
+            <MudNumericField Value="_dayOfMonth" T="int" Label="Day of month" Margin="Margin.Dense"
                              Min="1" Max="28" ValueChanged="OnDayOfMonthChanged" Variant="Variant.Outlined" />
         </MudItem>
     }
@@ -41,7 +41,7 @@
     @if (_frequency is CronFrequency.Daily or CronFrequency.Weekly or CronFrequency.Monthly)
     {
         <MudItem xs="6" md="2">
-            <MudNumericField Value="_hour" T="int" Label="Hour (UTC)" Dense="true"
+            <MudNumericField Value="_hour" T="int" Label="Hour (UTC)" Margin="Margin.Dense"
                              Min="0" Max="23" ValueChanged="OnHourChanged" Variant="Variant.Outlined" />
         </MudItem>
     }
@@ -49,7 +49,7 @@
     @if (_frequency is not CronFrequency.Custom)
     {
         <MudItem xs="6" md="2">
-            <MudNumericField Value="_minute" T="int" Label="Minute" Dense="true"
+            <MudNumericField Value="_minute" T="int" Label="Minute" Margin="Margin.Dense"
                              Min="0" Max="59" ValueChanged="OnMinuteChanged" Variant="Variant.Outlined" />
         </MudItem>
     }
@@ -57,7 +57,7 @@
     @if (_frequency == CronFrequency.Custom)
     {
         <MudItem xs="12" md="7">
-            <MudTextField Value="_customExpression" Label="Cron expression" Dense="true"
+            <MudTextField Value="_customExpression" Label="Cron expression" Margin="Margin.Dense"
                           HelperText="5-part expression: minute hour day month weekday"
                           Immediate="true" ValueChanged="OnCustomExpressionChanged" Variant="Variant.Outlined" T="string" />
         </MudItem>

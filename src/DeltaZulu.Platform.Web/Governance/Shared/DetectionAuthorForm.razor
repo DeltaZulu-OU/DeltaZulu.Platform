@@ -30,12 +30,12 @@
 
     @* ── Core identity ── *@
     <MudItem xs="12" md="6">
-        <MudTextField Value="_id" ValueChanged="OnIdChanged" Label="Detection ID" Dense="true"
+        <MudTextField Value="_id" ValueChanged="OnIdChanged" Label="Detection ID" Margin="Margin.Dense"
                       HelperText="Stable identifier, e.g. dz-suspicious-command-line-download"
                       Immediate="true" Variant="Variant.Outlined" T="string" />
     </MudItem>
     <MudItem xs="12" md="6">
-        <MudTextField Value="_title" ValueChanged="OnTitleChanged" Label="Title" Dense="true"
+        <MudTextField Value="_title" ValueChanged="OnTitleChanged" Label="Title" Margin="Margin.Dense"
                       HelperText="Short analyst-facing name" Immediate="true" Variant="Variant.Outlined" T="string" />
     </MudItem>
 
@@ -60,13 +60,13 @@
     </MudItem>
     <MudItem xs="12" md="3">
         <MudNumericField Value="_riskScore" ValueChanged="OnRiskScoreChanged" T="int"
-                         Label="Risk score" Dense="true" Min="0" Max="100" Variant="Variant.Outlined" />
+                         Label="Risk score" Margin="Margin.Dense" Min="0" Max="100" Variant="Variant.Outlined" />
     </MudItem>
 
     @* ── Description ── *@
     <MudItem xs="12">
         <MudTextField Value="_description" ValueChanged="OnDescriptionChanged" Label="Description"
-                      Lines="3" Dense="true" Immediate="true" Variant="Variant.Outlined" T="string"
+                      Lines="3" Margin="Margin.Dense" Immediate="true" Variant="Variant.Outlined" T="string"
                       HelperText="What does this detection find? Include analyst guidance." />
     </MudItem>
 
@@ -75,7 +75,7 @@
     {
         <MudItem xs="12" md="4">
             <MudNumericField Value="_nrtThreshold" ValueChanged="OnNrtThresholdChanged" T="int"
-                             Label="Alert threshold (result rows)" Dense="true"
+                             Label="Alert threshold (result rows)" Margin="Margin.Dense"
                              Min="1" HelperText="Minimum matching rows to raise an alert."
                              Variant="Variant.Outlined" />
         </MudItem>
@@ -97,7 +97,7 @@
         </MudItem>
         <MudItem xs="12" md="3">
             <MudNumericField Value="_maxAlertsPerRun" ValueChanged="OnMaxAlertsChanged" T="int"
-                             Label="Max alerts per run" Dense="true" Min="1" Max="10000"
+                             Label="Max alerts per run" Margin="Margin.Dense" Min="1" Max="10000"
                              Variant="Variant.Outlined" />
         </MudItem>
     }
@@ -123,25 +123,25 @@
                 <MudGrid Spacing="2">
                     <MudItem xs="12" md="6">
                         <MudTextField Value="_tacticsCsv" ValueChanged="OnTacticsChanged"
-                                      Label="MITRE tactics (comma-separated)" Dense="true"
+                                      Label="MITRE tactics (comma-separated)" Margin="Margin.Dense"
                                       HelperText="e.g. Lateral Movement, Initial Access"
                                       Immediate="true" Variant="Variant.Outlined" T="string" />
                     </MudItem>
                     <MudItem xs="12" md="6">
                         <MudTextField Value="_techniquesCsv" ValueChanged="OnTechniquesChanged"
-                                      Label="MITRE techniques (comma-separated)" Dense="true"
+                                      Label="MITRE techniques (comma-separated)" Margin="Margin.Dense"
                                       HelperText="e.g. T1021.001, T1059.001"
                                       Immediate="true" Variant="Variant.Outlined" T="string" />
                     </MudItem>
                     <MudItem xs="12">
                         <MudTextField Value="_entityMappingsText" ValueChanged="OnEntityMappingsChanged"
-                                      Label="Entity mappings (one per line: type:field)" Dense="true"
+                                      Label="Entity mappings (one per line: type:field)" Margin="Margin.Dense"
                                       Lines="3" Immediate="true" Variant="Variant.Outlined" T="string"
                                       HelperText="e.g. host:DeviceName" />
                     </MudItem>
                     <MudItem xs="12">
                         <MudTextField Value="_falsePositiveNotes" ValueChanged="OnFpNotesChanged"
-                                      Label="False positive notes" Dense="true" Lines="2"
+                                      Label="False positive notes" Margin="Margin.Dense" Lines="2"
                                       Immediate="true" Variant="Variant.Outlined" T="string" />
                     </MudItem>
                 </MudGrid>

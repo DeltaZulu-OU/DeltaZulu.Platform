@@ -27,7 +27,7 @@
                     <MudTextField @bind-Value="_title"
                                   Label="Title"
                                   Variant="Variant.Outlined"
-                                  Dense="true"
+                                  Margin="Margin.Dense"
                                   Class="nrt-field nrt-field--wide"
                                   Placeholder="e.g. PowerShell download cradle detected" />
 
@@ -50,14 +50,14 @@
                     <MudTextField @bind-Value="_description"
                                   Label="Description (optional)"
                                   Variant="Variant.Outlined"
-                                  Dense="true"
+                                  Margin="Margin.Dense"
                                   Class="nrt-field nrt-field--wide"
                                   Placeholder="What does this rule detect?" />
 
                     <MudNumericField @bind-Value="_riskScore"
                                      Label="Risk Score"
                                      Variant="Variant.Outlined"
-                                     Dense="true"
+                                     Margin="Margin.Dense"
                                      Min="0" Max="100"
                                      Class="nrt-field nrt-field--narrow" />
 
@@ -65,7 +65,7 @@
                                      Label="Threshold (t)"
                                      HelperText="Alert when MV has ≥ t rows"
                                      Variant="Variant.Outlined"
-                                     Dense="true"
+                                     Margin="Margin.Dense"
                                      Min="0"
                                      Class="nrt-field nrt-field--narrow" />
                 </div>
@@ -74,14 +74,14 @@
                     <MudTextField @bind-Value="_mitreTactics"
                                   Label="MITRE Tactics (comma-separated)"
                                   Variant="Variant.Outlined"
-                                  Dense="true"
+                                  Margin="Margin.Dense"
                                   Class="nrt-field"
                                   Placeholder="e.g. Execution, Command and Control" />
 
                     <MudTextField @bind-Value="_mitreTechniques"
                                   Label="MITRE Techniques (comma-separated)"
                                   Variant="Variant.Outlined"
-                                  Dense="true"
+                                  Margin="Margin.Dense"
                                   Class="nrt-field"
                                   Placeholder="e.g. T1059, T1105" />
                 </div>
@@ -93,7 +93,7 @@
                         <button class="hunt-btn" @onclick="PreviewAsync" disabled="@_busy">
                             @(_busy ? "Compiling…" : "Compile to Proton SQL")
                         </button>
-                        <MudSwitch @bind-Value="_isEnabled" Label="Enabled" Color="Color.Success" Dense="true" />
+                        <MudSwitch @bind-Value="_isEnabled" Label="Enabled" Color="Color.Success" />
                     </div>
                 </div>
 
