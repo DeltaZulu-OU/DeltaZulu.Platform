@@ -72,8 +72,8 @@ public sealed class DzCronPickerTests
 
         var preview = cut.Find(".dz-cron-preview");
         Assert.Contains("*/5 * * * *", preview.TextContent);
-        Assert.IsFalse(preview.TextContent.Contains("Every"), "Custom cron should not produce a standard description");
-        Assert.IsFalse(preview.TextContent.Contains("Daily"), "Custom cron should not produce a standard description");
+        Assert.DoesNotContain("Every", preview.TextContent, "Custom cron should not produce a standard description");
+        Assert.DoesNotContain("Daily", preview.TextContent, "Custom cron should not produce a standard description");
     }
 
     [TestMethod]

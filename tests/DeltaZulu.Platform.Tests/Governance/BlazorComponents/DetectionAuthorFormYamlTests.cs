@@ -1,6 +1,7 @@
 using Bunit;
 using DeltaZulu.Platform.Web.Analytics.Services;
 using DeltaZulu.Platform.Web.Governance.Components.Shared;
+using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 
 namespace DeltaZulu.Platform.Tests.Governance.BlazorComponents;
@@ -135,8 +136,8 @@ public sealed class DetectionAuthorFormYamlTests
 
         Assert.Contains("trigger_type: nrt", yaml);
         Assert.Contains("threshold: 5", yaml);
-        Assert.IsFalse(yaml.Contains("schedule:"), "NRT detection should not include schedule field");
-        Assert.IsFalse(yaml.Contains("lookback:"), "NRT detection should not include lookback field");
+        Assert.DoesNotContain("schedule:", yaml, "NRT detection should not include schedule field");
+        Assert.DoesNotContain("lookback:", yaml, "NRT detection should not include lookback field");
     }
 
     [TestMethod]
@@ -262,7 +263,7 @@ public sealed class DetectionAuthorFormYamlTests
         // Severity values from YAML ("High") are stored lowercase
         Assert.Contains("severity: high", yaml);
         Assert.Contains("confidence: high", yaml);
-        Assert.IsFalse(yaml.Contains("severity: High"), "Severity should be stored and emitted in lowercase");
+        Assert.DoesNotContain("severity: High", yaml, "Severity should be stored and emitted in lowercase");
     }
 
     [TestMethod]
@@ -278,6 +279,6 @@ public sealed class DetectionAuthorFormYamlTests
 
         Assert.Contains("dz-test-nrt", yaml);
         Assert.Contains("trigger_type: nrt", yaml);
-        Assert.IsFalse(yaml.Contains("dz-test-scheduled"), "Second load should replace id from first load");
+        Assert.DoesNotContain("dz-test-scheduled", yaml, "Second load should replace id from first load");
     }
 }

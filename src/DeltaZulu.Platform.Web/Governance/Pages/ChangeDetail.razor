@@ -193,9 +193,8 @@
                                     }
                                     else if (file.ContentType == DraftContentType.DetectionMetadata)
                                     {
-                                        @{
-                                            var d = ParseDetectionDisplay(file.Content);
-                                        }
+                                        var d = ParseDetectionDisplay(file.Content);
+                                        
                                         <div class="dz-detection-read-view">
                                             <MudGrid Spacing="1" Class="mb-2">
                                                 <MudItem xs="6" md="3"><DzDetailItem Label="ID" Value="@d.Id" Mono="true" /></MudItem>
