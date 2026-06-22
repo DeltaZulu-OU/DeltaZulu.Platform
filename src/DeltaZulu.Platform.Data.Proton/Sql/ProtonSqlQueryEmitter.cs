@@ -37,6 +37,9 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
 
         internal string Emit(RelNode node)
         {
+            if (TryEmitOptimized(node, out var optimizedSql))
+                return optimizedSql;
+
             var (source, columns) = EmitNode(node);
             var sb = new StringBuilder();
 
@@ -55,6 +58,92 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
               .Append(" FROM ").Append(source);
 
             return sb.ToString();
+        }
+
+        private bool TryEmitOptimized(RelNode node, out string sql)
+        {
+            if (TryBuildSimpleSelect(node, out var shape))
+            {
+                sql = shape.ToSql();
+                return true;
+            }
+
+            if (node is AggregateNode aggregate && TryBuildSimpleSelect(aggregate.Input, out var inputShape))
+            {
+                var groupCols = aggregate.GroupBy.Select(EmitScalar).ToList();
+
+                _inAggregateProjection = true;
+                List<string> aggregateCols;
+                try { aggregateCols = aggregate.Aggregates.Select(EmitProjection).ToList(); }
+                finally { _inAggregateProjection = false; }
+
+                var columns = string.Join(", ", groupCols.Concat(aggregateCols));
+                var sb = new StringBuilder("SELECT ").Append(columns).Append(" FROM ").Append(inputShape.Source);
+                if (inputShape.Where.Count > 0)
+                    sb.Append(" WHERE ").AppendJoin(" AND ", inputShape.Where);
+                if (groupCols.Count > 0)
+                    sb.Append(" GROUP BY ").AppendJoin(", ", groupCols);
+                sql = sb.ToString();
+                return true;
+            }
+
+            sql = string.Empty;
+            return false;
+        }
+
+        private bool TryBuildSimpleSelect(RelNode node, out SelectShape shape)
+        {
+            switch (node)
+            {
+                case ScanNode scan:
+                    shape = new SelectShape(QuoteIdent(scan.ViewName));
+                    return true;
+                case FilterNode filter when TryBuildSimpleSelect(filter.Input, out var input) && input.Columns is null:
+                    input.Where.Add(EmitScalar(filter.Predicate));
+                    shape = input;
+                    return true;
+                case ProjectNode project when TryBuildSimpleSelect(project.Input, out var input):
+                    input.Columns = project.Projections.Select(EmitProjection).ToList();
+                    shape = input;
+                    return true;
+                case SortNode sort when TryBuildSimpleSelect(sort.Input, out var input):
+                    input.OrderBy = sort.Sorts.Select(EmitSortExpr).ToList();
+                    shape = input;
+                    return true;
+                case LimitNode limit when TryBuildSimpleSelect(limit.Input, out var input):
+                    input.Limit = limit.Count;
+                    shape = input;
+                    return true;
+                case SampleNode sample when TryBuildSimpleSelect(sample.Input, out var input):
+                    input.Limit = sample.Count;
+                    shape = input;
+                    return true;
+                default:
+                    shape = default!;
+                    return false;
+            }
+        }
+
+        private sealed class SelectShape(string source)
+        {
+            public string Source { get; } = source;
+            public List<string>? Columns { get; set; }
+            public List<string> Where { get; } = [];
+            public List<string>? OrderBy { get; set; }
+            public int? Limit { get; set; }
+
+            public string ToSql()
+            {
+                var sb = new StringBuilder("SELECT ").Append(Columns is { Count: > 0 } ? string.Join(", ", Columns) : "*")
+                    .Append(" FROM ").Append(Source);
+                if (Where.Count > 0)
+                    sb.Append(" WHERE ").AppendJoin(" AND ", Where);
+                if (OrderBy is { Count: > 0 })
+                    sb.Append(" ORDER BY ").AppendJoin(", ", OrderBy);
+                if (Limit is { } limit)
+                    sb.Append(" LIMIT ").Append(limit);
+                return sb.ToString();
+            }
         }
 
         private string NextStage()
