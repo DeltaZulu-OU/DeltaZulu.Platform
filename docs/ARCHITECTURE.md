@@ -317,25 +317,63 @@ threat-hunting and historical-analytics engine only; it is not part of the detec
 The two engines share KQL as the analyst-facing language and the RelNode IR as the internal
 representation, but they target different SQL dialects and serve different purposes.
 
-- Executable detection definitions are projections from accepted detection content. They include
-  detection identity, accepted version, rule hash, query text, severity, confidence, risk score,
-  MITRE metadata, entity mapping, schedule cron, lookback policy, alert materialization mode,
-  suppression policy, enabled flag, and timestamps.
-- Detection runs are traceable execution records. Each run records detection identity, accepted
-  version, rule hash, execution window, lookback window, status, result count, alert count, duration,
-  query hash, and diagnostics.
-- Alerts are immutable or append-oriented records created from detection matches. Alert materialization
-  modes include PerResultRow, SingleAlertPerRun, GroupByEntity, and GroupByCustomKey.
-- Alert entities are normalized entities extracted from alert evidence according to detection entity
-  mappings and schema contracts.
-- Incident candidates are explainable correlation proposals built from alerts, entities, windows,
-  evidence, scoring factors, and rationale. They are not confirmed incidents.
-- Triage decisions are analyst or system decisions about alerts or candidates, preserved as operational
-  and audit state.
-- Operations state must be exposed through approved read-only analytical views such as DetectionRun,
-  AlertEvent, AlertEntity, AlertEnrichment, and IncidentCandidate. Because alerts are SQLite-backed
-  operational records, the implementation must choose a controlled DuckDB-facing projection or view
-  strategy rather than leaving alert querying as repository-backed UI lists only.
+### Data model: lake vs operational state
+
+The two storage tiers are separated by mutability, not by topic area.
+
+**DuckDB data lake — append-only forever.**
+Every record written to the lake is immutable. Writers are the ingestion layer (Bronze/Silver/Gold
+events) and the .NET mediation daemon (Alerts, AlertEntities). Nothing in the lake is ever updated
+or deleted. Analysts query the lake via KQL through the `ApprovedViewCatalog` canonical views.
+
+**SQLite operational state — mutable lifecycle records.**
+Incident candidates and their associated links and evidence have explicit status lifecycles and are
+managed by the Operations module. These records are never in the lake; the lake is their evidence
+source, not their home.
+
+```mermaid
+flowchart TD
+    subgraph Lake["DuckDB Data Lake — append-only"]
+        B[bronze.*] --> S[silver.*] --> G[golden.*]
+        G --> A[alerts.*]
+        A --> AE[alert_entities.*]
+    end
+    subgraph Ops["SQLite Operations — mutable state"]
+        IC[incident_candidates]
+        CAL[candidate_alert_links]
+        CE[candidate_evidence]
+    end
+    subgraph AppState["SQLite App State — mutable state"]
+        NR[nrt_rules]
+        SQ[saved_queries]
+        VIS[visualizations]
+        DASH[dashboards / user_settings]
+    end
+
+    AE -->|correlation reads lake| IC
+    IC --> CAL
+    IC --> CE
+    A -.->|alert_id reference| CAL
+```
+
+**Where `detection_runs` lands** depends on whether the daemon writes a final record at completion
+or updates a row mid-run. If each run is a single atomic write at the end, it belongs in the lake
+as an append-only audit record. If the daemon updates status mid-run, it is operational state in
+SQLite. This decision should be made when the daemon is implemented.
+
+### Existing code debt
+
+The current `DapperAlertRepository` has `UpdateStatusAsync` and an upsert `ON CONFLICT DO UPDATE
+SET status = ...`. This contradicts the append-only model and must be removed when alerts migrate
+to the lake. The repository will be replaced by a direct DuckDB lake writer with no status column.
+
+`alerts`, `alert_entities`, `incident_candidates`, `candidate_alert_links`, and
+`candidate_evidence` are currently listed in `AppStateTables` (the SQLite app state attachment).
+This is wrong: `alerts` and `alert_entities` belong in the lake; the incident tables belong in a
+separate operations SQLite database, not the app state database.
+
+The `ApprovedViewCatalog` needs `AlertEvent` and `AlertEntity` canonical views so analysts can
+write KQL against lake alerts the same way they query `ProcessEvent`, `Dns`, and `NetworkSession`.
 
 ### Engine responsibilities
 
@@ -345,24 +383,36 @@ flowchart LR
         NRT["NRT detections<br/>Materialized views"]
         Sched["Scheduled detections<br/>Timeplus scheduled tasks"]
     end
-    subgraph DuckDB["DuckDB — hunting engine"]
+    subgraph Lake["DuckDB Data Lake"]
         Hunt["Threat hunting<br/>Interactive KQL queries"]
         Hist["Historical analytics<br/>Dashboards, investigations"]
+        Alrt["Alerts + AlertEntities<br/>Detection hit records"]
     end
     subgraph Platform["Platform — business logic bridge"]
         Pivot["Saved query → detection content"]
+        Daemon[".NET Mediation Daemon"]
     end
 
     Hunt -.->|analyst promotes<br/>valuable query| Pivot
     Pivot -.->|detection authored<br/>as KQL + YAML| NRT
     Pivot -.->|detection authored<br/>as KQL + YAML| Sched
+    NRT -->|alert output| Daemon
+    Sched -->|alert output| Daemon
+    Daemon -->|append-only write| Alrt
 ```
 
-The only connection between DuckDB and Proton is at the business-logic level: an analyst running a
-threat-hunting query in DuckDB may discover a valuable detection pattern and pivot from a saved query
-to a detection content proposal. This is a governance workflow — the analyst authors detection
-metadata (YAML) and the KQL query, which the platform compiles into Proton SQL. There is no runtime
-coupling between the hunting and detection engines.
+- Executable detection definitions are projections from accepted detection content. They include
+  detection identity, accepted version, rule hash, query text, severity, confidence, risk score,
+  MITRE metadata, entity mapping, schedule cron, lookback policy, alert materialization mode,
+  suppression policy, enabled flag, and timestamps.
+- Detection runs are traceable execution records (see note above on append-only vs mutable).
+- Alerts are immutable lake records created from detection matches. No status column. No updates.
+- Alert entities are normalized entities extracted from alert evidence at write time. Immutable.
+- Incident candidates are operational records built by correlating alerts from the lake. They have
+  an explicit status lifecycle (Pending → Active → Closed/Dismissed) and live in operations SQLite.
+- Candidate alert links are the join between an incident candidate and the lake alert IDs it
+  incorporates. Owned by the incident candidate; stored in operations SQLite.
+- Triage decisions are analyst decisions recorded against incident candidates. Operations SQLite.
 
 ### Hunting → detection pivot
 
@@ -396,7 +446,7 @@ operational state store.
 | Use case | High-urgency, low-latency alerts | Periodic pattern detection, compliance |
 
 Both modes share the same compilation pipeline (KQL → RelNode → ProtonSQL), the same detection
-metadata model (YAML), and the same alert materialization path into the platform's SQLite store.
+metadata model (YAML), and the same alert materialization path into the DuckDB data lake.
 
 ### Streaming medallion pipeline
 
@@ -414,7 +464,7 @@ flowchart LR
     G -->|scheduled task| SCH["Scheduled Detection Tasks"]
     NRT -->|threshold trigger| A["Alert dispatch stream"]
     SCH -->|result threshold| A
-    A -->|.NET daemon| DB["Alert Storage<br/>SQLite"]
+    A -->|.NET daemon| DB["Alert Storage<br/>DuckDB lake"]
 ```
 
 **Bronze.** Raw JSON payloads land in high-throughput Proton streams with no schema enforcement.
@@ -507,7 +557,7 @@ the daemon consumes the alert dispatch stream.
 sequenceDiagram
     participant P as Proton (MV / Scheduled Task)
     participant D as .NET Mediation Daemon
-    participant S as SQLite Alert Store
+    participant L as DuckDB Alert Lake
 
     loop NRT: poll interval
         D->>P: SELECT count(*) FROM mv_nrt_{ruleId}
@@ -515,13 +565,13 @@ sequenceDiagram
         alt row_count >= threshold
             D->>P: SELECT evidence FROM mv_nrt_{ruleId}
             P-->>D: evidence rows
-            D->>S: INSERT INTO alerts (rule, evidence, ...)
+            D->>L: INSERT INTO alerts (rule, evidence, ...)
         end
     end
 
     loop Scheduled: alert dispatch stream
         P->>D: Alert rows from scheduled task output
-        D->>S: INSERT INTO alerts (rule, evidence, ...)
+        D->>L: INSERT INTO alerts (rule, evidence, ...)
     end
 ```
 
