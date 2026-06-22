@@ -5,6 +5,7 @@
 @using Microsoft.JSInterop
 @using MudBlazor
 @inject WidgetEditorInterop WidgetEditor
+@inject IServiceProvider Services
 @implements IAsyncDisposable
 
 @* ── Trigger type toggle ── *@
@@ -123,10 +124,23 @@
             <MudExpansionPanel Text="MITRE ATT&amp;CK, entity mappings &amp; notes" Dense="true">
                 <MudGrid Spacing="2">
                     <MudItem xs="12">
-                        <MudTextField Value="_mitreAttackCsv" ValueChanged="OnMitreAttackChanged"
-                                      Label="MITRE ATT&amp;CK techniques" Margin="Margin.Dense"
-                                      HelperText="Search or enter names, technique IDs, or sub-technique IDs, e.g. Abuse Elevation Control Mechanism, T1548.002."
-                                      Immediate="true" Variant="Variant.Outlined" T="string" />
+                        <MudAutocomplete T="string"
+                                         Value="_mitreAttackPickerValue"
+                                         ValueChanged="OnMitreAttackSelected"
+                                         SearchFunc="SearchMitreAttackAsync"
+                                         Label="@($"MITRE ATT&CK techniques ({_mitreAttackVersion})")"
+                                         Margin="Margin.Dense"
+                                         HelperText="Autocomplete is sourced from the local DuckDB ATT&CK catalog imported from Enterprise ATT&CK v19.1."
+                                         Variant="Variant.Outlined"
+                                         Dense="true"
+                                         Clearable="true"
+                                         ResetValueOnEmptyText="true" />
+                        <MudChipSet T="string" Class="mt-2">
+                            @foreach (var technique in MitreAttackItems)
+                            {
+                                <MudChip T="string" Value="@technique" OnClose="@(() => RemoveMitreAttackTechnique(technique))" Closeable="true">@technique</MudChip>
+                            }
+                        </MudChipSet>
                     </MudItem>
                     <MudItem xs="12">
                         <MudTextField Value="_entityMappingsText" ValueChanged="OnEntityMappingsChanged"
@@ -169,6 +183,8 @@
     private int _maxAlertsPerRun = 100;
     private string _kqlQuery = "";
     private string _mitreAttackCsv = "";
+    private string? _mitreAttackPickerValue;
+    private string _mitreAttackVersion = DeltaZulu.Platform.Web.Analytics.Services.MitreAttackCatalogService.DefaultVersion;
     private string _entityMappingsText = "";
     private string _falsePositiveNotes = "";
 
@@ -270,10 +286,20 @@
             Lookback: _triggerType == TriggerKind.Scheduled ? _lookback : null,
             MaxAlertsPerRun: _triggerType == TriggerKind.Scheduled ? _maxAlertsPerRun : null,
             KqlQuery: _kqlQuery,
-            MitreAttackTechniques: SplitCsv(_mitreAttackCsv),
+            MitreAttackTechniques: SplitCsv(_mitreAttackCsv).Where(IsTechniqueId).ToArray(),
             EntityMappings: ParseEntityMappings(_entityMappingsText),
             FalsePositiveNotes: (_falsePositiveNotes ?? "")
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+
+    /// <summary>Returns canonical YAML for tests and preview callers that need serialized content.</summary>
+    public async Task<string> GetYamlAsync()
+    {
+        var draft = await GetDraftAsync();
+        var tactics = SplitCsv(_mitreAttackCsv)
+            .Where(item => !IsTechniqueId(item))
+            .ToArray();
+        return BuildDetectionYaml(draft, tactics);
     }
 
     private void SetTrigger(TriggerKind kind) => _triggerType = kind;
@@ -289,7 +315,46 @@
     private void OnLookbackChanged(string v) => _lookback = v;
     private void OnMaxAlertsChanged(int v) => _maxAlertsPerRun = v;
     private void OnKqlChanged(string v) => _kqlQuery = v;
-    private void OnMitreAttackChanged(string v) => _mitreAttackCsv = v;
+    private IReadOnlyList<string> MitreAttackItems => SplitCsv(_mitreAttackCsv);
+
+    private async Task<IEnumerable<string>> SearchMitreAttackAsync(string value, CancellationToken cancellationToken)
+    {
+        var catalog = (DeltaZulu.Platform.Web.Analytics.Services.MitreAttackCatalogService?)Services.GetService(typeof(DeltaZulu.Platform.Web.Analytics.Services.MitreAttackCatalogService));
+        if (catalog is null)
+            return [];
+
+        var snapshot = await catalog.GetSnapshotAsync(cancellationToken);
+        _mitreAttackVersion = snapshot.Version;
+        return (await catalog.SearchTechniquesAsync(value, cancellationToken: cancellationToken))
+            .Select(t => $"{t.TechniqueId} — {t.Name}");
+    }
+
+    private void OnMitreAttackSelected(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        var id = value.Split('—', 2)[0].Trim();
+        var items = MitreAttackItems.Append(id).Distinct(StringComparer.OrdinalIgnoreCase);
+        _mitreAttackCsv = string.Join(", ", items);
+        _mitreAttackPickerValue = null;
+    }
+
+    private void RemoveMitreAttackTechnique(string value)
+    {
+        _mitreAttackCsv = string.Join(", ", MitreAttackItems.Where(t => !string.Equals(t, value, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    public async Task InsertQueryAsync(string query)
+    {
+        _kqlQuery = query ?? string.Empty;
+        if (_kqlEditorReady)
+            await WidgetEditor.SetValueAsync(_editorId, _kqlQuery);
+    }
+
+    public async Task AppendQueryAsync(string query)
+    {
+        var prefix = string.IsNullOrWhiteSpace(_kqlQuery) ? string.Empty : _kqlQuery.TrimEnd() + "\n\n";
+        await InsertQueryAsync(prefix + (query ?? string.Empty));
+    }
     private void OnEntityMappingsChanged(string v) => _entityMappingsText = v;
     private void OnFpNotesChanged(string v) => _falsePositiveNotes = v;
 
@@ -416,6 +481,93 @@
         return string.Join(", ", items);
     }
 
+
+
+    private static bool IsTechniqueId(string value)
+    {
+        var trimmed = (value ?? string.Empty).Trim();
+        if (trimmed.Length < 5 || trimmed[0] != 'T') return false;
+        return trimmed.Skip(1).All(ch => char.IsDigit(ch) || ch == '.');
+    }
+
+    private static string BuildDetectionYaml(DetectionDraftForm draft, IReadOnlyList<string> tactics)
+    {
+        var sb = new System.Text.StringBuilder();
+
+        sb.AppendLine($"id: {YStr(draft.Id)}");
+        sb.AppendLine($"title: {YStr(draft.Title)}");
+        sb.AppendLine("description: >-");
+        foreach (var line in (draft.Description ?? string.Empty).Split('\n'))
+            sb.AppendLine($"  {line.TrimEnd()}");
+        sb.AppendLine($"severity: {draft.Severity}");
+        sb.AppendLine($"confidence: {draft.Confidence}");
+        sb.AppendLine($"risk_score: {draft.RiskScore}");
+        sb.AppendLine("content_type: detection");
+        sb.AppendLine("query_language: kql");
+        sb.AppendLine($"trigger_type: {draft.TriggerType}");
+
+        if (draft.TriggerType == "nrt")
+        {
+            sb.AppendLine($"threshold: {draft.RealtimeThreshold ?? 1}");
+        }
+        else
+        {
+            sb.AppendLine($"schedule: '{draft.ScheduleExpression ?? "0 * * * *"}'");
+            sb.AppendLine($"lookback: {draft.Lookback ?? "1h"}");
+            sb.AppendLine($"max_alerts_per_run: {draft.MaxAlertsPerRun ?? 100}");
+        }
+
+        sb.AppendLine("query: |");
+        var kql = (draft.KqlQuery ?? string.Empty).TrimEnd();
+        if (string.IsNullOrWhiteSpace(kql))
+        {
+            sb.AppendLine("  # KQL query goes here");
+        }
+        else
+        {
+            foreach (var line in kql.Split('\n'))
+                sb.AppendLine($"  {line.TrimEnd()}");
+        }
+
+        if (tactics.Count > 0)
+        {
+            sb.AppendLine("tactics:");
+            foreach (var item in tactics)
+                sb.AppendLine($"  - {item}");
+        }
+
+        if (draft.MitreAttackTechniques.Count > 0)
+        {
+            sb.AppendLine("techniques:");
+            foreach (var item in draft.MitreAttackTechniques)
+                sb.AppendLine($"  - {item}");
+        }
+
+        if (draft.EntityMappings.Count > 0)
+        {
+            sb.AppendLine("entity_mappings:");
+            foreach (var mapping in draft.EntityMappings)
+            {
+                sb.AppendLine($"  - type: {mapping.Type}");
+                sb.AppendLine($"    field: {mapping.Field}");
+            }
+        }
+
+        if (draft.FalsePositiveNotes.Count > 0)
+        {
+            sb.AppendLine("false_positive_notes:");
+            foreach (var note in draft.FalsePositiveNotes)
+                sb.AppendLine($"  - {note}");
+        }
+
+        return sb.ToString();
+    }
+
+    private static string YStr(string value)
+    {
+        var escaped = (value ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"");
+        return $"\"{escaped}\"";
+    }
 
     private static IReadOnlyList<DetectionEntityMappingDraft> ParseEntityMappings(string text)
     {

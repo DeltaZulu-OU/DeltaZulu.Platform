@@ -123,6 +123,7 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         services.AddScoped<LanguageService>();
         services.AddScoped<WidgetEditorInterop>();
         services.AddScoped<DashboardTransferInterop>();
+        services.AddScoped<MitreAttackCatalogService>();
 
         services.AddProtonDetectionBackend();
         services.AddSingleton<NrtRuleCompiler>();

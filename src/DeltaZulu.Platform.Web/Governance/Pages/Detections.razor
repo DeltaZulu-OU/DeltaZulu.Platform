@@ -20,7 +20,7 @@
     <Actions>
         <MudButton Variant="Variant.Filled" Color="Color.Primary"
                    StartIcon="@Icons.Material.Outlined.Add"
-                   OnClick="OpenNewDetectionDialog">
+                   OnClick="OpenNewDetectionPage">
             New detection
         </MudButton>
     </Actions>
@@ -59,7 +59,7 @@ else if (_filteredDetections.Count == 0)
         <Actions>
             <MudButton Variant="Variant.Filled" Color="Color.Primary"
                        StartIcon="@Icons.Material.Outlined.Add"
-                       OnClick="OpenNewDetectionDialog">
+                       OnClick="OpenNewDetectionPage">
                 New detection
             </MudButton>
         </Actions>
@@ -137,13 +137,7 @@ else
             .ToList();
     }
 
-    private async Task OpenNewDetectionDialog()
-    {
-        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<NewDetectionDialog>("New detection", options);
-        var result = await dialog.Result;
-        if (result is not null && !result.Canceled) await LoadAsync();
-    }
+    private void OpenNewDetectionPage() => Nav.NavigateTo("/governance/detections/new");
 
     private async Task OpenChangeForDetection(DetectionId detectionId)
     {
