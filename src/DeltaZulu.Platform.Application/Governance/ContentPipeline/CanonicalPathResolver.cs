@@ -50,6 +50,38 @@ public static class CanonicalPathResolver
     }
 
     /// <summary>
+    /// Converts a repository-relative accepted-content path for the supplied detection slug
+    /// back to its logical package path, or <c>null</c> when the path belongs to another detection.
+    /// </summary>
+    public static string? TryGetLogicalPath(string detectionSlug, string repositoryPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(detectionSlug);
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+
+        var prefix = DetectionPrefix(detectionSlug);
+        if (string.Equals(repositoryPath, prefix + ".yaml", StringComparison.Ordinal))
+        {
+            return "detection.yaml";
+        }
+
+        var flatPrefix = prefix + "-";
+        if (!repositoryPath.StartsWith(flatPrefix, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var relative = repositoryPath[flatPrefix.Length..];
+        return relative switch {
+            "rule.kql" => "rule.kql",
+            _ when relative.StartsWith("tests-", StringComparison.Ordinal) => "tests/" + relative["tests-".Length..],
+            _ when relative.StartsWith("fixtures-", StringComparison.Ordinal) => "fixtures/" + relative["fixtures-".Length..],
+            _ when relative.StartsWith("notes-assets-", StringComparison.Ordinal) => "notes/assets/" + relative["notes-assets-".Length..],
+            _ when relative.StartsWith("notes-", StringComparison.Ordinal) => "notes/" + relative["notes-".Length..],
+            _ => relative,
+        };
+    }
+
+    /// <summary>
     /// Given a repository-relative path, extracts the detection slug if it lives under
     /// <c>detections/</c>. Returns <c>null</c> for paths outside that tree.
     /// </summary>

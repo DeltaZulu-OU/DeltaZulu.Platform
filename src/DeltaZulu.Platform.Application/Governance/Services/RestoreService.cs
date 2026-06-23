@@ -48,7 +48,6 @@ public sealed class RestoreService(
             ChangeRequestId.New(), restoreKey, restoreTitle, detection.Id, authorId,
             workflowProfileId, detection.CurrentVersionId, time.GetUtcNow(), linkedIssueId ?? version.LinkedIssueId);
 
-        var prefix = CanonicalPathResolver.DetectionPrefix(detection.Slug);
         if (!await contentStore.CommitExistsAsync(version.GitCommitSha, ct))
         {
             throw new DomainException(
@@ -56,8 +55,10 @@ public sealed class RestoreService(
                 $"Accepted content for version {version.DisplayVersion} is unavailable. Run accepted-content reconciliation before comparing or restoring this version.");
         }
 
-        var files = await contentStore.ListFilesAtCommitAsync(prefix, version.GitCommitSha, ct);
-        if (files.Count == 0)
+        var files = (await contentStore.ListFilesAtCommitAsync("detections", version.GitCommitSha, ct))
+            .Where(file => CanonicalPathResolver.TryGetLogicalPath(detection.Slug, file.RepositoryPath) is not null)
+            .ToArray();
+        if (files.Length == 0)
         {
             throw new DomainException("restore.content_missing",
                 $"No accepted content files were found for version {version.DisplayVersion}.");
@@ -65,7 +66,7 @@ public sealed class RestoreService(
 
         foreach (var file in files.OrderBy(f => f.RepositoryPath, StringComparer.Ordinal))
         {
-            var logicalPath = ToLogicalPath(prefix, file.RepositoryPath);
+            var logicalPath = ToLogicalPath(detection.Slug, file.RepositoryPath);
             change.UpsertDraftFile(
                 LogicalPath.Parse(logicalPath), InferContentType(logicalPath, file), file.Content,
                 authorId, time.GetUtcNow());
@@ -88,14 +89,10 @@ public sealed class RestoreService(
         return $"RST-{safeVersion}-{Guid.NewGuid():N}"[..32];
     }
 
-    private static string ToLogicalPath(string detectionPrefix, string repositoryPath)
-    {
-        var prefix = detectionPrefix.TrimEnd('/') + "/";
-        return !repositoryPath.StartsWith(prefix, StringComparison.Ordinal)
-            ? throw new DomainException("restore.path_outside_detection",
-                $"Accepted content path '{repositoryPath}' is outside the detection package.")
-            : repositoryPath[prefix.Length..];
-    }
+    private static string ToLogicalPath(string detectionSlug, string repositoryPath)
+        => CanonicalPathResolver.TryGetLogicalPath(detectionSlug, repositoryPath)
+            ?? throw new DomainException("restore.path_outside_detection",
+                $"Accepted content path '{repositoryPath}' is outside the detection package.");
 
     private static DraftContentType InferContentType(string logicalPath, ContentFile file) => file.IsBinary
             ? DraftContentType.StaticAsset
