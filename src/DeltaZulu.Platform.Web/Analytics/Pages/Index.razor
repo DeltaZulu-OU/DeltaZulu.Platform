@@ -2,11 +2,13 @@
 @namespace DeltaZulu.Platform.Web.Analytics.Pages
 @using DeltaZulu.Platform.Web.Analytics.Components
 @using DeltaZulu.Platform.Domain.Analytics.Rendering
+@using DeltaZulu.Platform.Web.Analytics.Exports
 @inject DeltaZulu.Platform.Web.Analytics.Rendering.RenderedQueryRunner RenderedQueryRunner
 @inject DeltaZulu.Platform.Domain.Analytics.Catalog.ApprovedViewCatalog Catalog
 @inject DeltaZulu.Platform.Web.Analytics.Services.EditorBus EditorBus
 @inject DeltaZulu.Platform.Web.Analytics.Services.LanguageService LanguageService
 @inject IJSRuntime JS
+@inject FileOperationsService FileOperations
 @inject DeltaZulu.Platform.Web.Analytics.Services.UserSettingsState UserSettings
 @inject DeltaZulu.Platform.Web.Analytics.Services.QueryLibraryService QueryLibrary
 @inject DeltaZulu.Platform.Web.Analytics.Services.VisualizationLibraryService VisualizationLibrary
@@ -119,6 +121,12 @@
                         <div class="hunt-results-toolbar-actions">
                             @if (_result?.Success == true)
                             {
+                                <button class="hunt-btn"
+                                        disabled="@IsExportCsvDisabled"
+                                        @onclick="ExportCsvAsync">
+                                    Export CSV
+                                </button>
+
                                 <button class="hunt-btn"
                                         disabled="@IsSaveActionDisabled"
                                         @onclick="SaveActiveResultArtifactAsync">
@@ -674,6 +682,9 @@
            && _chart?.CanRender == true
            && _chartOptions is not null;
 
+    private bool IsExportCsvDisabled
+        => _result is null || !_result.Success || _result.RowCount == 0 || _result.ColumnCount == 0;
+
     private bool IsSaveActionDisabled
         => _activeTab == ResultTab.Render
          ? _savingVisualization || !HasRenderOutput
@@ -683,6 +694,19 @@
         => _activeTab == ResultTab.Render
             ? (_savingVisualization ? "Saving…" : "Save visualization")
             : (_savingQuery ? "Saving…" : "Save query");
+
+    private async Task ExportCsvAsync()
+    {
+        if (_result is null || !_result.Success || _result.RowCount == 0 || _result.ColumnCount == 0)
+        {
+            return;
+        }
+
+        await FileOperations.DownloadAsync(
+            QueryResultCsvExporter.BuildCsvFileName(_cachedEditorText),
+            QueryResultCsvExporter.BuildCsv(_result),
+            QueryResultCsvExporter.MimeType);
+    }
 
     private Task SaveActiveResultArtifactAsync()
         => _activeTab == ResultTab.Render
