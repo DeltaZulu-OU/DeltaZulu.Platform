@@ -29,6 +29,22 @@ public sealed class MonacoLanguageMetadataGuardTests
         Assert.IsGreaterThan(setSchema, registerLanguage);
     }
 
+    [TestMethod]
+    public void HelperDrawerInsert_ReplacesEditorContentsInsteadOfCursorInsertion()
+    {
+        var source = ReadRepositorySource("src", "DeltaZulu.Platform.Web", "Analytics", "Pages", "Index.razor");
+        var insertStart = source.IndexOf("private async Task InsertHelperQueryAsync(string queryText)", StringComparison.Ordinal);
+        var appendStart = source.IndexOf("private async Task AppendHelperQueryAsync(string queryText)", StringComparison.Ordinal);
+
+        Assert.IsGreaterThanOrEqualTo(0, insertStart);
+        Assert.IsGreaterThan(insertStart, appendStart);
+
+        var insertMethod = source[insertStart..appendStart];
+        Assert.Contains("await LanguageService.SetEditorValueAsync(updated);", insertMethod);
+        Assert.DoesNotContain("InsertTextAtCursorAsync", insertMethod);
+        Assert.DoesNotContain("AppendHelperQueryAsync", insertMethod);
+    }
+
     private static string ReadRepositorySource(params string[] relativePath)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
