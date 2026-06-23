@@ -61,7 +61,7 @@ public sealed class DashboardListPageController
         try
         {
             await _dashboardRepository.SaveAsync(dashboard, cancellationToken);
-            _navigation.NavigateTo($"/dashboards/{dashboard.Id}");
+            _navigation.NavigateTo($"/analytics/dashboards/{dashboard.Id}");
         }
         catch (Exception ex)
         {
@@ -83,7 +83,7 @@ public sealed class DashboardListPageController
 
             var dashboard = DashboardJsonTransfer.ImportAsCopy(json);
             await _dashboardRepository.SaveAsync(dashboard, cancellationToken);
-            _navigation.NavigateTo($"/dashboards/{dashboard.Id}");
+            _navigation.NavigateTo($"/analytics/dashboards/{dashboard.Id}");
         }
         catch (Exception ex)
         {
@@ -135,5 +135,5 @@ public sealed class DashboardListPageController
     }
 
     public void OpenDashboard(string dashboardId)
-        => _navigation.NavigateTo($"/dashboards/{dashboardId}");
+        => _navigation.NavigateTo($"/analytics/dashboards/{dashboardId}");
 }
