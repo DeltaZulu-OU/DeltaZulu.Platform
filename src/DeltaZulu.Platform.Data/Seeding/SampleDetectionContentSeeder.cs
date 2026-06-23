@@ -13,7 +13,7 @@ public static class SampleDetectionContentSeeder
 {
     private static readonly SampleDetectionContentFile[] Files =
     {
-        new("dns-high-query-volume-per-name/detection.yaml", """
+        new("dns-high-query-volume-per-name.yaml", """
 id: dz-sample-dns-high-query-volume-per-name
 title: High DNS query volume for a single name
 status: sample
@@ -23,7 +23,12 @@ confidence: Medium
 risk_score: 35
 content_type: detection
 query_language: kql
-query_file: query.kql
+query: |
+  Dns
+  | where Timestamp > ago(1h)
+  | summarize QueryCount=count() by DeviceName, QueryName
+  | where QueryCount > 50
+  | sort by QueryCount desc
 schedule:
   type: cron
   expression: '0 */1 * * *'
@@ -55,14 +60,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("dns-high-query-volume-per-name/query.kql", """
-Dns
-| where Timestamp > ago(1h)
-| summarize QueryCount=count() by DeviceName, QueryName
-| where QueryCount > 50
-| sort by QueryCount desc
-"""),
-        new("inbound-ldap-ldaps-exposure/detection.yaml", """
+        new("inbound-ldap-ldaps-exposure.yaml", """
 id: dz-sample-inbound-ldap-ldaps-exposure
 title: Inbound LDAP or LDAPS connection observed
 status: sample
@@ -72,7 +70,12 @@ confidence: Medium
 risk_score: 50
 content_type: detection
 query_language: kql
-query_file: query.kql
+query: |
+  NetworkSession
+  | where Timestamp > ago(7d)
+  | where LocalPort in (389, 636, 3269)
+  | project Timestamp, DeviceName, LocalIP, LocalPort, RemoteIP, InitiatingProcessFileName, SourceType
+  | sort by Timestamp desc
 schedule:
   type: cron
   expression: '0 */1 * * *'
@@ -106,14 +109,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("inbound-ldap-ldaps-exposure/query.kql", """
-NetworkSession
-| where Timestamp > ago(7d)
-| where LocalPort in (389, 636, 3269)
-| project Timestamp, DeviceName, LocalIP, LocalPort, RemoteIP, InitiatingProcessFileName, SourceType
-| sort by Timestamp desc
-"""),
-        new("kerberos-preauth-disabled/detection.yaml", """
+        new("kerberos-preauth-disabled.yaml", """
 id: dz-sample-kerberos-preauth-disabled
 title: Kerberos preauthentication disabled for account
 status: sample
@@ -123,7 +119,14 @@ confidence: Medium
 risk_score: 80
 content_type: detection
 query_language: kql
-query_file: query.kql
+query: |
+  UserManagement
+  | where Timestamp > ago(7d)
+  | where EventId == 4738
+  | where AccountType =~ "User"
+  | where UserAccountControl has "2096"
+  | project Timestamp, TargetAccount, ActorAccount, UserAccountControl, DeviceName, SourceType
+  | sort by Timestamp desc
 schedule:
   type: cron
   expression: '0 */1 * * *'
@@ -157,16 +160,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("kerberos-preauth-disabled/query.kql", """
-UserManagement
-| where Timestamp > ago(7d)
-| where EventId == 4738
-| where AccountType =~ "User"
-| where UserAccountControl has "2096"
-| project Timestamp, TargetAccount, ActorAccount, UserAccountControl, DeviceName, SourceType
-| sort by Timestamp desc
-"""),
-        new("new-low-port-listener/detection.yaml", """
+        new("new-low-port-listener.yaml", """
 id: dz-sample-new-low-port-listener
 title: Low-numbered service listener created on endpoint
 status: sample
@@ -176,7 +170,13 @@ confidence: Medium
 risk_score: 55
 content_type: detection
 query_language: kql
-query_file: query.kql
+query: |
+  NetworkSession
+  | where Timestamp > ago(7d)
+  | where ActionType =~ "ListeningConnectionCreated"
+  | where LocalPort in (21, 22, 53, 80, 443, 445, 3389)
+  | project Timestamp, DeviceName, LocalIP, LocalPort, InitiatingProcessFileName, InitiatingProcessCommandLine, AccountName
+  | sort by Timestamp desc
 schedule:
   type: cron
   expression: '0 */1 * * *'
@@ -210,15 +210,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("new-low-port-listener/query.kql", """
-NetworkSession
-| where Timestamp > ago(7d)
-| where ActionType =~ "ListeningConnectionCreated"
-| where LocalPort in (21, 22, 53, 80, 443, 445, 3389)
-| project Timestamp, DeviceName, LocalIP, LocalPort, InitiatingProcessFileName, InitiatingProcessCommandLine, AccountName
-| sort by Timestamp desc
-"""),
-        new("password-not-required-flag-set/detection.yaml", """
+        new("password-not-required-flag-set.yaml", """
 id: dz-sample-password-not-required-flag-set
 title: Active Directory account set to password not required
 status: sample
@@ -228,7 +220,13 @@ confidence: High
 risk_score: 75
 content_type: detection
 query_language: kql
-query_file: query.kql
+query: |
+  UserManagement
+  | where Timestamp > ago(7d)
+  | where EventId == 4738
+  | where UserAccountControl has "2082"
+  | project Timestamp, TargetAccount, ActorAccount, UserAccountControl, DeviceName, SourceType
+  | sort by Timestamp desc
 schedule:
   type: cron
   expression: '0 */1 * * *'
@@ -263,15 +261,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("password-not-required-flag-set/query.kql", """
-UserManagement
-| where Timestamp > ago(7d)
-| where EventId == 4738
-| where UserAccountControl has "2082"
-| project Timestamp, TargetAccount, ActorAccount, UserAccountControl, DeviceName, SourceType
-| sort by Timestamp desc
-"""),
-        new("powershell-execution-policy-change/detection.yaml", """
+        new("powershell-execution-policy-change.yaml", """
 id: dz-sample-powershell-execution-policy-change
 title: PowerShell execution policy changed by non-system account
 status: sample
@@ -281,7 +271,14 @@ confidence: High
 risk_score: 55
 content_type: detection
 query_language: kql
-query_file: query.kql
+query: |
+  ProcessEvent
+  | where Timestamp > ago(1d)
+  | where FileName =~ "powershell.exe"
+  | where ProcessCommandLine contains "Set-ExecutionPolicy"
+  | where AccountName !~ "system"
+  | project Timestamp, DeviceName, AccountName, ProcessCommandLine, ParentFileName, SourceType
+  | sort by Timestamp desc
 schedule:
   type: cron
   expression: '0 */1 * * *'
@@ -315,16 +312,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("powershell-execution-policy-change/query.kql", """
-ProcessEvent
-| where Timestamp > ago(1d)
-| where FileName =~ "powershell.exe"
-| where ProcessCommandLine contains "Set-ExecutionPolicy"
-| where AccountName !~ "system"
-| project Timestamp, DeviceName, AccountName, ProcessCommandLine, ParentFileName, SourceType
-| sort by Timestamp desc
-"""),
-        new("powershell-public-network-connection/detection.yaml", """
+        new("powershell-public-network-connection.yaml", """
 id: dz-sample-powershell-public-network-connection
 title: PowerShell initiated public network connection
 status: sample
@@ -334,7 +322,15 @@ confidence: Medium
 risk_score: 60
 content_type: detection
 query_language: kql
-query_file: query.kql
+query: |
+  NetworkSession
+  | where Timestamp > ago(1d)
+  | where InitiatingProcessCommandLine contains "powershell"
+  | where RemoteIPType =~ "Public"
+  | where AccountName !~ "system"
+  | where AccountName !~ "local service"
+  | project Timestamp, DeviceName, AccountName, InitiatingProcessCommandLine, LocalIP, RemoteIP, RemotePort, RemoteUrl
+  | sort by Timestamp desc
 schedule:
   type: cron
   expression: '0 */1 * * *'
@@ -371,17 +367,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("powershell-public-network-connection/query.kql", """
-NetworkSession
-| where Timestamp > ago(1d)
-| where InitiatingProcessCommandLine contains "powershell"
-| where RemoteIPType =~ "Public"
-| where AccountName !~ "system"
-| where AccountName !~ "local service"
-| project Timestamp, DeviceName, AccountName, InitiatingProcessCommandLine, LocalIP, RemoteIP, RemotePort, RemoteUrl
-| sort by Timestamp desc
-"""),
-        new("public-ssh-egress/detection.yaml", """
+        new("public-ssh-egress.yaml", """
 id: dz-sample-public-ssh-egress
 title: Outbound SSH connection to public endpoint
 status: sample
@@ -391,7 +377,13 @@ confidence: Medium
 risk_score: 45
 content_type: detection
 query_language: kql
-query_file: query.kql
+query: |
+  NetworkSession
+  | where Timestamp > ago(1d)
+  | where RemotePort == 22
+  | where RemoteIPType =~ "Public"
+  | project Timestamp, DeviceName, AccountName, InitiatingProcessCommandLine, LocalIP, RemoteIP, RemoteUrl
+  | sort by Timestamp desc
 schedule:
   type: cron
   expression: '0 */1 * * *'
@@ -425,15 +417,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("public-ssh-egress/query.kql", """
-NetworkSession
-| where Timestamp > ago(1d)
-| where RemotePort == 22
-| where RemoteIPType =~ "Public"
-| project Timestamp, DeviceName, AccountName, InitiatingProcessCommandLine, LocalIP, RemoteIP, RemoteUrl
-| sort by Timestamp desc
-"""),
-        new("rdp-interactive-logon/detection.yaml", """
+        new("rdp-interactive-logon.yaml", """
 id: dz-sample-rdp-interactive-logon
 title: Remote Desktop interactive logon observed
 status: sample
@@ -443,7 +427,13 @@ confidence: High
 risk_score: 40
 content_type: detection
 query_language: kql
-query_file: query.kql
+query: |
+  Authentication
+  | where Timestamp > ago(7d)
+  | where EventId == 4624
+  | where LogonType == 10
+  | project Timestamp, DeviceName, AccountName, AccountDomain, SourceIP, LogonType, SourceType
+  | sort by Timestamp desc
 schedule:
   type: cron
   expression: '0 */1 * * *'
@@ -476,15 +466,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("rdp-interactive-logon/query.kql", """
-Authentication
-| where Timestamp > ago(7d)
-| where EventId == 4624
-| where LogonType == 10
-| project Timestamp, DeviceName, AccountName, AccountDomain, SourceIP, LogonType, SourceType
-| sort by Timestamp desc
-"""),
-        new("suspicious-command-line-download/detection.yaml", """
+        new("suspicious-command-line-download.yaml", """
 id: dz-sample-suspicious-command-line-download
 title: Command-line download utility usage
 status: sample
@@ -494,7 +476,12 @@ confidence: Medium
 risk_score: 60
 content_type: detection
 query_language: kql
-query_file: query.kql
+query: |
+  ProcessEvent
+  | where Timestamp > ago(1d)
+  | where ProcessCommandLine has_any ("Invoke-WebRequest", "DownloadString", "curl", "wget", "bitsadmin")
+  | project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine, ParentFileName, SourceType
+  | sort by Timestamp desc
 schedule:
   type: cron
   expression: '0 */1 * * *'
@@ -529,13 +516,6 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("suspicious-command-line-download/query.kql", """
-ProcessEvent
-| where Timestamp > ago(1d)
-| where ProcessCommandLine has_any ("Invoke-WebRequest", "DownloadString", "curl", "wget", "bitsadmin")
-| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine, ParentFileName, SourceType
-| sort by Timestamp desc
-"""),
     };
 
     /// <summary>
@@ -568,8 +548,24 @@ ProcessEvent
             written.Add(fullPath);
         }
 
+        foreach (var obsoleteRelativePath in ObsoleteSplitQueryFiles)
+        {
+            var obsoleteFullPath = Path.Combine(rootDirectory, obsoleteRelativePath.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(obsoleteFullPath))
+            {
+                continue;
+            }
+
+            File.Delete(obsoleteFullPath);
+            written.Add(obsoleteFullPath);
+        }
+
         return written;
     }
+
+    private static readonly string[] ObsoleteSplitQueryFiles = Files
+        .Select(file => file.RelativePath[..^".yaml".Length] + "/query.kql")
+        .ToArray();
 
     /// <summary>
     /// Seeds the accepted-content Git repository with canonical sample detection files.
@@ -615,6 +611,22 @@ ProcessEvent
         }
 
         using var repository = new Repository(repositoryDirectory);
+        foreach (var obsoleteRelativePath in ObsoleteSplitQueryFiles)
+        {
+            var obsoleteRepositoryPath = "detections/" + obsoleteRelativePath;
+            var obsoleteFullPath = Path.Combine(
+                repositoryDirectory,
+                obsoleteRepositoryPath.Replace('/', Path.DirectorySeparatorChar));
+
+            if (File.Exists(obsoleteFullPath))
+            {
+                File.Delete(obsoleteFullPath);
+                written.Add(obsoleteRepositoryPath);
+            }
+
+            stagePaths.Add(obsoleteRepositoryPath);
+        }
+
         foreach (var path in stagePaths.Distinct(StringComparer.Ordinal))
         {
             Commands.Stage(repository, path);
@@ -709,7 +721,7 @@ ProcessEvent
                 VALUES
                     (@VersionId, @DetectionId, 1, '1.0', @Title, @ChangeSummary,
                      @AuthorId, 'StandardReview', @ChangeRequestId, NULL,
-                     @AcceptedAt, 'detection.yaml;query.kql', @GitCommitSha, @ChecksSummary, @ReviewSummary)
+                     @AcceptedAt, 'detection.yaml', @GitCommitSha, @ChecksSummary, @ReviewSummary)
                 """, new {
                 VersionId = versionId,
                 DetectionId = detectionId,

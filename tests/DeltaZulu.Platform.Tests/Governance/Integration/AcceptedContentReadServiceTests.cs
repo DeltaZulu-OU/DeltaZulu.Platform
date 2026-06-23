@@ -34,9 +34,9 @@ public sealed class AcceptedContentReadServiceTests : IDisposable
 
         Assert.HasCount(2, files);
         Assert.AreEqual("detection.yaml", files[0].LogicalPath);
-        Assert.AreEqual("detections/accepted-read/detection.yaml", files[0].RepositoryPath);
+        Assert.AreEqual("detections/accepted-read.yaml", files[0].RepositoryPath);
         Assert.AreEqual("rule.kql", files[1].LogicalPath);
-        Assert.AreEqual("detections/accepted-read/rule.kql", files[1].RepositoryPath);
+        Assert.AreEqual("detections/accepted-read-rule.kql", files[1].RepositoryPath);
     }
 
     [TestMethod]

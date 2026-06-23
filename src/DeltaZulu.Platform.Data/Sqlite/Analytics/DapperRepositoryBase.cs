@@ -7,6 +7,7 @@ public abstract class DapperRepositoryBase : IApplicationPersistenceRepository, 
     private readonly string _createSchemaSql;
     private readonly SemaphoreSlim _schemaSemaphore = new(1, 1);
     private bool _initialized;
+    private int _disposed;
 
     protected DapperRepositoryBase(IAppDbConnectionFactory connectionFactory, string createSchemaSql)
     {
@@ -44,5 +45,23 @@ public abstract class DapperRepositoryBase : IApplicationPersistenceRepository, 
         }
     }
 
-    public void Dispose() => _schemaSemaphore.Dispose();
+    protected virtual void Dispose(bool disposing)
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        if (disposing)
+        {
+            _schemaSemaphore.Dispose();
+        }
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
 }

@@ -132,7 +132,7 @@
 
         if (!string.IsNullOrWhiteSpace(queryText))
         {
-            EditorBus.RequestInsert(queryText);
+            EditorBus.RequestReplace(queryText);
         }
     }
 }

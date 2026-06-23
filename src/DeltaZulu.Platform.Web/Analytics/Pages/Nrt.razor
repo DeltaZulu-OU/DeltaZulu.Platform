@@ -1,0 +1,476 @@
+@page "/analytics/nrt"
+@namespace DeltaZulu.Platform.Web.Analytics.Pages
+@using DeltaZulu.Platform.Application.Analytics.Nrt
+@using DeltaZulu.Platform.Domain.Analytics.Catalog
+@using DeltaZulu.Platform.Domain.Analytics.Nrt
+@inject NrtRuleService NrtRuleService
+@inject DeltaZulu.Platform.Web.Analytics.Services.LanguageService LanguageService
+@inject ApprovedViewCatalog Catalog
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@implements IAsyncDisposable
+
+<DzPageHeader Title="Realtime Detection Rules"
+              Description="Realtime detection rules. Create regular detections from the Detections area and choose realtime or scheduled during editing." />
+
+<div class="nrt-layout">
+
+    @* ── Left panel: rule editor ── *@
+    <section class="nrt-editor-panel" aria-label="Rule editor">
+
+        <DzPanel Title="@(_editingId is null ? "New Realtime Rule" : "Edit Rule")">
+
+            <div class="nrt-form">
+
+                @* Metadata row *@
+                <div class="nrt-form-row">
+                    <MudTextField @bind-Value="_title"
+                                  Label="Title"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Class="nrt-field nrt-field--wide"
+                                  Placeholder="e.g. PowerShell download cradle detected" />
+
+                    <MudSelect @bind-Value="_severity" Label="Severity" Variant="Variant.Outlined" Dense="true" Class="nrt-field">
+                        <MudSelectItem Value='"Informational"'>Informational</MudSelectItem>
+                        <MudSelectItem Value='"Low"'>Low</MudSelectItem>
+                        <MudSelectItem Value='"Medium"'>Medium</MudSelectItem>
+                        <MudSelectItem Value='"High"'>High</MudSelectItem>
+                        <MudSelectItem Value='"Critical"'>Critical</MudSelectItem>
+                    </MudSelect>
+
+                    <MudSelect @bind-Value="_confidence" Label="Confidence" Variant="Variant.Outlined" Dense="true" Class="nrt-field">
+                        <MudSelectItem Value='"Low"'>Low</MudSelectItem>
+                        <MudSelectItem Value='"Medium"'>Medium</MudSelectItem>
+                        <MudSelectItem Value='"High"'>High</MudSelectItem>
+                    </MudSelect>
+                </div>
+
+                <div class="nrt-form-row">
+                    <MudTextField @bind-Value="_description"
+                                  Label="Description (optional)"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Class="nrt-field nrt-field--wide"
+                                  Placeholder="What does this rule detect?" />
+
+                    <MudNumericField @bind-Value="_riskScore"
+                                     Label="Risk Score"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense"
+                                     Min="0" Max="100"
+                                     Class="nrt-field nrt-field--narrow" />
+
+                    <MudNumericField @bind-Value="_threshold"
+                                     Label="Threshold (t)"
+                                     HelperText="Alert when MV has ≥ t rows"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense"
+                                     Min="0"
+                                     Class="nrt-field nrt-field--narrow" />
+                </div>
+
+                <div class="nrt-form-row">
+                    <MudTextField @bind-Value="_mitreTactics"
+                                  Label="MITRE Tactics (comma-separated)"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Class="nrt-field"
+                                  Placeholder="e.g. Execution, Command and Control" />
+
+                    <MudTextField @bind-Value="_mitreTechniques"
+                                  Label="MITRE Techniques (comma-separated)"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Class="nrt-field"
+                                  Placeholder="e.g. T1059, T1105" />
+                </div>
+
+                @* KQL editor *@
+                <div class="nrt-editor-label-row">
+                    <span class="nrt-label">KQL Query</span>
+                    <div class="nrt-editor-actions">
+                        <button class="hunt-btn" @onclick="PreviewAsync" disabled="@_busy">
+                            @(_busy ? "Compiling…" : "Preview deployment SQL")
+                        </button>
+                        <MudSwitch @bind-Value="_isEnabled" Label="Enabled" Color="Color.Success" />
+                    </div>
+                </div>
+
+                <div class="nrt-kql-editor">
+                    <div id="nrt-kql-editor" class="hunt-editor-textarea"></div>
+                </div>
+
+                @if (_compilationErrors.Count > 0)
+                {
+                    <div class="hunt-diagnostics">
+                        @foreach (var err in _compilationErrors)
+                        {
+                            <div class="hunt-diagnostic hunt-diagnostic-error">@err</div>
+                        }
+                    </div>
+                }
+
+                @* Deployment SQL preview *@
+                @if (_protonDdl is not null)
+                {
+                    <div class="nrt-ddl-preview">
+                        <div class="nrt-ddl-header">
+                            <span class="nrt-label">Generated Deployment DDL</span>
+                            <button class="hunt-btn hunt-btn-clear" @onclick="CopyDdl">Copy</button>
+                        </div>
+                        <pre class="nrt-ddl-code">@_protonDdl</pre>
+                    </div>
+                }
+
+                <div class="nrt-form-actions">
+                    <button class="hunt-btn hunt-btn-run"
+                            disabled="@(_busy || string.IsNullOrWhiteSpace(_title))"
+                            @onclick="SaveAsync">
+                        @(_busy ? "Saving…" : (_editingId is null ? "Save Rule" : "Update Rule"))
+                    </button>
+
+                    @if (_editingId is not null)
+                    {
+                        <button class="hunt-btn hunt-btn-clear" @onclick="ResetForm">Cancel edit</button>
+                    }
+                </div>
+
+            </div>
+
+        </DzPanel>
+
+    </section>
+
+    @* ── Right panel: rule list ── *@
+    <section class="nrt-rules-panel" aria-label="Saved realtime rules">
+
+        <DzPanel Title="Saved Rules">
+            @if (_loadingRules)
+            {
+                <DzLoadingState />
+            }
+            else if (_rules.Count == 0)
+            {
+                <DzEmptyState Title="No rules yet"
+                              Description="Save your first realtime detection rule using the editor."
+                              Icon="@Icons.Material.Outlined.Rule"
+                              Elevation="0" />
+            }
+            else
+            {
+                <div class="nrt-rule-list">
+                    @foreach (var rule in _rules)
+                    {
+                        <div class="nrt-rule-card @(rule.IsEnabled ? "" : "nrt-rule-card--disabled")">
+                            <div class="nrt-rule-card-header">
+                                <span class="nrt-rule-title">@rule.Title</span>
+                                <DzStatusChip Label="@rule.Severity" Tone="@SeverityTone(rule.Severity)" />
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(rule.Description))
+                            {
+                                <p class="nrt-rule-desc">@rule.Description</p>
+                            }
+                            <div class="nrt-rule-meta">
+                                <span class="nrt-meta-item">Threshold: @rule.Threshold</span>
+                                <span class="nrt-meta-item">Risk: @rule.RiskScore</span>
+                                @if (!string.IsNullOrWhiteSpace(rule.MitreTechniques))
+                                {
+                                    <span class="nrt-meta-item">@rule.MitreTechniques</span>
+                                }
+                                <span class="nrt-meta-item nrt-meta-updated">@rule.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm")</span>
+                            </div>
+                            <div class="nrt-rule-actions">
+                                <button class="hunt-btn" @onclick="() => EditRule(rule)">Edit</button>
+                                <button class="hunt-btn" @onclick="() => ToggleRule(rule)">
+                                    @(rule.IsEnabled ? "Disable" : "Enable")
+                                </button>
+                                <button class="hunt-btn" @onclick="() => ShowDdl(rule)">DDL</button>
+                                <button class="hunt-btn hunt-btn-clear" @onclick="() => DeleteRule(rule)">Delete</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </DzPanel>
+
+    </section>
+
+</div>
+
+@* DDL viewer drawer *@
+<DzCodeDrawer Open="_showDdlDrawer"
+              OpenChanged="v => _showDdlDrawer = v"
+              Title="@($"DDL — {_ddlDrawerRuleName}")"
+              Subtitle="Apply this DDL through the configured deployment pipeline."
+              Content="@_ddlDrawerContent"
+              EmptyTitle="No DDL available."
+              EmptyDescription="Compile the rule first."
+              AriaLabel="Deployment DDL" />
+
+@code {
+    private bool _editorInitialized;
+    private bool _busy;
+    private bool _loadingRules = true;
+    private bool _isEnabled = true;
+    private bool _showDdlDrawer;
+
+    private string _title = string.Empty;
+    private string? _description;
+    private string _severity = "Medium";
+    private string _confidence = "Medium";
+    private int _riskScore = 50;
+    private int _threshold = 0;
+    private string? _mitreTactics;
+    private string? _mitreTechniques;
+
+    private string? _editingId;
+    private string? _protonDdl;
+    private List<string> _compilationErrors = [];
+    private IReadOnlyList<NrtRule> _rules = [];
+    private string _ddlDrawerContent = string.Empty;
+    private string _ddlDrawerRuleName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRulesAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_editorInitialized)
+        {
+            var schema = Catalog.BuildEditorSchemaMetadata();
+            try
+            {
+                await LanguageService.InitializeKqlEditorAsync(
+                    "nrt-kql-editor",
+                    DefaultKql,
+                    () => Task.CompletedTask,
+                    schema);
+                _editorInitialized = true;
+            }
+            catch
+            {
+                // Editor not yet mounted — will retry on next render
+            }
+        }
+    }
+
+    private async Task PreviewAsync()
+    {
+        _compilationErrors = [];
+        _protonDdl = null;
+        _busy = true;
+
+        try
+        {
+            var kql = await GetEditorKqlAsync();
+            if (string.IsNullOrWhiteSpace(kql))
+            {
+                _compilationErrors = ["KQL query is empty."];
+                return;
+            }
+
+            var ruleId = _editingId ?? Guid.NewGuid().ToString("N");
+            var result = NrtRuleService.Preview(ruleId, kql);
+
+            if (!result.Success)
+            {
+                _compilationErrors = result.Errors.ToList();
+                return;
+            }
+
+            _protonDdl = result.MaterializedViewDdl;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_title))
+        {
+            Snackbar.Add("Title is required.", Severity.Warning);
+            return;
+        }
+
+        _compilationErrors = [];
+        _protonDdl = null;
+        _busy = true;
+
+        try
+        {
+            var kql = await GetEditorKqlAsync();
+            if (string.IsNullOrWhiteSpace(kql))
+            {
+                _compilationErrors = ["KQL query is empty."];
+                return;
+            }
+
+            var (rule, compilation) = await NrtRuleService.SaveRuleAsync(
+                existingId:      _editingId,
+                title:           _title,
+                description:     _description,
+                kqlQuery:        kql,
+                threshold:       _threshold,
+                severity:        _severity,
+                confidence:      _confidence,
+                riskScore:       _riskScore,
+                mitreTactics:    _mitreTactics,
+                mitreTechniques: _mitreTechniques,
+                isEnabled:       _isEnabled);
+
+            if (!compilation.Success)
+            {
+                _compilationErrors = compilation.Errors.ToList();
+                Snackbar.Add("Rule could not be saved — fix compilation errors.", Severity.Error);
+                return;
+            }
+
+            _protonDdl = compilation.MaterializedViewDdl;
+            Snackbar.Add($"Rule '{_title}' saved.", Severity.Success);
+            ResetForm();
+            await LoadRulesAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void EditRule(NrtRule rule)
+    {
+        _editingId       = rule.Id;
+        _title           = rule.Title;
+        _description     = rule.Description;
+        _severity        = rule.Severity;
+        _confidence      = rule.Confidence;
+        _riskScore       = rule.RiskScore;
+        _threshold       = rule.Threshold;
+        _mitreTactics    = rule.MitreTactics;
+        _mitreTechniques = rule.MitreTechniques;
+        _isEnabled       = rule.IsEnabled;
+        _protonDdl       = rule.MaterializedViewDdl;
+        _compilationErrors = [];
+
+        if (_editorInitialized)
+            _ = LanguageService.SetEditorValueAsync(rule.KqlQuery);
+    }
+
+    private async Task ToggleRule(NrtRule rule)
+    {
+        try
+        {
+            await NrtRuleService.ToggleEnabledAsync(rule.Id, !rule.IsEnabled);
+            await LoadRulesAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Could not toggle rule: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteRule(NrtRule rule)
+    {
+        try
+        {
+            await NrtRuleService.DeleteRuleAsync(rule.Id);
+            if (_editingId == rule.Id) ResetForm();
+            await LoadRulesAsync();
+            Snackbar.Add($"Rule '{rule.Title}' deleted.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ShowDdl(NrtRule rule)
+    {
+        _ddlDrawerRuleName = rule.Title;
+        _ddlDrawerContent  = rule.MaterializedViewDdl ?? "(No DDL — rule was never compiled successfully.)";
+        _showDdlDrawer     = true;
+    }
+
+    private async Task CopyDdl()
+    {
+        if (string.IsNullOrWhiteSpace(_protonDdl)) return;
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", _protonDdl);
+            Snackbar.Add("DDL copied to clipboard.", Severity.Success);
+        }
+        catch
+        {
+            Snackbar.Add("Copy not available in this browser context.", Severity.Warning);
+        }
+    }
+
+    private void ResetForm()
+    {
+        _editingId       = null;
+        _title           = string.Empty;
+        _description     = null;
+        _severity        = "Medium";
+        _confidence      = "Medium";
+        _riskScore       = 50;
+        _threshold       = 0;
+        _mitreTactics    = null;
+        _mitreTechniques = null;
+        _isEnabled       = true;
+        _protonDdl       = null;
+        _compilationErrors = [];
+
+        if (_editorInitialized)
+            _ = LanguageService.SetEditorValueAsync(DefaultKql);
+    }
+
+    private async Task LoadRulesAsync()
+    {
+        _loadingRules = true;
+        try
+        {
+            _rules = await NrtRuleService.ListRulesAsync();
+        }
+        finally
+        {
+            _loadingRules = false;
+        }
+    }
+
+    private async Task<string> GetEditorKqlAsync()
+    {
+        if (!_editorInitialized) return string.Empty;
+        try { return await LanguageService.GetEditorValueAsync(); }
+        catch { return string.Empty; }
+    }
+
+    private static string SeverityTone(string severity) => severity switch {
+        "Critical"      => "error",
+        "High"          => "warning",
+        "Medium"        => "info",
+        "Low"           => "success",
+        "Informational" => "neutral",
+        _               => "neutral"
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        await LanguageService.DisposeAsync();
+    }
+
+    private const string DefaultKql =
+        """
+        ProcessEvent
+        | where Timestamp > ago(5m)
+        | where ProcessCommandLine contains "powershell"
+        | project Timestamp, DeviceName, AccountName, ProcessCommandLine
+        """;
+}

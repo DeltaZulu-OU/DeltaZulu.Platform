@@ -94,7 +94,7 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAntiforgery();
 
-// Bootstrap Analytics module (DuckDB schema, application persistence)
+// Bootstrap Analytics module (schema, application persistence)
 await app.BootstrapAnalyticsModuleAsync(new AnalyticsModuleOptions {
     BootstrapDuckDbSchema = true,
     BootstrapApplicationPersistence = true,

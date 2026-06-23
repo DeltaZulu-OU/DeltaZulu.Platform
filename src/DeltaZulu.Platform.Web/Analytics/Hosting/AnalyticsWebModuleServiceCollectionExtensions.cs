@@ -1,3 +1,5 @@
+using DeltaZulu.Platform.Application.Analytics.Nrt;
+using DeltaZulu.Platform.Data.Proton;
 using DeltaZulu.Platform.Application.Analytics.Validation;
 using DeltaZulu.Platform.Data.DuckDb.Execution;
 using DeltaZulu.Platform.Data.DuckDb;
@@ -32,7 +34,7 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         "candidate_evidence"];
 
     /// <summary>
-    /// Registers DuckDB-backed Analytics query/runtime services. This layer is reusable outside the
+    /// Registers Analytics query/runtime services. This layer is reusable outside the
     /// standalone Blazor host and deliberately excludes application-state persistence and UI providers.
     /// </summary>
     public static IServiceCollection AddAnalyticsRuntime(
@@ -82,7 +84,7 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
 
-        // Keep repository writes on Microsoft.Data.Sqlite: DuckDB's SQLite attachment supports
+        // Keep repository writes on Microsoft.Data.Sqlite: the analytics runtime attachment supports
         // cross-database reads, but does not support SQLite-backed ON CONFLICT/MERGE writes.
         services.AddApplicationPersistence($"Data Source={options.AppDbPath}");
         services.AddDashboards();
@@ -121,6 +123,11 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         services.AddScoped<LanguageService>();
         services.AddScoped<WidgetEditorInterop>();
         services.AddScoped<DashboardTransferInterop>();
+        services.AddScoped<MitreAttackCatalogService>();
+
+        services.AddProtonDetectionBackend();
+        services.AddSingleton<NrtRuleCompiler>();
+        services.AddScoped<NrtRuleService>();
 
         return services;
     }

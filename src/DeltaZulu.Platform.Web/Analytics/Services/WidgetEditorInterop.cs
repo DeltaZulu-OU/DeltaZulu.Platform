@@ -19,6 +19,9 @@ public sealed class WidgetEditorInterop(IJSRuntime js)
     public ValueTask<string> GetValueAsync(string elementId) =>
         js.InvokeAsync<string>("huntingDashboardWidgetEditor.getValue", elementId);
 
+    public ValueTask SetValueAsync(string elementId, string value) =>
+        js.InvokeVoidAsync("huntingDashboardWidgetEditor.setValue", elementId, value);
+
     public ValueTask DisposeEditorAsync(string elementId) =>
         js.InvokeVoidAsync("huntingDashboardWidgetEditor.dispose", elementId);
 

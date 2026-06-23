@@ -7,14 +7,10 @@ confidence: Medium
 risk_score: 50
 content_type: detection
 query_language: kql
-query_file: query.kql
-schedule:
-  type: cron
-  expression: '0 */1 * * *'
+trigger_type: scheduled
+schedule: '0 */1 * * *'
 lookback: 1d
-materialization:
-  mode: per_result_row
-  max_alerts_per_run: 100
+max_alerts_per_run: 100
 source:
   repository: Sentinel-Queries-main sample extract
   original_path: Defender for Endpoint/Device-SummarizeLDAPandLDAPStraffic.kql
@@ -24,6 +20,12 @@ description: >-
   surfacing directory-service exposure and unexpected LDAP listeners.
 required_tables:
   - NetworkSession
+query: |
+  NetworkSession
+  | where Timestamp > ago(7d)
+  | where LocalPort in (389, 636, 3269)
+  | project Timestamp, DeviceName, LocalIP, LocalPort, RemoteIP, InitiatingProcessFileName, SourceType
+  | sort by Timestamp desc
 tactics:
   - Discovery
   - Lateral Movement

@@ -55,9 +55,9 @@ public sealed class MergeServiceTests : IDisposable
         }
 
         // Verify Git content store.
-        Assert.IsTrue(await _host.ContentStore.ExistsAsync("detections/quick-merge/detection.yaml", TestContext.CancellationToken));
-        Assert.IsTrue(await _host.ContentStore.ExistsAsync("detections/quick-merge/rule.kql", TestContext.CancellationToken));
-        var yamlFile = await _host.ContentStore.GetFileAsync("detections/quick-merge/detection.yaml", TestContext.CancellationToken);
+        Assert.IsTrue(await _host.ContentStore.ExistsAsync("detections/quick-merge.yaml", TestContext.CancellationToken));
+        Assert.IsTrue(await _host.ContentStore.ExistsAsync("detections/quick-merge-rule.kql", TestContext.CancellationToken));
+        var yamlFile = await _host.ContentStore.GetFileAsync("detections/quick-merge.yaml", TestContext.CancellationToken);
         Assert.AreEqual("id: quick-merge", yamlFile!.Content);
 
         // Verify change is merged.
@@ -220,7 +220,7 @@ public sealed class MergeServiceTests : IDisposable
         }
 
         // Git should have v2 content at HEAD.
-        var yaml = await _host.ContentStore.GetFileAsync("detections/multi-version/detection.yaml", TestContext.CancellationToken);
+        var yaml = await _host.ContentStore.GetFileAsync("detections/multi-version.yaml", TestContext.CancellationToken);
         Assert.AreEqual("v2", yaml!.Content);
     }
 
@@ -246,7 +246,7 @@ public sealed class MergeServiceTests : IDisposable
             await mergeSvc.MergeAsync(changeId, "u", "e@e.com", TestContext.CancellationToken);
         }
 
-        var note = await _host.ContentStore.GetFileAsync("detections/noted-det/notes/investigation.md", TestContext.CancellationToken);
+        var note = await _host.ContentStore.GetFileAsync("detections/noted-det-notes-investigation.md", TestContext.CancellationToken);
         Assert.IsNotNull(note);
         Assert.IsTrue(note.Content.Contains("T1110", StringComparison.Ordinal));
         Assert.IsFalse(note.IsBinary);
@@ -274,7 +274,7 @@ public sealed class MergeServiceTests : IDisposable
             await mergeSvc.MergeAsync(changeId, "u", "e@e.com", TestContext.CancellationToken);
         }
 
-        var asset = await _host.ContentStore.GetFileAsync("detections/asset-det/notes/assets/timeline.png", TestContext.CancellationToken);
+        var asset = await _host.ContentStore.GetFileAsync("detections/asset-det-notes-assets-timeline.png", TestContext.CancellationToken);
         Assert.IsNotNull(asset);
         Assert.IsTrue(asset.IsBinary);
         Assert.AreEqual(pngB64, asset.Content);
@@ -324,8 +324,8 @@ public sealed class MergeServiceTests : IDisposable
             await mergeSvc.MergeAsync(secondId, "u", "e@e.com", TestContext.CancellationToken);
         }
 
-        var yaml = await _host.ContentStore.GetFileAsync("detections/partial-preserve/detection.yaml", TestContext.CancellationToken);
-        var query = await _host.ContentStore.GetFileAsync("detections/partial-preserve/rule.kql", TestContext.CancellationToken);
+        var yaml = await _host.ContentStore.GetFileAsync("detections/partial-preserve.yaml", TestContext.CancellationToken);
+        var query = await _host.ContentStore.GetFileAsync("detections/partial-preserve-rule.kql", TestContext.CancellationToken);
 
         Assert.IsNotNull(yaml);
         Assert.AreEqual("id: partial-preserve\ntitle: v2", yaml.Content);

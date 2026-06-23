@@ -38,7 +38,7 @@ public sealed class AcceptedContentReadService(
             ?? throw new DomainException("detection.not_found", $"Detection '{change.DetectionId}' not found.");
 
         var prefix = CanonicalPathResolver.DetectionPrefix(detection.Slug);
-        var acceptedFiles = await contentStore.ListFilesAsync(prefix, ct);
+        var acceptedFiles = await contentStore.ListFilesAsync("detections", ct);
         var acceptedByLogical = ToLogicalPathMap(prefix, acceptedFiles);
 
         return change.DraftFiles
@@ -67,16 +67,17 @@ public sealed class AcceptedContentReadService(
             ?? throw new DomainException("detection.not_found", $"Detection '{detectionId}' not found.");
 
         var prefix = CanonicalPathResolver.DetectionPrefix(detection.Slug);
-        var files = await contentStore.ListFilesAsync(prefix, ct);
-        var prefixWithSlash = prefix.TrimEnd('/') + "/";
+        var files = await contentStore.ListFilesAsync("detections", ct);
 
         return files
-            .Where(file => file.RepositoryPath.StartsWith(prefixWithSlash, StringComparison.Ordinal))
-            .OrderBy(file => file.RepositoryPath, StringComparer.Ordinal)
+            .Select(file => new { File = file, LogicalPath = ToLogicalPath(prefix, file.RepositoryPath) })
+            .Where(file => file.LogicalPath is not null)
+            .OrderBy(file => file.LogicalPath == "detection.yaml" ? 0 : 1)
+            .ThenBy(file => file.LogicalPath, StringComparer.Ordinal)
             .Select(file => new AcceptedContentFileSummary(
-                file.RepositoryPath,
-                file.RepositoryPath[prefixWithSlash.Length..],
-                file.IsBinary))
+                file.File.RepositoryPath,
+                file.LogicalPath!,
+                file.File.IsBinary))
             .ToList();
     }
 
@@ -107,18 +108,32 @@ public sealed class AcceptedContentReadService(
         string detectionPrefix,
         IReadOnlyList<ContentFile> files)
     {
-        var prefixWithSlash = detectionPrefix.TrimEnd('/') + "/";
         var acceptedByLogical = new Dictionary<string, ContentFile>(StringComparer.Ordinal);
 
         foreach (var file in files)
         {
-            if (file.RepositoryPath.StartsWith(prefixWithSlash, StringComparison.Ordinal))
+            var logicalPath = ToLogicalPath(detectionPrefix, file.RepositoryPath);
+            if (logicalPath is not null)
             {
-                acceptedByLogical[file.RepositoryPath[prefixWithSlash.Length..]] = file;
+                acceptedByLogical[logicalPath] = file;
             }
         }
 
         return acceptedByLogical;
+    }
+
+    private static string? ToLogicalPath(string detectionPrefix, string repositoryPath)
+    {
+        var yamlPath = detectionPrefix + ".yaml";
+        if (string.Equals(repositoryPath, yamlPath, StringComparison.Ordinal))
+        {
+            return "detection.yaml";
+        }
+
+        var flatPrefix = detectionPrefix + "-";
+        return repositoryPath.StartsWith(flatPrefix, StringComparison.Ordinal)
+            ? repositoryPath[flatPrefix.Length..]
+            : null;
     }
 }
 

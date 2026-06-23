@@ -7,14 +7,10 @@ confidence: High
 risk_score: 40
 content_type: detection
 query_language: kql
-query_file: query.kql
-schedule:
-  type: cron
-  expression: '0 */1 * * *'
+trigger_type: scheduled
+schedule: '0 */1 * * *'
 lookback: 1d
-materialization:
-  mode: per_result_row
-  max_alerts_per_run: 100
+max_alerts_per_run: 100
 source:
   repository: Sentinel-Queries-main sample extract
   original_path: Active Directory/SecurityEvent-SummarizeRDPActivity.kql
@@ -24,6 +20,13 @@ description: >-
   for lateral movement review, not a final incident rule.
 required_tables:
   - Authentication
+query: |
+  Authentication
+  | where Timestamp > ago(7d)
+  | where EventId == 4624
+  | where LogonType == 10
+  | project Timestamp, DeviceName, AccountName, AccountDomain, SourceIP, LogonType, SourceType
+  | sort by Timestamp desc
 tactics:
   - Lateral Movement
 techniques:
