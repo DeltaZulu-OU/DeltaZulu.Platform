@@ -19,7 +19,7 @@ public sealed class SampleDetectionContentSeederTests
             var written = SampleDetectionContentSeeder.Seed(root);
 
             Assert.IsGreaterThanOrEqualTo(10, written.Count);
-            var metadataPath = Path.Combine(root, "powershell-execution-policy-change", "detection.yaml");
+            var metadataPath = Path.Combine(root, "powershell-execution-policy-change.yaml");
             var obsoleteQueryPath = Path.Combine(root, "powershell-execution-policy-change", "query.kql");
 
             Assert.IsTrue(File.Exists(metadataPath));
@@ -46,7 +46,7 @@ public sealed class SampleDetectionContentSeederTests
         try
         {
             SampleDetectionContentSeeder.Seed(root);
-            var path = Path.Combine(root, "powershell-execution-policy-change", "detection.yaml");
+            var path = Path.Combine(root, "powershell-execution-policy-change.yaml");
             File.WriteAllText(path, "id: custom-detection");
 
             SampleDetectionContentSeeder.Seed(root);
@@ -68,7 +68,7 @@ public sealed class SampleDetectionContentSeederTests
         {
             var written = SampleDetectionContentSeeder.SeedAcceptedContentRepository(root);
 
-            var metadataPath = Path.Combine(root, "detections", "powershell-execution-policy-change", "detection.yaml");
+            var metadataPath = Path.Combine(root, "detections", "powershell-execution-policy-change.yaml");
             var obsoleteQueryPath = Path.Combine(root, "detections", "powershell-execution-policy-change", "query.kql");
 
             Assert.IsGreaterThanOrEqualTo(10, written.Count);
@@ -77,7 +77,7 @@ public sealed class SampleDetectionContentSeederTests
 
             using var repository = new Repository(root);
             Assert.IsNotNull(repository.Head.Tip);
-            Assert.IsNotNull(repository.Head.Tip.Tree["detections/powershell-execution-policy-change/detection.yaml"]);
+            Assert.IsNotNull(repository.Head.Tip.Tree["detections/powershell-execution-policy-change.yaml"]);
             Assert.IsNull(repository.Head.Tip.Tree["detections/powershell-execution-policy-change/query.kql"]);
         }
         finally

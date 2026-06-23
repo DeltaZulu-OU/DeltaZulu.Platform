@@ -11,11 +11,11 @@ namespace DeltaZulu.Platform.Application.Governance.ContentPipeline;
 /// <remarks>
 /// <para>Repository layout:</para>
 /// <code>
-/// detections/&lt;slug&gt;/detection.yaml
-/// detections/&lt;slug&gt;/rule.kql
-/// detections/&lt;slug&gt;/tests/baseline.yaml
-/// detections/&lt;slug&gt;/notes/investigation.md
-/// detections/&lt;slug&gt;/notes/assets/timeline.png
+/// detections/&lt;slug&gt;.yaml
+/// detections/&lt;slug&gt;-rule.kql
+/// detections/&lt;slug&gt;-tests-baseline.yaml
+/// detections/&lt;slug&gt;-notes-investigation.md
+/// detections/&lt;slug&gt;-notes-assets-timeline.png
 /// </code>
 /// <para>The public convention belongs to <see cref="DetectionContentPathResolver" />. This
 /// adapter preserves the existing Governance API surface while delegating the convention to the
@@ -29,7 +29,7 @@ public static class CanonicalPathResolver
     /// </summary>
     /// <param name="detectionSlug">The detection's slug, e.g. <c>anomalous-sign-in</c>.</param>
     /// <param name="logicalPath">The logical path within the detection package, e.g. <c>rule.kql</c> or <c>notes/investigation.md</c>.</param>
-    /// <returns>The repository-relative path, e.g. <c>detections/anomalous-sign-in/rule.kql</c>.</returns>
+    /// <returns>The repository-relative path, e.g. <c>detections/anomalous-sign-in-rule.kql</c>.</returns>
     public static string Resolve(string detectionSlug, LogicalPath logicalPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(detectionSlug);

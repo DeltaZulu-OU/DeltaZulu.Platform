@@ -13,7 +13,7 @@ public static class SampleDetectionContentSeeder
 {
     private static readonly SampleDetectionContentFile[] Files =
     {
-        new("dns-high-query-volume-per-name/detection.yaml", """
+        new("dns-high-query-volume-per-name.yaml", """
 id: dz-sample-dns-high-query-volume-per-name
 title: High DNS query volume for a single name
 status: sample
@@ -60,7 +60,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("inbound-ldap-ldaps-exposure/detection.yaml", """
+        new("inbound-ldap-ldaps-exposure.yaml", """
 id: dz-sample-inbound-ldap-ldaps-exposure
 title: Inbound LDAP or LDAPS connection observed
 status: sample
@@ -109,7 +109,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("kerberos-preauth-disabled/detection.yaml", """
+        new("kerberos-preauth-disabled.yaml", """
 id: dz-sample-kerberos-preauth-disabled
 title: Kerberos preauthentication disabled for account
 status: sample
@@ -160,7 +160,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("new-low-port-listener/detection.yaml", """
+        new("new-low-port-listener.yaml", """
 id: dz-sample-new-low-port-listener
 title: Low-numbered service listener created on endpoint
 status: sample
@@ -210,7 +210,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("password-not-required-flag-set/detection.yaml", """
+        new("password-not-required-flag-set.yaml", """
 id: dz-sample-password-not-required-flag-set
 title: Active Directory account set to password not required
 status: sample
@@ -261,7 +261,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("powershell-execution-policy-change/detection.yaml", """
+        new("powershell-execution-policy-change.yaml", """
 id: dz-sample-powershell-execution-policy-change
 title: PowerShell execution policy changed by non-system account
 status: sample
@@ -312,7 +312,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("powershell-public-network-connection/detection.yaml", """
+        new("powershell-public-network-connection.yaml", """
 id: dz-sample-powershell-public-network-connection
 title: PowerShell initiated public network connection
 status: sample
@@ -367,7 +367,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("public-ssh-egress/detection.yaml", """
+        new("public-ssh-egress.yaml", """
 id: dz-sample-public-ssh-egress
 title: Outbound SSH connection to public endpoint
 status: sample
@@ -417,7 +417,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("rdp-interactive-logon/detection.yaml", """
+        new("rdp-interactive-logon.yaml", """
 id: dz-sample-rdp-interactive-logon
 title: Remote Desktop interactive logon observed
 status: sample
@@ -466,7 +466,7 @@ false_positive_notes:
 validation_notes:
   - Sample content only; tune thresholds, schemas, and suppression before production use.
 """),
-        new("suspicious-command-line-download/detection.yaml", """
+        new("suspicious-command-line-download.yaml", """
 id: dz-sample-suspicious-command-line-download
 title: Command-line download utility usage
 status: sample
@@ -564,7 +564,7 @@ validation_notes:
     }
 
     private static readonly string[] ObsoleteSplitQueryFiles = Files
-        .Select(file => file.RelativePath[..file.RelativePath.LastIndexOf('/')] + "/query.kql")
+        .Select(file => file.RelativePath[..^".yaml".Length] + "/query.kql")
         .ToArray();
 
     /// <summary>
