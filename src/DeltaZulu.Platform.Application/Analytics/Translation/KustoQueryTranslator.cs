@@ -704,6 +704,17 @@ internal sealed class KustoQueryTranslator
             return new UnaryScalar(ScalarUnaryOp.Not, args[0]);
         }
 
+        // KQL case(c1, v1, c2, v2, ..., default) → CaseScalar with paired branches.
+        if (name.Equals("case", StringComparison.OrdinalIgnoreCase) && args.Count >= 3 && args.Count % 2 == 1)
+        {
+            var branches = new List<(ScalarExpr When, ScalarExpr Then)>();
+            for (var i = 0; i < args.Count - 1; i += 2)
+            {
+                branches.Add((args[i], args[i + 1]));
+            }
+            return new CaseScalar(branches, args[^1]);
+        }
+
         // prev/next → window scalar expressions
         if (name is "prev" or "next")
         {

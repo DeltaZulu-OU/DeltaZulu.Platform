@@ -127,7 +127,7 @@ to_json(
             "abs" => $"abs({args[0]})",
             "ceiling" => $"ceil({args[0]})",
             "floor" => $"floor({args[0]})",
-            "round" => $"round({args[0]}, {args[1]})",
+            "round" => args.Count >= 2 ? $"round({args[0]}, {args[1]})" : $"round({args[0]}, 0)",
             "log" => $"ln({args[0]})",
             "log2" => $"log2({args[0]})",
             "log10" => $"log10({args[0]})",

@@ -357,6 +357,37 @@ public sealed partial class DuckDbQueryEmitterTests
     }
 
     [TestMethod]
+    [Description("round() with single argument defaults precision to 0")]
+    public void Emit_Round_SingleArg_DefaultsPrecisionToZero()
+    {
+        var node = new ProjectNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("rounded", new FunctionCall("round", [new ColumnRef("Value")]))]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "round(Value, 0)");
+    }
+
+    [TestMethod]
+    [Description("CaseScalar emitted from case() function translation")]
+    public void Emit_CaseScalar_MultiBranch()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("severity",
+                new CaseScalar(
+                    [(new BinaryScalar(new ColumnRef("ProcessId"), ScalarBinaryOp.Gt, new LiteralScalar(1000, LiteralKind.Int)),
+                      new LiteralScalar("high", LiteralKind.String)),
+                     (new BinaryScalar(new ColumnRef("ProcessId"), ScalarBinaryOp.Gt, new LiteralScalar(100, LiteralKind.Int)),
+                      new LiteralScalar("medium", LiteralKind.String))],
+                    new LiteralScalar("low", LiteralKind.String)))]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "CASE WHEN");
+        AssertSqlContains(sql, "ELSE 'low' END");
+    }
+
+    [TestMethod]
     [Description("LimitNode wrapping ScanNode")]
     public void Emit_Limit()
     {

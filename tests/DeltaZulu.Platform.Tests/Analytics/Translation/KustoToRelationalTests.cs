@@ -645,6 +645,40 @@ public sealed class KustoToRelationalTests
         Assert.IsNull(result);
     }
 
+    // ─── case() function ──────────────────────────────────────────
+
+    [TestMethod]
+    [Description("case(c1, v1, c2, v2, default) translates to CaseScalar")]
+    public void Case_Function_TranslatesToCaseScalar()
+    {
+        var (result, diag) = Translate(
+            """
+            ProcessEvent
+            | extend severity = case(
+                ProcessId > 1000, "high",
+                ProcessId > 100, "medium",
+                "low")
+            """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var ext = AssertIs<ExtendNode>(result);
+        AssertIs<CaseScalar>(ext.Extensions[0].Expression);
+    }
+
+    [TestMethod]
+    [Description("case() with single branch plus default")]
+    public void Case_SingleBranch_TranslatesToCaseScalar()
+    {
+        var (result, diag) = Translate(
+            """
+            ProcessEvent
+            | extend label = case(ProcessId > 0, "positive", "non-positive")
+            """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var ext = AssertIs<ExtendNode>(result);
+        var cs = AssertIs<CaseScalar>(ext.Extensions[0].Expression);
+        Assert.AreEqual(1, cs.Branches.Count);
+    }
+
     // ─── Spec-derived: sort default direction ────────────────────
 
     [TestMethod]

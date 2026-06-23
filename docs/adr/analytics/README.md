@@ -14,7 +14,7 @@ Current platform architecture is documented in [`../../ARCHITECTURE.md`](../../A
 | [`0006-reject-unsafe-kql-semantic-approximations.md`](0006-reject-unsafe-kql-semantic-approximations.md) | ADR 0006: Reject Unsafe KQL Semantic Approximations |
 | [`0007-use-quartz-with-db-backed-saved-queries-and-schedules.md`](0007-use-quartz-with-db-backed-saved-queries-and-schedules.md) | ADR 0007: Use Quartz with DB-Backed Saved Queries and Schedule Management |
 | [`0008-use-medallion-schemas-with-principle-driven-contracts.md`](0008-use-medallion-schemas-with-principle-driven-contracts.md) | ADR 0008: Use Medallion Schemas with Principle-Driven Silver and Golden Contracts |
-| [`0009-multi-dialect-backend-architecture.md`](0009-multi-dialect-backend-architecture.md) | ADR 0009: Multi-Dialect Backend Architecture (DuckDB + Future Proton/Arroyo) |
+| [`0009-multi-dialect-backend-architecture.md`](0009-multi-dialect-backend-architecture.md) | ~~ADR 0009: Multi-Dialect Backend Architecture (DuckDB + Future Proton/Arroyo)~~ — superseded by ADR 0018 |
 | [`0010-phase-1a-medallion-checkpoint.md`](0010-phase-1a-medallion-checkpoint.md) | ADR 0010: Treat Phase 1A as the medallion checkpoint |
 | [`0010-render-poc-subset-with-vizor-echarts.md`](0010-render-poc-subset-with-vizor-echarts.md) | ADR 0010: Implement a POC Subset of KQL `render` Using Vizor.ECharts |
 | [`0011-add-relational-planner-fast-path-gateway.md`](0011-add-relational-planner-fast-path-gateway.md) | ADR 0011: Add relational planner fast-path gateway |
@@ -28,3 +28,4 @@ Current platform architecture is documented in [`../../ARCHITECTURE.md`](../../A
 | [`0015-timeseries-adr-validation.md`](0015-timeseries-adr-validation.md) | ADR 0015 Validation + Engineering Blueprint: KQL Time-Series on DuckDB |
 | [`0016-threat-hunting-workflow-boundary.md`](0016-threat-hunting-workflow-boundary.md) | ADR 0016: Model threat hunting as a separate workflow aggregate |
 | [`0017-use-shared-platform-web-module-abstractions.md`](0017-use-shared-platform-web-module-abstractions.md) | ADR 0017: Use Shared Platform Web Module Abstractions |
+| [`0018-proton-core-streaming-detection-engine.md`](0018-proton-core-streaming-detection-engine.md) | ADR 0018: Proton as Core Streaming Detection Engine |
