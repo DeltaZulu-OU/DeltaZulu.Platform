@@ -117,14 +117,22 @@ body:has(.hunt-app) {
 /* ─── Schema browser and workbench navigation ─────────────────────────────── */
 .schema-browser {
     padding: 8px 0;
+    font-size: 12px;
+    --mud-typography-default-size: 12px;
+    --mud-typography-body1-size: 12px;
+    --mud-typography-body2-size: 11px;
 }
 
 .schema-nav-menu {
     width: 100%;
+    font-size: 12px;
 }
 
     .schema-nav-menu .mud-nav-link {
         color: var(--text-main);
+        min-height: 30px;
+        font-size: 12px;
+        line-height: 1.25;
     }
 
         .schema-nav-menu .mud-nav-link:hover,
@@ -134,6 +142,18 @@ body:has(.hunt-app) {
 
     .schema-nav-menu .mud-nav-link-text {
         min-width: 0;
+        font-size: 12px;
+        line-height: 1.25;
+    }
+
+    .schema-nav-menu .mud-nav-group > .mud-nav-link .mud-nav-link-text {
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .schema-nav-menu .mud-nav-link .mud-icon-root,
+    .schema-nav-menu .mud-nav-group .mud-icon-root {
+        font-size: 18px;
     }
 
 .schema-column-nav-item,
@@ -170,17 +190,23 @@ body:has(.hunt-app) {
     color: var(--text-dim);
 }
 
-.schema-col-type {
+schema-col-type {
     flex: 0 0 auto;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 10.5px;
 }
 
 .schema-saved-query-description {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 11px;
+    font-size: 10.5px;
+}
+
+.schema-col-name,
+.schema-saved-query-name {
+    font-size: 11.5px;
+    line-height: 1.25;
 }
 
 .schema-saved-queries-menu {
@@ -194,6 +220,7 @@ body:has(.hunt-app) {
 .schema-saved-queries-search {
     width: 100%;
     margin-bottom: 4px;
+    font-size: 12px;
 }
 
 .schema-saved-queries-list {
@@ -216,6 +243,7 @@ body:has(.hunt-app) {
 .schema-empty {
     padding: 8px 16px;
     color: var(--text-dim);
+    font-size: 12px;
 }
 
 /* ─── Main content ──────────────────────────────────────────────────────── */
@@ -1216,8 +1244,12 @@ samp,
 
 .schema-col-type {
     color: var(--dz-product-text-muted);
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 500;
+}
+
+.schema-browser .mud-nav-link {
+    min-height: 26px;
 }
 
 .schema-samples {
@@ -2793,6 +2825,10 @@ body.hunt-splitter-active {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    font-size: 12px;
+    --mud-typography-default-size: 12px;
+    --mud-typography-body1-size: 12px;
+    --mud-typography-body2-size: 11px;
 }
 
 .hunt-query-library-save {
@@ -2867,15 +2903,14 @@ body.hunt-splitter-active {
     gap: 0.25rem;
 }
 
-.hunt-query-library-link {
-    border: 0;
-    padding: 0;
-    background: transparent;
-    color: var(--text-head);
-    text-align: left;
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
+.hunt-query-library-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    font-size: 12px;
+    --mud-typography-default-size: 12px;
+    --mud-typography-body1-size: 12px;
+    --mud-typography-body2-size: 11px;
 }
 
     .hunt-query-library-link:hover {
@@ -2884,8 +2919,8 @@ body.hunt-splitter-active {
 
 .hunt-query-library-description,
 .hunt-query-library-meta {
-    font-size: 0.82rem;
-    line-height: 1.35;
+    font-size: 11px;
+    line-height: 1.3;
 }
 
 .hunt-query-library-description {
