@@ -168,17 +168,13 @@
         RefreshDescription();
     }
 
-    private static bool TryParseMinute(string value, out int minute) =>
-        int.TryParse(value, out minute) && minute is >= 0 and <= 59;
+    private static bool TryParseInRange(string value, int min, int max, out int result) =>
+        int.TryParse(value, out result) && result >= min && result <= max;
 
-    private static bool TryParseHour(string value, out int hour) =>
-        int.TryParse(value, out hour) && hour is >= 0 and <= 23;
-
-    private static bool TryParseDayOfWeek(string value, out int dayOfWeek) =>
-        int.TryParse(value, out dayOfWeek) && dayOfWeek is >= 0 and <= 6;
-
-    private static bool TryParseDayOfMonth(string value, out int dayOfMonth) =>
-        int.TryParse(value, out dayOfMonth) && dayOfMonth is >= 1 and <= 28;
+    private static bool TryParseMinute(string value, out int minute) => TryParseInRange(value, 0, 59, out minute);
+    private static bool TryParseHour(string value, out int hour) => TryParseInRange(value, 0, 23, out hour);
+    private static bool TryParseDayOfWeek(string value, out int dayOfWeek) => TryParseInRange(value, 0, 6, out dayOfWeek);
+    private static bool TryParseDayOfMonth(string value, out int dayOfMonth) => TryParseInRange(value, 1, 28, out dayOfMonth);
 
     private string Build() => _frequency switch
     {

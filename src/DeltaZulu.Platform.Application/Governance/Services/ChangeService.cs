@@ -108,7 +108,12 @@ public sealed class ChangeService(
 
     private static string YStr(string value)
     {
-        var escaped = (value ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"");
+        var escaped = (value ?? string.Empty)
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"")
+            .Replace("\n", "\\n")
+            .Replace("\r", "\\r")
+            .Replace("\t", "\\t");
         return $"\"{escaped}\"";
     }
 

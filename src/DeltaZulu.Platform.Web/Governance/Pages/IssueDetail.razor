@@ -398,8 +398,8 @@
                 .Where(l => !string.IsNullOrWhiteSpace(l))
                 .ToList();
             await IssueService.ClassifyAsync(_issue.Id, _tlpInput, labels);
-            _showClassifyForm = false;
             Snackbar.Add("Classification saved.", Severity.Success);
+            _showClassifyForm = false;
             await LoadAsync();
         }
         catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
@@ -424,11 +424,11 @@
         {
             var url = string.IsNullOrWhiteSpace(_extCaseUrl) ? null : _extCaseUrl.Trim();
             await IssueService.LinkExternalCaseAsync(_issue.Id, _extSystem.Trim(), _extCaseId.Trim(), url);
+            Snackbar.Add("External case linked.", Severity.Success);
             _showExternalCaseForm = false;
             _extSystem = "";
             _extCaseId = "";
             _extCaseUrl = "";
-            Snackbar.Add("External case linked.", Severity.Success);
             await LoadAsync();
         }
         catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }

@@ -567,38 +567,32 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
             return ($"lower({left})", $"lower({right})");
         }
 
-        private static string BuildWordBoundaryPattern(ScalarExpr rhs, string rhsSql, bool ci)
-        {
-            if (rhs is LiteralScalar { Kind: LiteralKind.String, Value: string s })
-            {
-                var term = ci ? s.ToLowerInvariant() : s;
-                return $"'(^|[^[:alnum:]]){EscapeString(Regex.Escape(term))}([^[:alnum:]]|$)'";
-            }
-            var escaped = $"regexp_replace(toString({rhsSql}), '([\\[\\](){{}}^$*+?.|\\\\])', '\\\\$1', 'g')";
-            var inner = ci ? $"lower({escaped})" : escaped;
-            return $"concat('(^|[^[:alnum:]])', {inner}, '([^[:alnum:]]|$)')";
-        }
+        private static string BuildWordBoundaryPattern(ScalarExpr rhs, string rhsSql, bool ci) =>
+            BuildWordPattern(rhs, rhsSql, ci, "(^|[^[:alnum:]])", "([^[:alnum:]]|$)", escapeRegex: true);
 
-        private static string BuildWordStartPattern(ScalarExpr rhs, string rhsSql, bool ci)
-        {
-            if (rhs is LiteralScalar { Kind: LiteralKind.String, Value: string s })
-            {
-                var term = ci ? s.ToLowerInvariant() : s;
-                return $"'(^|[^[:alnum:]]){EscapeString(Regex.Escape(term))}'";
-            }
-            var inner = ci ? $"lower(toString({rhsSql}))" : $"toString({rhsSql})";
-            return $"concat('(^|[^[:alnum:]])', {inner})";
-        }
+        private static string BuildWordStartPattern(ScalarExpr rhs, string rhsSql, bool ci) =>
+            BuildWordPattern(rhs, rhsSql, ci, "(^|[^[:alnum:]])", null, escapeRegex: false);
 
-        private static string BuildWordEndPattern(ScalarExpr rhs, string rhsSql, bool ci)
+        private static string BuildWordEndPattern(ScalarExpr rhs, string rhsSql, bool ci) =>
+            BuildWordPattern(rhs, rhsSql, ci, null, "([^[:alnum:]]|$)", escapeRegex: false);
+
+        private static string BuildWordPattern(ScalarExpr rhs, string rhsSql, bool ci,
+            string? prefix, string? suffix, bool escapeRegex)
         {
             if (rhs is LiteralScalar { Kind: LiteralKind.String, Value: string s })
             {
                 var term = ci ? s.ToLowerInvariant() : s;
-                return $"'{EscapeString(Regex.Escape(term))}([^[:alnum:]]|$)'";
+                return $"'{prefix}{EscapeString(Regex.Escape(term))}{suffix}'";
             }
-            var inner = ci ? $"lower(toString({rhsSql}))" : $"toString({rhsSql})";
-            return $"concat({inner}, '([^[:alnum:]]|$)')";
+            var raw = escapeRegex
+                ? $"regexp_replace(toString({rhsSql}), '([\\[\\](){{}}^$*+?.|\\\\])', '\\\\$1', 'g')"
+                : $"toString({rhsSql})";
+            var inner = ci ? $"lower({raw})" : raw;
+            var parts = new List<string>();
+            if (prefix is not null) parts.Add($"'{prefix}'");
+            parts.Add(inner);
+            if (suffix is not null) parts.Add($"'{suffix}'");
+            return $"concat({string.Join(", ", parts)})";
         }
 
         private string EmitUnary(UnaryScalar un)
@@ -686,7 +680,7 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
                 "trim_start"          => $"trimLeft({args[1]})",
                 "trim_end"            => $"trimRight({args[1]})",
                 "extract"             => $"extract({args[2]}, {args[0]})",
-                "countof"             => $"(length({args[0]}) - length(replaceAll({args[0]}, {args[1]}, '')))",
+                "countof"             => $"((length({args[0]}) - length(replaceAll({args[0]}, {args[1]}, ''))) / nullif(length({args[1]}), 0))",
 
                 "ago"                 => EmitAgo(fn.Args, args),
                 "now"                 => "now()",

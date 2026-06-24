@@ -21,5 +21,5 @@ internal static class ProtonDdlHelpers
         return $"`{id.Replace("`", "``")}`";
     }
 
-    internal static string EscapeSingleQuote(string s) => s.Replace("'", "\\'");
+    internal static string EscapeSingleQuote(string s) => s.Replace("'", "''");
 }

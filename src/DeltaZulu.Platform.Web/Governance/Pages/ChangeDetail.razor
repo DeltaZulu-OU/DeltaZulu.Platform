@@ -524,7 +524,6 @@
             _pendingFormYaml = null;
             _detectionForm.LoadFromYaml(yaml);
             StateHasChanged();
-            return;
         }
 
         if (!_showAddFile || _newContentType != DraftContentType.AnalyticsQuery)

@@ -25,8 +25,9 @@ public sealed class ProtonDetectionCompilationBackend : IDetectionCompilationBac
         ArgumentException.ThrowIfNullOrWhiteSpace(ruleId);
         ArgumentException.ThrowIfNullOrWhiteSpace(selectSql);
 
-        var safeId = ruleId.Replace("\"", "").Replace("`", "");
-        return new MaterializedViewDdl($"mv_nrt_{safeId}")
+        if (!ruleId.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_'))
+            throw new ArgumentException($"Rule ID contains invalid characters: '{ruleId}'", nameof(ruleId));
+        return new MaterializedViewDdl($"mv_nrt_{ruleId}")
             .As(selectSql)
             .Build();
     }
