@@ -17,7 +17,7 @@
         </div>
         <div class="dashboard-widget-actions" data-dashboard-drag-ignore="true">
             <div class="dashboard-widget-split" role="group" aria-label="@WidgetActionLabel">
-                <MudButton Class="dashboard-widget-refresh-button"
+                <MudButton Class="@RefreshButtonClass"
                            Variant="Variant.Outlined"
                            Size="Size.Small"
                            Disabled="@(!CanRunWidget)"
@@ -28,16 +28,22 @@
                 </MudButton>
                 @if (IsEditMode)
                 {
-                    <MudMenu Class="dashboard-widget-menu"
-                             Dense="true"
-                             AnchorOrigin="Origin.BottomRight"
-                             TransformOrigin="Origin.TopRight"
-                             Icon="@Icons.Material.Filled.ArrowDropDown"
-                             Size="Size.Small"
-                             Variant="Variant.Outlined">
-                        <MudMenuItem OnClick="EditAsync">Edit</MudMenuItem>
-                        <MudMenuItem OnClick="DeleteAsync">Delete</MudMenuItem>
-                    </MudMenu>
+                    <MudButton Class="dashboard-widget-action-button"
+                               Variant="Variant.Outlined"
+                               Size="Size.Small"
+                               OnClick="EditAsync"
+                               title="Edit widget"
+                               aria-label="Edit widget">
+                        <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                    </MudButton>
+                    <MudButton Class="dashboard-widget-action-button dashboard-widget-action-button-last"
+                               Variant="Variant.Outlined"
+                               Size="Size.Small"
+                               OnClick="DeleteAsync"
+                               title="Delete widget"
+                               aria-label="Delete widget">
+                        <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                    </MudButton>
                 }
             </div>
             @if (IsEditMode)
@@ -138,6 +144,11 @@
 
     private string WidgetActionLabel
         => $"{Widget.Title} actions";
+
+    private string RefreshButtonClass
+        => IsEditMode
+            ? "dashboard-widget-refresh-button"
+            : "dashboard-widget-refresh-button dashboard-widget-action-button-last";
 
     private string ChartHeight
     {

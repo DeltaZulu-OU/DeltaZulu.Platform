@@ -2161,9 +2161,9 @@ body.hunt-splitter-active {
     }
 
     .dashboard-toolbar-split .dashboard-mode-button {
-        min-width: 72px;
-        width: auto;
-        padding-inline: 14px;
+        min-width: 38px;
+        width: 38px;
+        padding-inline: 0;
         border-left-width: 0;
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
@@ -2660,25 +2660,23 @@ body.hunt-splitter-active {
         border-bottom-right-radius: 0;
     }
 
-    .dashboard-widget-split .dashboard-widget-menu .mud-button-root,
-    .dashboard-widget-split .dashboard-widget-menu .mud-icon-button,
-    .dashboard-widget-split .dashboard-widget-menu button {
-        min-width: 32px;
-        width: 32px;
+    .dashboard-widget-split .dashboard-widget-action-button {
+        min-width: 34px;
+        width: 34px;
         min-height: 30px;
         padding-inline: 0;
         border-left-width: 0;
-        border-top-left-radius: 0 !important;
-        border-bottom-left-radius: 0 !important;
-        border-top-right-radius: var(--radius) !important;
-        border-bottom-right-radius: var(--radius) !important;
+        border-radius: 0;
         margin-left: -1px;
     }
 
+    .dashboard-widget-split .dashboard-widget-action-button-last {
+        border-top-right-radius: var(--radius);
+        border-bottom-right-radius: var(--radius);
+    }
+
         .dashboard-widget-split .dashboard-widget-refresh-button:hover,
-        .dashboard-widget-split .dashboard-widget-menu .mud-button-root:hover,
-        .dashboard-widget-split .dashboard-widget-menu .mud-icon-button:hover,
-        .dashboard-widget-split .dashboard-widget-menu button:hover {
+        .dashboard-widget-split .dashboard-widget-action-button:hover {
             background: var(--bg-input);
         }
 
