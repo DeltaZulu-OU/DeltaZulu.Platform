@@ -1,11 +1,13 @@
 @namespace DeltaZulu.Platform.Web.Analytics.Components
 @using DeltaZulu.Platform.Domain.Analytics.Rendering
 @using DeltaZulu.Platform.Domain.Analytics.Schema
+@using DeltaZulu.Platform.Web.Analytics.Rendering
 @inject DeltaZulu.Platform.Domain.Analytics.Catalog.ApprovedViewCatalog Catalog
-@inject IJSRuntime JS
-@implements IAsyncDisposable
+@inject RenderedQueryRunner RenderedQueryRunner
+@inject EChartsRenderOptionsBuilder EChartsOptionsBuilder
+@implements IDisposable
 
-<button class="hunt-btn hunt-btn-helper" @onclick="Open" aria-haspopup="dialog" aria-expanded="@_open">Visualization wizard</button>
+<button class="hunt-btn hunt-btn-helper" @onclick="OpenAsync" aria-haspopup="dialog" aria-expanded="@_open">Visualization wizard</button>
 
 @if (_open)
 {
@@ -114,10 +116,33 @@
                 </div>
             </section>
 
-            <section class="hunt-helper-section" aria-labelledby="viz-preview-heading">
-                <h3 id="viz-preview-heading" class="hunt-helper-section-title">Render clause preview</h3>
-                <div id="@_previewEditorId" class="hunt-editor-textarea" style="min-height: 6rem;"></div>
-                <p class="hunt-helper-note">Apply replaces any terminal render clause in the editor, then appends this generated clause.</p>
+            <section class="hunt-helper-section" aria-labelledby="viz-test-heading">
+                <div class="hunt-helper-section-header">
+                    <h3 id="viz-test-heading" class="hunt-helper-section-title">Preview card</h3>
+                    <button class="hunt-btn hunt-btn-helper-secondary" @onclick="RefreshPreviewCardAsync" disabled="@_previewRunning">@(_previewRunning ? "Rendering…" : "Refresh")</button>
+                </div>
+                <div class="hunt-render-panel">
+                    @if (!string.IsNullOrWhiteSpace(_previewMessage))
+                    {
+                        <div class="hunt-render-fallback">@_previewMessage</div>
+                    }
+                    else if (_previewChartOptions is not null)
+                    {
+                        <div class="hunt-chart-wrapper">
+                            <div class="hunt-echart">
+                                <Vizor.ECharts.EChart @key="_previewChartRenderKey" Width="100%" Height="260px" Options="@_previewChartOptions" />
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(_previewWarning))
+                        {
+                            <p class="hunt-render-note">@_previewWarning</p>
+                        }
+                    }
+                    else
+                    {
+                        <p class="hunt-helper-note">The graph preview updates automatically as the editor query or render settings change.</p>
+                    }
+                </div>
             </section>
         </div>
 
@@ -132,11 +157,10 @@
 @code {
     [Parameter] public EventCallback<string> ApplyRequested { get; set; }
     [Parameter] public EventCallback<string> RefreshRequested { get; set; }
+    [Parameter] public Func<Task<string>>? CurrentQueryTextProvider { get; set; }
 
-    private readonly string _previewEditorId = $"render-wizard-preview-{Guid.NewGuid():N}";
     private IReadOnlyList<EditorTableMetadata> _tables = [];
     private bool _open;
-    private bool _previewNeedsInitialize;
     private RenderKind _kind = RenderKind.Barchart;
     private string _table = string.Empty;
     private string _title = string.Empty;
@@ -145,6 +169,18 @@
     private string _seriesColumn = string.Empty;
     private string _legend = string.Empty;
     private bool _isStacked;
+    private bool _previewRunning;
+    private string? _previewMessage;
+    private string? _previewWarning;
+    private Vizor.ECharts.ChartOptions? _previewChartOptions;
+    private int _previewChartRenderKey;
+    private CancellationTokenSource? _previewWatcherCts;
+    private CancellationTokenSource? _previewRenderCts;
+    private long _previewRequestId;
+    private string? _lastPreviewSignature;
+
+    private static readonly TimeSpan PreviewDebounceDelay = TimeSpan.FromMilliseconds(450);
+    private static readonly TimeSpan PreviewEditorPollInterval = TimeSpan.FromMilliseconds(750);
 
     private static readonly RenderKind[] RenderKinds = [RenderKind.Timechart, RenderKind.Linechart, RenderKind.Barchart, RenderKind.Columnchart, RenderKind.Piechart, RenderKind.Areachart, RenderKind.Scatterchart, RenderKind.Card, RenderKind.Table];
     private IReadOnlyList<EditorTableMetadata> Tables => _tables;
@@ -167,28 +203,21 @@
         ResetColumnDefaults();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!_open || !_previewNeedsInitialize)
-        {
-            return;
-        }
-
-        _previewNeedsInitialize = false;
-        await JS.InvokeAsync<bool>("huntingRenderWizard.initPreview", _previewEditorId, RenderClause);
-    }
-
-    private void Open()
+    private async Task OpenAsync()
     {
         _open = true;
-        _previewNeedsInitialize = true;
+        _lastPreviewSignature = null;
+        await InitializeFromHostQueryAsync();
+        StartPreviewWatcher();
+        SchedulePreviewCardRefresh();
     }
 
-    private async Task Close()
+    private Task Close()
     {
         _open = false;
-        _previewNeedsInitialize = false;
-        await JS.InvokeVoidAsync("huntingRenderWizard.disposePreview", _previewEditorId);
+        StopPreviewWatcher();
+        CancelPreviewRender();
+        return Task.CompletedTask;
     }
 
     private async Task OnKindChanged()
@@ -202,6 +231,30 @@
         _table = args.Value?.ToString() ?? string.Empty;
         ResetColumnDefaults();
         await RefreshPreviewAsync();
+    }
+
+
+    private async Task InitializeFromHostQueryAsync()
+    {
+        if (CurrentQueryTextProvider is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var currentText = await CurrentQueryTextProvider.Invoke();
+            if (TryInferTableName(currentText, out var tableName)
+                && !string.Equals(_table, tableName, StringComparison.OrdinalIgnoreCase))
+            {
+                _table = tableName;
+                ResetColumnDefaults();
+            }
+        }
+        catch (Exception ex)
+        {
+            SetPreviewWarning($"Could not read the current query from the editor: {ex.Message}");
+        }
     }
 
     private void ResetColumnDefaults()
@@ -223,8 +276,206 @@
         await RefreshPreviewAsync();
     }
 
-    private async Task RefreshPreviewAsync()
-        => await JS.InvokeAsync<bool>("huntingRenderWizard.setPreview", _previewEditorId, RenderClause);
+    private Task RefreshPreviewAsync()
+    {
+        SchedulePreviewCardRefresh();
+        return Task.CompletedTask;
+    }
+
+    private async Task RefreshPreviewCardAsync()
+    {
+        _lastPreviewSignature = null;
+        await InitializeFromHostQueryAsync();
+        SchedulePreviewCardRefresh();
+    }
+
+    private void SchedulePreviewCardRefresh()
+    {
+        if (!_open)
+        {
+            return;
+        }
+
+        var requestId = Interlocked.Increment(ref _previewRequestId);
+        _ = DebouncedPreviewCardRefreshAsync(requestId);
+    }
+
+    private async Task DebouncedPreviewCardRefreshAsync(long requestId)
+    {
+        try
+        {
+            await Task.Delay(PreviewDebounceDelay);
+            if (!_open || requestId != Interlocked.Read(ref _previewRequestId))
+            {
+                return;
+            }
+
+            await InvokeAsync(async () =>
+            {
+                await RunPreviewCardAsync();
+                StateHasChanged();
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            // Component disposal can race with the debounce timer.
+        }
+    }
+
+    private async Task RunPreviewCardAsync()
+    {
+        if (CurrentQueryTextProvider is null)
+        {
+            SetPreviewWarning("Preview is unavailable because the current query cannot be read from this host.");
+            return;
+        }
+
+        CancellationToken cancellationToken = default;
+
+        try
+        {
+            var currentText = await CurrentQueryTextProvider.Invoke();
+            var signature = $"{currentText}\n-- render --\n{RenderClause}";
+            if (string.Equals(signature, _lastPreviewSignature, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _lastPreviewSignature = signature;
+            if (!RenderClauseQueryValidator.TryAppendOrReplaceTerminalRender(currentText, RenderClause, out var previewQuery, out var error))
+            {
+                SetPreviewWarning(error);
+                return;
+            }
+
+            CancelPreviewRender();
+            _previewRenderCts = new CancellationTokenSource();
+            cancellationToken = _previewRenderCts.Token;
+            _previewRunning = true;
+            ClearPreviewCard();
+            StateHasChanged();
+
+            var rendered = await RenderedQueryRunner.RunAsync(previewQuery, cancellationToken);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (!rendered.QueryResult.Success)
+            {
+                SetPreviewWarning(BuildDiagnosticPreviewMessage(rendered));
+                return;
+            }
+
+            if (!rendered.Chart.CanRender)
+            {
+                SetPreviewWarning(rendered.Chart.Message ?? "The current query did not produce renderable chart data.");
+                return;
+            }
+
+            _previewWarning = rendered.Chart.Warning;
+            _previewChartOptions = EChartsOptionsBuilder.Build(rendered.Chart);
+            _previewChartRenderKey++;
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer query/render setting superseded this preview.
+        }
+        catch (Exception ex)
+        {
+            SetPreviewWarning($"Could not render preview: {ex.Message}");
+        }
+        finally
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                _previewRunning = false;
+            }
+        }
+    }
+
+    private void SetPreviewWarning(string message)
+    {
+        ClearPreviewCard();
+        _previewMessage = message;
+        _previewRunning = false;
+    }
+
+    private static string BuildDiagnosticPreviewMessage(RenderedQueryResult rendered)
+    {
+        var diagnostics = rendered.QueryResult.Diagnostics.All;
+        if (diagnostics.Count == 0)
+        {
+            return "The current query could not be rendered.";
+        }
+
+        return string.Join(" ", diagnostics.Take(3).Select(d => d.Message));
+    }
+
+    private void StartPreviewWatcher()
+    {
+        StopPreviewWatcher();
+        _previewWatcherCts = new CancellationTokenSource();
+        _ = WatchEditorQueryForPreviewChangesAsync(_previewWatcherCts.Token);
+    }
+
+    private async Task WatchEditorQueryForPreviewChangesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(PreviewEditorPollInterval);
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                if (!_open || CurrentQueryTextProvider is null)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var currentText = await CurrentQueryTextProvider.Invoke();
+                    var signature = $"{currentText}\n-- render --\n{RenderClause}";
+                    if (!string.Equals(signature, _lastPreviewSignature, StringComparison.Ordinal))
+                    {
+                        SchedulePreviewCardRefresh();
+                    }
+                }
+                catch (Exception) when (!cancellationToken.IsCancellationRequested)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        SetPreviewWarning("Could not read the current query for preview.");
+                        StateHasChanged();
+                    });
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Drawer closed or component disposed.
+        }
+    }
+
+    private void StopPreviewWatcher()
+    {
+        _previewWatcherCts?.Cancel();
+        _previewWatcherCts?.Dispose();
+        _previewWatcherCts = null;
+    }
+
+    private void CancelPreviewRender()
+    {
+        _previewRenderCts?.Cancel();
+        _previewRenderCts?.Dispose();
+        _previewRenderCts = null;
+    }
+
+    private void ClearPreviewCard()
+    {
+        _previewMessage = null;
+        _previewWarning = null;
+        _previewChartOptions = null;
+    }
 
     private async Task ApplyAsync()
     {
@@ -252,6 +503,53 @@
         return properties.Count == 0 ? $"| render {kind}" : $"| render {kind} with ({string.Join(", ", properties)})";
     }
 
+
+    private bool TryInferTableName(string queryText, out string tableName)
+    {
+        tableName = string.Empty;
+        if (string.IsNullOrWhiteSpace(queryText) || Tables.Count == 0)
+        {
+            return false;
+        }
+
+        var normalizedQuery = queryText.Replace("\r", string.Empty, StringComparison.Ordinal);
+        foreach (var table in Tables)
+        {
+            if (QueryReferencesTable(normalizedQuery, table.Name))
+            {
+                tableName = table.Name;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool QueryReferencesTable(string queryText, string tableName)
+    {
+        var lines = queryText.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var line in lines)
+        {
+            if (line.StartsWith("//", StringComparison.Ordinal) || line.StartsWith("--", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (line.StartsWith(tableName, StringComparison.OrdinalIgnoreCase)
+                && IsTableBoundary(line, tableName.Length))
+            {
+                return true;
+            }
+        }
+
+        return queryText.Contains($"| {tableName}", StringComparison.OrdinalIgnoreCase)
+            || queryText.Contains($";{tableName}", StringComparison.OrdinalIgnoreCase)
+            || queryText.Contains($"; {tableName}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsTableBoundary(string text, int index)
+        => index >= text.Length || char.IsWhiteSpace(text[index]) || text[index] is '|' or ';';
+
     private static void Add(List<string> properties, string name, string? value)
     {
         if (!string.IsNullOrWhiteSpace(value)) properties.Add($"{name}='{value.Trim().Replace("'", "\\'", StringComparison.Ordinal)}'");
@@ -259,8 +557,9 @@
 
     private static string GetKindLabel(RenderKind kind) => kind.ToString();
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        await JS.InvokeVoidAsync("huntingRenderWizard.disposePreview", _previewEditorId);
+        StopPreviewWatcher();
+        CancelPreviewRender();
     }
 }
