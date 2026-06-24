@@ -192,10 +192,10 @@
     --font-size-h1: 2.5rem;
     --font-size-h2: 1.75rem;
     --font-size-h3: 1.25rem;
-    --font-size-body-lg: 1.125rem;
-    --font-size-body: 1rem;
-    --font-size-body-sm: 0.875rem;
-    --font-size-label: 0.8125rem;
+    --font-size-body-lg: 1rem;
+    --font-size-body: 0.75rem;
+    --font-size-body-sm: 0.50rem;
+    --font-size-label: 0.40rem;
     --line-height-display: 1.02;
     --line-height-h1: 1.08;
     --line-height-h2: 1.12;
