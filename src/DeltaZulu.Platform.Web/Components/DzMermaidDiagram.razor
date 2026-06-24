@@ -1,0 +1,29 @@
+﻿@namespace DeltaZulu.Platform.Web.Components
+@using Blazorade.Mermaid.Components
+
+<div @attributes="AdditionalAttributes" class="@CssClass" aria-label="@AriaLabel">
+    @if (string.IsNullOrWhiteSpace(Definition))
+    {
+        <DzEmptyState Title="@EmptyTitle"
+                      Description="@EmptyDescription"
+                      Icon="@Icons.Material.Outlined.AccountTree"
+                      Elevation="0" />
+    }
+    else
+    {
+        <MermaidDiagram Definition="@Definition" />
+    }
+</div>
+
+@code {
+    [Parameter] public string? Definition { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string AriaLabel { get; set; } = "Mermaid diagram";
+    [Parameter] public string EmptyTitle { get; set; } = "No diagram available.";
+    [Parameter] public string EmptyDescription { get; set; } = "Provide a Mermaid definition to render a diagram.";
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => string.IsNullOrWhiteSpace(Class)
+        ? "dz-mermaid-diagram"
+        : $"dz-mermaid-diagram {Class}";
+}

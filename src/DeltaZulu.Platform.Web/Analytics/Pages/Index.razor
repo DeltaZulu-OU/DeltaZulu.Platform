@@ -307,7 +307,18 @@
               ShowCopyButton="@DrawerCanCopy"
               EmptyTitle="No drawer content."
               EmptyDescription="Run a query or open a cell value to inspect content."
-              AriaLabel="@_drawerTitle" />
+              AriaLabel="@_drawerTitle">
+    @if (_drawerMode == DrawerMode.Sql)
+    {
+        <section class="dz-code-drawer-diagram" aria-label="DuckDB SQL planner diagram section">
+            <h3>Planner diagram</h3>
+            <DzMermaidDiagram Definition="@_result?.PlannerMermaid"
+                              AriaLabel="DuckDB SQL planner Mermaid diagram"
+                              EmptyTitle="No DuckDB planner diagram returned."
+                              EmptyDescription="DuckDB did not return Mermaid output for EXPLAIN (ANALYZE, FORMAT MERMAID)." />
+        </section>
+    }
+</DzCodeDrawer>
 
 @code {
     private string _kql = string.Empty;
@@ -905,6 +916,27 @@
         var trimmed = text.TrimStart();
         if (trimmed.StartsWith("{") || trimmed.StartsWith("[")) return "JSON / structured content";
         return "Long text";
+    }
+
+    private string BuildExplainStatement(string format)
+        => BuildExplainSql(analyze: false, format);
+
+    private string BuildExplainAnalyzeStatement(string format)
+        => BuildExplainSql(analyze: true, format);
+
+    private string BuildExplainSql(bool analyze, string format)
+    {
+        var sql = (_result?.GeneratedSql ?? "SELECT 42 AS x").Trim();
+        if (!sql.EndsWith(';'))
+        {
+            sql += ';';
+        }
+
+        var options = analyze
+            ? $"ANALYZE, FORMAT {format}"
+            : $"FORMAT {format}";
+
+        return $"EXPLAIN ({options})\n{sql}";
     }
 
     private enum DrawerMode

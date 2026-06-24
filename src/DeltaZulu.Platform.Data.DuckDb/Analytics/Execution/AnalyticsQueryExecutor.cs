@@ -94,6 +94,7 @@ public sealed partial class AnalyticsQueryExecutor : IAnalyticsQueryExecutor, ID
                 columnData ?? CreateColumnData(streamResult.Columns.Count),
                 streamResult.GeneratedSql,
                 streamResult.PlannerStatsJson,
+                streamResult.PlannerMermaid,
                 streamResult.SqlShapeStatsJson,
                 trace,
                 streamResult.Diagnostics);
@@ -157,6 +158,7 @@ public sealed partial class AnalyticsQueryExecutor : IAnalyticsQueryExecutor, ID
         List<object?>[] columnData,
         string? sql,
         string? plannerStatsJson,
+        string? plannerMermaid,
         string? sqlShapeStatsJson,
         List<string>? debugTrace,
         DiagnosticBag diagnostics)
@@ -173,6 +175,7 @@ public sealed partial class AnalyticsQueryExecutor : IAnalyticsQueryExecutor, ID
             ColumnData = readonlyColumnData,
             GeneratedSql = sql,
             PlannerStatsJson = plannerStatsJson,
+            PlannerMermaid = plannerMermaid,
             SqlShapeStatsJson = sqlShapeStatsJson,
             DebugTrace = debugTrace ?? [],
             Diagnostics = diagnostics

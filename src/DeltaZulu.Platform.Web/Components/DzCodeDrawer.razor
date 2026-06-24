@@ -73,6 +73,13 @@
                         <pre class="hunt-drawer-content">@Content</pre>
                     }
                 </div>
+
+                @if (ChildContent is not null)
+                {
+                    <div class="dz-code-drawer-extra">
+                        @ChildContent
+                    </div>
+                }
             }
         </div>
     </aside>
@@ -96,6 +103,7 @@
     [Parameter] public string EmptyDescription { get; set; } = "Select content to preview it here.";
     [Parameter] public string AriaLabel { get; set; } = "Details drawer";
     [Parameter] public string CloseAriaLabel { get; set; } = "Close details drawer";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
 
     private string? EffectiveCopyText => string.IsNullOrEmpty(CopyText) ? Content : CopyText;
 
