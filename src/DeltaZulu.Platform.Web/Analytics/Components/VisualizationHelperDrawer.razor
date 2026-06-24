@@ -1,0 +1,266 @@
+@namespace DeltaZulu.Platform.Web.Analytics.Components
+@using DeltaZulu.Platform.Domain.Analytics.Rendering
+@using DeltaZulu.Platform.Domain.Analytics.Schema
+@inject DeltaZulu.Platform.Domain.Analytics.Catalog.ApprovedViewCatalog Catalog
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<button class="hunt-btn hunt-btn-helper" @onclick="Open" aria-haspopup="dialog" aria-expanded="@_open">Visualization wizard</button>
+
+@if (_open)
+{
+    <button class="hunt-drawer-backdrop" @onclick="Close" aria-label="Close visualization wizard"></button>
+    <aside class="hunt-drawer hunt-helper-drawer" role="dialog" aria-modal="true" aria-label="Visualization wizard">
+        <div class="hunt-drawer-header">
+            <div>
+                <div class="hunt-drawer-title">Visualization wizard</div>
+                <div class="hunt-drawer-subtitle">Pick chart settings; the render clause is appended only when you apply it.</div>
+            </div>
+            <button class="hunt-drawer-close" @onclick="Close" aria-label="Close visualization wizard">×</button>
+        </div>
+
+        <div class="hunt-drawer-body hunt-drawer-body-padded hunt-helper-body">
+            <section class="hunt-helper-section" aria-labelledby="viz-kind-heading">
+                <h3 id="viz-kind-heading" class="hunt-helper-section-title">Chart type</h3>
+                <div class="hunt-helper-grid">
+                    <label class="hunt-helper-field">
+                        <span>Kind</span>
+                        <select class="hunt-helper-input" @bind="_kind" @bind:after="OnKindChanged">
+                            @foreach (var kind in RenderKinds)
+                            {
+                                <option value="@kind">@GetKindLabel(kind)</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="hunt-helper-field">
+                        <span>Table schema</span>
+                        <select class="hunt-helper-input" value="@_table" @onchange="OnTableChanged">
+                            @foreach (var table in Tables)
+                            {
+                                <option value="@table.Name">@table.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="hunt-helper-field hunt-helper-field-wide">
+                        <span>Title</span>
+                        <input class="hunt-helper-input" @bind="_title" @bind:event="oninput" @bind:after="RefreshPreviewAsync" placeholder="Optional chart title" />
+                    </label>
+                </div>
+            </section>
+
+            <section class="hunt-helper-section" aria-labelledby="viz-attrs-heading">
+                <h3 id="viz-attrs-heading" class="hunt-helper-section-title">Attributes</h3>
+                <div class="hunt-helper-grid">
+                    @if (UsesXColumn)
+                    {
+                        <label class="hunt-helper-field">
+                            <span>@XColumnLabel</span>
+                            <select class="hunt-helper-input" @bind="_xColumn" @bind:after="RefreshPreviewAsync">
+                                <option value="">Infer from result</option>
+                                @foreach (var column in XColumnChoices)
+                                {
+                                    <option value="@column.Name">@column.Name (@column.Type)</option>
+                                }
+                            </select>
+                        </label>
+                    }
+
+                    @if (UsesYColumns)
+                    {
+                        <div class="hunt-helper-field hunt-helper-field-wide">
+                            <span>Y/value columns</span>
+                            <div class="hunt-helper-filters" style="max-height: 12rem; overflow: auto;">
+                                @foreach (var column in YColumnChoices)
+                                {
+                                    <label class="hunt-helper-checkbox-row">
+                                        <input type="checkbox" checked="@IsYColumnSelected(column.Name)" @onchange="args => ToggleYColumn(column.Name, args)" />
+                                        <span>@column.Name (@column.Type)</span>
+                                    </label>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (UsesSeriesColumn)
+                    {
+                        <label class="hunt-helper-field">
+                            <span>Series column</span>
+                            <select class="hunt-helper-input" @bind="_seriesColumn" @bind:after="RefreshPreviewAsync">
+                                <option value="">None</option>
+                                @foreach (var column in CurrentColumns)
+                                {
+                                    <option value="@column.Name">@column.Name (@column.Type)</option>
+                                }
+                            </select>
+                        </label>
+                    }
+
+                    <label class="hunt-helper-field">
+                        <span>Legend</span>
+                        <select class="hunt-helper-input" @bind="_legend" @bind:after="RefreshPreviewAsync">
+                            <option value="">Auto</option>
+                            <option value="visible">Visible</option>
+                            <option value="hidden">Hidden</option>
+                        </select>
+                    </label>
+
+                    @if (UsesStacking)
+                    {
+                        <label class="hunt-helper-checkbox-row hunt-helper-field-wide">
+                            <input type="checkbox" @bind="_isStacked" @bind:after="RefreshPreviewAsync" />
+                            <span>Stack series</span>
+                        </label>
+                    }
+                </div>
+            </section>
+
+            <section class="hunt-helper-section" aria-labelledby="viz-preview-heading">
+                <h3 id="viz-preview-heading" class="hunt-helper-section-title">Render clause preview</h3>
+                <div id="@_previewEditorId" class="hunt-editor-textarea" style="min-height: 6rem;"></div>
+                <p class="hunt-helper-note">Apply replaces any terminal render clause in the editor, then appends this generated clause.</p>
+            </section>
+        </div>
+
+        <div class="hunt-helper-actions">
+            <button class="hunt-btn hunt-btn-run" @onclick="ApplyAsync">Apply to editor</button>
+            <button class="hunt-btn" @onclick="ApplyAndRunAsync">Apply &amp; refresh</button>
+            <button class="hunt-btn hunt-btn-clear" @onclick="Close">Cancel</button>
+        </div>
+    </aside>
+}
+
+@code {
+    [Parameter] public EventCallback<string> ApplyRequested { get; set; }
+    [Parameter] public EventCallback<string> RefreshRequested { get; set; }
+
+    private readonly string _previewEditorId = $"render-wizard-preview-{Guid.NewGuid():N}";
+    private IReadOnlyList<EditorTableMetadata> _tables = [];
+    private bool _open;
+    private bool _previewNeedsInitialize;
+    private RenderKind _kind = RenderKind.Barchart;
+    private string _table = string.Empty;
+    private string _title = string.Empty;
+    private string _xColumn = string.Empty;
+    private readonly List<string> _yColumns = [];
+    private string _seriesColumn = string.Empty;
+    private string _legend = string.Empty;
+    private bool _isStacked;
+
+    private static readonly RenderKind[] RenderKinds = [RenderKind.Timechart, RenderKind.Linechart, RenderKind.Barchart, RenderKind.Columnchart, RenderKind.Piechart, RenderKind.Areachart, RenderKind.Scatterchart, RenderKind.Card, RenderKind.Table];
+    private IReadOnlyList<EditorTableMetadata> Tables => _tables;
+    private EditorTableMetadata? SelectedTable => Tables.FirstOrDefault(table => string.Equals(table.Name, _table, StringComparison.OrdinalIgnoreCase));
+    private IReadOnlyList<EditorColumnMetadata> CurrentColumns => SelectedTable?.Columns ?? [];
+    private IEnumerable<EditorColumnMetadata> NumericColumns => CurrentColumns.Where(c => c.Type is "int" or "long" or "real" or "decimal" or "double");
+    private IEnumerable<EditorColumnMetadata> XColumnChoices => _kind == RenderKind.Timechart ? CurrentColumns.Where(c => string.Equals(c.Type, "datetime", StringComparison.OrdinalIgnoreCase)) : CurrentColumns;
+    private IEnumerable<EditorColumnMetadata> YColumnChoices => _kind == RenderKind.Piechart ? NumericColumns.Take(8) : NumericColumns;
+    private bool UsesXColumn => _kind != RenderKind.Card && _kind != RenderKind.Table;
+    private bool UsesYColumns => _kind != RenderKind.Card && _kind != RenderKind.Table;
+    private bool UsesSeriesColumn => _kind is RenderKind.Timechart or RenderKind.Linechart or RenderKind.Barchart or RenderKind.Columnchart or RenderKind.Areachart or RenderKind.Scatterchart;
+    private bool UsesStacking => _kind is RenderKind.Barchart or RenderKind.Columnchart or RenderKind.Areachart;
+    private string XColumnLabel => _kind == RenderKind.Piechart ? "Category column" : "X-axis column";
+    private string RenderClause => BuildRenderClause();
+
+    protected override void OnInitialized()
+    {
+        _tables = Catalog.BuildEditorSchemaMetadata().Tables.OrderBy(static table => table.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+        _table = Tables.FirstOrDefault()?.Name ?? string.Empty;
+        ResetColumnDefaults();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_open || !_previewNeedsInitialize)
+        {
+            return;
+        }
+
+        _previewNeedsInitialize = false;
+        await JS.InvokeAsync<bool>("huntingRenderWizard.initPreview", _previewEditorId, RenderClause);
+    }
+
+    private void Open()
+    {
+        _open = true;
+        _previewNeedsInitialize = true;
+    }
+
+    private async Task Close()
+    {
+        _open = false;
+        _previewNeedsInitialize = false;
+        await JS.InvokeVoidAsync("huntingRenderWizard.disposePreview", _previewEditorId);
+    }
+
+    private async Task OnKindChanged()
+    {
+        ResetColumnDefaults();
+        await RefreshPreviewAsync();
+    }
+
+    private async Task OnTableChanged(ChangeEventArgs args)
+    {
+        _table = args.Value?.ToString() ?? string.Empty;
+        ResetColumnDefaults();
+        await RefreshPreviewAsync();
+    }
+
+    private void ResetColumnDefaults()
+    {
+        _xColumn = XColumnChoices.FirstOrDefault()?.Name ?? CurrentColumns.FirstOrDefault()?.Name ?? string.Empty;
+        _yColumns.Clear();
+        _yColumns.AddRange(YColumnChoices.Take(_kind == RenderKind.Piechart ? 1 : 2).Select(c => c.Name));
+        _seriesColumn = string.Empty;
+        if (!UsesStacking) _isStacked = false;
+    }
+
+    private bool IsYColumnSelected(string column) => _yColumns.Contains(column, StringComparer.OrdinalIgnoreCase);
+
+    private async Task ToggleYColumn(string column, ChangeEventArgs args)
+    {
+        var isChecked = args.Value is bool value && value;
+        if (isChecked && !IsYColumnSelected(column)) _yColumns.Add(column);
+        if (!isChecked) _yColumns.RemoveAll(value => string.Equals(value, column, StringComparison.OrdinalIgnoreCase));
+        await RefreshPreviewAsync();
+    }
+
+    private async Task RefreshPreviewAsync()
+        => await JS.InvokeAsync<bool>("huntingRenderWizard.setPreview", _previewEditorId, RenderClause);
+
+    private async Task ApplyAsync()
+    {
+        await ApplyRequested.InvokeAsync(RenderClause);
+        await Close();
+    }
+
+    private async Task ApplyAndRunAsync()
+    {
+        await ApplyRequested.InvokeAsync(RenderClause);
+        await RefreshRequested.InvokeAsync(RenderClause);
+        await Close();
+    }
+
+    private string BuildRenderClause()
+    {
+        var properties = new List<string>();
+        Add(properties, "title", _title);
+        if (UsesXColumn) Add(properties, "xcolumn", _xColumn);
+        if (UsesYColumns && _yColumns.Count > 0) Add(properties, "ycolumns", string.Join(",", _yColumns));
+        if (UsesSeriesColumn) Add(properties, "series", _seriesColumn);
+        Add(properties, "legend", _legend);
+        if (UsesStacking && _isStacked) Add(properties, "kind", "stacked");
+        var kind = _kind.ToString().ToLowerInvariant();
+        return properties.Count == 0 ? $"| render {kind}" : $"| render {kind} with ({string.Join(", ", properties)})";
+    }
+
+    private static void Add(List<string> properties, string name, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value)) properties.Add($"{name}='{value.Trim().Replace("'", "\\'", StringComparison.Ordinal)}'");
+    }
+
+    private static string GetKindLabel(RenderKind kind) => kind.ToString();
+
+    public async ValueTask DisposeAsync()
+    {
+        await JS.InvokeVoidAsync("huntingRenderWizard.disposePreview", _previewEditorId);
+    }
+}
