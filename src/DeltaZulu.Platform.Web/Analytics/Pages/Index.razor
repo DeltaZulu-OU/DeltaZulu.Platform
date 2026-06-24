@@ -757,14 +757,7 @@
         Render
     }
 
-    private static string FormatCell(object? value)
-    {
-        if (value is null) return "";
-        if (value is DateTimeOffset dto) return dto.ToString("yyyy-MM-dd HH:mm:ss");
-        if (value is DateTime dt) return dt.ToString("yyyy-MM-dd HH:mm:ss");
-        var s = value.ToString() ?? "";
-        return s.Length > 200 ? s[..200] + "…" : s;
-    }
+    private static string FormatCell(object? value) => CellFormatter.FormatDisplay(value);
 
     private static bool ShouldShowCellDrawerButton(object? value)
     {

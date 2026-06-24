@@ -291,44 +291,14 @@ Lorem *ipsum* **dolor** sit amet.
 
         _editorNeedsInitialize = false;
 
-        try
+        await RunEditorInteropAsync(async () =>
         {
             _monacoReady = await WidgetEditor.InitializeAsync(
                 _editorElementId,
                 EditorLanguage == "kql" ? _queryText : _markdownText,
                 EditorLanguage);
             _editorInitialized = _monacoReady;
-        }
-        catch (JSDisconnectedException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "initialize");
-            MarkEditorDisposed();
-        }
-        catch (TaskCanceledException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "initialize");
-            MarkEditorDisposed();
-        }
-        catch (OperationCanceledException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "initialize");
-            MarkEditorDisposed();
-        }
-        catch (JSException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "initialize");
-            MarkEditorDisposed();
-        }
-        catch (ObjectDisposedException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "initialize");
-            MarkEditorDisposed();
-        }
-        catch (InvalidOperationException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "initialize");
-            MarkEditorDisposed();
-        }
+        }, "initialize");
 
         await RequestRenderAsync();
     }
@@ -448,44 +418,9 @@ Lorem *ipsum* **dolor** sit amet.
     }
 
     private async Task SetDashboardEditorValueAsync(string value)
-    {
-        try
-        {
-            await JS.InvokeVoidAsync("huntingDashboardWidgetEditor.setValue", _editorElementId, value);
-        }
-        catch (JSDisconnectedException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "setValue");
-            MarkEditorDisposed();
-        }
-        catch (TaskCanceledException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "setValue");
-            MarkEditorDisposed();
-        }
-        catch (OperationCanceledException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "setValue");
-            MarkEditorDisposed();
-        }
-        catch (JSException ex)
-        {
-            Logger.LogDebug(
-                ex,
-                "Dashboard widget editor JS interop setValue failed for {EditorElementId}; keeping the last known query text.",
-                _editorElementId);
-        }
-        catch (ObjectDisposedException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "setValue");
-            MarkEditorDisposed();
-        }
-        catch (InvalidOperationException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "setValue");
-            MarkEditorDisposed();
-        }
-    }
+        => await RunEditorInteropAsync(
+            () => JS.InvokeVoidAsync("huntingDashboardWidgetEditor.setValue", _editorElementId, value).AsTask(),
+            "setValue", disposeOnJsError: false);
 
     private async Task RefreshVisualizationRenderAsync(string renderClause)
         => await RequestRenderAsync();
@@ -578,44 +513,9 @@ Lorem *ipsum* **dolor** sit amet.
     }
 
     private async Task SetEditorLanguageAsync()
-    {
-        try
-        {
-            await WidgetEditor.SetLanguageAsync(_editorElementId, EditorLanguage);
-        }
-        catch (JSDisconnectedException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "setLanguage");
-            MarkEditorDisposed();
-        }
-        catch (TaskCanceledException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "setLanguage");
-            MarkEditorDisposed();
-        }
-        catch (OperationCanceledException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "setLanguage");
-            MarkEditorDisposed();
-        }
-        catch (JSException ex)
-        {
-            Logger.LogDebug(
-                ex,
-                "Dashboard widget editor JS interop setLanguage failed for {EditorElementId}; keeping the current editor language.",
-                _editorElementId);
-        }
-        catch (ObjectDisposedException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "setLanguage");
-            MarkEditorDisposed();
-        }
-        catch (InvalidOperationException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "setLanguage");
-            MarkEditorDisposed();
-        }
-    }
+        => await RunEditorInteropAsync(
+            () => WidgetEditor.SetLanguageAsync(_editorElementId, EditorLanguage).AsTask(),
+            "setLanguage", disposeOnJsError: false);
 
     private async Task<string> GetQueryTextAsync()
     {
@@ -624,43 +524,10 @@ Lorem *ipsum* **dolor** sit amet.
             return _queryText;
         }
 
-        try
+        await RunEditorInteropAsync(async () =>
         {
             _queryText = await WidgetEditor.GetValueAsync(_editorElementId);
-        }
-        catch (JSDisconnectedException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "getValue");
-            MarkEditorDisposed();
-        }
-        catch (TaskCanceledException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "getValue");
-            MarkEditorDisposed();
-        }
-        catch (OperationCanceledException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "getValue");
-            MarkEditorDisposed();
-        }
-        catch (JSException ex)
-        {
-            // Keep the last textarea/model value if the Monaco instance is unavailable.
-            Logger.LogDebug(
-                ex,
-                "Dashboard widget editor JS interop getValue failed for {EditorElementId}; keeping the last known query text.",
-                _editorElementId);
-        }
-        catch (ObjectDisposedException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "getValue");
-            MarkEditorDisposed();
-        }
-        catch (InvalidOperationException ex)
-        {
-            LogEditorInteropLifecycleDebug(ex, "getValue");
-            MarkEditorDisposed();
-        }
+        }, "getValue", disposeOnJsError: false);
 
         return _queryText;
     }
@@ -719,6 +586,24 @@ Lorem *ipsum* **dolor** sit amet.
         }
 
         return id.Length <= 8 ? id : id[..8];
+    }
+
+    private async Task RunEditorInteropAsync(Func<Task> action, string operation, bool disposeOnJsError = true)
+    {
+        try
+        {
+            await action();
+        }
+        catch (JSException ex) when (!disposeOnJsError)
+        {
+            LogEditorInteropLifecycleDebug(ex, operation);
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or OperationCanceledException
+                                       or JSException or ObjectDisposedException or InvalidOperationException)
+        {
+            LogEditorInteropLifecycleDebug(ex, operation);
+            MarkEditorDisposed();
+        }
     }
 
     private void LogEditorInteropLifecycleDebug(Exception exception, string operation)

@@ -7,6 +7,7 @@ namespace DeltaZulu.Platform.Web.Analytics.Exports;
 public static class QueryResultCsvExporter
 {
     public const string MimeType = "text/csv;charset=utf-8";
+    private static readonly char[] anyOf = new[] { '"', ',', '\r', '\n' };
 
     public static string BuildCsv(QueryResult result, IReadOnlyList<int>? columnIndexes = null)
     {
@@ -71,7 +72,7 @@ public static class QueryResultCsvExporter
 
     private static string EscapeCsvField(string value)
     {
-        if (value.IndexOfAny(new[] { '"', ',', '\r', '\n' }) < 0)
+        if (value.IndexOfAny(anyOf) < 0)
         {
             return value;
         }
@@ -79,16 +80,12 @@ public static class QueryResultCsvExporter
         return $"\"{value.Replace("\"", "\"\"")}\"";
     }
 
-    private static string FormatCsvCell(object? value)
-    {
-        return value switch
-        {
-            null => string.Empty,
-            DateTime dateTime => dateTime.ToString("O", CultureInfo.InvariantCulture),
-            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("O", CultureInfo.InvariantCulture),
-            bool boolean => boolean ? "true" : "false",
-            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture) ?? string.Empty,
-            _ => value.ToString() ?? string.Empty
-        };
-    }
+    private static string FormatCsvCell(object? value) => value switch {
+        null => string.Empty,
+        DateTime dateTime => dateTime.ToString("O", CultureInfo.InvariantCulture),
+        DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("O", CultureInfo.InvariantCulture),
+        bool boolean => boolean ? "true" : "false",
+        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture) ?? string.Empty,
+        _ => value.ToString() ?? string.Empty
+    };
 }

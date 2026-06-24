@@ -123,10 +123,7 @@ public sealed class AcceptedContentReadService(
     }
 
     private static string? ToLogicalPath(string detectionPrefix, string repositoryPath)
-    {
-        var detectionSlug = detectionPrefix["detections/".Length..];
-        return CanonicalPathResolver.TryGetLogicalPath(detectionSlug, repositoryPath);
-    }
+        => CanonicalPathResolver.TryGetLogicalPathFromPrefix(detectionPrefix, repositoryPath);
 }
 
 /// <summary>UI-safe summary of an accepted canonical file.</summary>

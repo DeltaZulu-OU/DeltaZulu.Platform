@@ -159,11 +159,8 @@ public sealed class VersionService(
             || (candidate.AcceptedAt == afterVersion.AcceptedAt && candidate.SequenceNumber < afterVersion.SequenceNumber);
 
     private static string ToLogicalPath(string detectionPrefix, string repositoryPath)
-    {
-        var detectionSlug = detectionPrefix["detections/".Length..];
-        return CanonicalPathResolver.TryGetLogicalPath(detectionSlug, repositoryPath)
+        => CanonicalPathResolver.TryGetLogicalPathFromPrefix(detectionPrefix, repositoryPath)
             ?? throw new DomainException("version.path_outside_detection", $"Accepted content path '{repositoryPath}' is outside the detection package.");
-    }
 
     private static VersionFileDiff CreateDiff(string logicalPath, ContentFile? before, ContentFile? after)
     {

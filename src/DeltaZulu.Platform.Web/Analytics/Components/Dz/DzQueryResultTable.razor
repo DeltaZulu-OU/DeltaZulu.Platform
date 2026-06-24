@@ -1,6 +1,7 @@
 @namespace DeltaZulu.Platform.Web.Analytics.Components.Dz
 @using DeltaZulu.Platform.Domain.Analytics.Execution
 @using System.Globalization
+@using DeltaZulu.Platform.Web.Analytics
 @using DeltaZulu.Platform.Web.Analytics.Exports
 @inject FileOperationsService FileOperations
 
@@ -196,19 +197,9 @@
         {
             null => string.Empty,
             IComparable comparable => comparable,
-            _ => FormatCell(value)
+            _ => CellFormatter.FormatValue(value)
         };
     }
 
-    private static string FormatCell(object? value)
-    {
-        return value switch
-        {
-            null => string.Empty,
-            DateTime dateTime => dateTime.ToString("O", CultureInfo.InvariantCulture),
-            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("O", CultureInfo.InvariantCulture),
-            bool boolean => boolean ? "true" : "false",
-            _ => Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty
-        };
-    }
+    private static string FormatCell(object? value) => CellFormatter.FormatValue(value);
 }

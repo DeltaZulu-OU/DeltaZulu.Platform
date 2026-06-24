@@ -56,12 +56,9 @@ public sealed class QueryResultCsvExporterTests
             csv);
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("Dns | take 100", "Dns---take-100.csv")]
     [DataRow("", "query-results.csv")]
     [DataRow("already-safe", "already-safe.csv")]
-    public void BuildCsvFileName_DerivesSafeCsvFileName(string queryText, string expected)
-    {
-        Assert.AreEqual(expected, QueryResultCsvExporter.BuildCsvFileName(queryText));
-    }
+    public void BuildCsvFileName_DerivesSafeCsvFileName(string queryText, string expected) => Assert.AreEqual(expected, QueryResultCsvExporter.BuildCsvFileName(queryText));
 }
