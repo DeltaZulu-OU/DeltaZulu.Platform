@@ -7,3 +7,12 @@
    ============================================================ */
 
 /* Keep this file for Workbench-specific overrides only. */
+/* Detection rule list refinements */
+.dz-rule-name { display: grid; gap: .1rem; }
+.dz-rule-name code,
+.dz-rule-name span { color: var(--mud-palette-text-secondary); font-size: .72rem; }
+.dz-rule-name span { max-width: 34rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dz-rule-count { background: rgba(37, 99, 235, .1); border-radius: 999px; color: var(--mud-palette-primary); display: inline-flex; font-weight: 800; justify-content: center; min-width: 1.75rem; padding: .15rem .5rem; }
+.dz-rule-row:hover { background: rgba(37, 99, 235, .055); }
+
+.dz-rule-dialog__title { align-items: center; display: flex; gap: .75rem; }
