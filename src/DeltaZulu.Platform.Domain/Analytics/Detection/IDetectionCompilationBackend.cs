@@ -4,8 +4,8 @@ namespace DeltaZulu.Platform.Domain.Analytics.Detection;
 
 /// <summary>
 /// Backend-neutral port for compiling a RelNode query into detection deployment artifacts.
-/// Application-layer orchestrators (e.g. NrtRuleCompiler) depend on this interface; the concrete
-/// implementation is infrastructure-specific and lives in the Data layer.
+/// Application-layer orchestrators depend on this interface; the concrete implementation is
+/// infrastructure-specific and lives in the Data layer.
 /// </summary>
 public interface IDetectionCompilationBackend
 {
@@ -16,9 +16,49 @@ public interface IDetectionCompilationBackend
     /// </summary>
     string EmitSelectSql(RelNode query);
 
+    // -------------------------------------------------------------------------
+    // NRT (Materialized View + Alert)
+    // -------------------------------------------------------------------------
+
     /// <summary>
-    /// Wraps <paramref name="selectSql"/> in the backend-specific NRT deployment DDL
-    /// (e.g. a <c>CREATE MATERIALIZED VIEW</c> statement in Proton).
+    /// Wraps <paramref name="selectSql"/> in a <c>CREATE MATERIALIZED VIEW</c> statement for
+    /// continuous NRT detection against the Gold streams.
     /// </summary>
     string BuildNrtDeploymentDdl(string ruleId, string selectSql);
+
+    /// <summary>
+    /// Builds a <c>CREATE ALERT</c> statement that monitors the NRT materialized view for
+    /// <paramref name="ruleId"/> and invokes <paramref name="udfName"/> when the batch threshold
+    /// is met. The UDF is responsible for writing to the <c>alert_dispatch</c> stream.
+    /// </summary>
+    string BuildNrtAlertDdl(
+        string ruleId,
+        string udfName,
+        int batchEvents,
+        TimeSpan batchTimeout,
+        int? limitAlerts = null,
+        TimeSpan? limitPer = null);
+
+    /// <summary>
+    /// Returns DDL that drops both the NRT materialized view and its associated alert.
+    /// </summary>
+    string BuildDropNrtDdl(string ruleId);
+
+    // -------------------------------------------------------------------------
+    // Scheduled (Task)
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Builds a <c>CREATE OR REPLACE TASK</c> statement that runs <paramref name="selectSql"/>
+    /// on the given <paramref name="schedule"/> and writes results to <paramref name="targetStream"/>.
+    /// </summary>
+    string BuildScheduledDeploymentDdl(
+        string ruleId,
+        string selectSql,
+        TimeSpan schedule,
+        TimeSpan timeout,
+        string targetStream);
+
+    /// <summary>Returns DDL that drops the scheduled task.</summary>
+    string BuildDropScheduledDdl(string ruleId);
 }

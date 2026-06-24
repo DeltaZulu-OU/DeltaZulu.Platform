@@ -15,13 +15,20 @@ namespace DeltaZulu.Platform.Data.DuckDb;
 /// provider-specific value handling.
 /// </para>
 /// </summary>
-public sealed class SchemaApplier
+public sealed class SchemaApplier : ISchemaApplier
 {
     private readonly DuckDbConnectionFactory _connectionFactory;
 
     public SchemaApplier(DuckDbConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory;
+    }
+
+    /// <inheritdoc/>
+    public Task ApplyAsync(IEnumerable<string> statements, CancellationToken ct = default)
+    {
+        ApplyStatements(statements);
+        return Task.CompletedTask;
     }
 
     /// <summary>

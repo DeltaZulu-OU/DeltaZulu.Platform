@@ -15,7 +15,7 @@ namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 /// silver parser views → golden public hunting views.
 /// </para>
 /// </summary>
-public sealed class SchemaEmitter
+public sealed class SchemaEmitter : ISchemaEmitter
 {
     private static readonly string[] first = new[]
             {
@@ -24,11 +24,41 @@ public sealed class SchemaEmitter
                 "golden"
             };
 
+    public string TargetDialect => "duckdb";
+
     #region Top-level orchestration
 
     /// <summary>
-    /// Emit all DDL statements needed to build the database from scratch,
-    /// in dependency order.
+    /// Emit all DDL statements in dependency order (Bronze → Silver → Golden).
+    /// Satisfies <see cref="ISchemaEmitter"/>; internal tables are omitted.
+    /// </summary>
+    public IReadOnlyList<string> EmitAll(
+        IEnumerable<RawTableDef> rawTables,
+        IEnumerable<ParserViewDef> parserViews,
+        IEnumerable<CanonicalViewDef> canonicalViews)
+        => EmitAll(rawTables, [], parserViews, canonicalViews);
+
+    /// <summary>
+    /// Emit drop DDL in safe reverse-dependency order (Golden → Silver → Bronze).
+    /// </summary>
+    public IReadOnlyList<string> EmitDropAll(
+        IEnumerable<RawTableDef> rawTables,
+        IEnumerable<ParserViewDef> parserViews,
+        IEnumerable<CanonicalViewDef> canonicalViews)
+    {
+        var raw    = rawTables.ToList();
+        var parser = parserViews.ToList();
+        var golden = canonicalViews.ToList();
+
+        var statements = new List<string>(raw.Count + parser.Count + golden.Count);
+        foreach (var v in golden) statements.Add($"DROP VIEW IF EXISTS {DuckDbSqlText.EscapeQualifiedIdent(v.QualifiedName)}");
+        foreach (var v in parser) statements.Add($"DROP VIEW IF EXISTS {DuckDbSqlText.EscapeQualifiedIdent(v.QualifiedName)}");
+        foreach (var t in raw)    statements.Add($"DROP TABLE IF EXISTS {DuckDbSqlText.EscapeQualifiedIdent(t.QualifiedName)}");
+        return statements;
+    }
+
+    /// <summary>
+    /// Full overload including internal tables (e.g. provenance, scratch tables).
     /// </summary>
     public IReadOnlyList<string> EmitAll(
         IEnumerable<RawTableDef> rawTables,
