@@ -25,9 +25,9 @@ public static class ProtonServiceCollectionExtensions
         services.AddSingleton<IDetectionCompilationBackend, ProtonDetectionCompilationBackend>();
         services.AddSingleton<IDetectionDeployer, ProtonDetectionDeployer>();
         services.AddSingleton<ProtonSchemaEmitter>();
-        services.AddSingleton<ISchemaEmitter>(sp => sp.GetRequiredService<ProtonSchemaEmitter>());
+        services.AddKeyedSingleton<ISchemaEmitter>("proton", (sp, _) => sp.GetRequiredService<ProtonSchemaEmitter>());
         services.AddSingleton<ProtonSchemaApplier>();
-        services.AddSingleton<ISchemaApplier>(sp => sp.GetRequiredService<ProtonSchemaApplier>());
+        services.AddKeyedSingleton<ISchemaApplier>("proton", (sp, _) => sp.GetRequiredService<ProtonSchemaApplier>());
         return services;
     }
 

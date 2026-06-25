@@ -77,7 +77,7 @@ public sealed class NrtRuleService
             KqlQuery:            kqlQuery,
             ProtonSelectSql:     compilation.SelectSql,
             MaterializedViewDdl: compilation.MaterializedViewDdl,
-            AlertDdl:            null,
+            AlertDdl:            existing?.AlertDdl,
             Threshold:           threshold,
             Severity:            severity,
             Confidence:          confidence,

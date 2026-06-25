@@ -32,7 +32,7 @@ public sealed class ProtonDetectionDeployer : IDetectionDeployer
 
     public async Task RetractNrtAsync(string ruleId, CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(ruleId);
+        ValidateRuleIdFormat(ruleId);
 
         _logger.LogInformation("Retracting NRT rule '{RuleId}': dropping Alert then MV.", ruleId);
         await _executor.ExecuteAsync($"DROP ALERT IF EXISTS `alert_nrt_{ruleId}`;", ct);
@@ -42,7 +42,7 @@ public sealed class ProtonDetectionDeployer : IDetectionDeployer
 
     public async Task DeployScheduledAsync(string ruleId, string taskDdl, CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(ruleId);
+        ValidateRuleIdFormat(ruleId);
         ArgumentException.ThrowIfNullOrWhiteSpace(taskDdl);
 
         _logger.LogInformation("Deploying scheduled rule '{RuleId}'.", ruleId);
@@ -52,10 +52,18 @@ public sealed class ProtonDetectionDeployer : IDetectionDeployer
 
     public async Task RetractScheduledAsync(string ruleId, CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(ruleId);
+        ValidateRuleIdFormat(ruleId);
 
         _logger.LogInformation("Retracting scheduled rule '{RuleId}'.", ruleId);
         await _executor.ExecuteAsync($"DROP TASK IF EXISTS `sched_{ruleId}`;", ct);
         _logger.LogInformation("Scheduled rule '{RuleId}' retracted.", ruleId);
+    }
+
+    private static void ValidateRuleIdFormat(string ruleId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ruleId);
+        if (!ruleId.All(c => char.IsAsciiLetterOrDigit(c) || c == '-' || c == '_'))
+            throw new ArgumentException(
+                $"Rule ID '{ruleId}' contains characters not permitted in Proton identifiers.", nameof(ruleId));
     }
 }

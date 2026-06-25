@@ -8,6 +8,7 @@ using DeltaZulu.Platform.Data.Sqlite.Analytics.Detections;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Nrt;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.QueryHistory;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.SavedQueries;
+using DeltaZulu.Platform.Data.Sqlite.Analytics.Scheduled;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Settings;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Visualizations;
 using DeltaZulu.Platform.Domain.Analytics.AlertEntities;
@@ -19,6 +20,7 @@ using DeltaZulu.Platform.Domain.Analytics.Detections;
 using DeltaZulu.Platform.Domain.Analytics.Nrt;
 using DeltaZulu.Platform.Domain.Analytics.QueryHistory;
 using DeltaZulu.Platform.Domain.Analytics.SavedQueries;
+using DeltaZulu.Platform.Domain.Analytics.Scheduled;
 using DeltaZulu.Platform.Domain.Analytics.Visualizations;
 using Microsoft.Extensions.DependencyInjection;
 using IUserSettingsRepository = DeltaZulu.Platform.Domain.Analytics.Settings.IUserSettingsRepository;
@@ -55,6 +57,7 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         AddApplicationRepository<IIncidentCandidateRepository, DapperIncidentCandidateRepository>(services);
         AddApplicationRepository<ICandidateEvidenceRepository, DapperCandidateEvidenceRepository>(services);
         AddApplicationRepository<INrtRuleRepository, DapperNrtRuleRepository>(services);
+        AddApplicationRepository<IScheduledDetectionRuleRepository, DapperScheduledDetectionRuleRepository>(services);
     }
 
     private static void AddApplicationRepository<TRepository, TImplementation>(IServiceCollection services)

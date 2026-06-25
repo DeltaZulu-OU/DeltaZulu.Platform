@@ -14,14 +14,17 @@ namespace DeltaZulu.Platform.Application.Analytics.Mediation;
 /// Both NRT alerts (forwarded to the stream by the ALERT UDF) and scheduled task results
 /// (written via <c>INTO alert_dispatch</c>) arrive on the same channel.
 /// </summary>
-public sealed class AlertMediationService : IHostedService, IDisposable
+public sealed class AlertMediationService : BackgroundService
 {
+    private static readonly JsonSerializerOptions _jsonOpts = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+    };
+
     private readonly IStreamSubscriber _subscriber;
     private readonly IAlertSink _sink;
     private readonly MediationOptions _options;
     private readonly ILogger<AlertMediationService> _logger;
-    private CancellationTokenSource? _cts;
-    private Task? _loop;
 
     public AlertMediationService(
         IStreamSubscriber subscriber,
@@ -35,28 +38,7 @@ public sealed class AlertMediationService : IHostedService, IDisposable
         _logger     = logger;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        _cts  = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _loop = RunAsync(_cts.Token);
-        return Task.CompletedTask;
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        if (_cts is not null) await _cts.CancelAsync();
-        if (_loop is not null)
-        {
-            try { await _loop.WaitAsync(cancellationToken); }
-            catch (OperationCanceledException) { }
-        }
-    }
-
-    public void Dispose() => _cts?.Dispose();
-
-    // -------------------------------------------------------------------------
-
-    private async Task RunAsync(CancellationToken ct)
+    protected override async Task ExecuteAsync(CancellationToken ct)
     {
         _logger.LogInformation("Alert mediation started; listening on channel '{Channel}'.", _options.AlertDispatchChannel);
 
@@ -89,7 +71,7 @@ public sealed class AlertMediationService : IHostedService, IDisposable
         AlertRecord? alert;
         try
         {
-            alert = JsonSerializer.Deserialize<AlertRecord>(payload);
+            alert = JsonSerializer.Deserialize<AlertRecord>(payload, _jsonOpts);
         }
         catch (JsonException ex)
         {

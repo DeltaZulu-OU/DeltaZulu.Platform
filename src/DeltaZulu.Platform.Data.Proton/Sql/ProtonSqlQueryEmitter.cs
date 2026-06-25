@@ -571,10 +571,10 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
             BuildWordPattern(rhs, rhsSql, ci, "(^|[^[:alnum:]])", "([^[:alnum:]]|$)", escapeRegex: true);
 
         private static string BuildWordStartPattern(ScalarExpr rhs, string rhsSql, bool ci) =>
-            BuildWordPattern(rhs, rhsSql, ci, "(^|[^[:alnum:]])", null, escapeRegex: false);
+            BuildWordPattern(rhs, rhsSql, ci, "(^|[^[:alnum:]])", null, escapeRegex: true);
 
         private static string BuildWordEndPattern(ScalarExpr rhs, string rhsSql, bool ci) =>
-            BuildWordPattern(rhs, rhsSql, ci, null, "([^[:alnum:]]|$)", escapeRegex: false);
+            BuildWordPattern(rhs, rhsSql, ci, null, "([^[:alnum:]]|$)", escapeRegex: true);
 
         private static string BuildWordPattern(ScalarExpr rhs, string rhsSql, bool ci,
             string? prefix, string? suffix, bool escapeRegex)

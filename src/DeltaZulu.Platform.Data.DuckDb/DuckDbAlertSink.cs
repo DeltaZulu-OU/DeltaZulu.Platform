@@ -42,8 +42,10 @@ public sealed class DuckDbAlertSink : IAlertSink
         """;
 
     private readonly DuckDbConnectionFactory _connectionFactory;
-    private readonly SemaphoreSlim _initLock = new(1, 1);
-    private volatile bool _initialized;
+    // DuckDbConnectionFactory is not designed for concurrent query execution (see its XML doc).
+    // A single semaphore serializes all writes (init + insert) through this sink.
+    private readonly SemaphoreSlim _lock = new(1, 1);
+    private bool _initialized;
 
     public DuckDbAlertSink(DuckDbConnectionFactory connectionFactory)
     {
@@ -53,39 +55,37 @@ public sealed class DuckDbAlertSink : IAlertSink
     public async Task WriteAsync(AlertRecord alert, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(alert);
-        await EnsureInitializedAsync(ct);
-        await Task.Run(() => _connectionFactory.GetConnection().Execute(InsertSql, ToParams(alert)), ct);
+        await _lock.WaitAsync(ct);
+        try
+        {
+            EnsureInitialized();
+            _connectionFactory.GetConnection().Execute(InsertSql, ToParams(alert));
+        }
+        finally { _lock.Release(); }
     }
 
     public async Task WriteBatchAsync(IReadOnlyList<AlertRecord> alerts, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(alerts);
         if (alerts.Count == 0) return;
-        await EnsureInitializedAsync(ct);
-        await Task.Run(() =>
+        await _lock.WaitAsync(ct);
+        try
         {
+            EnsureInitialized();
             var conn = _connectionFactory.GetConnection();
             using var tx = conn.BeginTransaction();
             foreach (var alert in alerts)
                 conn.Execute(InsertSql, ToParams(alert), tx);
             tx.Commit();
-        }, ct);
+        }
+        finally { _lock.Release(); }
     }
 
-    private async Task EnsureInitializedAsync(CancellationToken ct)
+    private void EnsureInitialized()
     {
         if (_initialized) return;
-        await _initLock.WaitAsync(ct);
-        try
-        {
-            if (_initialized) return;
-            await Task.Run(() => _connectionFactory.GetConnection().Execute(CreateSchemaSql), ct);
-            _initialized = true;
-        }
-        finally
-        {
-            _initLock.Release();
-        }
+        _connectionFactory.GetConnection().Execute(CreateSchemaSql);
+        _initialized = true;
     }
 
     private static object ToParams(AlertRecord a) => new
