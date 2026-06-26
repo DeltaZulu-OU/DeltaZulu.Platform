@@ -28,9 +28,11 @@ public class SchemaModelContractTests
         Assert.AreEqual("golden.ProcessEvent", SchemaConventions.CanonicalViews.Single(v => v.Name == "ProcessEvent").QualifiedName);
         Assert.AreEqual("golden.NetworkSession", SchemaConventions.CanonicalViews.Single(v => v.Name == "NetworkSession").QualifiedName);
         Assert.AreEqual("golden.Dns", SchemaConventions.CanonicalViews.Single(v => v.Name == "Dns").QualifiedName);
+        Assert.AreEqual("golden.AlertEvent", SchemaConventions.CanonicalViews.Single(v => v.Name == "AlertEvent").QualifiedName);
+        Assert.AreEqual("golden.AlertEntity", SchemaConventions.CanonicalViews.Single(v => v.Name == "AlertEntity").QualifiedName);
 
         Assert.HasCount(3, SchemaConventions.RawTables);
         Assert.HasCount(6, SchemaConventions.ParserViews);
-        Assert.HasCount(3, SchemaConventions.CanonicalViews);
+        Assert.HasCount(5, SchemaConventions.CanonicalViews);
     }
 }

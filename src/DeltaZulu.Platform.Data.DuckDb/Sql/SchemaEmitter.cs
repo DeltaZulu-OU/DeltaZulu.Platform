@@ -243,16 +243,16 @@ public sealed class SchemaEmitter : ISchemaEmitter
                 $"Canonical view {view.QualifiedName} has null parser-view metadata.");
         }
 
-        if (view.ParserViews.Count == 0)
-        {
-            throw new InvalidOperationException(
-                $"Canonical view {view.QualifiedName} has no parser views.");
-        }
-
         var sb = new StringBuilder();
         sb.Append("CREATE OR REPLACE VIEW ");
         sb.Append(DuckDbSqlText.EscapeQualifiedIdent(view.QualifiedName));
         sb.Append(" AS\n");
+
+        if (view.ParserViews.Count == 0)
+        {
+            EmitEmptyCanonicalViewBody(sb, view);
+            return sb.ToString();
+        }
 
         var canonicalColumns = string.Join(",\n    ", view.Columns.Select(c => {
             ArgumentNullException.ThrowIfNull(c);
@@ -273,6 +273,31 @@ public sealed class SchemaEmitter : ISchemaEmitter
         }
 
         return sb.ToString();
+    }
+
+
+    private static void EmitEmptyCanonicalViewBody(StringBuilder sb, CanonicalViewDef view)
+    {
+        sb.Append("SELECT\n");
+
+        for (var i = 0; i < view.Columns.Count; i++)
+        {
+            var column = view.Columns[i];
+            ArgumentNullException.ThrowIfNull(column);
+
+            sb.Append("    CAST(NULL AS ");
+            sb.Append(column.DuckDbType.ToSql());
+            sb.Append(") AS ");
+            sb.Append(DuckDbSqlText.EscapeIdent(column.Name));
+            if (i < view.Columns.Count - 1)
+            {
+                sb.Append(',');
+            }
+
+            sb.Append('\n');
+        }
+
+        sb.Append("WHERE FALSE");
     }
 
     #endregion Canonical view (golden.*)
