@@ -1,18 +1,17 @@
 # DeltaZulu Platform roadmap
 
-This roadmap describes the current target after repository consolidation. The historical merge plan is retained in [`CONSOLIDATION_ROADMAP.md`](CONSOLIDATION_ROADMAP.md); it is no longer the active plan. The target product-level user stories are defined in [`TARGET_USER_STORIES.md`](TARGET_USER_STORIES.md).
+This roadmap describes the current target after repository consolidation. Completed consolidation/import history has been removed from the active documentation set; the target product-level user stories are defined in [`TARGET_USER_STORIES.md`](TARGET_USER_STORIES.md), and production-v1 blockers are summarized in [`reviews/PRODUCTION_V1_GAP_ANALYSIS.md`](reviews/PRODUCTION_V1_GAP_ANALYSIS.md).
 
 ## Current baseline
 
 Repository consolidation is complete and the solution has been expanded for multi-backend support:
 
 - One runnable Blazor host: `src/DeltaZulu.Platform.Web`.
-- Seven source projects: Domain, Application, Ingestion, Data.DuckDb, Data, Blazor.Interop, Web.
+- Ten source projects: Domain, Application, Ingestion, Data, Data.DuckDb, Data.SQLite, Data.Git, Data.Proton, Blazor.Interop, Web.
 - One test project: `tests/DeltaZulu.Platform.Tests`.
 - Analytics and Governance are platform modules, not separately deployed applications.
 - Shared components, design tokens, detection contracts, platform module abstractions, analytics code, governance code, persistence, and tests have been absorbed into the platform projects.
-- DuckDB infrastructure is now in a dedicated `DeltaZulu.Platform.Data.DuckDb` project; raw-log
-  pub-sub is in `DeltaZulu.Platform.Ingestion`; typed Blazor JS interop is in `DeltaZulu.Blazor.Interop`.
+- DuckDB infrastructure is in `DeltaZulu.Platform.Data.DuckDb`; SQLite repositories and seeders are in `DeltaZulu.Platform.Data.SQLite`; Git accepted-content storage is in `DeltaZulu.Platform.Data.Git`; Proton DDL/backend code is in `DeltaZulu.Platform.Data.Proton`; raw-log pub-sub is in `DeltaZulu.Platform.Ingestion`; typed Blazor JS interop is in `DeltaZulu.Blazor.Interop`.
 - Design-system adoption is partial: the shell, tokens, and shared components exist, but product identity, radius rules, typography scope, legacy Hunting aliases, dashboard primitives, and evidence-table semantics still need enforcement work.
 - NRT detection foundation is complete: KQL-to-Proton compilation pipeline (`NrtRuleCompiler`, `ProtonSqlQueryEmitter`), Proton DDL builder library (`MaterializedViewDdl`, `ScheduledTaskDdl`, `AlertDdl`, `ProtonInterval`), NRT rule authoring UI at `/analytics/nrt`, and SQLite-backed `DapperNrtRuleRepository` for rule metadata.
 - Detection engine separation is settled: Timeplus Proton owns all detection execution (NRT materialized views + Proton scheduled tasks); DuckDB is threat hunting and historical analytics only. The only runtime connection is the analyst-initiated pivot from a saved hunting query to a detection content proposal.
@@ -22,12 +21,12 @@ Repository consolidation is complete and the solution has been expanded for mult
 
 The platform is past repository consolidation and is now in the **pre-Operations implementation phase**. The remaining roadmap is not another merge or project split; it is the work needed to cross the operational threshold: accepted detections must execute through a shared application-layer analytics contract, create traceable detection runs, materialize alerts/entities, expose approved KQL views, and feed enrichment, suppression, correlation, triage, and governance tuning loops.
 
-Evidence from the retained documentation and current tree:
+Evidence from the current documentation and tree:
 
-- The consolidation roadmap is closed: C1 through C12 are complete, and the solution inventory is the four platform source projects plus the single consolidated test project.
-- The central architecture is authoritative and supersedes imported module-era documents whenever they describe standalone Hunting or Workbench hosts.
+- Consolidation is closed: the active shape is one web host, ten source projects, and the single consolidated test project.
+- The central architecture is authoritative for module ownership, backend ownership, routing, and storage boundaries.
 - Analytics has a working KQL-to-DuckDB contract, render/dashboard design, Golden-view query boundary, diagnostics-first unsupported behavior, and a construct-level checklist showing 226 MVP-ready or metadata-supported items out of 320 in-scope items, with 91 deferred and 3 deliberately blocked for semantic safety.
-- Governance has the core detection-content workflow shape in place: issues, detections, database-owned changes, checks, reviews, Git-backed accepted content, versions, compare/restore, and merge reconciliation. The retained Workbench roadmap still identifies the highest-value gaps as end-to-end UI hardening, richer workflow actions, merge-reconciliation guidance, stronger checks, and explicit persistence/read-model deferrals.
+- Governance has the core detection-content workflow shape in place: issues, detections, database-owned changes, checks, reviews, Git-backed accepted content, versions, compare/restore, and merge reconciliation.
 - The shared analytics execution contract (Phase 2) is complete. Curated analytics persistence and promotion (Phase 3) are complete. NRT detection foundation (Phase 3A) is complete. The next meaningful progress is **Phase 3B** (alert storage migration to DuckDB lake) and **Phase 4** (executable detection projection), both of which are unblocked.
 - A design-system gap analysis now adds a prerequisite UI-governance track: resolve whether this app is DZNS-branded, DeltaZulu Platform-branded, or an internal DeltaZulu platform; remove rule conflicts before expanding dashboard and Operations surfaces.
 
@@ -38,7 +37,7 @@ The repository is aligned with the revised target at the documentation and conso
 
 | Target area | Current repository state | Gap | Priority |
 |---|---|---|---|
-| Repository consolidation | One runnable Blazor host, seven source projects, one test project, and Analytics/Governance as platform modules. DuckDB infrastructure in Data.DuckDb; raw-log pub-sub in Ingestion; typed JS interop in Blazor.Interop. | No major consolidation gap. | Closed |
+| Repository consolidation | One runnable Blazor host, ten source projects, one test project, and Analytics/Governance as platform modules. DuckDB, SQLite, Git, Proton, ingestion, and Blazor interop responsibilities are split into explicit projects. | No major consolidation gap. | Closed |
 | Product framing| Module separation | Analytics and Governance are separate responsibility areas inside one host. Operations is defined as a target responsibility area. | `OperationsModule`, `/operations` routes, and Operations pages are not implemented, so alert queues, operational dashboards, investigation drawers, and monitoring flows cannot validate the target design. | High |
 | Analytics module | `/analytics` exposes the consolidated analytics workbench, library, dashboards, schema, and visual surfaces. | Threat-hunting workflow, evidence workflow, curated analytics, and alert/candidate analytical pivots are still target surfaces. | Medium |
 | Shared analytics execution | Application-layer `IAnalyticsQueryExecutor` and `ExecutionPurpose` policies exist; interactive, dashboard, and governance validation dry-run execution all route through the shared DuckDB executor. Query-history recording stays in the Web adapter. Boundary tests prove no governance check creates parallel execution paths. | Scheduled-detection and recovery callers deferred to Phase 6. | Closed (Phase 2) |
@@ -219,13 +218,13 @@ These priorities apply across all phases and guide day-to-day work ordering:
 | Single platform web host | Complete; `DeltaZulu.Platform.Web` is the only web SDK project. |
 | Domain consolidation | Complete; detection, analytics, and governance domain/contracts live in `DeltaZulu.Platform.Domain`. |
 | Application consolidation | Complete; analytics and governance use cases live in `DeltaZulu.Platform.Application`. |
-| Data consolidation | Complete; SQLite, Git, and seed infrastructure live in `DeltaZulu.Platform.Data`. DuckDB SQL infrastructure has been extracted to `DeltaZulu.Platform.Data.DuckDb`; raw-log pub-sub to `DeltaZulu.Platform.Ingestion`. |
+| Data consolidation | Complete; shared Data abstractions, DuckDB runtime, SQLite repositories/seeders, Git accepted-content storage, Proton backend, and ingestion have explicit projects. |
 | Web consolidation | Complete; platform shell, shared components, analytics UI, and governance UI live in `DeltaZulu.Platform.Web`. |
 | Test consolidation | Complete; all tests live in `DeltaZulu.Platform.Tests`. |
 
 ## Documentation cleanup policy
 
 - Central docs (`docs/README.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `docs/TARGET_USER_STORIES.md`) are authoritative.
-- Imported ADRs have been centralized under `docs/adr/analytics` and `docs/adr/governance` for provenance.
-- Deep domain references may remain in module trees when they describe active semantics, such as KQL translation behavior or dashboard rendering behavior.
-- Imported module roadmaps/readmes/architecture pages should redirect to central docs unless they carry unique active domain detail.
+- Imported ADRs and pre-consolidation notes have been reviewed; still-relevant decisions were converted into the centralized ADR set under `docs/adr/`, while obsolete history remains out of active docs.
+- Deep domain references may remain only when they describe active semantics, such as KQL translation behavior.
+- Imported module roadmaps/readmes/architecture pages should not be reintroduced; durable decisions belong in central docs.
