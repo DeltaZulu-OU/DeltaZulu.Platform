@@ -3,6 +3,7 @@
   <PropertyGroup>
 	<RootNamespace>DeltaZulu.Platform.Web</RootNamespace>
 	<AssemblyName>DeltaZulu.Platform.Web</AssemblyName>
+	<NoWarn>$(NoWarn);CS1591;NU1601</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,11 +23,17 @@
 	<ProjectReference Include="..\DeltaZulu.Platform.Data.Proton\DeltaZulu.Platform.Data.Proton.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-	<PackageReference Include="Markdig" />
-	<PackageReference Include="Blazorade.Mermaid" />
-	<PackageReference Include="MudBlazor" />
-	<PackageReference Include="Vizor.ECharts" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Markdig" />
+		<PackageReference Include="Blazorade.Mermaid" />
+		<PackageReference Include="MudBlazor" />
+		<PackageReference Include="SourceGear.sqlite3" />
+		<PackageReference Include="Vizor.ECharts" />
+
+		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+		<PackageReference Include="SQLitePCLRaw.core" />
+		<PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
+		<PackageReference Include="SQLitePCLRaw.provider.e_sqlite3" />
+	</ItemGroup>
 
 </Project>
