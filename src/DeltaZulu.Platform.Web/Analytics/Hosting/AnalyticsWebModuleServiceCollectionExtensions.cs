@@ -23,18 +23,16 @@ namespace DeltaZulu.Platform.Web.Analytics.Hosting;
 
 public static class AnalyticsWebModuleServiceCollectionExtensions
 {
+    // Only analytics app-state SQLite tables are attached as read-only views.
+    // Alert and alert-entity records live in the DuckDB lake (append-only, queried via KQL).
+    // Incident candidates and related tables live in the separate operations SQLite database.
     private static readonly string[] AppStateTables = [
         "user_settings",
         "saved_queries",
         "query_history",
         "visualizations",
         "detections",
-        "detection_runs",
-        "alerts",
-        "alert_entities",
-        "incident_candidates",
-        "candidate_alert_links",
-        "candidate_evidence"];
+        "detection_runs"];
 
     /// <summary>
     /// Registers Analytics query/runtime services. This layer is reusable outside the
@@ -90,6 +88,7 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         // Keep repository writes on Microsoft.Data.Sqlite: the analytics runtime attachment supports
         // cross-database reads, but does not support SQLite-backed ON CONFLICT/MERGE writes.
         services.AddApplicationPersistence($"Data Source={options.AppDbPath}");
+        services.AddOperationsPersistence($"Data Source={options.OperationsDbPath}");
         services.AddDashboards();
         services.AddScoped<UserSettingsState>();
         services.AddScoped<QueryLibraryService>();

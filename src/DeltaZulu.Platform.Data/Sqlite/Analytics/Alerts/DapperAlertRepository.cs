@@ -20,9 +20,7 @@ public sealed class DapperAlertRepository : DapperRepositoryBase, IAlertReposito
             confidence TEXT NOT NULL,
             risk_score INTEGER NOT NULL DEFAULT 0,
             evidence_json TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'New',
-            created_at_utc TEXT NOT NULL,
-            updated_at_utc TEXT NOT NULL
+            created_at_utc TEXT NOT NULL
         );
 
         CREATE INDEX IF NOT EXISTS idx_alerts_detection_run_id
@@ -30,9 +28,6 @@ public sealed class DapperAlertRepository : DapperRepositoryBase, IAlertReposito
 
         CREATE INDEX IF NOT EXISTS idx_alerts_detection_id
             ON alerts (detection_id, alert_time_utc DESC);
-
-        CREATE INDEX IF NOT EXISTS idx_alerts_status
-            ON alerts (status, alert_time_utc DESC);
 
         CREATE INDEX IF NOT EXISTS idx_alerts_source_event
             ON alerts (detection_id, source_event_id);
@@ -52,9 +47,7 @@ public sealed class DapperAlertRepository : DapperRepositoryBase, IAlertReposito
             confidence AS Confidence,
             risk_score AS RiskScore,
             evidence_json AS EvidenceJson,
-            status AS Status,
-            created_at_utc AS CreatedAtUtc,
-            updated_at_utc AS UpdatedAtUtc
+            created_at_utc AS CreatedAtUtc
         FROM alerts
         WHERE detection_run_id = @DetectionRunId
         ORDER BY alert_time_utc ASC;
@@ -74,9 +67,7 @@ public sealed class DapperAlertRepository : DapperRepositoryBase, IAlertReposito
             confidence AS Confidence,
             risk_score AS RiskScore,
             evidence_json AS EvidenceJson,
-            status AS Status,
-            created_at_utc AS CreatedAtUtc,
-            updated_at_utc AS UpdatedAtUtc
+            created_at_utc AS CreatedAtUtc
         FROM alerts
         WHERE detection_id = @DetectionId
         ORDER BY alert_time_utc DESC;
@@ -96,38 +87,25 @@ public sealed class DapperAlertRepository : DapperRepositoryBase, IAlertReposito
             confidence AS Confidence,
             risk_score AS RiskScore,
             evidence_json AS EvidenceJson,
-            status AS Status,
-            created_at_utc AS CreatedAtUtc,
-            updated_at_utc AS UpdatedAtUtc
+            created_at_utc AS CreatedAtUtc
         FROM alerts
         WHERE id = @Id;
         """;
 
-    private const string UpsertSql =
+    private const string InsertSql =
         """
-        INSERT INTO alerts (
+        INSERT OR IGNORE INTO alerts (
             id, detection_id, detection_version, detection_run_id,
             alert_time_utc, source_view, source_event_id,
             severity, confidence, risk_score, evidence_json,
-            status, created_at_utc, updated_at_utc
+            created_at_utc
         )
         VALUES (
             @Id, @DetectionId, @DetectionVersion, @DetectionRunId,
             @AlertTimeUtc, @SourceView, @SourceEventId,
             @Severity, @Confidence, @RiskScore, @EvidenceJson,
-            @Status, @CreatedAtUtc, @UpdatedAtUtc
-        )
-        ON CONFLICT(id) DO UPDATE SET
-            status = excluded.status,
-            updated_at_utc = excluded.updated_at_utc;
-        """;
-
-    private const string UpdateStatusSql =
-        """
-        UPDATE alerts
-        SET status = @Status,
-            updated_at_utc = @UpdatedAtUtc
-        WHERE id = @Id;
+            @CreatedAtUtc
+        );
         """;
 
     public DapperAlertRepository(IAppDbConnectionFactory connectionFactory)
@@ -189,7 +167,7 @@ public sealed class DapperAlertRepository : DapperRepositoryBase, IAlertReposito
 
         await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
 
-        await ExecuteUpsertAsync(connection, alert, cancellationToken);
+        await connection.ExecuteAsync(new CommandDefinition(InsertSql, ToParams(alert), cancellationToken: cancellationToken));
     }
 
     public async Task SaveBatchAsync(IReadOnlyList<AlertRecord> alerts, CancellationToken cancellationToken = default)
@@ -213,53 +191,27 @@ public sealed class DapperAlertRepository : DapperRepositoryBase, IAlertReposito
             ArgumentException.ThrowIfNullOrWhiteSpace(alert.DetectionRunId);
             ArgumentException.ThrowIfNullOrWhiteSpace(alert.SourceView);
 
-            await ExecuteUpsertAsync(connection, alert, cancellationToken);
+            await connection.ExecuteAsync(new CommandDefinition(InsertSql, ToParams(alert), cancellationToken: cancellationToken));
         }
 
         await transaction.CommitAsync(cancellationToken);
     }
 
-    public async Task UpdateStatusAsync(string id, string status, DateTime updatedAtUtc, CancellationToken cancellationToken = default)
+    private static object ToParams(AlertRecord alert) => new
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        ArgumentException.ThrowIfNullOrWhiteSpace(status);
-
-        await EnsureInitializedAsync(cancellationToken);
-
-        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
-
-        await connection.ExecuteAsync(new CommandDefinition(
-            UpdateStatusSql,
-            new {
-                Id = id,
-                Status = status,
-                UpdatedAtUtc = Format(updatedAtUtc)
-            },
-            cancellationToken: cancellationToken));
-    }
-
-    private static async Task ExecuteUpsertAsync(
-        System.Data.Common.DbConnection connection,
-        AlertRecord alert,
-        CancellationToken cancellationToken) => await connection.ExecuteAsync(new CommandDefinition(
-            UpsertSql,
-            new {
-                alert.Id,
-                alert.DetectionId,
-                alert.DetectionVersion,
-                alert.DetectionRunId,
-                AlertTimeUtc = Format(alert.AlertTimeUtc),
-                alert.SourceView,
-                alert.SourceEventId,
-                alert.Severity,
-                alert.Confidence,
-                alert.RiskScore,
-                alert.EvidenceJson,
-                alert.Status,
-                CreatedAtUtc = Format(alert.CreatedAtUtc),
-                UpdatedAtUtc = Format(alert.UpdatedAtUtc)
-            },
-            cancellationToken: cancellationToken));
+        alert.Id,
+        alert.DetectionId,
+        alert.DetectionVersion,
+        alert.DetectionRunId,
+        AlertTimeUtc = Format(alert.AlertTimeUtc),
+        alert.SourceView,
+        alert.SourceEventId,
+        alert.Severity,
+        alert.Confidence,
+        alert.RiskScore,
+        alert.EvidenceJson,
+        CreatedAtUtc = Format(alert.CreatedAtUtc)
+    };
 
     private static AlertRecord ToRecord(AlertRow row) => new AlertRecord(
             row.Id,
@@ -273,9 +225,7 @@ public sealed class DapperAlertRepository : DapperRepositoryBase, IAlertReposito
             row.Confidence,
             row.RiskScore,
             row.EvidenceJson,
-            row.Status,
-            Parse(row.CreatedAtUtc),
-            Parse(row.UpdatedAtUtc));
+            Parse(row.CreatedAtUtc));
 
     private sealed class AlertRow
     {
@@ -290,8 +240,6 @@ public sealed class DapperAlertRepository : DapperRepositoryBase, IAlertReposito
         public string Confidence { get; init; } = string.Empty;
         public int RiskScore { get; init; }
         public string EvidenceJson { get; init; } = string.Empty;
-        public string Status { get; init; } = string.Empty;
         public string CreatedAtUtc { get; init; } = string.Empty;
-        public string UpdatedAtUtc { get; init; } = string.Empty;
     }
 }

@@ -36,8 +36,7 @@ public sealed class AlertRepositoryTests
             await repository.SaveAsync(CreateAlert(
                 id: "alert-001",
                 alertTimeUtc: alertTime,
-                createdAtUtc: now,
-                updatedAtUtc: now), TestContext.CancellationToken);
+                createdAtUtc: now), TestContext.CancellationToken);
 
             var secondRepository = new DapperAlertRepository(
                 new SqliteAppDbConnectionFactory(BuildConnectionString(dbPath)));
@@ -53,7 +52,6 @@ public sealed class AlertRepositoryTests
             Assert.AreEqual("High", saved.Severity);
             Assert.AreEqual("Medium", saved.Confidence);
             Assert.AreEqual(75, saved.RiskScore);
-            Assert.AreEqual("New", saved.Status);
             Assert.AreEqual(now, saved.CreatedAtUtc);
         }
         finally
@@ -72,9 +70,9 @@ public sealed class AlertRepositoryTests
 
             var alerts = new[]
             {
-                CreateAlert(id: "alert-001", alertTimeUtc: now.AddMinutes(-2), createdAtUtc: now, updatedAtUtc: now),
-                CreateAlert(id: "alert-002", alertTimeUtc: now.AddMinutes(-1), createdAtUtc: now, updatedAtUtc: now),
-                CreateAlert(id: "alert-003", alertTimeUtc: now, createdAtUtc: now, updatedAtUtc: now)
+                CreateAlert(id: "alert-001", alertTimeUtc: now.AddMinutes(-2), createdAtUtc: now),
+                CreateAlert(id: "alert-002", alertTimeUtc: now.AddMinutes(-1), createdAtUtc: now),
+                CreateAlert(id: "alert-003", alertTimeUtc: now, createdAtUtc: now)
             };
 
             await repository.SaveBatchAsync(alerts, TestContext.CancellationToken);
@@ -82,35 +80,6 @@ public sealed class AlertRepositoryTests
             var saved = await repository.ListByRunAsync("run-001", TestContext.CancellationToken);
 
             Assert.HasCount(3, saved);
-        }
-        finally
-        {
-            DeleteDatabaseFiles(dbPath);
-        }
-    }
-
-    [TestMethod]
-    public async Task UpdateStatusAsync_ChangesAlertStatus()
-    {
-        var repository = CreateRepository(out var dbPath);
-        try
-        {
-            var now = new DateTime(2026, 6, 8, 9, 5, 0, DateTimeKind.Utc);
-            var later = new DateTime(2026, 6, 8, 10, 0, 0, DateTimeKind.Utc);
-
-            await repository.SaveAsync(CreateAlert(
-                id: "alert-001",
-                alertTimeUtc: now,
-                createdAtUtc: now,
-                updatedAtUtc: now), TestContext.CancellationToken);
-
-            await repository.UpdateStatusAsync("alert-001", "Resolved", later, TestContext.CancellationToken);
-
-            var saved = await repository.GetAsync("alert-001", TestContext.CancellationToken);
-
-            Assert.IsNotNull(saved);
-            Assert.AreEqual("Resolved", saved.Status);
-            Assert.AreEqual(later, saved.UpdatedAtUtc);
         }
         finally
         {
@@ -129,15 +98,15 @@ public sealed class AlertRepositoryTests
 
             await repository.SaveAsync(CreateAlert(
                 id: "alert-001", alertTimeUtc: baseTime.AddMinutes(1),
-                createdAtUtc: now, updatedAtUtc: now), TestContext.CancellationToken);
+                createdAtUtc: now), TestContext.CancellationToken);
 
             await repository.SaveAsync(CreateAlert(
                 id: "alert-002", alertTimeUtc: baseTime.AddMinutes(3),
-                createdAtUtc: now, updatedAtUtc: now), TestContext.CancellationToken);
+                createdAtUtc: now), TestContext.CancellationToken);
 
             await repository.SaveAsync(CreateAlert(
                 id: "alert-003", alertTimeUtc: baseTime.AddMinutes(2),
-                createdAtUtc: now, updatedAtUtc: now), TestContext.CancellationToken);
+                createdAtUtc: now), TestContext.CancellationToken);
 
             var alerts = await repository.ListByDetectionAsync("det-001", TestContext.CancellationToken);
 
@@ -153,7 +122,7 @@ public sealed class AlertRepositoryTests
     }
 
     [TestMethod]
-    public async Task SaveAsync_DuplicateIdPreservesOriginalData()
+    public async Task SaveAsync_DuplicateIdIsIgnored()
     {
         var repository = CreateRepository(out var dbPath);
         try
@@ -163,8 +132,9 @@ public sealed class AlertRepositoryTests
 
             await repository.SaveAsync(CreateAlert(
                 id: "alert-001", alertTimeUtc: alertTime,
-                createdAtUtc: now, updatedAtUtc: now), TestContext.CancellationToken);
+                createdAtUtc: now), TestContext.CancellationToken);
 
+            // Second save with same id and different data — should be silently ignored
             await repository.SaveAsync(new AlertRecord(
                 Id: "alert-001",
                 DetectionId: "det-002",
@@ -177,18 +147,15 @@ public sealed class AlertRepositoryTests
                 Confidence: "Low",
                 RiskScore: 10,
                 EvidenceJson: "{}",
-                Status: "Suppressed",
-                CreatedAtUtc: now,
-                UpdatedAtUtc: now.AddMinutes(30)), TestContext.CancellationToken);
+                CreatedAtUtc: now.AddMinutes(30)), TestContext.CancellationToken);
 
             var saved = await repository.GetAsync("alert-001", TestContext.CancellationToken);
 
             Assert.IsNotNull(saved);
+            // Original data preserved because duplicate insert is ignored
             Assert.AreEqual("det-001", saved.DetectionId);
             Assert.AreEqual("run-001", saved.DetectionRunId);
             Assert.AreEqual(alertTime, saved.AlertTimeUtc);
-            Assert.AreEqual("Suppressed", saved.Status);
-            Assert.AreEqual(now.AddMinutes(30), saved.UpdatedAtUtc);
         }
         finally
         {
@@ -199,8 +166,7 @@ public sealed class AlertRepositoryTests
     private static AlertRecord CreateAlert(
         string id = "alert-001",
         DateTime alertTimeUtc = default,
-        DateTime createdAtUtc = default,
-        DateTime updatedAtUtc = default) => new AlertRecord(
+        DateTime createdAtUtc = default) => new AlertRecord(
             Id: id,
             DetectionId: "det-001",
             DetectionVersion: 2,
@@ -212,9 +178,7 @@ public sealed class AlertRepositoryTests
             Confidence: "Medium",
             RiskScore: 75,
             EvidenceJson: "{\"FileName\":\"powershell.exe\",\"CommandLine\":\"powershell -enc base64...\"}",
-            Status: "New",
-            CreatedAtUtc: createdAtUtc,
-            UpdatedAtUtc: updatedAtUtc);
+            CreatedAtUtc: createdAtUtc);
 
     private static DapperAlertRepository CreateRepository(out string dbPath)
     {

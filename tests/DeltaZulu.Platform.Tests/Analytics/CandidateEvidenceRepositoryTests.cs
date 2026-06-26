@@ -39,7 +39,7 @@ public sealed class CandidateEvidenceRepositoryTests
                 collectedAtUtc: now), TestContext.CancellationToken);
 
             var secondRepository = new DapperCandidateEvidenceRepository(
-                new SqliteAppDbConnectionFactory(BuildConnectionString(dbPath)));
+                new SqliteOperationsDbConnectionFactory(BuildConnectionString(dbPath)));
 
             var saved = await secondRepository.ListByCandidateAsync("cand-001", TestContext.CancellationToken);
 
@@ -187,7 +187,7 @@ public sealed class CandidateEvidenceRepositoryTests
             Path.GetTempPath(),
             $"candidate-evidence-{Guid.NewGuid():N}.db");
 
-        var connectionFactory = new SqliteAppDbConnectionFactory(BuildConnectionString(dbPath));
+        var connectionFactory = new SqliteOperationsDbConnectionFactory(BuildConnectionString(dbPath));
         return new DapperCandidateEvidenceRepository(connectionFactory);
     }
 

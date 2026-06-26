@@ -14,13 +14,15 @@ namespace DeltaZulu.Platform.Domain.Analytics.Schema.Definitions.Medallion;
 public static class MedallionSchemaCatalog
 {
     /// <summary>
-    /// Operator-facing Golden hunting views.
+    /// Operator-facing Golden hunting views plus alert lake read models.
     /// </summary>
     public static IReadOnlyList<CanonicalViewDef> CanonicalViews { get; } =
     [
         GoldenEventContracts.Dns,
         GoldenEventContracts.NetworkSession,
-        GoldenEventContracts.ProcessEvent
+        GoldenEventContracts.ProcessEvent,
+        AlertContracts.AlertEvent,
+        AlertContracts.AlertEntity
     ];
 
     /// <summary>

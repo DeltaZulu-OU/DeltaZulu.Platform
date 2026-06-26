@@ -3,7 +3,7 @@ using DeltaZulu.Platform.Domain.Analytics.Alerts;
 
 namespace DeltaZulu.Platform.Data.DuckDb;
 
-public sealed class DuckDbAlertSink : IAlertSink
+public sealed class DuckDbAlertSink : IAlertSink, IDisposable
 {
     private const string CreateSchemaSql =
         """
@@ -19,9 +19,7 @@ public sealed class DuckDbAlertSink : IAlertSink
             confidence          TEXT NOT NULL,
             risk_score          INTEGER NOT NULL,
             evidence_json       TEXT NOT NULL,
-            status              TEXT NOT NULL DEFAULT 'New',
-            created_at_utc      TIMESTAMP NOT NULL,
-            updated_at_utc      TIMESTAMP NOT NULL
+            created_at_utc      TIMESTAMP NOT NULL
         );
         """;
 
@@ -31,12 +29,12 @@ public sealed class DuckDbAlertSink : IAlertSink
             id, detection_id, detection_version, detection_run_id,
             alert_time_utc, source_view, source_event_id,
             severity, confidence, risk_score, evidence_json,
-            status, created_at_utc, updated_at_utc
+            created_at_utc
         ) VALUES (
             @Id, @DetectionId, @DetectionVersion, @DetectionRunId,
             @AlertTimeUtc, @SourceView, @SourceEventId,
             @Severity, @Confidence, @RiskScore, @EvidenceJson,
-            @Status, @CreatedAtUtc, @UpdatedAtUtc
+            @CreatedAtUtc
         )
         ON CONFLICT(id) DO NOTHING;
         """;
@@ -67,15 +65,22 @@ public sealed class DuckDbAlertSink : IAlertSink
     public async Task WriteBatchAsync(IReadOnlyList<AlertRecord> alerts, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(alerts);
-        if (alerts.Count == 0) return;
+        if (alerts.Count == 0)
+        {
+            return;
+        }
+
         await _lock.WaitAsync(ct);
         try
         {
             EnsureInitialized();
             var conn = _connectionFactory.GetConnection();
-            using var tx = conn.BeginTransaction();
+            await using var tx = conn.BeginTransaction();
             foreach (var alert in alerts)
+            {
                 conn.Execute(InsertSql, ToParams(alert), tx);
+            }
+
             tx.Commit();
         }
         finally { _lock.Release(); }
@@ -83,7 +88,11 @@ public sealed class DuckDbAlertSink : IAlertSink
 
     private void EnsureInitialized()
     {
-        if (_initialized) return;
+        if (_initialized)
+        {
+            return;
+        }
+
         _connectionFactory.GetConnection().Execute(CreateSchemaSql);
         _initialized = true;
     }
@@ -101,8 +110,7 @@ public sealed class DuckDbAlertSink : IAlertSink
         a.Confidence,
         a.RiskScore,
         a.EvidenceJson,
-        a.Status,
-        a.CreatedAtUtc,
-        a.UpdatedAtUtc
+        a.CreatedAtUtc
     };
+    public void Dispose() => _lock.Dispose();
 }

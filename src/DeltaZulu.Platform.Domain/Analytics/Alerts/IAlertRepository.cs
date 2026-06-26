@@ -13,6 +13,4 @@ public interface IAlertRepository
     Task SaveAsync(AlertRecord alert, CancellationToken cancellationToken = default);
 
     Task SaveBatchAsync(IReadOnlyList<AlertRecord> alerts, CancellationToken cancellationToken = default);
-
-    Task UpdateStatusAsync(string id, string status, DateTime updatedAtUtc, CancellationToken cancellationToken = default);
 }

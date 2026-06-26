@@ -1,5 +1,8 @@
 namespace DeltaZulu.Platform.Domain.Analytics.Alerts;
 
+/// <summary>
+/// Immutable alert record written once to the DuckDB lake; no status column or update path.
+/// </summary>
 public sealed record AlertRecord(
     string Id,
     string DetectionId,
@@ -12,6 +15,4 @@ public sealed record AlertRecord(
     string Confidence,
     int RiskScore,
     string EvidenceJson,
-    string Status,
-    DateTime CreatedAtUtc,
-    DateTime UpdatedAtUtc);
+    DateTime CreatedAtUtc);

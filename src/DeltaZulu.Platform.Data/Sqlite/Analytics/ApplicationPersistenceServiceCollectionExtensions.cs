@@ -43,6 +43,26 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Registers the operations SQLite database connection factory and the repositories that
+    /// own mutable incident-candidate lifecycle state. Separate from the analytics app-state
+    /// database so alert lake and operations state stay in distinct files.
+    /// </summary>
+    public static IServiceCollection AddOperationsPersistence(
+        this IServiceCollection services,
+        string operationsConnectionString)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(operationsConnectionString);
+
+        services.AddSingleton<IOperationsDbConnectionFactory>(
+            _ => new SqliteOperationsDbConnectionFactory(operationsConnectionString));
+        AddApplicationRepository<IIncidentCandidateRepository, DapperIncidentCandidateRepository>(services);
+        AddApplicationRepository<ICandidateEvidenceRepository, DapperCandidateEvidenceRepository>(services);
+
+        return services;
+    }
+
     private static void AddApplicationRepositories(IServiceCollection services)
     {
         AddApplicationRepository<IUserSettingsRepository, DapperUserSettingsRepository>(services);
@@ -54,8 +74,6 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         AddApplicationRepository<IDetectionRunRepository, DapperDetectionRunRepository>(services);
         AddApplicationRepository<IAlertRepository, DapperAlertRepository>(services);
         AddApplicationRepository<IAlertEntityRepository, DapperAlertEntityRepository>(services);
-        AddApplicationRepository<IIncidentCandidateRepository, DapperIncidentCandidateRepository>(services);
-        AddApplicationRepository<ICandidateEvidenceRepository, DapperCandidateEvidenceRepository>(services);
         AddApplicationRepository<INrtRuleRepository, DapperNrtRuleRepository>(services);
         AddApplicationRepository<IScheduledDetectionRuleRepository, DapperScheduledDetectionRuleRepository>(services);
     }

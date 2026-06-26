@@ -38,27 +38,27 @@ public sealed class AlertMediationService : BackgroundService
         _logger     = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Alert mediation started; listening on channel '{Channel}'.", _options.AlertDispatchChannel);
 
-        while (!ct.IsCancellationRequested)
+        while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await foreach (var payload in _subscriber.SubscribeAsync(_options.AlertDispatchChannel, ct: ct))
+                await foreach (var payload in _subscriber.SubscribeAsync(_options.AlertDispatchChannel, ct: stoppingToken))
                 {
-                    await HandlePayloadAsync(payload, ct);
+                    await HandlePayloadAsync(payload, stoppingToken);
                 }
             }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 break;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Alert mediation subscription error; reconnecting in 5 s.");
-                try { await Task.Delay(TimeSpan.FromSeconds(5), ct); }
+                try { await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken); }
                 catch (OperationCanceledException) { break; }
             }
         }

@@ -298,7 +298,7 @@ public sealed partial class QueryRuntime
                     var text = reader.GetValue(i)?.ToString();
                     if (IsMermaidDefinition(text))
                     {
-                        mermaidDefinitions.Add(text.Trim());
+                        mermaidDefinitions.Add(text!.Trim());
                     }
                 }
             }
