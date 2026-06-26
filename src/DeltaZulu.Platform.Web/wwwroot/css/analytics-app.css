@@ -1649,7 +1649,7 @@ body.hunt-splitter-active {
 .hunt-drawer-content,
 .hunt-sql-highlight,
 .hunt-sql-preview,
-.code-block {
+.hunt-app .code-block {
     background: var(--dz-code-bg);
     color: var(--dz-code-text);
 }
@@ -2973,16 +2973,6 @@ body.hunt-splitter-active {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-}
-
-.hunt-query-library-body {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    font-size: 12px;
-    --mud-typography-default-size: 12px;
-    --mud-typography-body1-size: 12px;
-    --mud-typography-body2-size: 11px;
 }
 
     .hunt-query-library-link:hover {

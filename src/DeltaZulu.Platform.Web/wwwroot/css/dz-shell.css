@@ -147,14 +147,6 @@ pre {
     cursor: pointer;
 }
 
-.text-secondary {
-    color: var(--color-text-secondary) !important;
-}
-
-.text-muted {
-    color: var(--color-text-muted) !important;
-}
-
 .dz-loading-state {
     display: flex;
     flex-direction: column;
@@ -163,22 +155,6 @@ pre {
 
 .dz-loading-state__text {
     color: var(--color-text-secondary) !important;
-}
-
-.dz-table-shell .mud-table .mud-table-head th {
-    font-weight: 600;
-    font-size: 0.8125rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--brand-slate);
-    border-bottom: 1px solid var(--color-border-strong);
-}
-
-.dz-link-button {
-    font-weight: 600 !important;
-    text-transform: none !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
 }
 
 .dz-mono-input input,
