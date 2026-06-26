@@ -236,6 +236,72 @@ const registerKqlLanguage = async () => {
     });
 };
 
+const markerSeverity = (severity) => {
+    const normalized = String(severity ?? '').toLowerCase();
+    if (normalized === 'warning') return monaco.MarkerSeverity.Warning;
+    if (normalized === 'info' || normalized === 'information') return monaco.MarkerSeverity.Info;
+    return monaco.MarkerSeverity.Error;
+};
+
+const diagnosticValue = (diagnostic, camelName, pascalName) => diagnostic?.[camelName] ?? diagnostic?.[pascalName];
+
+const diagnosticToMarker = (model, diagnostic) => {
+    const modelLength = model.getValueLength();
+    const rawStart = diagnosticValue(diagnostic, 'textStart', 'TextStart');
+    const rawLength = diagnosticValue(diagnostic, 'textLength', 'TextLength');
+    const startOffset = Math.min(Math.max(Number.isInteger(rawStart) ? rawStart : 0, 0), modelLength);
+    const length = Math.max(Number.isInteger(rawLength) ? rawLength : 1, 1);
+    const endOffset = Math.min(Math.max(startOffset + length, startOffset + 1), modelLength);
+    const start = model.getPositionAt(startOffset);
+    const end = model.getPositionAt(endOffset > startOffset ? endOffset : startOffset);
+
+    return {
+        severity: markerSeverity(diagnosticValue(diagnostic, 'severity', 'Severity')),
+        message: diagnosticValue(diagnostic, 'message', 'Message') ?? 'Invalid KQL.',
+        startLineNumber: start.lineNumber,
+        startColumn: start.column,
+        endLineNumber: end.lineNumber,
+        endColumn: endOffset > startOffset ? end.column : start.column + 1
+    };
+};
+
+const scheduleValidation = (editor, dotNetRef) => {
+    let validationTimer = null;
+    let validationVersion = 0;
+
+    const validate = () => {
+        clearTimeout(validationTimer);
+        const version = ++validationVersion;
+        validationTimer = setTimeout(async () => {
+            const model = editor.getModel();
+            if (!model) return;
+
+            const queryText = model.getValue();
+            if (!queryText.trim()) {
+                monaco.editor.setModelMarkers(model, 'kql-validation', []);
+                return;
+            }
+
+            try {
+                const diagnostics = await dotNetRef.invokeMethodAsync('ValidateFromEditor', queryText);
+                if (version !== validationVersion) return;
+
+                const markers = Array.isArray(diagnostics)
+                    ? diagnostics.map((diagnostic) => diagnosticToMarker(model, diagnostic))
+                    : [];
+                monaco.editor.setModelMarkers(model, 'kql-validation', markers);
+            } catch {
+                if (version === validationVersion) {
+                    monaco.editor.setModelMarkers(model, 'kql-validation', []);
+                }
+            }
+        }, 400);
+    };
+
+    editor.onDidChangeModelContent(validate);
+    validate();
+};
+
 window.huntingMonaco = {
     _editors: {},
     _schema: { tables: [], language: { keywords: [], operators: [], renderKinds: [] } },
@@ -282,6 +348,8 @@ window.huntingMonaco = {
             }
         });
 
+        scheduleValidation(editor, dotNetRef);
+
         window.huntingMonaco._editors[containerId] = editor;
 
         editor.onContextMenu((e) => {
@@ -298,6 +366,10 @@ window.huntingMonaco = {
     dispose: (containerId) => {
         const editor = window.huntingMonaco._editors[containerId];
         if (!editor) return;
+        const model = editor.getModel();
+        if (model) {
+            monaco.editor.setModelMarkers(model, 'kql-validation', []);
+        }
         editor.dispose();
         delete window.huntingMonaco._editors[containerId];
     }
