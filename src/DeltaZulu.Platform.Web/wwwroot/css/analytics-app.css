@@ -2537,26 +2537,28 @@ body.hunt-splitter-active {
     inset: 0;
     z-index: 2000;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
+    align-items: stretch;
+    justify-content: flex-end;
+    padding: 0;
     background: rgba(13, 17, 23, .72);
 }
 
 .dashboard-editor-dialog {
-    width: min(920px, 100%);
-    max-height: min(900px, calc(100vh - 48px));
+    width: min(920px, calc(100vw - 48px));
+    height: 100%;
+    max-height: 100vh;
     display: flex;
     flex-direction: column;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-width: 0 0 0 1px;
+    border-radius: var(--radius) 0 0 var(--radius);
     background: var(--bg-panel);
     box-shadow: var(--shadow);
     overflow: hidden;
 }
 
 .dashboard-settings-dialog {
-    width: min(720px, 100%);
+    width: min(560px, calc(100vw - 48px));
 }
 
 .dashboard-editor-header,
@@ -2863,8 +2865,13 @@ body.hunt-splitter-active {
     }
 
     .dashboard-editor-backdrop {
-        align-items: stretch;
-        padding: 12px;
+        padding-left: 12px;
+    }
+
+    .dashboard-editor-dialog,
+    .dashboard-settings-dialog {
+        width: 100%;
+        border-radius: var(--radius) 0 0 var(--radius);
     }
 
     .dashboard-editor-form {
