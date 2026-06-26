@@ -41,15 +41,17 @@ public static class ProtonServiceCollectionExtensions
         Action<ProtonHttpClientOptions>? configure = null)
     {
         if (configure is not null)
+        {
             services.Configure(configure);
+        }
 
         // Make the options instance directly injectable for non-options-pattern consumers.
         services.TryAddSingleton(sp =>
             sp.GetRequiredService<IOptions<ProtonHttpClientOptions>>().Value);
 
         services.AddSingleton<IWindowsSysmonEventPublisher, ProtonWindowsSysmonEventPublisher>();
-        services.AddSingleton<IDnsServerEventPublisher,     ProtonDnsServerEventPublisher>();
-        services.AddSingleton<IStreamSubscriber,              ProtonStreamSubscriber>();
+        services.AddSingleton<IDnsServerEventPublisher, ProtonDnsServerEventPublisher>();
+        services.AddSingleton<IStreamSubscriber, ProtonStreamSubscriber>();
 
         return services;
     }

@@ -12,19 +12,20 @@ namespace DeltaZulu.Platform.Data.Proton.Streaming;
 /// On connection failure, throws so the caller (AlertMediationService) applies its reconnect backoff.
 /// The HttpClient is held as a singleton field; auth headers are applied once at construction.
 /// </summary>
-public sealed class ProtonStreamSubscriber : IStreamSubscriber
+public sealed class ProtonStreamSubscriber : IStreamSubscriber, IDisposable
 {
     private readonly ProtonHttpClientOptions _options;
     private readonly HttpClient _http;
     private readonly ILogger<ProtonStreamSubscriber> _logger;
+    private bool disposedValue;
 
     public ProtonStreamSubscriber(
         ProtonHttpClientOptions options,
         ILogger<ProtonStreamSubscriber> logger)
     {
         _options = options;
-        _logger  = logger;
-        _http    = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
+        _logger = logger;
+        _http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
         if (!string.IsNullOrWhiteSpace(options.Username))
         {
             var credentials = Convert.ToBase64String(
@@ -83,8 +84,34 @@ public sealed class ProtonStreamSubscriber : IStreamSubscriber
                 throw;
             }
 
-            if (line is null) yield break;
-            if (line.Length > 0) yield return line;
+            if (line is null)
+            {
+                yield break;
+            }
+
+            if (line.Length > 0)
+            {
+                yield return line;
+            }
         }
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            if (disposing)
+            {
+                _http.Dispose();
+            }
+            disposedValue = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

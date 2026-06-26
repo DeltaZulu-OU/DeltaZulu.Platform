@@ -8,17 +8,18 @@ namespace DeltaZulu.Platform.Data.Proton;
 /// ClickHouse-compatible HTTP interface and throws on non-success responses.
 /// The HttpClient is held as a singleton field; auth headers are applied once at construction.
 /// </summary>
-internal sealed class ProtonHttpExecutor
+public sealed class ProtonHttpExecutor : IDisposable
 {
     private readonly string _baseUrl;
     private readonly HttpClient _http;
     private readonly ILogger<ProtonHttpExecutor> _logger;
+    private bool disposedValue;
 
     public ProtonHttpExecutor(ProtonHttpClientOptions options, ILogger<ProtonHttpExecutor> logger)
     {
         _baseUrl = options.BaseUrl.TrimEnd('/');
-        _logger  = logger;
-        _http    = new HttpClient();
+        _logger = logger;
+        _http = new HttpClient();
         if (!string.IsNullOrWhiteSpace(options.Username))
         {
             var credentials = Convert.ToBase64String(
@@ -49,5 +50,24 @@ internal sealed class ProtonHttpExecutor
             throw new InvalidOperationException(
                 $"Proton SQL execution failed ({(int)response.StatusCode}): {body}");
         }
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            if (disposing)
+            {
+                _http.Dispose();
+            }
+            disposedValue = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

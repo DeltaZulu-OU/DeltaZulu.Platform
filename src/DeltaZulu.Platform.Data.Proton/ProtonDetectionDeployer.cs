@@ -15,7 +15,7 @@ public sealed class ProtonDetectionDeployer : IDetectionDeployer
     public ProtonDetectionDeployer(ProtonHttpExecutor executor, ILogger<ProtonDetectionDeployer> logger)
     {
         _executor = executor;
-        _logger   = logger;
+        _logger = logger;
     }
 
     public async Task DeployNrtAsync(string ruleId, string mvDdl, string alertDdl, CancellationToken ct = default)
@@ -63,7 +63,9 @@ public sealed class ProtonDetectionDeployer : IDetectionDeployer
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ruleId);
         if (!ruleId.All(c => char.IsAsciiLetterOrDigit(c) || c == '-' || c == '_'))
+        {
             throw new ArgumentException(
                 $"Rule ID '{ruleId}' contains characters not permitted in Proton identifiers.", nameof(ruleId));
+        }
     }
 }

@@ -29,15 +29,26 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
         IEnumerable<ParserViewDef> parserViews,
         IEnumerable<CanonicalViewDef> canonicalViews)
     {
-        var raw    = rawTables.ToList();
+        var raw = rawTables.ToList();
         var parser = parserViews.ToList();
         var golden = canonicalViews.ToList();
 
         var statements = new List<string>(raw.Count + golden.Count + parser.Count);
 
-        foreach (var t in raw)    statements.Add(EmitStream(t));
-        foreach (var v in golden) statements.Add(EmitStream(v));
-        foreach (var v in parser) statements.Add(EmitSilverMv(v));
+        foreach (var t in raw)
+        {
+            statements.Add(EmitStream(t));
+        }
+
+        foreach (var v in golden)
+        {
+            statements.Add(EmitStream(v));
+        }
+
+        foreach (var v in parser)
+        {
+            statements.Add(EmitSilverMv(v));
+        }
 
         return statements;
     }
@@ -47,15 +58,26 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
         IEnumerable<ParserViewDef> parserViews,
         IEnumerable<CanonicalViewDef> canonicalViews)
     {
-        var raw    = rawTables.ToList();
+        var raw = rawTables.ToList();
         var parser = parserViews.ToList();
         var golden = canonicalViews.ToList();
 
         var statements = new List<string>(raw.Count + golden.Count + parser.Count);
 
-        foreach (var v in parser) statements.Add(EmitDropSilverMv(v.QualifiedName));
-        foreach (var v in golden) statements.Add(EmitDropStream(v.QualifiedName));
-        foreach (var t in raw)    statements.Add(EmitDropStream(t.QualifiedName));
+        foreach (var v in parser)
+        {
+            statements.Add(EmitDropSilverMv(v.QualifiedName));
+        }
+
+        foreach (var v in golden)
+        {
+            statements.Add(EmitDropStream(v.QualifiedName));
+        }
+
+        foreach (var t in raw)
+        {
+            statements.Add(EmitDropStream(t.QualifiedName));
+        }
 
         return statements;
     }
@@ -69,17 +91,21 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
         ArgumentNullException.ThrowIfNull(def);
 
         var sb = new StringBuilder("CREATE STREAM IF NOT EXISTS ");
-        sb.Append(QuoteName(def.QualifiedName));
-        sb.Append(" (\n");
+        sb.Append(QuoteName(def.QualifiedName))
+            .Append(" (\n");
 
         for (var i = 0; i < def.Columns.Count; i++)
         {
             var col = def.Columns[i];
-            sb.Append("    ");
-            sb.Append(QuoteIdentifier(col.Name));
-            sb.Append(' ');
-            sb.Append(col.ToProtonColumnType());
-            if (i < def.Columns.Count - 1) sb.Append(',');
+            sb.Append("    ")
+                .Append(QuoteIdentifier(col.Name))
+                .Append(' ')
+                .Append(col.ToProtonColumnType());
+            if (i < def.Columns.Count - 1)
+            {
+                sb.Append(',');
+            }
+
             sb.Append('\n');
         }
 
@@ -102,7 +128,7 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
         ArgumentNullException.ThrowIfNull(view);
 
         var targetStream = $"golden.{view.CanonicalTarget}";
-        var columnTypes  = view.Columns.ToDictionary(c => c.Name, c => c, StringComparer.OrdinalIgnoreCase);
+        var columnTypes = view.Columns.ToDictionary(c => c.Name, c => c, StringComparer.OrdinalIgnoreCase);
 
         var sb = new StringBuilder("CREATE MATERIALIZED VIEW IF NOT EXISTS ");
         sb.Append(QuoteName(view.QualifiedName));
@@ -129,7 +155,11 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
 
             sb.Append(" AS ");
             sb.Append(QuoteIdentifier(proj.TargetColumn));
-            if (i < view.Mapping.Projections.Count - 1) sb.Append(',');
+            if (i < view.Mapping.Projections.Count - 1)
+            {
+                sb.Append(',');
+            }
+
             sb.Append('\n');
         }
 
@@ -156,24 +186,36 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
     // -------------------------------------------------------------------------
 
     private string EmitExpr(ExprDef expr) => expr switch {
-        ColumnExpr col      => QuoteIdentifier(col.Name),
-        LiteralExpr lit     => EmitLiteral(lit),
-        JsonTextExpr json   => $"JSON_VALUE({EmitExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}')",
+        ColumnExpr col => QuoteIdentifier(col.Name),
+        LiteralExpr lit => EmitLiteral(lit),
+        JsonTextExpr json => $"JSON_VALUE({EmitExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}')",
         JsonExistsExpr json => $"isNotNull(JSON_VALUE({EmitExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}'))",
         RegexExtractExpr re => EmitRegexExtract(re),
-        CastExpr cast       => $"CAST({EmitExpr(cast.Input)}, '{EscapeSql(cast.TargetType.ToProtonSql())}')",
-        TryCastExpr cast    => $"accurateCastOrNull({EmitExpr(cast.Input)}, '{EscapeSql(cast.TargetType.ToProtonSql())}')",
-        FunctionExpr fn     => $"{fn.Name}({string.Join(", ", fn.Args.Select(EmitExpr))})",
-        BinaryExpr bin      => EmitBinary(bin),
-        CaseExpr cs         => EmitCase(cs),
+        CastExpr cast => $"CAST({EmitExpr(cast.Input)}, '{EscapeSql(cast.TargetType.ToProtonSql())}')",
+        TryCastExpr cast => $"accurateCastOrNull({EmitExpr(cast.Input)}, '{EscapeSql(cast.TargetType.ToProtonSql())}')",
+        FunctionExpr fn => $"{fn.Name}({string.Join(", ", fn.Args.Select(EmitExpr))})",
+        BinaryExpr bin => EmitBinary(bin),
+        CaseExpr cs => EmitCase(cs),
         _ => throw new NotSupportedException($"Unsupported mapping expression: {expr.GetType().Name}")
     };
 
     private static string EmitLiteral(LiteralExpr lit)
     {
-        if (lit.Value is null)    return "NULL";
-        if (lit.Value is string s) return $"'{EscapeSql(s)}'";
-        if (lit.Value is bool b)   return b ? "true" : "false";
+        if (lit.Value is null)
+        {
+            return "NULL";
+        }
+
+        if (lit.Value is string s)
+        {
+            return $"'{EscapeSql(s)}'";
+        }
+
+        if (lit.Value is bool b)
+        {
+            return b ? "true" : "false";
+        }
+
         return lit.Value.ToString()!;
     }
 
@@ -188,14 +230,14 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
     private string EmitBinary(BinaryExpr bin)
     {
         var op = bin.Op switch {
-            BinaryOp.Eq  => "=",
+            BinaryOp.Eq => "=",
             BinaryOp.Neq => "!=",
-            BinaryOp.Lt  => "<",
+            BinaryOp.Lt => "<",
             BinaryOp.Lte => "<=",
-            BinaryOp.Gt  => ">",
+            BinaryOp.Gt => ">",
             BinaryOp.Gte => ">=",
             BinaryOp.And => "AND",
-            BinaryOp.Or  => "OR",
+            BinaryOp.Or => "OR",
             _ => throw new NotSupportedException($"Unsupported binary op: {bin.Op}")
         };
         return $"({EmitExpr(bin.Left)} {op} {EmitExpr(bin.Right)})";
@@ -205,7 +247,10 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
     {
         var sb = new StringBuilder("CASE");
         foreach (var branch in cs.Branches)
+        {
             sb.Append($" WHEN {EmitExpr(branch.When)} THEN {EmitExpr(branch.Then)}");
+        }
+
         sb.Append($" ELSE {EmitExpr(cs.Else)} END");
         return sb.ToString();
     }

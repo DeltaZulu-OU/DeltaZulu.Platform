@@ -15,7 +15,7 @@ public sealed class ProtonSchemaApplier : ISchemaApplier
     public ProtonSchemaApplier(ProtonHttpExecutor executor, ILogger<ProtonSchemaApplier> logger)
     {
         _executor = executor;
-        _logger   = logger;
+        _logger = logger;
     }
 
     public async Task ApplyAsync(IEnumerable<string> statements, CancellationToken ct = default)

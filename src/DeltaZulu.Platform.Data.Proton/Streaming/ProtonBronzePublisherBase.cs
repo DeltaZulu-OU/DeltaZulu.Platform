@@ -11,7 +11,7 @@ namespace DeltaZulu.Platform.Data.Proton.Streaming;
 /// Stamps <c>ingest_time</c> (UTC) into every payload before forwarding to Proton.
 /// The HttpClient is held as a singleton field; auth headers are applied once at construction.
 /// </summary>
-internal abstract class ProtonBronzePublisherBase
+public abstract class ProtonBronzePublisherBase : IDisposable
 {
     private static readonly JsonSerializerOptions _jsonOpts = new(JsonSerializerDefaults.Web);
 
@@ -19,6 +19,7 @@ internal abstract class ProtonBronzePublisherBase
     private readonly string _baseUrl;
     private readonly HttpClient _http;
     private readonly ILogger _logger;
+    private bool disposedValue;
 
     protected ProtonBronzePublisherBase(
         string channel,
@@ -27,8 +28,8 @@ internal abstract class ProtonBronzePublisherBase
     {
         _channel = channel;
         _baseUrl = options.BaseUrl.TrimEnd('/');
-        _logger  = logger;
-        _http    = new HttpClient();
+        _logger = logger;
+        _http = new HttpClient();
         if (!string.IsNullOrWhiteSpace(options.Username))
         {
             var credentials = Convert.ToBase64String(
@@ -57,23 +58,25 @@ internal abstract class ProtonBronzePublisherBase
 
         foreach (var entry in entries)
         {
-            var row = new
-            {
+            var row = new {
                 ingest_time = now,
                 source_name = entry.SourceName,
-                provider    = entry.Provider,
-                host        = entry.Host,
-                raw_log     = entry.RawJson,
-                raw_text    = entry.RawText
+                provider = entry.Provider,
+                host = entry.Host,
+                raw_log = entry.RawJson,
+                raw_text = entry.RawText
             };
             body.AppendLine(JsonSerializer.Serialize(row, _jsonOpts));
         }
 
         var bodyStr = body.ToString();
-        if (bodyStr.Length == 0) return;
+        if (bodyStr.Length == 0)
+        {
+            return;
+        }
 
         var insertSql = $"INSERT INTO {ProtonDdlHelpers.QuoteName(_channel)} FORMAT JSONEachRow";
-        var url       = $"{_baseUrl}/?query={Uri.EscapeDataString(insertSql)}";
+        var url = $"{_baseUrl}/?query={Uri.EscapeDataString(insertSql)}";
 
         using var content = new StringContent(bodyStr, Encoding.UTF8, "application/x-ndjson");
 
@@ -94,5 +97,24 @@ internal abstract class ProtonBronzePublisherBase
             throw new InvalidOperationException(
                 $"Proton INSERT into '{_channel}' failed ({(int)response.StatusCode}): {errorBody}");
         }
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            if (disposing)
+            {
+                _http.Dispose();
+            }
+            disposedValue = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }
