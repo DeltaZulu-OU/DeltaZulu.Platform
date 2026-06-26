@@ -5,7 +5,7 @@
  *   ./monaco-themes/atom-one-light.json
  *
  * When loaded as a Blazor static web asset, the script usually lives under:
- *   /_content/DeltaZulu.Hunting.Web/js/monaco-theme-loader.js
+ *   /_content/DeltaZulu.Platform.Web/js/monaco-theme-loader.js
  *
  * Therefore the theme URL must be resolved relative to the current script,
  * not from the application root.
@@ -15,7 +15,7 @@
 
     const customThemeName = 'atom-one-light';
     const fallbackThemeName = 'vs';
-    const fallbackThemeUrl = '_content/DeltaZulu.Hunting.Web/js/monaco-themes/atom-one-light.json';
+    const fallbackThemeUrl = '_content/DeltaZulu.Platform.Web/js/monaco-themes/atom-one-light.json';
 
     let activeThemeName = customThemeName;
     let registered = false;
