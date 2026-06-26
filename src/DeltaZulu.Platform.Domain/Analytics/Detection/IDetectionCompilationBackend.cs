@@ -27,6 +27,14 @@ public interface IDetectionCompilationBackend
     string BuildNrtDeploymentDdl(string ruleId, string selectSql);
 
     /// <summary>
+    /// Builds the backend-specific NRT alert DDL that continuously monitors
+    /// <paramref name="selectSql"/> and invokes <paramref name="udfName"/> when
+    /// <paramref name="batchEvents"/> events accumulate or <paramref name="batchTimeout"/> elapses,
+    /// whichever comes first.
+    /// </summary>
+    string BuildNrtAlertDdl(string ruleId, string selectSql, string udfName, int batchEvents, TimeSpan batchTimeout);
+
+    /// <summary>
     /// Builds a <c>CREATE ALERT</c> statement that monitors the NRT materialized view for
     /// <paramref name="ruleId"/> and invokes <paramref name="udfName"/> when the batch threshold
     /// is met. The UDF is responsible for writing to the <c>alert_dispatch</c> stream.
