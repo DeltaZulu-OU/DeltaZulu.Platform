@@ -128,6 +128,7 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         services.AddScoped<MitreAttackCatalogService>();
 
         services.AddProtonDetectionBackend();
+        services.AddProtonStreaming();
         services.AddSingleton<NrtRuleCompiler>();
         services.AddScoped<NrtRuleService>();
         services.AddScoped<ScheduledDetectionService>();
