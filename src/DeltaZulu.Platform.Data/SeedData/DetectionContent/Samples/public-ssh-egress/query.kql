@@ -1,6 +1,0 @@
-NetworkSession
-| where Timestamp > ago(1d)
-| where RemotePort == 22
-| where RemoteIPType =~ "Public"
-| project Timestamp, DeviceName, AccountName, InitiatingProcessCommandLine, LocalIP, RemoteIP, RemoteUrl
-| sort by Timestamp desc

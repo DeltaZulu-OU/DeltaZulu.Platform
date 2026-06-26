@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>DeltaZulu.Platform.Data</RootNamespace>
+    <AssemblyName>DeltaZulu.Platform.Data.SQLite</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" />
+    <PackageReference Include="LibGit2Sharp" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DeltaZulu.Platform.Data\DeltaZulu.Platform.Data.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Ingestion\DeltaZulu.Platform.Ingestion.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Application\DeltaZulu.Platform.Application.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Data.DuckDb\DeltaZulu.Platform.Data.DuckDb.csproj" />
+  </ItemGroup>
+
+</Project>

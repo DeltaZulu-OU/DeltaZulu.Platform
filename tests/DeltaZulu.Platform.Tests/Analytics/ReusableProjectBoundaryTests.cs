@@ -7,7 +7,9 @@ public sealed class ReusableProjectBoundaryTests
     [
         "src/DeltaZulu.Platform.Domain/DeltaZulu.Platform.Domain.csproj",
         "src/DeltaZulu.Platform.Application/DeltaZulu.Platform.Application.csproj",
-        "src/DeltaZulu.Platform.Data/DeltaZulu.Platform.Data.csproj"
+        "src/DeltaZulu.Platform.Data/DeltaZulu.Platform.Data.csproj",
+        "src/DeltaZulu.Platform.Data.Git/DeltaZulu.Platform.Data.Git.csproj",
+        "src/DeltaZulu.Platform.Data.SQLite/DeltaZulu.Platform.Data.SQLite.csproj"
     ];
 
     [TestMethod]

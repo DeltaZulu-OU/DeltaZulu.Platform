@@ -1,6 +1,0 @@
-NetworkSession
-| where Timestamp > ago(7d)
-| where ActionType =~ "ListeningConnectionCreated"
-| where LocalPort in (21, 22, 53, 80, 443, 445, 3389)
-| project Timestamp, DeviceName, LocalIP, LocalPort, InitiatingProcessFileName, InitiatingProcessCommandLine, AccountName
-| sort by Timestamp desc
