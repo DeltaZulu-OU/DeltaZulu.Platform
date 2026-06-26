@@ -1,0 +1,20 @@
+{
+  "recordKind": "collector.filter.summary",
+  "metadata": {
+    "agentId": "endpoint-123",
+    "hostId": "host-abc",
+    "profileId": "windows-security-default",
+    "filterId": "security-minimal",
+    "observedAt": "2026-06-25T12:00:00Z",
+    "windowStart": "2026-06-25T11:55:00Z",
+    "windowEnd": "2026-06-25T12:00:00Z"
+  },
+  "body": {
+    "sourceType": "WindowsEventLog",
+    "channel": "Security",
+    "readCount": 5000,
+    "keptAfterFilterCount": 1800,
+    "discardedCount": 3200,
+    "forwardedCount": 1800
+  }
+}
