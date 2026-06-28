@@ -76,12 +76,20 @@ public sealed class DuckDbAlertSink : IAlertSink, IDisposable
             EnsureInitialized();
             var conn = _connectionFactory.GetConnection();
             await using var tx = conn.BeginTransaction();
-            foreach (var alert in alerts)
+            try
             {
-                conn.Execute(InsertSql, ToParams(alert), tx);
-            }
+                foreach (var alert in alerts)
+                {
+                    conn.Execute(InsertSql, ToParams(alert), tx);
+                }
 
-            tx.Commit();
+                tx.Commit();
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
         }
         finally { _lock.Release(); }
     }

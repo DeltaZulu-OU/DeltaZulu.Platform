@@ -53,7 +53,7 @@ public abstract class ProtonBronzePublisherBase : IDisposable
 
     private async Task InsertAsync(IEnumerable<BronzeRawEntry> entries, CancellationToken ct)
     {
-        var now = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+        var now = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
         var body = new StringBuilder();
 
         foreach (var entry in entries)
@@ -94,6 +94,7 @@ public abstract class ProtonBronzePublisherBase : IDisposable
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync(ct);
+            if (errorBody.Length > 1000) errorBody = errorBody[..1000] + "…(truncated)";
             throw new InvalidOperationException(
                 $"Proton INSERT into '{_channel}' failed ({(int)response.StatusCode}): {errorBody}");
         }

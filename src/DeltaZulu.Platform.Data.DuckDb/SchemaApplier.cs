@@ -39,9 +39,21 @@ public sealed class SchemaApplier : ISchemaApplier
         ArgumentNullException.ThrowIfNull(statements);
 
         var conn = _connectionFactory.GetConnection();
+        var index = 0;
         foreach (var sql in statements.Where(static sql => !string.IsNullOrWhiteSpace(sql)))
         {
-            conn.Execute(sql);
+            try
+            {
+                conn.Execute(sql);
+            }
+            catch (Exception ex)
+            {
+                var preview = sql.Length > 80 ? sql[..80] + "…" : sql;
+                throw new InvalidOperationException(
+                    $"Schema statement #{index} failed: {preview}", ex);
+            }
+
+            index++;
         }
     }
 

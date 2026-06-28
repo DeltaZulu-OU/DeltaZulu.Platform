@@ -117,9 +117,24 @@ public sealed class NrtRuleService
 
         await _deployer.DeployNrtAsync(ruleId, rule.MaterializedViewDdl, alertDdl, ct);
 
-        await _repository.SaveAsync(
-            rule with { AlertDdl = alertDdl, IsEnabled = true, UpdatedAtUtc = DateTime.UtcNow },
-            ct);
+        try
+        {
+            await _repository.SaveAsync(
+                rule with { AlertDdl = alertDdl, IsEnabled = true, UpdatedAtUtc = DateTime.UtcNow },
+                ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            try { await _deployer.RetractNrtAsync(ruleId, ct); }
+            catch (Exception rollbackEx)
+            {
+                throw new AggregateException(
+                    $"NRT rule '{ruleId}' deployed to Proton but state save failed, and rollback also failed.",
+                    ex, rollbackEx);
+            }
+
+            throw;
+        }
     }
 
     /// <summary>
@@ -134,9 +149,24 @@ public sealed class NrtRuleService
 
         await _deployer.RetractNrtAsync(ruleId, ct);
 
-        await _repository.SaveAsync(
-            rule with { IsEnabled = false, AlertDdl = null, UpdatedAtUtc = DateTime.UtcNow },
-            ct);
+        try
+        {
+            await _repository.SaveAsync(
+                rule with { IsEnabled = false, AlertDdl = null, UpdatedAtUtc = DateTime.UtcNow },
+                ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            try { await _deployer.DeployNrtAsync(ruleId, rule.MaterializedViewDdl!, rule.AlertDdl!, ct); }
+            catch (Exception rollbackEx)
+            {
+                throw new AggregateException(
+                    $"NRT rule '{ruleId}' retracted from Proton but state save failed, and re-deploy also failed.",
+                    ex, rollbackEx);
+            }
+
+            throw;
+        }
     }
 
     public async Task ToggleEnabledAsync(string id, bool enabled, CancellationToken ct = default)

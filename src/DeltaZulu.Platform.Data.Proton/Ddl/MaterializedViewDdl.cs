@@ -47,16 +47,32 @@ public sealed class MaterializedViewDdl
     { _settings["pause_on_start"] = pause ? "true" : "false"; return this; }
 
     public MaterializedViewDdl WithRecoveryPolicy(RecoveryPolicy policy)
-    { _settings["recovery_policy"] = $"'{policy.ToString().ToLowerInvariant()}'"; return this; }
+    {
+        var value = policy switch
+        {
+            RecoveryPolicy.Strict => "strict",
+            RecoveryPolicy.BestEffort => "best_effort",
+            _ => throw new ArgumentOutOfRangeException(nameof(policy), policy, "Unknown recovery policy.")
+        };
+        _settings["recovery_policy"] = $"'{value}'";
+        return this;
+    }
 
     public MaterializedViewDdl WithMemoryWeight(int weight)
     { _settings["memory_weight"] = weight.ToString(); return this; }
 
     public MaterializedViewDdl WithDefaultHashTable(HashTableMode mode)
-    { _settings["default_hash_table"] = $"'{mode.ToString().ToLowerInvariant()}'"; return this; }
+    { _settings["default_hash_table"] = $"'{ToProtonString(mode)}'"; return this; }
 
     public MaterializedViewDdl WithDefaultHashJoin(HashTableMode mode)
-    { _settings["default_hash_join"] = $"'{mode.ToString().ToLowerInvariant()}'"; return this; }
+    { _settings["default_hash_join"] = $"'{ToProtonString(mode)}'"; return this; }
+
+    private static string ToProtonString(HashTableMode mode) => mode switch
+    {
+        HashTableMode.Memory => "memory",
+        HashTableMode.Hybrid => "hybrid",
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown hash table mode.")
+    };
 
     public MaterializedViewDdl WithMaxHotKeys(int maxKeys)
     { _settings["max_hot_keys"] = maxKeys.ToString(); return this; }

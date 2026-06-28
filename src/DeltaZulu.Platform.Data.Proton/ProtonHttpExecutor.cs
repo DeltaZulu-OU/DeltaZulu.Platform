@@ -19,7 +19,7 @@ public sealed class ProtonHttpExecutor : IDisposable
     {
         _baseUrl = options.BaseUrl.TrimEnd('/');
         _logger = logger;
-        _http = new HttpClient();
+        _http = new HttpClient { Timeout = options.ExecutionTimeout };
         if (!string.IsNullOrWhiteSpace(options.Username))
         {
             var credentials = Convert.ToBase64String(
@@ -47,6 +47,7 @@ public sealed class ProtonHttpExecutor : IDisposable
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync(ct);
+            if (body.Length > 1000) body = body[..1000] + "…(truncated)";
             throw new InvalidOperationException(
                 $"Proton SQL execution failed ({(int)response.StatusCode}): {body}");
         }

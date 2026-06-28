@@ -42,9 +42,16 @@ public sealed class ProtonStreamSubscriber : IStreamSubscriber, IDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(channel);
 
-        var startClause = options?.StartFrom is { } start
-            ? $" WHERE _tp_time >= '{start:yyyy-MM-dd HH:mm:ss}'"
-            : string.Empty;
+        // StartFrom is a DateTimeOffset — formatted as fixed digits/separators only.
+        // Validate the formatted result to guard against future type changes.
+        var startClause = string.Empty;
+        if (options?.StartFrom is { } start)
+        {
+            var formatted = start.ToString("yyyy-MM-dd HH:mm:ss");
+            if (!formatted.All(c => char.IsAsciiDigit(c) || c is '-' or ':' or ' '))
+                throw new ArgumentException("StartFrom produced an unexpected timestamp format.", nameof(options));
+            startClause = $" WHERE _tp_time >= '{formatted}'";
+        }
 
         var sql = $"SELECT * FROM {ProtonDdlHelpers.QuoteName(channel)}{startClause}";
         var baseUrl = _options.BaseUrl.TrimEnd('/');
@@ -57,6 +64,7 @@ public sealed class ProtonStreamSubscriber : IStreamSubscriber, IDisposable
             if (!response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync(ct);
+                if (body.Length > 1000) body = body[..1000] + "…(truncated)";
                 throw new InvalidOperationException(
                     $"Proton subscription to '{channel}' failed ({(int)response.StatusCode}): {body}");
             }
@@ -87,6 +95,13 @@ public sealed class ProtonStreamSubscriber : IStreamSubscriber, IDisposable
             if (line is null)
             {
                 yield break;
+            }
+
+            const int maxLineLength = 10 * 1024 * 1024; // 10 MB safety limit
+            if (line.Length > maxLineLength)
+            {
+                _logger.LogWarning("Dropping oversized line ({Length} chars) on channel '{Channel}'.", line.Length, channel);
+                continue;
             }
 
             if (line.Length > 0)

@@ -26,7 +26,26 @@ public sealed class ProtonDetectionDeployer : IDetectionDeployer
 
         _logger.LogInformation("Deploying NRT rule '{RuleId}': creating MV then Alert.", ruleId);
         await _executor.ExecuteAsync(mvDdl, ct);
-        await _executor.ExecuteAsync(alertDdl, ct);
+        try
+        {
+            await _executor.ExecuteAsync(alertDdl, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Alert creation failed for NRT rule '{RuleId}'; rolling back MV.", ruleId);
+            try
+            {
+                await _executor.ExecuteAsync($"DROP VIEW IF EXISTS `mv_nrt_{ruleId}`;", ct);
+            }
+            catch (Exception rollbackEx)
+            {
+                _logger.LogCritical(rollbackEx,
+                    "Rollback of MV for NRT rule '{RuleId}' also failed — orphaned MV may remain in Proton.", ruleId);
+            }
+
+            throw;
+        }
+
         _logger.LogInformation("NRT rule '{RuleId}' deployed.", ruleId);
     }
 

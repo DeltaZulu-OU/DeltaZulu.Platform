@@ -116,9 +116,24 @@ public sealed class ScheduledDetectionService
 
         await _deployer.DeployScheduledAsync(ruleId, rule.ScheduledTaskDdl, ct);
 
-        await _repository.SaveAsync(
-            rule with { IsEnabled = true, UpdatedAtUtc = DateTime.UtcNow },
-            ct);
+        try
+        {
+            await _repository.SaveAsync(
+                rule with { IsEnabled = true, UpdatedAtUtc = DateTime.UtcNow },
+                ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            try { await _deployer.RetractScheduledAsync(ruleId, ct); }
+            catch (Exception rollbackEx)
+            {
+                throw new AggregateException(
+                    $"Scheduled rule '{ruleId}' deployed to Proton but state save failed, and rollback also failed — orphaned task may remain.",
+                    ex, rollbackEx);
+            }
+
+            throw;
+        }
     }
 
     /// <summary>
@@ -133,9 +148,24 @@ public sealed class ScheduledDetectionService
 
         await _deployer.RetractScheduledAsync(ruleId, ct);
 
-        await _repository.SaveAsync(
-            rule with { IsEnabled = false, UpdatedAtUtc = DateTime.UtcNow },
-            ct);
+        try
+        {
+            await _repository.SaveAsync(
+                rule with { IsEnabled = false, UpdatedAtUtc = DateTime.UtcNow },
+                ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            try { await _deployer.DeployScheduledAsync(ruleId, rule.ScheduledTaskDdl!, ct); }
+            catch (Exception rollbackEx)
+            {
+                throw new AggregateException(
+                    $"Scheduled rule '{ruleId}' retracted from Proton but state save failed, and re-deploy also failed.",
+                    ex, rollbackEx);
+            }
+
+            throw;
+        }
     }
 
     public Task DeleteRuleAsync(string id, CancellationToken ct = default) =>

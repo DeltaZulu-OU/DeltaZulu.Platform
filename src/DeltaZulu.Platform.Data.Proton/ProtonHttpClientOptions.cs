@@ -10,6 +10,11 @@ public sealed class ProtonHttpClientOptions
     /// </summary>
     public string BaseUrl { get; set; } = "http://localhost:8123";
 
+    /// <summary>
+    /// Timeout for DDL/query execution requests. Streaming subscriptions use infinite timeout independently.
+    /// </summary>
+    public TimeSpan ExecutionTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
     public string? Username { get; set; }
     public string? Password { get; set; }
 }

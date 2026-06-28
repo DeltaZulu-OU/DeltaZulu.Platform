@@ -85,13 +85,31 @@ public sealed class AlertMediationService : BackgroundService
             return;
         }
 
-        try
+        const int maxRetries = 3;
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
         {
-            await _sink.WriteAsync(alert, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to write alert '{AlertId}' to lake.", alert.Id);
+            try
+            {
+                await _sink.WriteAsync(alert, ct);
+                return;
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                if (attempt == maxRetries)
+                {
+                    _logger.LogCritical(ex,
+                        "Alert '{AlertId}' permanently lost after {Attempts} write attempts.",
+                        alert.Id, maxRetries);
+                    return;
+                }
+
+                var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt - 1));
+                _logger.LogWarning(ex,
+                    "Failed to write alert '{AlertId}' (attempt {Attempt}/{Max}); retrying in {Delay}s.",
+                    alert.Id, attempt, maxRetries, delay.TotalSeconds);
+                await Task.Delay(delay, ct);
+            }
         }
     }
 }

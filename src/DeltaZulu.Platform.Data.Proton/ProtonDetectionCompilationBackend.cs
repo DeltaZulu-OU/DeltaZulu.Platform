@@ -35,18 +35,13 @@ public sealed class ProtonDetectionCompilationBackend : IDetectionCompilationBac
 
     public string BuildNrtAlertDdl(string ruleId, string selectSql, string udfName, int batchEvents, TimeSpan batchTimeout)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(ruleId);
+        ValidateRuleId(ruleId);
         ArgumentException.ThrowIfNullOrWhiteSpace(selectSql);
         ArgumentException.ThrowIfNullOrWhiteSpace(udfName);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchEvents);
         if (batchTimeout <= TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(batchTimeout), "Batch timeout must be positive.");
-        }
-
-        if (!ruleId.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_'))
-        {
-            throw new ArgumentException($"Rule ID contains invalid characters: '{ruleId}'", nameof(ruleId));
         }
 
         return new AlertDdl($"alert_nrt_{ruleId}")

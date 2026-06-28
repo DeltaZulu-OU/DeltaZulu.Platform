@@ -89,6 +89,7 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
     public string EmitStream(SchemaObjectDef def)
     {
         ArgumentNullException.ThrowIfNull(def);
+        ArgumentOutOfRangeException.ThrowIfZero(def.Columns.Count, nameof(def));
 
         var sb = new StringBuilder("CREATE STREAM IF NOT EXISTS ");
         sb.Append(QuoteName(def.QualifiedName))
