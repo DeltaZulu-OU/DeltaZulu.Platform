@@ -34,15 +34,18 @@ public sealed class SchemaEmitter
         IEnumerable<RawTableDef> rawTables,
         IEnumerable<InternalTableDef> internalTables,
         IEnumerable<ParserViewDef> parserViews,
-        IEnumerable<CanonicalViewDef> canonicalViews)
+        IEnumerable<CanonicalViewDef> canonicalViews,
+        IEnumerable<InternalViewDef>? internalViews = null)
     {
         var rawTableList = rawTables.ToList();
         var internalTableList = internalTables.ToList();
         var parserViewList = parserViews.ToList();
         var canonicalViewList = canonicalViews.ToList();
+        var internalViewList = internalViews?.ToList() ?? [];
 
         var schemaNames = first.Concat(rawTableList.Select(static obj => obj.Schema))
             .Concat(internalTableList.Select(static obj => obj.Schema))
+            .Concat(internalViewList.Select(static obj => obj.Schema))
             .Concat(parserViewList.Select(static obj => obj.Schema))
             .Concat(canonicalViewList.Select(static obj => obj.Schema))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -62,6 +65,12 @@ public sealed class SchemaEmitter
         foreach (var t in internalTableList)
         {
             statements.Add(EmitCreateTable(t));
+        }
+
+        // Internal views (after internal tables they depend on)
+        foreach (var v in internalViewList)
+        {
+            statements.Add(EmitInternalView(v));
         }
 
         // Parser views
@@ -120,6 +129,23 @@ public sealed class SchemaEmitter
     }
 
     #endregion CREATE TABLE
+
+    #region Internal view (internal.v_*)
+
+    public string EmitInternalView(InternalViewDef view)
+    {
+        ArgumentNullException.ThrowIfNull(view);
+
+        if (string.IsNullOrWhiteSpace(view.SqlBody))
+        {
+            throw new InvalidOperationException(
+                $"Internal view {view.QualifiedName} has no SQL body.");
+        }
+
+        return $"CREATE OR REPLACE VIEW {DuckDbSqlText.EscapeQualifiedIdent(view.QualifiedName)} AS\n{view.SqlBody.Trim()}";
+    }
+
+    #endregion Internal view (internal.v_*)
 
     #region Parser view (silver.v_*)
 

@@ -2,7 +2,10 @@ using DeltaZulu.Platform.Application.Analytics.Nrt;
 using DeltaZulu.Platform.Data.Proton;
 using DeltaZulu.Platform.Application.Analytics.Validation;
 using DeltaZulu.Platform.Data.DuckDb.Execution;
+using DeltaZulu.Platform.Data.DuckDb.Analytics;
+using DeltaZulu.Platform.Data.DuckDb.Ingestion;
 using DeltaZulu.Platform.Data.DuckDb;
+using DeltaZulu.Platform.Domain.Analytics.Observability;
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.Catalog;
 using DeltaZulu.Platform.Domain.Analytics.Execution;
@@ -31,7 +34,8 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         "alert_entities",
         "incident_candidates",
         "candidate_alert_links",
-        "candidate_evidence"];
+        "candidate_evidence",
+        "source_observations"];
 
     /// <summary>
     /// Registers Analytics query/runtime services. This layer is reusable outside the
@@ -67,6 +71,8 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
             developerMode: options.DeveloperMode,
             plannerMaxIterations: options.PlannerMaxIterations));
         services.AddSingleton<IAnalyticsQueryExecutor, AnalyticsQueryExecutor>();
+        services.AddSingleton<DuckDbSourceObservationWriter>();
+        services.AddSingleton<ISourceMetricsReader, DuckDbSourceMetricsReader>();
         services.AddSingleton<QueryService>();
 
         return services;

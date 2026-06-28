@@ -18,6 +18,8 @@ public static class SchemaConventions
 
     public static IReadOnlyList<InternalTableDef> InternalTables => InternalSchemaCatalog.InternalTables;
 
+    public static IReadOnlyList<InternalViewDef> InternalViews => InternalSchemaCatalog.InternalViews;
+
     public static IReadOnlyList<ParserViewDef> ParserViews => MedallionSchemaCatalog.ParserViews;
 
     public static IReadOnlyList<CanonicalViewDef> CanonicalViews => MedallionSchemaCatalog.CanonicalViews;

@@ -1,11 +1,13 @@
 @page "/"
 @using MudBlazor
+@using DeltaZulu.Platform.Domain.Analytics.Observability
+@inject ISourceMetricsReader MetricsReader
 
 <PageTitle>DeltaZulu Platform — Overview</PageTitle>
 
 <DzPageHeader Eyebrow="Full-cycle security analytics"
               Title="Overview"
-              Description="Start investigations, reuse analytical content, manage detections, and review operational work from one place.">
+              Description="Platform health, source telemetry, and module navigation.">
     <Actions>
         <MudButton Href="/analytics" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Search">
             Open Analytics Workbench
@@ -15,6 +17,131 @@
         </MudButton>
     </Actions>
 </DzPageHeader>
+
+@if (_loading)
+{
+    <DzLoadingState Text="Loading source observations..." />
+}
+else if (_summary.SourceCount == 0)
+{
+    <DzEmptyState Title="No source observations yet"
+                  Description="Connect a DeltaZulu agent and configure log sources to see collection health and pipeline metrics here."
+                  Icon="@Icons.Material.Outlined.Sensors" />
+}
+else
+{
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Sources"
+                          Value="@_summary.SourceCount.ToString()"
+                          Icon="@Icons.Material.Outlined.Sensors"
+                          Label="@($"Across {_summary.AgentCount} agent(s)")" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Healthy"
+                          Value="@_summary.HealthyCount.ToString()"
+                          Icon="@Icons.Material.Outlined.CheckCircleOutline"
+                          Label="Enabled, readable, no errors"
+                          Tone="success" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Degraded"
+                          Value="@_summary.DegradedCount.ToString()"
+                          Icon="@Icons.Material.Outlined.Warning"
+                          Label="Read errors or forward failures"
+                          Tone="@(_summary.DegradedCount > 0 ? "error" : "neutral")" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Events forwarded"
+                          Value="@FormatCount(_summary.TotalForwarded)"
+                          Icon="@Icons.Material.Outlined.CallMade"
+                          Label="@($"{FormatCount(_summary.TotalDiscarded)} discarded")" />
+        </MudItem>
+    </MudGrid>
+
+    <DzPanel Eyebrow="Collection" Title="Source observations">
+        <Actions>
+            <DzFilterRow>
+                <DzFilterChip Value="all" Selected="@(_filter == "all")" OnClick="@(() => ApplyFilter("all"))">
+                    All
+                </DzFilterChip>
+                <DzFilterChip Value="healthy" Selected="@(_filter == "healthy")" OnClick="@(() => ApplyFilter("healthy"))">
+                    Healthy
+                </DzFilterChip>
+                <DzFilterChip Value="degraded" Selected="@(_filter == "degraded")" OnClick="@(() => ApplyFilter("degraded"))">
+                    Degraded
+                </DzFilterChip>
+                <DzFilterChip Value="disabled" Selected="@(_filter == "disabled")" OnClick="@(() => ApplyFilter("disabled"))">
+                    Disabled
+                </DzFilterChip>
+            </DzFilterRow>
+        </Actions>
+        <ChildContent>
+            @if (_rows.Count == 0)
+            {
+                <DzEmptyState Title="No sources match the current filter"
+                              Description="Adjust the filter to see other source observations."
+                              Icon="@Icons.Material.Outlined.FilterAltOff"
+                              Elevation="0" />
+            }
+            else
+            {
+                <DzTableShell>
+                    <MudTable Items="_rows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="SourceLatestRow" Elevation="0">
+                        <HeaderContent>
+                            <MudTh>Source</MudTh>
+                            <MudTh>Agent</MudTh>
+                            <MudTh>Status</MudTh>
+                            <MudTh Style="text-align:right">Read</MudTh>
+                            <MudTh Style="text-align:right">Kept</MudTh>
+                            <MudTh Style="text-align:right">Discarded</MudTh>
+                            <MudTh Style="text-align:right">Forwarded</MudTh>
+                            <MudTh>Last seen</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Source">
+                                <code>@context.SourceType</code>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Channel</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Agent">
+                                <code>@context.AgentId</code>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.HostId</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Status">
+                                <DzStatusChip Label="@context.HealthStatus" Tone="@HealthTone(context.HealthStatus)" />
+                            </MudTd>
+                            <MudTd DataLabel="Read" Style="text-align:right">
+                                <MudText Typo="Typo.body2">@FormatCount(context.ReadCount)</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Kept" Style="text-align:right">
+                                <MudText Typo="Typo.body2">@FormatCount(context.KeptAfterFilterCount)</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Discarded" Style="text-align:right">
+                                <MudText Typo="Typo.body2">@FormatCount(context.DiscardedCount)</MudText>
+                                @if (context.DiscardRatio > 0.5)
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.DiscardRatio.ToString("P0")</MudText>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Forwarded" Style="text-align:right">
+                                <MudText Typo="Typo.body2">@FormatCount(context.ForwardedCount)</MudText>
+                                @if (context.ForwardFailedCount > 0)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Error">@FormatCount(context.ForwardFailedCount) failed</MudText>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Last seen">
+                                <MudText Typo="Typo.caption">@FormatTimestamp(context.ObservedAt)</MudText>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </DzTableShell>
+            }
+        </ChildContent>
+    </DzPanel>
+}
+
+<MudText Typo="Typo.overline" Class="mt-6 mb-2">Modules</MudText>
 
 <MudGrid Spacing="3">
     <MudItem xs="12" md="4">
@@ -64,36 +191,59 @@
             </MudButton>
         </DzPanel>
     </MudItem>
-
-    <MudItem xs="12" md="4">
-        <DzPanel Eyebrow="Analytics" Title="Library" Elevation="0" Outlined="true" Class="dz-panel--full-height">
-            <MudText Typo="Typo.body2" Class="text-secondary">
-                Browse saved queries, visualizations, and reusable analytical artifacts.
-            </MudText>
-            <MudButton Href="/analytics/library"
-                       Variant="Variant.Outlined"
-                       Color="Color.Secondary"
-                       Size="Size.Small"
-                       Class="mt-3"
-                       StartIcon="@Icons.Material.Outlined.LibraryBooks">
-                Open library
-            </MudButton>
-        </DzPanel>
-    </MudItem>
-
-    <MudItem xs="12" md="4">
-        <DzPanel Eyebrow="Platform" Title="Settings" Elevation="0" Outlined="true" Class="dz-panel--full-height">
-            <MudText Typo="Typo.body2" Class="text-secondary">
-                Configure query defaults and platform operational options.
-            </MudText>
-            <MudButton Href="/settings"
-                       Variant="Variant.Outlined"
-                       Color="Color.Secondary"
-                       Size="Size.Small"
-                       Class="mt-3"
-                       StartIcon="@Icons.Material.Outlined.Settings">
-                Open settings
-            </MudButton>
-        </DzPanel>
-    </MudItem>
 </MudGrid>
+
+@code {
+    private bool _loading = true;
+    private SourceHealthSummary _summary = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    private IReadOnlyList<SourceLatestRow> _rows = [];
+    private string _filter = "all";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        await Task.Run(() =>
+        {
+            _summary = MetricsReader.ReadSummary();
+            _rows = MetricsReader.ReadLatest();
+        });
+        _loading = false;
+    }
+
+    private void ApplyFilter(string filter)
+    {
+        _filter = filter;
+        _rows = filter switch
+        {
+            "healthy" => MetricsReader.ReadLatest("Healthy"),
+            "degraded" => MetricsReader.ReadLatest("Degraded"),
+            "disabled" => MetricsReader.ReadLatest("Disabled"),
+            _ => MetricsReader.ReadLatest(),
+        };
+    }
+
+    private static string HealthTone(string status) => status switch
+    {
+        "Healthy" => "success",
+        "Degraded" => "error",
+        "Inactive" => "warning",
+        "Disabled" => "muted",
+        _ => "neutral"
+    };
+
+    private static string FormatCount(long value) => value switch
+    {
+        >= 1_000_000 => $"{value / 1_000_000.0:F1}M",
+        >= 1_000 => $"{value / 1_000.0:F1}K",
+        _ => value.ToString("N0")
+    };
+
+    private static string FormatTimestamp(DateTime utc)
+    {
+        var age = DateTime.UtcNow - utc;
+        if (age.TotalMinutes < 1) return "just now";
+        if (age.TotalMinutes < 60) return $"{(int)age.TotalMinutes}m ago";
+        if (age.TotalHours < 24) return $"{(int)age.TotalHours}h ago";
+        return utc.ToString("yyyy-MM-dd HH:mm");
+    }
+}
