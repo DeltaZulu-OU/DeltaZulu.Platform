@@ -85,43 +85,9 @@ The target is a full-cycle security analytics platform that keeps Clean Architec
 5. **Storage boundaries** remain explicit: DuckDB for threat-hunting execution and the append-only data lake (Bronze/Silver/Gold events, Alerts, AlertEntities); SQLite for mutable operational state (incident candidates, application settings, governance state); Git for accepted detection content; approved read-only KQL views for all operations state queryable by analysts.
 6. **Workflow orchestration** uses Elsa for long-running processes. Elsa coordinates steps, timers, retries, branching, and human decisions. Domain and application services own security semantics.
 
-## Agent Management Roadmap
+## Agent management
 
-The agent management capability will provide centralized lifecycle control for DeltaZulu agents without turning the agent into a general-purpose remote execution platform. The priority is to make collection reliable, observable, configurable, and safe across tenants and agent groups. The roadmap starts with identity, enrollment, heartbeat, policy delivery, and operational health, then expands into controlled diagnostics, staged rollout, local enrichment, and upgrade orchestration.
-
-| Priority | Phase | Capability | Description | Outcome |
-|---|---|---|---|---|
-| P0 | Foundation | Agent identity model | Define `TenantId`, `AgentId`, certificate identity, hostname, OS metadata, agent version, and first/last seen timestamps. | Every agent has a stable, auditable identity. |
-| P0 | Foundation | Automated enrollment | Implement bootstrap-token enrollment that exchanges a short-lived onboarding token for a tenant-scoped agent identity and certificate. | New customer onboarding can automatically provision agents without manual PKI work. |
-| P0 | Foundation | Heartbeat endpoint | Agents periodically report version, platform, policy hash, source status, buffer state, output state, and last successful send time. | The platform can distinguish healthy, degraded, stale, and offline agents. |
-| P0 | Foundation | Agent inventory view | Build a basic UI/API view listing agents by tenant, group, OS, version, status, last seen, and assigned policy. | Operators can see the managed fleet and identify coverage gaps. |
-| P0 | Configuration | Declarative policy model | Define agent policies for inputs, channels, filters, buffer settings, RELP/TLS output, compression, and heartbeat intervals. | Agent behavior becomes centrally defined and versioned. |
-| P0 | Configuration | Policy assignment | Allow policies to be assigned to tenants, groups, or individual agents. | Different server classes, environments, and tenants can use different collection profiles. |
-| P0 | Configuration | Effective configuration reporting | Agents report the exact applied policy version and configuration hash. | The platform can detect configuration drift between intended and applied state. |
-| P0 | Reliability | Source health reporting | Agents report per-source status, including enabled channels, read errors, bookmark state, lag, and last event timestamp. | Collection failures become visible before detection coverage is affected. |
-| P0 | Reliability | Buffer health reporting | Agents report memory queue, disk queue, dropped records, retry count, and backpressure state. | Operators can detect forwarding, storage, and network pressure. |
-| P1 | Operations | Command queue | Add a constrained command model for one-shot operational actions such as reload configuration, test output, flush buffer, collect diagnostics, and restart service. | Operators can remediate common agent issues centrally. |
-| P1 | Operations | Command result store | Persist command status, timestamps, structured output, errors, timeout state, and requesting user. | Operational actions become auditable and supportable. |
-| P1 | Safety | Command allowlist | Restrict remote commands to predefined safe operations. Avoid arbitrary shell, arbitrary script execution, or unrestricted local queries. | Agent management remains operationally useful without becoming an unsafe remote execution channel. |
-| P1 | Configuration | Policy validation | Validate policy syntax, allowed inputs, buffer limits, endpoint settings, and incompatible options before rollout. | Bad configuration is rejected before it reaches endpoints. |
-| P1 | Configuration | Canary rollout | Support assigning a new policy version to a small group before wider deployment. | Configuration risk is reduced during changes. |
-| P1 | Configuration | Rollback | Preserve previous policy versions and allow rollback at tenant, group, or agent level. | Failed rollouts can be reversed quickly. |
-| P1 | Monitoring | Fleet health dashboard | Aggregate agent health by tenant, group, OS, version, policy, source status, and buffer pressure. | Operators can prioritize remediation at fleet level instead of reviewing agents one by one. |
-| P1 | Monitoring | Drift and stale-agent detection | Flag agents that stop checking in, run old versions, fail to apply policy, or report unexpected source state. | Silent degradation becomes visible. |
-| P2 | Security | Certificate lifecycle automation | Automate certificate issuance, renewal, revocation, expiry monitoring, and rotation. | PKI remains a backend concern and does not burden customers. |
-| P2 | Security | Tenant isolation controls | Enforce tenant-scoped agent identity, tenant-scoped policies, tenant-scoped commands, and tenant-scoped results. | Cross-tenant management mistakes are prevented by design. |
-| P2 | Security | Management-plane audit log | Record enrollment, policy changes, command requests, command results, certificate actions, and administrative access. | Agent management actions become reviewable and compliance-friendly. |
-| P2 | Local context | Diagnostic providers | Add predefined local checks for service status, event-channel availability, Sysmon channel presence, agent permissions, disk state, and network reachability. | Support teams can diagnose common endpoint issues without logging into the host. |
-| P2 | Local context | Local enrichment providers | Add controlled providers for installed software, drivers, browser extensions, local users, and selected system facts. | Agent-collected telemetry can be enriched without requiring a separate endpoint inventory product. |
-| P2 | Data quality | Telemetry utilization metrics | Report collected, filtered, forwarded, dropped, retried, and suppressed event counts by source and policy. | The platform can measure collection quality and wasted telemetry. |
-| P2 | Data quality | Collection recommendation engine | Use deterministic health and utilization metrics to suggest source, filter, and policy improvements. | Operators receive actionable recommendations instead of raw health signals only. |
-| P3 | Lifecycle | Agent upgrade orchestration | Support version rings, signed package validation, staged rollout, upgrade status, and rollback. | Agent upgrades become centrally controlled and observable. |
-| P3 | Lifecycle | Compatibility matrix | Track which agent versions support which policy schema versions, input types, commands, and protocol features. | Rollouts avoid incompatible configuration and protocol combinations. |
-| P3 | Advanced operations | Maintenance windows | Allow policy rollout, upgrade, and disruptive commands to respect tenant or group maintenance windows. | Operational changes align with customer change-control requirements. |
-| P3 | Advanced operations | Advanced local query abstraction | Expose selected local resource providers through a constrained query interface with limits, RBAC, audit, and timeout controls. | Analysts and operators can inspect endpoint context safely without arbitrary endpoint execution. |
-| P3 | Advanced operations | Multi-region management support | Support regional management endpoints and tenant affinity for larger deployments. | The management plane can scale across customer regions and data-residency boundaries. |
-
-The implementation order should start with P0 identity, enrollment, heartbeat, policy assignment, and health reporting. These capabilities create the minimum viable control plane. P1 should then add constrained operations, rollout safety, and fleet-level visibility. P2 should improve security, auditability, local context, and telemetry-quality measurement. P3 should focus on mature lifecycle management, controlled local querying, maintenance windows, and scale.
+Agent management lifecycle is a separate capability area with its own priority scheme. It is tracked in [`AGENT_MANAGEMENT_ROADMAP.md`](AGENT_MANAGEMENT_ROADMAP.md) and does not block or depend on the platform core phases below.
 
 ## Implementation phases
 
@@ -130,24 +96,24 @@ These phases represent the minimum implementation sequence from the target user 
 | Phase | Goal | Main deliverable | Key user stories |
 |---:|---|---|---|
 | 1 | Rename the product boundary | User-facing language changes from Hunting-first to Analytics-first. Threat hunting becomes a workflow under Analytics. | US-01, US-07 |
-| 1A | Enforce product identity and design-system rules | Resolve DZNS/DeltaZulu Platform naming; enforce binary radius, product typography, orange action semantics, legacy-CSS quarantine, dashboard primitives, and design audits before broad Operations UI expansion. | US-01, US-02, US-06, US-23, US-26, US-27 |
+| 1A | Enforce product identity and design-system rules | Resolve DZNS/DeltaZulu Platform naming; enforce binary radius, product typography, orange action semantics, legacy-CSS quarantine, dashboard primitives, and design audits before broad Operations UI expansion. | US-01, US-05, US-27 |
 | 2 | Deduplicate execution | Shared analytics execution service with purpose-specific policies used by interactive queries, dashboards, validation, and scheduled detections. | US-03 |
 | 3 | Define curated analytics | Separate lightweight query history from reusable analytics with purpose, expected shape, entity mappings, and notes. | US-05, US-08 |
-| 3A | NRT detection foundation | KQL→Proton compilation pipeline, Proton DDL builder library, NRT rule authoring UI, and rule persistence. Does not include Proton connectivity or mediation daemon. | US-21 |
+| 3A | NRT detection foundation | KQL→Proton compilation pipeline, Proton DDL builder library, NRT rule authoring UI, and rule persistence. Does not include Proton connectivity or mediation daemon. | US-12, US-21 |
 | 3B | Alert storage migration | Remove `alerts`/`alert_entities` from SQLite app state. Create append-only DuckDB lake writer for alerts. Add `AlertEvent`/`AlertEntity` to `ApprovedViewCatalog`. Separate operations SQLite for incident candidates. | US-22, US-26 |
-| 4 | Define executable detection projection | Accepted detection content projects into executable detection definitions with entity mapping, schedule, lookback, alert materialization mode, and suppression policy. | US-16, US-20 |
-| 5 | Harden operations schema | Detection runs, alert entities, suppression state, evidence hash, materialization key, and audit fields as domain records. Alerts are DuckDB lake records (append-only). Incident candidates, links, and evidence are operations SQLite records (mutable). | US-21, US-22, US-28 |
-| 6 | Build Proton scheduled detection | Proton scheduled task generation via `ScheduledTaskDdl`, deployment to Proton, and .NET mediation daemon consuming the alert dispatch stream. Detection runs recorded with full execution metadata. | US-21 |
-| 7 | Materialize alerts to DuckDB lake | .NET mediation daemon evaluates NRT MV thresholds and writes append-only alert records to DuckDB lake. PerResultRow default. Aggregate modes (SingleAlertPerRun, GroupByEntity, GroupByCustomKey) introduced deliberately. | US-22 |
-| 8 | Expose operations views | DetectionRun, AlertEvent, AlertEntity, AlertEnrichment, and IncidentCandidate approved read models queryable through KQL. | US-26 |
-| 9 | Add alert UI | Operations module includes run list, alert queue, alert detail, entity views, and diagnostics. | US-23 |
-| 10 | Add enrichment and suppression | Deterministic processing over alert evidence and entities. Suppression marks alerts without deleting them. | US-23 |
-| 11 | Add candidate correlation | Explainable grouping over alert entities, windows, scoring factors, and evidence. Incident candidates with rationale and deterministic scoring. | US-24 |
-| 12 | Add triage feedback | Alert/candidate outcomes feed detection tuning, suppression adjustment, visibility gaps, and follow-up hunts. | US-25 |
+| 4 | Define executable detection projection | Accepted detection content projects into executable detection definitions with entity mapping, schedule, lookback, alert materialization mode, and suppression policy. | US-11 |
+| 5 | Harden operations schema | Detection runs, alert entities, suppression state, evidence hash, materialization key, and audit fields as domain records. Alerts are DuckDB lake records (append-only). Incident candidates, links, and evidence are operations SQLite records (mutable). | US-22, US-28 |
+| 6 | Build Proton scheduled detection | Proton scheduled task generation via `ScheduledTaskDdl`, deployment to Proton, and .NET mediation daemon consuming the alert dispatch stream. Detection runs recorded with full execution metadata. | US-12, US-21 |
+| 7 | Materialize alerts to DuckDB lake | .NET mediation daemon evaluates NRT MV thresholds and writes append-only alert records to DuckDB lake. PerResultRow default. Aggregate modes (SingleAlertPerRun, GroupByEntity, GroupByCustomKey) introduced deliberately. | US-13, US-22 |
+| 8 | Expose operations views | DetectionRun, AlertEvent, AlertEntity, AlertEnrichment, and IncidentCandidate approved read models queryable through KQL. | US-14, US-26 |
+| 9 | Add alert UI | Operations module includes run list, alert queue, alert detail, entity views, and diagnostics. | US-15, US-23 |
+| 10 | Add enrichment and suppression | Deterministic processing over alert evidence and entities. Suppression marks alerts without deleting them. | US-17 |
+| 11 | Add candidate correlation | Explainable grouping over alert entities, windows, scoring factors, and evidence. Incident candidates with rationale and deterministic scoring. | US-16, US-24 |
+| 12 | Add triage feedback | Alert/candidate outcomes feed detection tuning, suppression adjustment, visibility gaps, and follow-up hunts. | US-18, US-25 |
 
 ## Phase status
 
-Last assessed: 2026-06-22.
+Last assessed: 2026-06-27.
 
 | Phase | Status | Notes |
 |---:|---|---|
@@ -155,7 +121,7 @@ Last assessed: 2026-06-22.
 | 1A | **In progress** | Product identity is documented as DeltaZulu Platform; structural radius aliases and Mud defaults now use the sharp binary radius model; global product `h1` typography uses IBM Plex Sans; shared stylesheet audit coverage prevents legacy alias leakage outside the quarantined Analytics CSS. Remaining gaps: orange usage review, Analytics alias removal/quarantine cleanup, canonical dashboard/evidence primitives, Operations placeholders, and broader audit rules. |
 | 2 | **Complete** | Application-layer `ExecutionPurpose`, `AnalyticsQueryRequest`, `AnalyticsQueryResult`, and `IAnalyticsQueryExecutor` exist. DuckDB execution and single-connection serialization live behind `AnalyticsQueryExecutor`; interactive Analytics, dashboard data-only execution, and governance validation dry-runs all call through the shared contract with purpose-specific policies. `QueryExecutionDryRunCheck` runs draft queries with `ValidationDryRun` purpose during the governance check pipeline. Boundary tests prove no governance check creates parallel execution paths. Scheduled-detection and recovery callers are deferred to Phase 6. |
 | 3 | **Complete** | `CuratedAnalyticRecord` with purpose, required views/fields, expected result shape, entity mappings JSON, known false positives, severity/confidence/risk hints, notes, and promotion tracking. `ICuratedAnalyticRepository` with SQLite Dapper implementation. `CuratedAnalyticService` with saved-query-to-curated-analytic promotion. Persistence registered and initialized in platform startup. |
-| 3A | **Complete** | `NrtRule` domain record, `INrtRuleRepository`, `NrtCompilationResult`. `NrtRuleCompiler` (KQL→RelNode→ProtonSQL→MV DDL), `ProtonSqlQueryEmitter` (IRelationalQueryEmitter for Proton/ClickHouse dialect), `NrtRuleService` (Application orchestration). `MaterializedViewDdl`, `ScheduledTaskDdl`, `AlertDdl`, `ProtonInterval` DDL builder library. `DapperNrtRuleRepository` (SQLite). `/analytics/nrt` rule authoring UI. Architecture documented in `ARCHITECTURE.md`. |
+| 3A | **Complete** | `NrtRule` domain record, `INrtRuleRepository`, `NrtCompilationResult`. `NrtRuleCompiler` (Application, KQL→RelNode→ProtonSQL→MV DDL via `IDetectionCompilationBackend`), `ProtonDetectionCompilationBackend` and `ProtonSqlQueryEmitter` (Data.Proton), `NrtRuleService` (Application orchestration). `MaterializedViewDdl`, `ScheduledTaskDdl`, `AlertDdl`, `ProtonInterval` DDL builder library (Data.Proton). `DapperNrtRuleRepository` (SQLite). `/analytics/nrt` rule authoring UI. Architecture documented in `ARCHITECTURE.md`. |
 | 3B | **Not started** | Alerts and alert entities still live in SQLite app state. `DapperAlertRepository.UpdateStatusAsync` contradicts append-only model. `AppStateTables` has wrong entries for alerts and incident tables. `AlertEvent`/`AlertEntity` views not yet in `ApprovedViewCatalog`. Operations SQLite not yet separated from app state. |
 | 4 | **Scaffolded** | `DetectionRecord` exists but lacks `LookbackPolicy`, `AlertMaterializationMode`, `AcceptedVersionId`. No projection pipeline from governance acceptance. |
 | 5 | **Scaffolded** | Domain records and SQLite Dapper repositories exist under `Analytics/` namespace. Alert records must migrate to DuckDB lake (append-only) rather than SQLite (mutable). Missing key fields on `AlertRecord` (evidence hash, materialization key, rule hash, suppression) and `DetectionRunRecord` (alert count, lookback window). `IIncidentRepository` and `ICandidateDecisionRepository` have no SQLite implementations. |
@@ -173,36 +139,89 @@ Phases 1, 2, 3, and 3A are **complete**. The current roadmap position makes **Ph
 
 Completed phases (1, 2, 3, 3A) are omitted from this table. See the phase status table above for their exit criteria and completion notes.
 
-| Order | Phase | Phase definition | Entry condition | Exit criteria |
-|---:|---:|---|---|---|
-| 1 | 1A | Resolve product identity and enforce core design-system rules before broad dashboard/Operations UI expansion. Apply binary radius, product typography scoping, orange action semantics, legacy CSS quarantine, dashboard primitive contracts, evidence-table metadata, and audit coverage. | Consolidation and Phase 1 complete. Design tokens and shared components exist in Web. | Product identity is documented; product UI headings use IBM Plex Sans; structural radii are sharp; actions use pill treatment; legacy aliases are removed or isolated; canonical dashboard/table/state primitives exist; a local audit catches forbidden patterns. |
-| 2 | 3B | Migrate alert storage from SQLite app state to the DuckDB data lake and separate operations state. Remove `alerts`/`alert_entities` from `AppStateTables`. Delete `DapperAlertRepository.UpdateStatusAsync` and any upsert logic. Create an append-only DuckDB lake writer. Move `incident_candidates`, `candidate_alert_links`, `candidate_evidence` to a dedicated operations SQLite database. Add `AlertEvent`/`AlertEntity` canonical views to `ApprovedViewCatalog`. | Phase 3A complete; architecture decision documented (alerts = append-only lake, incidents = mutable ops SQLite). | `AppStateTables` has no alert or incident entries; a DuckDB lake writer appends alert records with no status column; incident tables live in an operations SQLite with its own `OperationsDbPath` option; `AlertEvent` and `AlertEntity` are queryable through KQL. |
-| 3 | 4 | Complete executable detection projection from accepted governance content. The projection should turn accepted detection versions into operations-ready detection definitions with schedule, lookback, entity mapping, materialization mode, suppression policy, and accepted-version traceability. | Phase 3 promotion metadata is complete; projection contract written to accept it without schema churn. | Governance acceptance writes or refreshes executable detection definitions; each definition records accepted version, rule hash, schedule, lookback, entity mapping, materialization mode, and suppression policy; stale or invalid projections surface diagnostics. |
-| 4 | 5 | Harden the Operations persistence model before building the mediation daemon. Finish detection-run, alert-entity, enrichment, suppression, incident-candidate, candidate-evidence, and triage persistence contracts with audit and evidence-integrity fields. Alert records are DuckDB lake (append-only, no status). Incident candidates and evidence are operations SQLite (mutable). | Phase 3B migration complete; Phase 4 projection contract defines the executable detection input shape. | DuckDB lake schema covers append-only alert and alert-entity records with materialization key, evidence hash, and rule hash; operations SQLite covers incident lifecycle and triage; detection-run records have alert counts and lookback windows; incident/candidate decision repositories have concrete implementations and tests. |
-| 5 | 6 | Build Proton scheduled detection and the .NET mediation daemon. Generate `CREATE OR REPLACE TASK` DDL via `ScheduledTaskDdl`, deploy to Proton, and implement the daemon that polls NRT MVs against thresholds and consumes the scheduled-task alert dispatch stream. Detection runs recorded with full execution metadata. | Phase 5 persistence complete; Proton connectivity established. | A `ScheduledTaskDdl`-generated task runs in Proton on a configured interval; the mediation daemon reads Proton alert output and writes append-only rows to the DuckDB lake; `DetectionRun` records inputs, window, status, diagnostics, counts, duration, and failure state. |
-| 6 | 7 | Materialize NRT alert records from detection MV threshold evaluation using `PerResultRow` as the default. The mediation daemon polls `mv_nrt_{ruleId}`, compares row count against the rule threshold, and writes immutable alert rows to the DuckDB lake. Add aggregate materialization modes only after row-level evidence identity is deterministic. | Phase 6 daemon can write to the lake; Phase 5 alert lake schema is stable. | NRT threshold evaluation writes append-only alert rows to the DuckDB lake with materialization keys and extracted entities; duplicate/retry behavior is deterministic; tests cover empty, threshold-met, and failed evaluation runs. |
-| 7 | 8 and 9 | Expose Operations state both analytically and operationally. Phase 8 publishes approved read-only KQL views; Phase 9 adds the first Operations module pages for run and alert inspection. These can proceed in parallel after Phase 7. | Alert records, entities, and runs exist and have stable read models. | Approved `DetectionRun`, `AlertEvent`, `AlertEntity`, enrichment, and candidate views are queryable through KQL; `/operations` navigation, run list, alert queue, alert detail, entity views, and diagnostics exist without direct database access from UI components. |
-| 8 | 10-12 | Add higher-order operations workflows: enrichment/suppression, candidate correlation, and triage feedback into detection tuning. These remain deferred until core run and alert loops are stable. | Phases 8 and 9 expose stable views and UI affordances. | Suppression and enrichment are deterministic and auditable; candidates are explainable with scoring rationale; triage decisions feed new governance proposals or curated analytics follow-ups. |
+| Phase | Phase definition | Entry condition | Exit criteria |
+|---:|---|---|---|
+| 1A | Resolve product identity and enforce core design-system rules before broad dashboard/Operations UI expansion. Apply binary radius, product typography scoping, orange action semantics, legacy CSS quarantine, dashboard primitive contracts, evidence-table metadata, and audit coverage. | Consolidation and Phase 1 complete. Design tokens and shared components exist in Web. | Product identity is documented; product UI headings use IBM Plex Sans; structural radii are sharp; actions use pill treatment; legacy aliases are removed or isolated; canonical dashboard/table/state primitives exist; a local audit catches forbidden patterns. |
+| 3B | Migrate alert storage from SQLite app state to the DuckDB data lake and separate operations state. Remove `alerts`/`alert_entities` from `AppStateTables`. Delete `DapperAlertRepository.UpdateStatusAsync` and any upsert logic. Create an append-only DuckDB lake writer. Move `incident_candidates`, `candidate_alert_links`, `candidate_evidence` to a dedicated operations SQLite database. Add `AlertEvent`/`AlertEntity` canonical views to `ApprovedViewCatalog`. | Phase 3A complete; architecture decision documented (alerts = append-only lake, incidents = mutable ops SQLite). | `AppStateTables` has no alert or incident entries; a DuckDB lake writer appends alert records with no status column; incident tables live in an operations SQLite with its own `OperationsDbPath` option; `AlertEvent` and `AlertEntity` are queryable through KQL. |
+| 4 | Complete executable detection projection from accepted governance content. The projection should turn accepted detection versions into operations-ready detection definitions with schedule, lookback, entity mapping, materialization mode, suppression policy, and accepted-version traceability. | Phase 3 promotion metadata is complete; projection contract written to accept it without schema churn. | Governance acceptance writes or refreshes executable detection definitions; each definition records accepted version, rule hash, schedule, lookback, entity mapping, materialization mode, and suppression policy; stale or invalid projections surface diagnostics. |
+| 5 | Harden the Operations persistence model before building the mediation daemon. Finish detection-run, alert-entity, enrichment, suppression, incident-candidate, candidate-evidence, and triage persistence contracts with audit and evidence-integrity fields. Alert records are DuckDB lake (append-only, no status). Incident candidates and evidence are operations SQLite (mutable). Detection runs are append-only lake records written once at completion. | Phase 3B migration complete; Phase 4 projection contract defines the executable detection input shape. | DuckDB lake schema covers append-only alert and alert-entity records with materialization key, evidence hash, and rule hash; operations SQLite covers incident lifecycle and triage; detection-run records have alert counts and lookback windows; incident/candidate decision repositories have concrete implementations and tests. |
+| 6 | Build Proton scheduled detection and the .NET mediation daemon. Generate `CREATE OR REPLACE TASK` DDL via `ScheduledTaskDdl`, deploy to Proton, and implement the daemon that polls NRT MVs against thresholds and consumes the scheduled-task alert dispatch stream. Detection runs recorded with full execution metadata. | Phase 5 persistence complete; Proton connectivity established. | A `ScheduledTaskDdl`-generated task runs in Proton on a configured interval; the mediation daemon reads Proton alert output and writes append-only rows to the DuckDB lake; `DetectionRun` records inputs, window, status, diagnostics, counts, duration, and failure state. |
+| 7 | Materialize NRT alert records from detection MV threshold evaluation using `PerResultRow` as the default. The mediation daemon polls `mv_nrt_{ruleId}`, compares row count against the rule threshold, and writes immutable alert rows to the DuckDB lake. Add aggregate materialization modes only after row-level evidence identity is deterministic. | Phase 6 daemon can write to the lake; Phase 5 alert lake schema is stable. | NRT threshold evaluation writes append-only alert rows to the DuckDB lake with materialization keys and extracted entities; duplicate/retry behavior is deterministic; tests cover empty, threshold-met, and failed evaluation runs. |
+| 8 | Expose Operations state analytically. Publish approved read-only KQL views for operations data. | Alert records, entities, and runs exist and have stable read models. | Approved `DetectionRun`, `AlertEvent`, `AlertEntity`, enrichment, and candidate views are queryable through KQL. |
+| 9 | Add Operations module and alert UI. Register the Operations module and build the first operations pages for run and alert inspection. Can proceed in parallel with Phase 8. | Alert records, entities, and runs exist and have stable read models. | `/operations` navigation, run list, alert queue, alert detail, entity views, and diagnostics exist without direct database access from UI components. |
+| 10 | Add enrichment and suppression. Deterministic processing over alert evidence and entities. | Phases 8 and 9 expose stable views and UI affordances. | Suppression and enrichment are deterministic and auditable; suppression marks alerts without deleting evidence. |
+| 11 | Add candidate correlation. Explainable grouping over alert entities, windows, scoring factors, and evidence. | Phase 10 suppression/enrichment is stable. | Candidates are explainable with scoring rationale and deterministic dedup. |
+| 12 | Add triage feedback. Alert/candidate outcomes feed detection tuning. | Phase 11 correlation is stable. | Triage decisions feed new governance proposals or curated analytics follow-ups. |
 
-### Immediate execution backlog
+### Phase task decomposition
 
-1. ~~Decide and document product identity across DZNS, DeltaZulu Platform, and internal DeltaZulu platform language.~~ Done in `docs/design/PRODUCT_IDENTITY.md`.
-2. ~~Replace medium structural radius tokens/Mud defaults with the binary radius model and scope Newsreader away from product UI headings.~~ Structural tokens, Mud defaults, and global product `h1` typography are enforced.
-3. Continue quarantining or removing legacy `--hunt-*`, `--bg-*`, and `--text-*` aliases; review orange usage so it remains action-only.
-4. Define canonical dashboard/table/state primitives and upgrade `DzQueryResultTable` toward evidence-grade metadata, degraded/overflow states, and export affordances; CSV table export is the first implementation, with PDF and PNG rendered-visualization export tracked for a later visualization phase.
-5. Expand design-system audit coverage for color literals, `Color.Primary`, raw Mud component divergence, and remaining legacy classes/variables.
-6. ~~Add an `ExecutionPurpose` model and shared `IAnalyticsQueryExecutor` service interface in the application layer.~~ Done with application-layer execution request/result contracts.
-7. ~~Refactor interactive Analytics and dashboard execution onto that executor while preserving UI-safe result limits and query-history behavior in the Web adapter.~~ Done for `QueryService` and dashboard data-only execution.
-8. ~~Move Governance validation dry-runs onto the same executor with validation-specific policy and diagnostics.~~ Done: `QueryExecutionDryRunCheck` uses `IAnalyticsQueryExecutor` with `ValidationDryRun` purpose.
-9. ~~Continue architecture-boundary tests proving callers use the shared service and that UI code remains behind application contracts.~~ Done: `SharedExecutionBoundaryTests` proves governance checks do not create parallel execution paths.
-10. ~~Split saved query history from curated analytic definitions with an explicit migration and persistence tests.~~ Done: `CuratedAnalyticRecord`, `ICuratedAnalyticRepository`, `DapperCuratedAnalyticRepository`, and `CuratedAnalyticService` with promotion from saved queries.
-11. Implement the ADR 0007 schema alignment slice: `RawEventEnvelope`/`RawEvent`, grouped Windows Security and Sysmon Silver records, `Authentication` and `ProcessActivity` Golden schemas with lineage, and DuckDB/Proton/KQL generation or snapshot checks.
-12. Draft the executable detection projection contract before adding any scheduled runner code.
-13. **(Phase 3B — immediate)** Remove `alerts` and `alert_entities` entries from `AppStateTables` in `AnalyticsWebModuleServiceCollectionExtensions.cs`. These belong in the DuckDB lake, not the SQLite app state.
-14. **(Phase 3B)** Delete `DapperAlertRepository.UpdateStatusAsync` and the `ON CONFLICT DO UPDATE SET status = ...` upsert. Replace with a plain `INSERT` lake writer — no status column on alert records.
-15. **(Phase 3B)** Move `incident_candidates`, `candidate_alert_links`, and `candidate_evidence` out of `AppStateTables` into a dedicated operations SQLite database. Add `OperationsDbPath` to `AnalyticsWebModuleOptions` and register the operations DB attachment separately.
-16. **(Phase 3B)** Add `AlertEvent` and `AlertEntity` canonical views to `ApprovedViewCatalog` and `SchemaConventions` so analysts can write KQL against lake alert data the same way they query `ProcessEvent`, `Dns`, and `NetworkSession`.
-17. **(Phase 3B → Phase 6)** Add `LakeDbPath` to `AnalyticsWebModuleOptions` and configure `DuckDbConnectionFactory` to attach or open the lake database separately from the analytics query database.
+Active phases decomposed into concrete, verifiable tasks.
+
+#### Phase 1A tasks (design-system enforcement)
+
+1. Audit all CSS for `--hunt-*`, `--bg-*`, `--text-*` aliases; list occurrences; remove or quarantine each.
+2. Audit all `Color.Primary` and explicit orange usage in Razor components; replace non-action uses with ink/slate/status colors.
+3. Define and implement `DzDataTable` component contract (props, column defs, sort, states).
+4. Define and implement `DzStatusBadge` component contract.
+5. Define and implement `DzFilterBar` component contract.
+6. Upgrade `DzQueryResultTable` toward evidence-grade metadata: freshness, source, query purpose, row limit, truncation, degraded/partial state, column overflow, and CSV export.
+7. Create Operations module placeholder navigation (routes and empty pages) for design-system validation.
+8. Add design-system audit test/script that fails on forbidden radius values, orange misuse, Newsreader leakage, raw Mud divergence, unsupported color literals, and legacy classes/variables.
+
+#### Phase 3B tasks (alert storage migration)
+
+1. Remove `alerts` and `alert_entities` entries from `AppStateTables` in `AnalyticsWebModuleServiceCollectionExtensions.cs`.
+2. Delete `DapperAlertRepository.UpdateStatusAsync` and the `ON CONFLICT DO UPDATE SET status = ...` upsert logic. Replace with a plain `INSERT` path.
+3. Create an append-only DuckDB lake writer for `AlertEvent` records (no status column).
+4. Create an append-only DuckDB lake writer for `AlertEntity` records.
+5. Add `AlertEvent` and `AlertEntity` canonical views to `ApprovedViewCatalog` and `SchemaConventions`.
+6. Add `OperationsDbPath` option and create a dedicated operations SQLite database with its own startup/migration path.
+7. Move `incident_candidates`, `candidate_alert_links`, and `candidate_evidence` out of `AppStateTables` into the operations SQLite.
+8. Add `LakeDbPath` to `AnalyticsWebModuleOptions` and configure `DuckDbConnectionFactory` to attach or open the lake database separately.
+
+#### Phase 4 tasks (executable detection projection)
+
+1. Add `LookbackPolicy`, `AlertMaterializationMode`, `AcceptedVersionId`, and `RuleHash` fields to `DetectionRecord`.
+2. Define `IDetectionProjectionService` contract in Application with input (accepted content metadata) and output (executable definition).
+3. Decide trigger mechanism: synchronous during acceptance flow (recommended for v1 simplicity) or async via Elsa.
+4. Implement projection logic: map accepted version, compute rule hash, extract schedule/lookback/entity mapping/materialization mode/suppression from detection metadata.
+5. Add projection diagnostics surfacing stale or invalid projections.
+6. Add backfill command for previously accepted content without executable definitions.
+7. Add tests proving acceptance creates/updates executable definitions idempotently.
+
+#### Phase 5 tasks (operations persistence hardening)
+
+1. Add missing fields to `DetectionRunRecord`: alert count, lookback window, execution mode, diagnostics JSON, stale/no-data warnings, workflow correlation.
+2. Add missing fields to `AlertRecord`: evidence hash, materialization key, rule hash, suppression marker.
+3. Add missing fields to `AlertEntityRecord`: extracted entity values, entity type contract.
+4. Implement concrete `IIncidentRepository` SQLite implementation with tests.
+5. Implement concrete `ICandidateDecisionRepository` SQLite implementation with tests.
+6. Move operations domain records from `Analytics/` namespace to `Operations/` namespace.
+
+#### Phase 8 tasks (operations KQL views)
+
+1. Add `DetectionRun` approved view to `ApprovedViewCatalog`.
+2. Add `AlertEnrichment` approved view to `ApprovedViewCatalog`.
+3. Add `IncidentCandidate` approved view (projection from operations SQLite) to `ApprovedViewCatalog`.
+4. Add KQL integration tests proving all operations views are queryable.
+
+#### Phase 9 tasks (Operations module UI)
+
+1. Create `OperationsModule` implementing the platform module contract.
+2. Register `/operations` routes and navigation entries.
+3. Build executable detections list page.
+4. Build detection run list page.
+5. Build alert queue page with filters, severity, freshness, and status context.
+6. Build alert detail page with evidence, entities, and enrichment.
+7. Build incident candidate list page.
+8. Build operations health and settings pages.
+
+#### Schema alignment tasks (cross-phase prerequisite)
+
+1. Implement the ADR 0007 schema alignment slice: `RawEventEnvelope`/`RawEvent` Bronze contract.
+2. Add grouped Windows Security and Sysmon Silver records with promoted common fields plus `EventDataJson`.
+3. Add `Authentication` and `ProcessActivity` Golden schemas with required lineage fields.
+4. Add DuckDB/Proton/KQL generation or snapshot checks for schema drift.
 
 ### Module readiness
 
