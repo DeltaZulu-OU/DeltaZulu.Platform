@@ -1,5 +1,9 @@
 namespace DeltaZulu.Platform.Domain.Analytics.Observability;
 
+/// <summary>
+/// Raw observation emitted by an agent for one configured log source.
+/// Health, coverage, and dashboard rollups are computed by DuckDB views.
+/// </summary>
 public sealed record SourceObservationSnapshot(
     string SourceType,
     string Channel,
@@ -15,7 +19,15 @@ public sealed record SourceObservationSnapshot(
     long DiscardedCount,
     long ForwardedCount,
     long ForwardFailedCount,
-    DateTime ObservedAtUtc)
+    DateTime ObservedAtUtc,
+    string TenantId = "default",
+    string? SourceInstanceId = null,
+    string? ResourceFamily = null,
+    string? Provider = null,
+    string? ProfileId = null,
+    string? ProfileVersionId = null,
+    DateTime? WindowStartUtc = null,
+    DateTime? WindowEndUtc = null)
 {
     public SourceHealthStatus HealthStatus
     {

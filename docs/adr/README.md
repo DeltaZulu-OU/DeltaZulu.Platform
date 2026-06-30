@@ -11,6 +11,7 @@ This directory contains the current centralized ADR set for DeltaZulu Platform. 
 | [`0004-governance-content-workflow.md`](0004-governance-content-workflow.md) | Accepted | Detection-content workflow, validation, review, versioning, and Git accepted content. |
 | [`0005-detection-execution-and-operations-storage.md`](0005-detection-execution-and-operations-storage.md) | Accepted | Proton execution, DuckDB lake alerts, operations SQLite, and run/alert/candidate ownership. |
 | [`0006-dashboard-rendering-and-library-boundary.md`](0006-dashboard-rendering-and-library-boundary.md) | Accepted | Dashboard/rendering/library boundaries above the query runtime. |
+| [`0008-lake-first-operational-metrics.md`](0008-lake-first-operational-metrics.md) | Accepted | DuckDB-backed operational metrics, PascalCase internal views, tenant-scoped Overview dashboard semantics, and refresh posture. |
 
 ## Conversion policy
 

@@ -1,13 +1,13 @@
 @page "/"
 @using MudBlazor
 @using DeltaZulu.Platform.Domain.Analytics.Observability
-@inject ISourceMetricsReader MetricsReader
+@inject IOperationalMetricsReader OperationalMetricsReader
 
 <PageTitle>DeltaZulu Platform — Overview</PageTitle>
 
 <DzPageHeader Eyebrow="Full-cycle security analytics"
               Title="Overview"
-              Description="Platform health, source telemetry, and module navigation.">
+              Description="Agent health, source telemetry, collection coverage, and module navigation.">
     <Actions>
         <MudButton Href="/analytics" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Search">
             Open Analytics Workbench
@@ -20,42 +20,72 @@
 
 @if (_loading)
 {
-    <DzLoadingState Text="Loading source observations..." />
+    <DzLoadingState Text="Loading operational metrics..." />
 }
-else if (_summary.SourceCount == 0)
+else if (_overview.AgentCount == 0 && _overview.SourceCount == 0)
 {
-    <DzEmptyState Title="No source observations yet"
-                  Description="Connect a DeltaZulu agent and configure log sources to see collection health and pipeline metrics here."
+    <DzEmptyState Title="No operational observations yet"
+                  Description="Connect a DeltaZulu agent and configure log sources to see agent health, collection health, and pipeline metrics here."
                   Icon="@Icons.Material.Outlined.Sensors" />
 }
 else
 {
     <MudGrid Spacing="3" Class="mb-4">
         <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Agents"
+                          Value="@_overview.AgentCount.ToString()"
+                          Icon="@Icons.Material.Outlined.Memory"
+                          Label="@($"{_overview.OnlineAgentCount} online, {_overview.StaleAgentCount + _overview.OfflineAgentCount} stale/offline")" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Agent degraded"
+                          Value="@_overview.DegradedAgentCount.ToString()"
+                          Icon="@Icons.Material.Outlined.HealthAndSafety"
+                          Label="Buffer pressure, drops, or forward failures"
+                          Tone="@(_overview.DegradedAgentCount > 0 ? "error" : "neutral")" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Config drift"
+                          Value="@_overview.ConfigDriftCount.ToString()"
+                          Icon="@Icons.Material.Outlined.Rule"
+                          Label="Desired and applied revisions differ"
+                          Tone="@(_overview.ConfigDriftCount > 0 ? "warning" : "neutral")" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Max buffer pressure"
+                          Value="@_overview.MaxBufferPressure.ToString("P0")"
+                          Icon="@Icons.Material.Outlined.Storage"
+                          Label="Highest latest agent pressure"
+                          Tone="@(_overview.MaxBufferPressure >= 0.85 ? "error" : "neutral")" />
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
             <DzMetricTile Eyebrow="Sources"
-                          Value="@_summary.SourceCount.ToString()"
+                          Value="@_overview.SourceCount.ToString()"
                           Icon="@Icons.Material.Outlined.Sensors"
-                          Label="@($"Across {_summary.AgentCount} agent(s)")" />
+                          Label="Latest observed source instances" />
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
             <DzMetricTile Eyebrow="Healthy"
-                          Value="@_summary.HealthyCount.ToString()"
+                          Value="@_overview.HealthySourceCount.ToString()"
                           Icon="@Icons.Material.Outlined.CheckCircleOutline"
                           Label="Enabled, readable, no errors"
                           Tone="success" />
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
             <DzMetricTile Eyebrow="Degraded"
-                          Value="@_summary.DegradedCount.ToString()"
+                          Value="@_overview.DegradedSourceCount.ToString()"
                           Icon="@Icons.Material.Outlined.Warning"
                           Label="Read errors or forward failures"
-                          Tone="@(_summary.DegradedCount > 0 ? "error" : "neutral")" />
+                          Tone="@(_overview.DegradedSourceCount > 0 ? "error" : "neutral")" />
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
             <DzMetricTile Eyebrow="Events forwarded"
-                          Value="@FormatCount(_summary.TotalForwarded)"
+                          Value="@FormatCount(_overview.TotalForwarded)"
                           Icon="@Icons.Material.Outlined.CallMade"
-                          Label="@($"{FormatCount(_summary.TotalDiscarded)} discarded")" />
+                          Label="@($"{FormatCount(_overview.TotalDiscarded)} discarded")" />
         </MudItem>
     </MudGrid>
 
@@ -77,7 +107,11 @@ else
             </DzFilterRow>
         </Actions>
         <ChildContent>
-            @if (_rows.Count == 0)
+            @if (_sourcesLoading)
+            {
+                <DzLoadingState Text="Loading source observations..." />
+            }
+            else if (_rows.Count == 0)
             {
                 <DzEmptyState Title="No sources match the current filter"
                               Description="Adjust the filter to see other source observations."
@@ -194,20 +228,26 @@ else
 </MudGrid>
 
 @code {
+    private static readonly TimeSpan SourceLoadJitterMin = TimeSpan.FromMilliseconds(150);
+    private static readonly TimeSpan SourceLoadJitterMax = TimeSpan.FromMilliseconds(900);
+
     private bool _loading = true;
-    private SourceHealthSummary _summary = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    private bool _sourcesLoading;
+    private OverviewMetricsSummary _overview = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     private IReadOnlyList<SourceLatestRow> _rows = [];
     private string _filter = "all";
 
     protected override async Task OnInitializedAsync()
     {
         _loading = true;
-        await Task.Run(() =>
-        {
-            _summary = MetricsReader.ReadSummary();
-            _rows = MetricsReader.ReadLatest();
-        });
+        _overview = await Task.Run(() => OperationalMetricsReader.ReadOverviewSummary());
         _loading = false;
+
+        _sourcesLoading = true;
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(NextSourceLoadJitter());
+        _rows = await Task.Run(() => OperationalMetricsReader.ReadLatestSources());
+        _sourcesLoading = false;
     }
 
     private void ApplyFilter(string filter)
@@ -215,11 +255,18 @@ else
         _filter = filter;
         _rows = filter switch
         {
-            "healthy" => MetricsReader.ReadLatest("Healthy"),
-            "degraded" => MetricsReader.ReadLatest("Degraded"),
-            "disabled" => MetricsReader.ReadLatest("Disabled"),
-            _ => MetricsReader.ReadLatest(),
+            "healthy" => OperationalMetricsReader.ReadLatestSources(healthStatusFilter: "Healthy"),
+            "degraded" => OperationalMetricsReader.ReadLatestSources(healthStatusFilter: "Degraded"),
+            "disabled" => OperationalMetricsReader.ReadLatestSources(healthStatusFilter: "Disabled"),
+            _ => OperationalMetricsReader.ReadLatestSources(),
         };
+    }
+
+    private static TimeSpan NextSourceLoadJitter()
+    {
+        var min = (int)SourceLoadJitterMin.TotalMilliseconds;
+        var max = (int)SourceLoadJitterMax.TotalMilliseconds;
+        return TimeSpan.FromMilliseconds(Random.Shared.Next(min, max + 1));
     }
 
     private static string HealthTone(string status) => status switch

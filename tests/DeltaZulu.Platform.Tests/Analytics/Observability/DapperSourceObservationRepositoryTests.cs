@@ -1,23 +1,46 @@
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Observability;
 using DeltaZulu.Platform.Domain.Analytics.Observability;
+using Microsoft.Data.Sqlite;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Observability;
 
 [TestClass]
-public sealed class DapperSourceObservationRepositoryTests
+public sealed class DapperSourceObservationRepositoryTests : IDisposable
 {
     private DapperSourceObservationRepository _repository = null!;
+    private string _dbPath = string.Empty;
+    private bool _cleanedUp;
 
     [TestInitialize]
     public void Setup()
     {
-        var factory = new SqliteAppDbConnectionFactory("Data Source=SourceObsTest;Mode=Memory;Cache=Shared");
+        _cleanedUp = false;
+        _dbPath = Path.Combine(
+            Path.GetTempPath(),
+            $"deltazulu-source-observations-{Guid.NewGuid():N}.db");
+        var factory = new SqliteAppDbConnectionFactory($"Data Source={_dbPath};Pooling=False");
         _repository = new DapperSourceObservationRepository(factory);
     }
 
     [TestCleanup]
-    public void Cleanup() => _repository.Dispose();
+    public void Cleanup()
+    {
+        if (_cleanedUp)
+        {
+            return;
+        }
+
+        _cleanedUp = true;
+        _repository.Dispose();
+        DeleteDatabaseFiles(_dbPath);
+    }
+
+    public void Dispose()
+    {
+        Cleanup();
+        GC.SuppressFinalize(this);
+    }
 
     [TestMethod]
     public async Task ListLatest_ReturnsEmpty_WhenNoData()
@@ -114,4 +137,20 @@ public sealed class DapperSourceObservationRepositoryTests
             ReadErrorCount: 0, LastError: null,
             ReadCount: readCount, KeptAfterFilterCount: readCount, DiscardedCount: 0,
             ForwardedCount: readCount, ForwardFailedCount: 0, ObservedAtUtc: DateTime.UtcNow);
+
+    private static void DeleteDatabaseFiles(string path)
+    {
+        SqliteConnection.ClearAllPools();
+        DeleteIfExists(path);
+        DeleteIfExists($"{path}-wal");
+        DeleteIfExists($"{path}-shm");
+    }
+
+    private static void DeleteIfExists(string path)
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+    }
 }

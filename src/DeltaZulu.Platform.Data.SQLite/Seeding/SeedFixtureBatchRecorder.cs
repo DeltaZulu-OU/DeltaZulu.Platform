@@ -4,52 +4,52 @@ using DeltaZulu.Platform.Data.DuckDb;
 namespace DeltaZulu.Platform.Data.Seeding;
 
 /// <summary>
-/// Records governed seed fixture batch metadata into internal.seed_batches.
+/// Records governed seed fixture batch metadata into internal.SeedBatches.
 /// This component records batch application metadata only; it does not execute seed SQL.
 /// </summary>
 public sealed class SeedFixtureBatchRecorder
 {
-    public const string SeedBatchesTable = "internal.seed_batches";
+    public const string SeedBatchesTable = "internal.SeedBatches";
     public const string DefaultCatalogVersion = "phase-1c";
 
     private const string DeleteSql =
         $"""
         DELETE FROM {SeedBatchesTable}
-        WHERE batch_id = @BatchId
+        WHERE BatchId = $BatchId
         """;
 
     private const string InsertSql =
         $"""
         INSERT INTO {SeedBatchesTable}
-            (batch_id, table_name, source_name, scenario, row_count, content_hash, catalog_version, applied_at)
+            (BatchId, TableName, SourceName, Scenario, RowCount, ContentHash, CatalogVersion, AppliedAt)
         VALUES
-            (@BatchId, @TableName, @SourceName, @Scenario, @RowCount, @ContentHash, @CatalogVersion, current_timestamp)
+            ($BatchId, $TableName, $SourceName, $Scenario, $RowCount, $ContentHash, $CatalogVersion, current_timestamp)
         """;
 
     private const string SelectSql =
         """
         SELECT
-            batch_id AS BatchId,
-            table_name AS TableName,
-            source_name AS SourceName,
-            scenario AS Scenario,
-            row_count AS RowCount,
-            content_hash AS ContentHash,
-            catalog_version AS CatalogVersion
-        FROM internal.seed_batches
-        ORDER BY batch_id
+            BatchId AS BatchId,
+            TableName AS TableName,
+            SourceName AS SourceName,
+            Scenario AS Scenario,
+            RowCount AS RowCount,
+            ContentHash AS ContentHash,
+            CatalogVersion AS CatalogVersion
+        FROM internal.SeedBatches
+        ORDER BY BatchId
         """;
 
     private const string CountMatchingSql =
         $"""
         SELECT count(*)
         FROM {SeedBatchesTable}
-        WHERE batch_id = @BatchId
-          AND table_name = @TableName
-          AND source_name = @SourceName
-          AND scenario = @Scenario
-          AND row_count = @RowCount
-          AND content_hash = @ContentHash
+        WHERE BatchId = $BatchId
+          AND TableName = $TableName
+          AND SourceName = $SourceName
+          AND Scenario = $Scenario
+          AND RowCount = $RowCount
+          AND ContentHash = $ContentHash
         """;
 
     private readonly DuckDbConnectionFactory _connectionFactory;

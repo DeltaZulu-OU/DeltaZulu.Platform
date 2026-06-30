@@ -181,6 +181,10 @@ historical analytics:
   backend-neutral compilation contract; `DeltaZulu.Platform.Data.DuckDb` provides the DuckDB
   implementation for analytics, and `DeltaZulu.Platform.Data.Proton` provides the Proton
   implementation for detection DDL generation (see [Detection execution architecture](#detection-execution-architecture)).
+- Internal operational metrics for the Overview and future Operations surfaces are lake-first: append-only
+  source/agent observations are stored in DuckDB internal PascalCase tables, and dashboard metrics are
+  read from tenant-scoped DuckDB views rather than recomputed in UI code or SQLite repositories. See
+  [ADR 0008](adr/0008-lake-first-operational-metrics.md).
 
 ### Data projects
 

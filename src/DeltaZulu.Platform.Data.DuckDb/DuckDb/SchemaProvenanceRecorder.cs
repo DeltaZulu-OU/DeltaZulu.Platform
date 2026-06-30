@@ -5,37 +5,37 @@ using DeltaZulu.Platform.Domain.Analytics.Schema;
 namespace DeltaZulu.Platform.Data.DuckDb.DuckDb;
 
 /// <summary>
-/// Records applied schema-object fingerprints into internal.schema_provenance.
+/// Records applied schema-object fingerprints into internal.SchemaProvenance.
 /// This component records the current state only; it does not classify or block drift.
 /// </summary>
 public sealed class SchemaProvenanceRecorder
 {
     public const string DefaultCatalogVersion = "phase-1b";
-    public const string ProvenanceTable = "internal.schema_provenance";
+    public const string ProvenanceTable = "internal.SchemaProvenance";
 
     private const string DeleteSql =
         $"""
         DELETE FROM {ProvenanceTable}
-        WHERE object_name = @ObjectName
+        WHERE ObjectName = $ObjectName
         """;
 
     private const string InsertSql =
         $"""
         INSERT INTO {ProvenanceTable}
-            (object_name, object_kind, schema_hash, catalog_version, applied_at)
+            (ObjectName, ObjectKind, SchemaHash, CatalogVersion, AppliedAt)
         VALUES
-            (@ObjectName, @ObjectKind, @SchemaHash, @CatalogVersion, current_timestamp)
+            ($ObjectName, $ObjectKind, $SchemaHash, $CatalogVersion, current_timestamp)
         """;
 
     private const string SelectSql =
         """
         SELECT
-            object_name AS ObjectName,
-            object_kind AS ObjectKind,
-            schema_hash AS SchemaHash,
-            catalog_version AS CatalogVersion
-        FROM internal.schema_provenance
-        ORDER BY object_name
+            ObjectName AS ObjectName,
+            ObjectKind AS ObjectKind,
+            SchemaHash AS SchemaHash,
+            CatalogVersion AS CatalogVersion
+        FROM internal.SchemaProvenance
+        ORDER BY ObjectName
         """;
 
     private readonly DuckDbConnectionFactory _connectionFactory;
