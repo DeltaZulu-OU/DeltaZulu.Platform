@@ -95,4 +95,45 @@ public static class GoldenEventContracts
            ],
            Columns: ProcessEventColumns!,
            Description: "Process execution and related process events across configured sources.");
+
+    public static readonly IReadOnlyList<ColumnDef> AuthenticationColumns =
+    [
+        new("Timestamp", DuckDbType.Timestamp, KustoType.DateTime, Description: "Event time."),
+        new("DeviceName", DuckDbType.Varchar, KustoType.String, Description: "Host or device name."),
+        new("ActionType", DuckDbType.Varchar, KustoType.String, Description: "Canonical authentication action."),
+        new("EventId", DuckDbType.Varchar, KustoType.String, Description: "Windows Security Event ID."),
+        new("AccountName", DuckDbType.Varchar, KustoType.String, Description: "Target account name."),
+        new("AccountDomain", DuckDbType.Varchar, KustoType.String, Description: "Target account domain."),
+        new("SubjectUserName", DuckDbType.Varchar, KustoType.String, Description: "Subject account name."),
+        new("SubjectDomainName", DuckDbType.Varchar, KustoType.String, Description: "Subject account domain."),
+        new("SubjectUserSid", DuckDbType.Varchar, KustoType.String, Description: "Subject user SID."),
+        new("SubjectUserSid_resolved", DuckDbType.Varchar, KustoType.String, Description: "Subject user SID resolved to well-known name."),
+        new("TargetUserSid", DuckDbType.Varchar, KustoType.String, Description: "Target user SID."),
+        new("TargetUserSid_resolved", DuckDbType.Varchar, KustoType.String, Description: "Target user SID resolved to well-known name."),
+        new("LogonType", DuckDbType.Varchar, KustoType.String, Description: "Logon type numeric code."),
+        new("LogonType_resolved", DuckDbType.Varchar, KustoType.String, Description: "Logon type resolved to canonical name."),
+        new("Status", DuckDbType.Varchar, KustoType.String, Description: "NTSTATUS code."),
+        new("Status_resolved", DuckDbType.Varchar, KustoType.String, Description: "NTSTATUS code resolved to symbolic name."),
+        new("SubStatus", DuckDbType.Varchar, KustoType.String, Description: "NTSTATUS sub-status code."),
+        new("SubStatus_resolved", DuckDbType.Varchar, KustoType.String, Description: "NTSTATUS sub-status resolved to symbolic name."),
+        new("SourceIP", DuckDbType.Varchar, KustoType.String, Description: "Source IP address."),
+        new("SourcePort", DuckDbType.Varchar, KustoType.String, Description: "Source port."),
+        new("WorkstationName", DuckDbType.Varchar, KustoType.String, Description: "Source workstation name."),
+        new("AuthenticationPackageName", DuckDbType.Varchar, KustoType.String, Description: "Authentication package used."),
+        new("FailureReason", DuckDbType.Varchar, KustoType.String, Description: "Failure reason message resource ID."),
+        new("FailureReason_resolved", DuckDbType.Varchar, KustoType.String, Description: "Failure reason resolved to text."),
+        new("ReportId", DuckDbType.Varchar, KustoType.String, Description: "Source report or event identifier."),
+        new("AdditionalFields", DuckDbType.Json, KustoType.Dynamic, Description: "Source-specific additional data.")
+    ];
+
+    public static readonly CanonicalViewDef Authentication = new(
+        Schema: "golden",
+        Name: "Authentication",
+        ParserViews:
+        [
+            "silver.v_authentication_windows_security_eid4624",
+            "silver.v_authentication_windows_security_eid4625"
+        ],
+        Columns: AuthenticationColumns!,
+        Description: "Authentication logon and logon-failure events across configured sources.");
 }

@@ -1,5 +1,6 @@
 using DeltaZulu.Platform.Domain.Analytics.Mapping;
 using DeltaZulu.Platform.Domain.Analytics.Schema.Definitions.Medallion.Golden;
+using DeltaZulu.Platform.Domain.Analytics.Schema.Definitions.Medallion.Silver.Lookups;
 using static DeltaZulu.Platform.Domain.Analytics.Mapping.MapDsl;
 
 namespace DeltaZulu.Platform.Domain.Analytics.Schema.Definitions.Medallion.Silver;
@@ -225,6 +226,75 @@ public static class SilverParserContributors
             Map("AdditionalFields", Col("raw_log"))
         ],
         description: "Sysmon Event ID 1 contributor for ProcessEvent.");
+
+    public static readonly ParserViewDef AuthenticationWindowsSecurityEid4624 = CreateParser(
+        schema: "silver",
+        name: "v_authentication_windows_security_eid4624",
+        sourceName: "Windows Security Event ID 4624",
+        canonicalTarget: "Authentication",
+        sourceObject: "bronze.windows_security_event",
+        filter: EventIdEquals("4624"),
+        columns: GoldenEventContracts.AuthenticationColumns,
+        projections:
+        [
+            Map("Timestamp", EventTimestamp("$.TimeCreated")),
+            Map("DeviceName", Col("host")),
+            Map("ActionType", Lit("LogonSuccess")),
+            Map("EventId", JsonText(Col("raw_log"), "$.EventID")),
+            Map("AccountName", JsonText(Col("raw_log"), "$.TargetUserName")),
+            Map("AccountDomain", JsonText(Col("raw_log"), "$.TargetDomainName")),
+            Map("SubjectUserName", JsonText(Col("raw_log"), "$.SubjectUserName")),
+            Map("SubjectDomainName", JsonText(Col("raw_log"), "$.SubjectDomainName")),
+            ..MapWithResolved("SubjectUserSid", JsonText(Col("raw_log"), "$.SubjectUserSid"), WellKnownSidLookup.Values, caseInsensitive: true),
+            ..MapWithResolved("TargetUserSid", JsonText(Col("raw_log"), "$.TargetUserSid"), WellKnownSidLookup.Values, caseInsensitive: true),
+            ..MapWithResolved("LogonType", JsonText(Col("raw_log"), "$.LogonType"), WindowsLogonTypeLookup.Values),
+            Map("Status", Lit(null)),
+            Map("Status_resolved", Lit(null)),
+            Map("SubStatus", Lit(null)),
+            Map("SubStatus_resolved", Lit(null)),
+            Map("SourceIP", Fn("COALESCE", JsonText(Col("raw_log"), "$.IpAddress"), JsonText(Col("raw_log"), "$.SourceNetworkAddress"))),
+            Map("SourcePort", Fn("COALESCE", JsonText(Col("raw_log"), "$.IpPort"), JsonText(Col("raw_log"), "$.SourcePort"))),
+            Map("WorkstationName", JsonText(Col("raw_log"), "$.WorkstationName")),
+            Map("AuthenticationPackageName", JsonText(Col("raw_log"), "$.AuthenticationPackageName")),
+            Map("FailureReason", Lit(null)),
+            Map("FailureReason_resolved", Lit(null)),
+            Map("ReportId", JsonText(Col("raw_log"), "$.EventRecordID")),
+            Map("AdditionalFields", Col("raw_log"))
+        ],
+        description: "Windows Security 4624 contributor for Authentication.");
+
+    public static readonly ParserViewDef AuthenticationWindowsSecurityEid4625 = CreateParser(
+        schema: "silver",
+        name: "v_authentication_windows_security_eid4625",
+        sourceName: "Windows Security Event ID 4625",
+        canonicalTarget: "Authentication",
+        sourceObject: "bronze.windows_security_event",
+        filter: EventIdEquals("4625"),
+        columns: GoldenEventContracts.AuthenticationColumns,
+        projections:
+        [
+            Map("Timestamp", EventTimestamp("$.TimeCreated")),
+            Map("DeviceName", Col("host")),
+            Map("ActionType", Lit("LogonFailure")),
+            Map("EventId", JsonText(Col("raw_log"), "$.EventID")),
+            Map("AccountName", JsonText(Col("raw_log"), "$.TargetUserName")),
+            Map("AccountDomain", JsonText(Col("raw_log"), "$.TargetDomainName")),
+            Map("SubjectUserName", JsonText(Col("raw_log"), "$.SubjectUserName")),
+            Map("SubjectDomainName", JsonText(Col("raw_log"), "$.SubjectDomainName")),
+            ..MapWithResolved("SubjectUserSid", JsonText(Col("raw_log"), "$.SubjectUserSid"), WellKnownSidLookup.Values, caseInsensitive: true),
+            ..MapWithResolved("TargetUserSid", JsonText(Col("raw_log"), "$.TargetUserSid"), WellKnownSidLookup.Values, caseInsensitive: true),
+            ..MapWithResolved("LogonType", JsonText(Col("raw_log"), "$.LogonType"), WindowsLogonTypeLookup.Values),
+            ..MapWithResolved("Status", JsonText(Col("raw_log"), "$.Status"), NtStatusLookup.Values, caseInsensitive: true),
+            ..MapWithResolved("SubStatus", JsonText(Col("raw_log"), "$.SubStatus"), NtStatusLookup.Values, caseInsensitive: true),
+            Map("SourceIP", Fn("COALESCE", JsonText(Col("raw_log"), "$.IpAddress"), JsonText(Col("raw_log"), "$.SourceNetworkAddress"))),
+            Map("SourcePort", Fn("COALESCE", JsonText(Col("raw_log"), "$.IpPort"), JsonText(Col("raw_log"), "$.SourcePort"))),
+            Map("WorkstationName", JsonText(Col("raw_log"), "$.WorkstationName")),
+            Map("AuthenticationPackageName", JsonText(Col("raw_log"), "$.AuthenticationPackageName")),
+            ..MapWithResolved("FailureReason", JsonText(Col("raw_log"), "$.FailureReason"), MessageResourceIdLookup.Values),
+            Map("ReportId", JsonText(Col("raw_log"), "$.EventRecordID")),
+            Map("AdditionalFields", Col("raw_log"))
+        ],
+        description: "Windows Security 4625 contributor for Authentication.");
 
     private static ParserViewDef CreateParser(
         string schema,

@@ -30,7 +30,7 @@ public class SchemaModelContractTests
         Assert.AreEqual("golden.Dns", SchemaConventions.CanonicalViews.Single(v => v.Name == "Dns").QualifiedName);
 
         Assert.HasCount(3, SchemaConventions.RawTables);
-        Assert.HasCount(6, SchemaConventions.ParserViews);
-        Assert.HasCount(3, SchemaConventions.CanonicalViews);
+        Assert.HasCount(8, SchemaConventions.ParserViews);
+        Assert.HasCount(4, SchemaConventions.CanonicalViews);
     }
 }
