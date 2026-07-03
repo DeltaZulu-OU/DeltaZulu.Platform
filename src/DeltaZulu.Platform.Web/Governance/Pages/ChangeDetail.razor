@@ -12,7 +12,7 @@
 @using DeltaZulu.Platform.Domain.Governance.Identifiers
 @using DeltaZulu.Platform.Domain.Governance.Workflow
 @using DeltaZulu.Platform.Web.Governance.Services
-@using DeltaZulu.Platform.Domain.Governance.Common
+@using DeltaZulu.Platform.Domain.Common
 @inject ChangeService ChangeService
 @inject AcceptedContentReadService AcceptedContentReadService
 @inject DetectionContentService DetectionService
@@ -679,7 +679,7 @@
             Snackbar.Add("Review recorded.", Severity.Success);
             await LoadAsync();
         }
-        catch (DeltaZulu.Platform.Domain.Governance.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+        catch (DeltaZulu.Platform.Domain.Common.DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
         finally { _running = false; }
     }
 

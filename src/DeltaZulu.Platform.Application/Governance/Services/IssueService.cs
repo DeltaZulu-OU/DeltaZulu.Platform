@@ -1,4 +1,4 @@
-using DeltaZulu.Platform.Domain.Governance.Common;
+using DeltaZulu.Platform.Domain.Common;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
 using DeltaZulu.Platform.Domain.Governance.Enums;
 using DeltaZulu.Platform.Domain.Governance.Identifiers;
