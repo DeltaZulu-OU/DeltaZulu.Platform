@@ -128,7 +128,7 @@ else
                     <MudTd DataLabel="Health">
                         @if (context.HasObservabilityData)
                         {
-                            <DzStatusChip Label="@context.HealthStatus!" Tone="@AgentInventoryRow.HealthTone(context.HealthStatus!)" />
+                            <DzStatusChip Label="@(context.HealthStatus!)" Tone="@AgentInventoryRow.HealthTone(context.HealthStatus!)" />
                         }
                         else
                         {
