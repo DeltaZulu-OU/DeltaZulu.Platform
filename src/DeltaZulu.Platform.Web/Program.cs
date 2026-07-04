@@ -8,6 +8,7 @@ using DeltaZulu.Platform.Data.Git;
 using DeltaZulu.Platform.Data.Seeding;
 using DeltaZulu.Platform.Data.Sqlite.AgentManagement;
 using DeltaZulu.Platform.Data.Sqlite.Governance;
+using DeltaZulu.Platform.Web.AgentManagement;
 using DeltaZulu.Platform.Web.Analytics;
 using DeltaZulu.Platform.Web.Analytics.Hosting;
 using DeltaZulu.Platform.Web.Governance;
@@ -28,6 +29,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 // --- Platform module registry ---
 builder.Services.AddSingleton<IPlatformModule, AnalyticsModule>();
 builder.Services.AddSingleton<IPlatformModule, GovernanceModule>();
+builder.Services.AddSingleton<IPlatformModule, AgentManagementModule>();
 
 // --- Governance module services ---
 builder.Services.AddScoped<PocUserContext>();

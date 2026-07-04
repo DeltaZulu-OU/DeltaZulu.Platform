@@ -1,0 +1,60 @@
+@using MudBlazor
+@using DeltaZulu.Platform.Application.AgentManagement.Services
+@using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@inject AgentGroupService GroupService
+
+<MudDialog>
+    <TitleContent>Create agent group</TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_name"
+                      Label="Group name"
+                      Placeholder="e.g. Production Servers"
+                      MaxLength="200"
+                      Immediate="true"
+                      Required="true"
+                      RequiredError="Group name is required" />
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-3">@_error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Submit" Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="@(string.IsNullOrWhiteSpace(_name) || _saving)">
+            @(_saving ? "Creating..." : "Create")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private string _name = "";
+    private string? _error;
+    private bool _saving;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_name)) return;
+
+        _saving = true;
+        _error = null;
+
+        try
+        {
+            var group = await GroupService.CreateAsync(TenantId.Default, _name.Trim());
+            MudDialog.Close(DialogResult.Ok(group));
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

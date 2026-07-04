@@ -1,0 +1,17 @@
+@using DeltaZulu.Platform.Domain.AgentManagement.Enums
+
+<DzStatusChip Label="@State.ToString()" Tone="@StateTone(State)" />
+
+@code {
+    [Parameter, EditorRequired] public ProfileState State { get; set; }
+
+    private static string StateTone(ProfileState state) => state switch
+    {
+        ProfileState.Draft => "neutral",
+        ProfileState.Validated => "info",
+        ProfileState.Published => "success",
+        ProfileState.Deprecated => "warning",
+        ProfileState.Archived => "muted",
+        _ => "neutral"
+    };
+}

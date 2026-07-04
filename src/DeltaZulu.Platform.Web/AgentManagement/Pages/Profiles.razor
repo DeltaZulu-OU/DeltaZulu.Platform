@@ -1,0 +1,85 @@
+@namespace DeltaZulu.Platform.Web.AgentManagement.Pages
+@page "/agents/profiles"
+@rendermode InteractiveServer
+@using MudBlazor
+@using DeltaZulu.Platform.Application.AgentManagement.Services
+@using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@using DeltaZulu.Platform.Domain.AgentManagement.Profiles
+@inject ResourceProfileService ProfileService
+@inject NavigationManager Nav
+
+<PageTitle>Resource Profiles</PageTitle>
+
+<DzPageHeader Eyebrow="Management"
+              Title="Resource Profiles"
+              Description="View and manage resource collection profiles and their versions.">
+    <Actions>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.Refresh" OnClick="LoadAsync">
+            Refresh
+        </MudButton>
+    </Actions>
+</DzPageHeader>
+
+@if (_loading)
+{
+    <DzLoadingState Text="Loading resource profiles..." />
+}
+else if (_profiles.Count == 0)
+{
+    <DzEmptyState Title="No resource profiles"
+                  Description="Resource profiles define how agents collect and process events."
+                  Icon="@Icons.Material.Outlined.Description" />
+}
+else
+{
+    <DzTableShell>
+        <MudTable Items="_profiles" Dense="true" Hover="true" T="ResourceProfile" Elevation="0"
+                  OnRowClick="@(args => Nav.NavigateTo($"/agents/profiles/{args.Item!.Id.Value}"))"
+                  RowClass="cursor-pointer">
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Origin</MudTh>
+                <MudTh>Enabled</MudTh>
+                <MudTh>Created</MudTh>
+                <MudTh>Updated</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Name"><strong>@context.Name</strong></MudTd>
+                <MudTd DataLabel="Origin">
+                    <DzMetaChip Kind="origin">@context.Origin</DzMetaChip>
+                </MudTd>
+                <MudTd DataLabel="Enabled">
+                    <DzStatusChip Label="@(context.Enabled ? "Enabled" : "Disabled")"
+                                  Tone="@(context.Enabled ? "success" : "muted")" />
+                </MudTd>
+                <MudTd DataLabel="Created">
+                    <MudText Typo="Typo.caption">@context.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Updated">
+                    <MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </DzTableShell>
+}
+
+@code {
+    private bool _loading = true;
+    private IReadOnlyList<ResourceProfile> _profiles = [];
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _profiles = await ProfileService.ListByTenantAsync(TenantId.Default);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

@@ -1,0 +1,16 @@
+@using DeltaZulu.Platform.Domain.AgentManagement.Enums
+
+<DzStatusChip Label="@Status.ToString()" Tone="@StatusTone(Status)" />
+
+@code {
+    [Parameter, EditorRequired] public AgentStatus Status { get; set; }
+
+    private static string StatusTone(AgentStatus status) => status switch
+    {
+        AgentStatus.Online => "success",
+        AgentStatus.Degraded => "error",
+        AgentStatus.Stale => "warning",
+        AgentStatus.Offline => "muted",
+        _ => "neutral"
+    };
+}
