@@ -33,6 +33,15 @@ public sealed record AgentInventoryRow
         && DesiredBundleId is not null
         && CurrentBundleId != DesiredBundleId;
 
+    public static string HealthTone(string status) => status switch
+    {
+        "Healthy" or "Online" => "success",
+        "Degraded" => "error",
+        "Stale" or "Inactive" => "warning",
+        "Disabled" or "Offline" => "muted",
+        _ => "neutral"
+    };
+
     public static IReadOnlyList<AgentInventoryRow> Merge(
         IReadOnlyList<Agent> agents,
         IReadOnlyList<AgentLatestRow> telemetry)

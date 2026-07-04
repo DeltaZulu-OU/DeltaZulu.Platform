@@ -7,10 +7,8 @@
 @using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
 @using DeltaZulu.Platform.Domain.AgentManagement.Profiles
 @using DeltaZulu.Platform.Domain.Common
-@using DeltaZulu.Platform.Web.AgentManagement.Shared
 @inject ResourceProfileService ProfileService
 @inject ISnackbar Snackbar
-@inject NavigationManager Nav
 
 <PageTitle>Profile — @(_profile?.Name ?? "Loading")</PageTitle>
 
@@ -104,25 +102,25 @@ else
                                     {
                                         case ProfileState.Draft:
                                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Info"
-                                                       OnClick="@(() => TransitionVersion(context.Id, "validate"))">
+                                                       OnClick="@(() => ValidateVersion(context.Id))">
                                                 Validate
                                             </MudButton>
                                             break;
                                         case ProfileState.Validated:
                                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Success"
-                                                       OnClick="@(() => TransitionVersion(context.Id, "publish"))">
+                                                       OnClick="@(() => PublishVersion(context.Id))">
                                                 Publish
                                             </MudButton>
                                             break;
                                         case ProfileState.Published:
                                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Warning"
-                                                       OnClick="@(() => TransitionVersion(context.Id, "deprecate"))">
+                                                       OnClick="@(() => DeprecateVersion(context.Id))">
                                                 Deprecate
                                             </MudButton>
                                             break;
                                         case ProfileState.Deprecated:
                                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Default"
-                                                       OnClick="@(() => TransitionVersion(context.Id, "archive"))">
+                                                       OnClick="@(() => ArchiveVersion(context.Id))">
                                                 Archive
                                             </MudButton>
                                             break;
@@ -144,7 +142,9 @@ else
     private List<ResourceProfileVersion> _versions = [];
     private List<BreadcrumbItem> _breadcrumbs = [];
 
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
     {
         if (!Guid.TryParse(Id, out var guid)) return;
         var profileId = new ResourceProfileId(guid);
@@ -161,28 +161,25 @@ else
         _versions = (await ProfileService.ListVersionsAsync(profileId)).ToList();
     }
 
-    private async Task TransitionVersion(ProfileVersionId versionId, string action)
+    private Task ValidateVersion(ProfileVersionId id) =>
+        ApplyTransition(() => ProfileService.MarkValidatedAsync(id), "validated");
+
+    private Task PublishVersion(ProfileVersionId id) =>
+        ApplyTransition(() => ProfileService.PublishAsync(id), "published");
+
+    private Task DeprecateVersion(ProfileVersionId id) =>
+        ApplyTransition(() => ProfileService.DeprecateAsync(id), "deprecated");
+
+    private Task ArchiveVersion(ProfileVersionId id) =>
+        ApplyTransition(() => ProfileService.ArchiveAsync(id), "archived");
+
+    private async Task ApplyTransition(Func<Task> action, string pastTense)
     {
         try
         {
-            switch (action)
-            {
-                case "validate":
-                    await ProfileService.MarkValidatedAsync(versionId);
-                    break;
-                case "publish":
-                    await ProfileService.PublishAsync(versionId);
-                    break;
-                case "deprecate":
-                    await ProfileService.DeprecateAsync(versionId);
-                    break;
-                case "archive":
-                    await ProfileService.ArchiveAsync(versionId);
-                    break;
-            }
-
-            Snackbar.Add($"Version {action}d.", Severity.Success);
-            await OnParametersSetAsync();
+            await action();
+            Snackbar.Add($"Version {pastTense}.", Severity.Success);
+            await LoadAsync();
         }
         catch (DomainException ex)
         {

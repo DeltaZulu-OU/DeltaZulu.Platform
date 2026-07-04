@@ -8,13 +8,10 @@
 @using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
 @using DeltaZulu.Platform.Domain.AgentManagement.Policy
 @using DeltaZulu.Platform.Domain.Analytics.Observability
-@using DeltaZulu.Platform.Web.AgentManagement.Shared
 @using DeltaZulu.Platform.Web.AgentManagement.ViewModels
 @inject AgentService AgentService
 @inject PolicyAssignmentService AssignmentService
 @inject IOperationalMetricsReader MetricsReader
-@inject ISnackbar Snackbar
-@inject NavigationManager Nav
 
 <PageTitle>Agent — @(_row?.Hostname ?? "Loading")</PageTitle>
 
@@ -50,7 +47,7 @@ else
                     <DzDetailItem Label="Health">
                         @if (_row.HasObservabilityData)
                         {
-                            <DzStatusChip Label="@_row.HealthStatus!" Tone="@HealthTone(_row.HealthStatus!)" />
+                            <DzStatusChip Label="@_row.HealthStatus!" Tone="@AgentInventoryRow.HealthTone(_row.HealthStatus!)" />
                         }
                         else
                         {
@@ -216,13 +213,4 @@ else
             TenantId.Default, AssignmentScopeType.Agent, agentId.Value.ToString("D")))
             .ToList();
     }
-
-    private static string HealthTone(string status) => status switch
-    {
-        "Healthy" or "Online" => "success",
-        "Degraded" => "error",
-        "Stale" or "Inactive" => "warning",
-        "Disabled" or "Offline" => "muted",
-        _ => "neutral"
-    };
 }

@@ -6,7 +6,6 @@
 @using DeltaZulu.Platform.Domain.AgentManagement.Enums
 @using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
 @using DeltaZulu.Platform.Domain.Analytics.Observability
-@using DeltaZulu.Platform.Web.AgentManagement.Shared
 @using DeltaZulu.Platform.Web.AgentManagement.ViewModels
 @inject AgentService AgentService
 @inject IOperationalMetricsReader MetricsReader
@@ -71,16 +70,16 @@ else
                 All (@_allRows.Count)
             </DzFilterChip>
             <DzFilterChip Value="online" Selected="@(_statusFilter == "online")" OnClick="@(() => OnStatusFilterChanged("online"))">
-                Online (@_allRows.Count(r => r.Status == AgentStatus.Online))
+                Online (@_onlineCount)
             </DzFilterChip>
             <DzFilterChip Value="degraded" Selected="@(_statusFilter == "degraded")" OnClick="@(() => OnStatusFilterChanged("degraded"))">
-                Degraded (@_allRows.Count(r => r.Status == AgentStatus.Degraded))
+                Degraded (@_degradedCount)
             </DzFilterChip>
             <DzFilterChip Value="stale" Selected="@(_statusFilter == "stale")" OnClick="@(() => OnStatusFilterChanged("stale"))">
-                Stale (@_allRows.Count(r => r.Status == AgentStatus.Stale))
+                Stale (@_staleCount)
             </DzFilterChip>
             <DzFilterChip Value="offline" Selected="@(_statusFilter == "offline")" OnClick="@(() => OnStatusFilterChanged("offline"))">
-                Offline (@_allRows.Count(r => r.Status == AgentStatus.Offline))
+                Offline (@_offlineCount)
             </DzFilterChip>
         </DzFilterRow>
     </DzToolbar>
@@ -96,7 +95,7 @@ else
         <DzTableShell>
             <MudTable Items="_filteredRows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="AgentInventoryRow" Elevation="0"
                       OnRowClick="@(args => Nav.NavigateTo($"/agents/{args.Item!.AgentId}"))"
-                      RowClassFunc="@((_, _) => "dz-agent-row")">
+                      RowClass="cursor-pointer">
                 <HeaderContent>
                     <MudTh>Hostname</MudTh>
                     <MudTh>OS</MudTh>
@@ -129,7 +128,7 @@ else
                     <MudTd DataLabel="Health">
                         @if (context.HasObservabilityData)
                         {
-                            <DzStatusChip Label="@context.HealthStatus!" Tone="@HealthTone(context.HealthStatus!)" />
+                            <DzStatusChip Label="@context.HealthStatus!" Tone="@AgentInventoryRow.HealthTone(context.HealthStatus!)" />
                         }
                         else
                         {
@@ -174,6 +173,10 @@ else
     private IReadOnlyList<AgentInventoryRow> _filteredRows = [];
     private string _searchText = "";
     private string _statusFilter = "all";
+    private int _onlineCount;
+    private int _degradedCount;
+    private int _staleCount;
+    private int _offlineCount;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -214,6 +217,11 @@ else
 
     private void ApplyFilter()
     {
+        _onlineCount = _allRows.Count(r => r.Status == AgentStatus.Online);
+        _degradedCount = _allRows.Count(r => r.Status == AgentStatus.Degraded);
+        _staleCount = _allRows.Count(r => r.Status == AgentStatus.Stale);
+        _offlineCount = _allRows.Count(r => r.Status == AgentStatus.Offline);
+
         var query = _searchText?.Trim() ?? "";
         _filteredRows = _allRows
             .Where(r => _statusFilter == "all" || r.Status.ToString().Equals(_statusFilter, StringComparison.OrdinalIgnoreCase))
@@ -236,15 +244,6 @@ else
         ResourcePlatform.Windows => Icons.Material.Outlined.DesktopWindows,
         ResourcePlatform.Linux => Icons.Material.Outlined.Terminal,
         _ => Icons.Material.Outlined.Devices,
-    };
-
-    private static string HealthTone(string status) => status switch
-    {
-        "Healthy" or "Online" => "success",
-        "Degraded" => "error",
-        "Stale" or "Inactive" => "warning",
-        "Disabled" or "Offline" => "muted",
-        _ => "neutral"
     };
 
     private static string FormatTimestamp(DateTimeOffset? ts)
