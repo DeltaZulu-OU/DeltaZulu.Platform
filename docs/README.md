@@ -29,7 +29,6 @@ These documents are still useful for detailed domain rules. They are subordinate
 | Analytics | [`analytics/kql-syntax-coverage-checklist.md`](analytics/kql-syntax-coverage-checklist.md) | Active supported-KQL coverage tracker. |
 | Analytics | [`analytics/README.md`](analytics/README.md) | Index for active Analytics references. |
 | ADRs | [`adr/README.md`](adr/README.md) | Current centralized decision records. |
-| Architecture | [`architecture/lake-first-operational-metrics.md`](architecture/lake-first-operational-metrics.md) | Active reference for internal operational metrics and Overview dashboard semantics. |
 
 ## Documentation rules
 
