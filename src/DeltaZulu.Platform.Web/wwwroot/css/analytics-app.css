@@ -3299,3 +3299,43 @@ body.hunt-splitter-active {
     gap: 6px;
     flex-wrap: wrap;
 }
+
+.investigation-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.investigation-form-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.investigation-form-grid-wide {
+    grid-column: 1 / -1;
+}
+
+.hunt-input {
+    border: 1px solid var(--mud-palette-lines-inputs);
+    border-radius: 8px;
+    padding: 0.65rem 0.75rem;
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
+    font: inherit;
+}
+
+.hunt-code-block {
+    overflow: auto;
+    max-height: 34rem;
+    margin: 0;
+    padding: 1rem;
+    border-radius: 8px;
+    background: var(--mud-palette-background-grey);
+}
+
+.investigation-tab-panel {
+    padding-top: 1rem;
+}

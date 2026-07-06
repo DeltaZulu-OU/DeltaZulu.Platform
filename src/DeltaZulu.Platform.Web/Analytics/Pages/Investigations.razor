@@ -1,0 +1,172 @@
+@page "/analytics/investigations"
+@namespace DeltaZulu.Platform.Web.Analytics.Pages
+@using DeltaZulu.Platform.Domain.Analytics.Investigations
+@inject IInvestigationRepository Repository
+@inject InvestigationService InvestigationService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<div class="dashboard-list-page investigations-page">
+    <DzPageHeader Eyebrow="Investigations"
+                  Title="Investigations"
+                  Description="Create analyst workspaces for pivots, evidence, tags, comments, links, and handover timelines.">
+        <Actions>
+            <DzToolbar>
+                <label class="dashboard-search" aria-label="Search investigations">
+                    <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" />
+                    <input placeholder="Search investigations"
+                           value="@_searchText"
+                           @oninput="OnSearchChanged" />
+                </label>
+
+                <div class="dashboard-list-actions-primary">
+                    <button class="hunt-btn dashboard-primary-action" @onclick="CreateInvestigationAsync">New investigation</button>
+                </div>
+            </DzToolbar>
+        </Actions>
+    </DzPageHeader>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="dashboard-error">@_error</div>
+    }
+
+    <DzPanel Title="New investigation" Elevation="0" Outlined="true">
+        <ChildContent>
+            <div class="investigation-form-grid">
+                <label>
+                    <span>Title</span>
+                    <input class="hunt-input" @bind="_newTitle" placeholder="Suspicious PowerShell activity" />
+                </label>
+                <label>
+                    <span>Status</span>
+                    <select class="hunt-input" @bind="_newStatus">
+                        <option>Open</option>
+                        <option>Triaging</option>
+                        <option>Contained</option>
+                        <option>Closed</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Created by</span>
+                    <input class="hunt-input" @bind="_newCreatedBy" placeholder="analyst" />
+                </label>
+                <label class="investigation-form-grid-wide">
+                    <span>Description</span>
+                    <textarea class="hunt-input" rows="3" @bind="_newDescription" placeholder="What prompted this investigation?"></textarea>
+                </label>
+            </div>
+        </ChildContent>
+        <Actions>
+            <button class="hunt-btn dashboard-primary-action" disabled="@_saving" @onclick="CreateInvestigationAsync">Create investigation</button>
+        </Actions>
+    </DzPanel>
+
+    @if (_loading)
+    {
+        <DzLoadingState Text="Loading investigations from local application persistence." />
+    }
+    else if (!_investigations.Any())
+    {
+        <DzEmptyState Title="No investigations" Description="Create an investigation to start collecting pivots and evidence." Icon="@Icons.Material.Filled.ManageSearch" Outlined="true" />
+    }
+    else if (!FilteredInvestigations.Any())
+    {
+        <DzEmptyState Title="No matching investigations" Description="Clear the search text or use a different term." Elevation="0">
+            <Actions><button class="hunt-btn" @onclick="() => _searchText = string.Empty">Clear search</button></Actions>
+        </DzEmptyState>
+    }
+    else
+    {
+        <div class="dashboard-list" aria-label="Investigation cards">
+            @foreach (var investigation in FilteredInvestigations)
+            {
+                <article class="dashboard-list-card">
+                    <div class="dashboard-card-main">
+                        <div class="dashboard-card-title-row">
+                            <h2>@investigation.Title</h2>
+                            <DzStatusChip Label="@investigation.Status" />
+                        </div>
+                        <p>@(string.IsNullOrWhiteSpace(investigation.Description) ? "No description." : investigation.Description)</p>
+                    </div>
+                    <dl class="dashboard-list-meta">
+                        <div><dt>Created by</dt><dd>@investigation.CreatedBy</dd></div>
+                        <div><dt>Updated</dt><dd>@investigation.UpdatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</dd></div>
+                    </dl>
+                    <div class="dashboard-card-actions">
+                        <button class="hunt-btn dashboard-primary-action" @onclick="() => OpenInvestigation(investigation.Id)">Open</button>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<InvestigationRecord> _investigations = [];
+    private string _searchText = string.Empty;
+    private string _newTitle = string.Empty;
+    private string? _newDescription;
+    private string _newStatus = "Open";
+    private string _newCreatedBy = "analyst";
+    private bool _loading = true;
+    private bool _saving;
+    private string? _error;
+
+    private IEnumerable<InvestigationRecord> FilteredInvestigations => string.IsNullOrWhiteSpace(_searchText)
+        ? _investigations
+        : _investigations.Where(i => Contains(i.Title) || Contains(i.Description) || Contains(i.Status) || Contains(i.CreatedBy));
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _investigations = await Repository.ListInvestigationsAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task CreateInvestigationAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newTitle))
+        {
+            Snackbar.Add("Enter an investigation title.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var now = DateTime.UtcNow;
+            var investigation = new InvestigationRecord(Guid.NewGuid().ToString("N"), _newTitle.Trim(), NullIfWhiteSpace(_newDescription), _newStatus, NullIfWhiteSpace(_newCreatedBy) ?? "analyst", now, now);
+            await InvestigationService.SaveInvestigationAsync(investigation);
+            Snackbar.Add("Investigation created.", Severity.Success);
+            Navigation.NavigateTo($"/analytics/investigations/{investigation.Id}");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            Snackbar.Add("Failed to create investigation.", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void OpenInvestigation(string investigationId) => Navigation.NavigateTo($"/analytics/investigations/{investigationId}");
+    private void OnSearchChanged(ChangeEventArgs args) => _searchText = args.Value?.ToString() ?? string.Empty;
+    private bool Contains(string? value) => value?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) == true;
+    private static string? NullIfWhiteSpace(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}

@@ -18,6 +18,7 @@ public sealed class AnalyticsModule : IPlatformModule
     [
         new("Analytics", "/analytics", Icons.Material.Outlined.Search, NavLinkMatch.All),
         new("Library", "/analytics/library", Icons.Material.Outlined.LibraryBooks),
+        new("Investigations", "/analytics/investigations", Icons.Material.Outlined.ManageSearch),
         new("Dashboards", "/analytics/dashboards", Icons.Material.Outlined.Dashboard),
     ];
 
