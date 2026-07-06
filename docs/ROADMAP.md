@@ -164,6 +164,65 @@ Completed phases (1, 2, 3, 3A) are omitted from this table. See the phase status
 15. **(Phase 3B)** Add `AlertEvent` and `AlertEntity` canonical views to `ApprovedViewCatalog` and `SchemaConventions` so analysts can write KQL against lake alert data the same way they query `ProcessEvent`, `Dns`, and `NetworkSession`.
 16. **(Phase 3B → Phase 6)** Add `LakeDbPath` to `AnalyticsWebModuleOptions` and configure `DuckDbConnectionFactory` to attach or open the lake database separately from the analytics query database.
 
+### `import-proton-support` branch next-step plan
+
+This branch is the near-real-time detection capability branch. Its purpose is to turn the Proton
+foundation from compile/deploy scaffolding into a production-shaped detection path where NRT rules are
+continuous materialized views and built-in scheduled detections are Timeplus scheduled tasks. Based on
+the architecture constraints above, do **not** add a DuckDB or Quartz detection runner on this branch;
+DuckDB remains the hunting/lake engine, while Proton owns all detection execution.
+
+#### Branch goals
+
+1. **Validate live Proton runtime behavior.** Prove schema creation, Bronze publishing, Silver MV
+   transformation, Golden stream reads, NRT MV deployment, scheduled-task deployment, and
+   `alert_dispatch` subscription against a real Proton instance.
+2. **Land the alert lake prerequisite.** Finish Phase 3B first enough that Proton outputs can be
+   written append-only to DuckDB without touching the mutable app-state SQLite alert scaffold.
+3. **Project accepted built-in content into executable rules.** Convert accepted/built-in detection
+   YAML into executable NRT or scheduled definitions with accepted-version traceability, schedule,
+   lookback, entity mapping, alert materialization mode, and suppression defaults.
+4. **Use Proton scheduled tasks for built-in scheduled detections.** Built-in scheduled detections
+   should compile through the same KQL → RelNode → Proton SQL path and deploy as
+   `ScheduledTaskDdl` artifacts that write to the shared alert-dispatch stream.
+5. **Introduce the mediation daemon behind application contracts.** The daemon should consume
+   scheduled-task output, evaluate NRT MV thresholds, append alert/entity records to the DuckDB
+   lake, and record detection-run metadata without UI or Web code reaching into Proton or storage.
+
+#### Dependency-ordered work packages
+
+| Order | Work package | Scope | Exit criteria |
+|---:|---|---|---|
+| 1 | Proton integration harness | Add opt-in integration-test configuration, container/local connection settings, schema apply smoke, typed Bronze publisher smoke, and alert-dispatch subscriber smoke. | Tests are skipped by default unless Proton settings are present; when enabled, they create medallion streams/MVs and can publish/read at least one fixture event. |
+| 2 | Alert lake writer slice | Remove alert writes from app-state SQLite for the detection path; add append-only DuckDB writer interfaces/implementation and `AlertEvent`/`AlertEntity` canonical view metadata. | Proton mediation can write immutable alert and entity rows with no status updates or upserts; KQL can address alert views through `ApprovedViewCatalog`. |
+| 3 | Operations SQLite split | Move incident-candidate mutable tables out of app-state SQLite into a dedicated operations SQLite connection/options path. | App-state tables no longer include alerts, alert entities, or incident candidates; operations tables migrate independently. |
+| 4 | Executable detection projection | Add projection contract/service from accepted or built-in detection content to executable definitions. Include trigger type, schedule cron, lookback, threshold, entity mappings, materialization mode, suppression defaults, rule hash, and accepted-version/source identity. | Built-in scheduled YAML and NRT definitions produce persisted executable records and diagnostics without deploying directly from UI forms. |
+| 5 | Scheduled built-in deployment | Wire built-in scheduled detections through `ScheduledDetectionService`, `ScheduledTaskDdl`, and `ProtonDetectionDeployer`. | A built-in scheduled detection can be compiled, deployed, retracted, and inspected as Proton task DDL; task output targets `alert_dispatch`. |
+| 6 | NRT threshold materialization | Add daemon loop that enumerates enabled NRT rules, polls their MVs, applies threshold/window policy, fetches deterministic evidence rows, and writes append-only alert records. | Empty, below-threshold, threshold-met, retry, and duplicate-materialization cases have deterministic tests. |
+| 7 | Detection run persistence | Decide append-only lake vs mutable operations state for run lifecycle, then implement run records with execution mode, lookback/window, counts, diagnostics, retry/recovery context, and correlation IDs. | Scheduled and NRT executions create traceable run records linked to alert materialization keys. |
+| 8 | Built-in detection seed/promotion path | Ensure seed/demo detections marked `trigger_type: scheduled` become executable scheduled tasks only after governance acceptance or explicit built-in enablement. | Built-ins do not bypass governance semantics accidentally; deployment state is auditable and reversible. |
+| 9 | Operations read surfaces | Add initial approved KQL read models and minimal `/operations` placeholders for detection runs and alert queue diagnostics. | Operators can verify runs and alerts without direct database access from UI components. |
+
+#### Immediate engineering sequence
+
+- Start with work packages 1 and 2 together: the branch needs live Proton proof, but alert output should
+  not deepen the current SQLite alert debt.
+- Implement work package 4 before broadening scheduled deployment so built-in tasks are generated from
+  accepted executable definitions, not ad-hoc page or seed logic.
+- Treat work packages 5 through 7 as the core NRT capability milestone: scheduled tasks, NRT MV
+  thresholding, alert lake writes, and detection-run records must land as one coherent runtime path.
+- Defer enrichment, suppression execution, candidate correlation, and rich Operations UI until the
+  scheduled/NRT alert loop is stable and queryable.
+
+#### Non-goals for this branch
+
+- Do not reintroduce Quartz or another .NET scheduled query runner for detections.
+- Do not execute detections against DuckDB; DuckDB is the alert lake and historical/hunting engine.
+- Do not store mutable alert status in the DuckDB lake or keep alert upserts in app-state SQLite.
+- Do not let Web/UI components deploy Proton artifacts or write directly to DuckDB/SQLite.
+- Do not implement candidate correlation, triage feedback, or enrichment before deterministic alert
+  materialization and run persistence are in place.
+
 ### Module readiness
 
 | Module | Readiness | Summary |
