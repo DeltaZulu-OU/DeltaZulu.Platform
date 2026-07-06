@@ -13,6 +13,7 @@ This directory contains the current centralized ADR set for DeltaZulu Platform. 
 | [`0006-dashboard-rendering-and-library-boundary.md`](0006-dashboard-rendering-and-library-boundary.md) | Accepted | Dashboard/rendering/library boundaries above the query runtime. |
 | [`0008-lake-first-operational-metrics.md`](0008-lake-first-operational-metrics.md) | Accepted | DuckDB-backed operational metrics, PascalCase internal views, tenant-scoped Overview dashboard semantics, and refresh posture. |
 | [`0009-collection-coverage-evaluation-boundaries.md`](0009-collection-coverage-evaluation-boundaries.md) | Accepted | Agent facts, CMDB context, Silver lookup resolution, and Platform-owned coverage/cost evaluation. |
+| [`0010-etw-collection-and-replay-boundaries.md`](0010-etw-collection-and-replay-boundaries.md) | Accepted | ETW Agent collection, Platform replay, provider profiles, and library boundary decisions. |
 
 ## Conversion policy
 

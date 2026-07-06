@@ -163,6 +163,10 @@ incident-candidate validity.
 - Producers today are development seeders; future producers include collectors and broker adapters.
 - Consumers today are the DuckDB Bronze table loaders; future consumers include Golden data-lake
   writers and near-real-time Proton loaders.
+- Windows ETW collection follows [ADR 0010](adr/0010-etw-collection-and-replay-boundaries.md):
+  Agent producers should emit replayable ETW raw envelopes through provider-profile policies, while
+  Platform replay/import tooling may use richer managed ETL processors behind the same ingestion
+  boundary.
 - Has no project references — it is a standalone boundary that Data, Data.DuckDb, and Web can all
   depend on without creating circular references.
 
