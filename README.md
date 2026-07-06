@@ -19,15 +19,28 @@ separate Razor Class Library projects.
 
 The solution has completed its Clean Architecture consolidation and expanded to eight source projects
 plus one test project. DuckDB infrastructure has been extracted into a dedicated `DeltaZulu.Platform.Data.DuckDb`
-project, `DeltaZulu.Platform.Data.Proton` owns Proton DDL deployment, SQL emission, schema application,
-stream publishers, and alert-stream subscription, and `DeltaZulu.Platform.Ingestion` owns the raw-log
+project, `DeltaZulu.Platform.Data.Proton` owns the Proton execution runtime scaffold: Proton SQL emission, typed DDL builders, schema application, deployment adapters, stream publishers, and alert-stream subscription. This is an integration path, not a completed target streaming ETL. `DeltaZulu.Platform.Ingestion` owns the raw-log
 pub-sub boundary. A new `DeltaZulu.Blazor.Interop` Razor library centralizes
 all Blazor JS interop behind typed, mockable services. The next implementation thresholds are design-system
 enforcement and Operations: the product identity decision, binary radius model, product typography scope,
 orange action semantics, legacy Hunting CSS quarantine, dashboard primitives, evidence-table metadata, and
-audit checks need to land alongside the executable projection, scheduled/manual execution, alert
-materialization, approved KQL views over operations state, alert/candidate UI, enrichment, suppression,
+audit checks need to land alongside executable projection, scheduled/manual execution, durable alert
+materialization into the DuckDB alert lake, approved KQL views over mutable operations state, alert/candidate UI, enrichment, suppression,
 correlation, and triage feedback.
+
+## Proton runtime posture
+
+The Proton execution runtime is intentionally documented as a runtime scaffold until the remaining
+durability and integration work lands. Current status is:
+
+- **Complete**: NRT authoring foundation, KQL-to-Proton compilation, typed Proton DDL builders, and
+  SQLite-backed rule metadata persistence.
+- **Scaffolded**: Proton HTTP executor, schema applier/emitter, deployment adapter, stream
+  publishers, stream subscriber, alert mediation service, and scheduled detection service. These
+  components define the integration path but are not yet a validated target streaming ETL.
+- **Not complete**: durable streaming ETL, cursor persistence, DLQ/replay, deterministic alert
+  materialization into the append-only DuckDB alert lake, deployment state reconciliation, scheduled
+  run monitoring, and live Proton integration tests.
 
 ## Project layout
 
@@ -37,7 +50,7 @@ correlation, and triage feedback.
 | Application | `src/DeltaZulu.Platform.Application` | Analytics translation/planning/rendering services (including `IRelationalQueryEmitter` backend contract), governance use cases, validation, workflow, and content pipeline services. Target Operations services are not yet complete. |
 | Ingestion | `src/DeltaZulu.Platform.Ingestion` | Raw-log pub-sub boundary: `IRawLogPubSub`, `InMemoryRawLogBus`, `RawLogNdjsonCodec`, and envelope/batch types. Standalone — no project references. |
 | Data.DuckDb | `src/DeltaZulu.Platform.Data.DuckDb` | DuckDB SQL emission, query runtime, schema application, alert-lake sink, and schema provenance for historical analytics. |
-| Data.Proton | `src/DeltaZulu.Platform.Data.Proton` | Timeplus Proton detection infrastructure: Proton SQL emission, DDL builders, schema applier, detection deployer, typed Bronze publishers, and alert-dispatch stream subscriber. |
+| Data.Proton | `src/DeltaZulu.Platform.Data.Proton` | Timeplus Proton detection runtime scaffold: Proton SQL emission, DDL builders, schema applier, detection deployer, typed Bronze publishers, and alert-dispatch stream subscriber. Durable cursoring, replay, deployment reconciliation, and live integration validation remain target work. |
 | Data | `src/DeltaZulu.Platform.Data` | SQLite repositories, Git accepted-content store, and seed data. References Data.DuckDb to compose the full storage tier. Initial operations persistence exists, but the operations read-model projection remains target work. |
 | Blazor.Interop | `src/DeltaZulu.Blazor.Interop` | Typed Blazor JS interop wrappers: `ClipboardService`, `FileOperationsService`, `JsLifecycleGuard`, `ElementReferenceExtensions`. Standalone Razor class library — no project references. |
 | Web | `src/DeltaZulu.Platform.Web` | Unified Blazor host, shared components/design tokens, platform shell, analytics UI, governance UI, module registry, and static assets. Operations UI is target work. |

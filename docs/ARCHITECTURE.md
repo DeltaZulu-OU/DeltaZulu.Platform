@@ -431,8 +431,7 @@ pipeline. The analyst:
 All detection execution targets Timeplus Proton. The platform compiles KQL detection content into
 Proton-compatible SQL and generates deployment artifacts (materialized view DDL or scheduled task
 definitions). Proton handles stateful stream processing, windowed aggregation, and scheduled
-execution natively. A .NET mediation daemon bridges Proton alert output back to the platform's
-DuckDB alert lake through the application/domain `IAlertSink` boundary.
+execution natively. The current code provides a runtime scaffold for this integration path: a .NET mediation service can bridge Proton alert output back to the platform's DuckDB alert lake through the application/domain `IAlertSink` boundary, but durable cursoring, DLQ/replay, deterministic alert materialization, and live Proton integration validation are not complete.
 
 ### Two detection modes
 
@@ -445,14 +444,13 @@ DuckDB alert lake through the application/domain `IAlertSink` boundary.
 | Threshold evaluation | Row count in MV ≥ t | Result count per run ≥ t |
 | Use case | High-urgency, low-latency alerts | Periodic pattern detection, compliance |
 
-Both modes share the same compilation pipeline (KQL → RelNode → ProtonSQL), the same detection
-metadata model (YAML), and the same alert materialization path into the DuckDB data lake.
+Both modes share the same compilation pipeline (KQL → RelNode → ProtonSQL) and the same detection metadata model (YAML). The alert materialization path into the DuckDB alert lake is scaffolded and remains target streaming ETL work until cursor persistence, DLQ/replay, and deterministic deduplication are implemented.
 
 ### Streaming medallion pipeline
 
 Raw events flow through a three-tier medallion architecture inside Timeplus Proton before reaching
 detection artifacts. Each tier is a **native Proton stream** (not a view) — the Proton ingestion
-pipeline owns the live ETL. Current code creates Bronze and Golden streams from the shared schema catalog and creates Silver materialized views that continuously transform raw source streams into the Golden canonical streams. Bronze publishers insert NDJSON rows into source-specific streams, and the mediation daemon subscribes to the `alert_dispatch` stream.
+pipeline is the target streaming ETL design. Current code scaffolds the integration path by creating Bronze and Golden streams from the shared schema catalog, creating Silver materialized views that transform raw source streams into Golden canonical streams, publishing NDJSON rows into source-specific streams, and subscribing to the `alert_dispatch` stream. Live end-to-end validation and durable alert delivery are still required before this path should be described as complete.
 
 ```mermaid
 flowchart LR
@@ -538,10 +536,7 @@ Key dialect differences from DuckDB emission:
 
 ### Threshold evaluation and alert materialization
 
-The .NET mediation daemon is a background service that bridges the streaming and analytical worlds.
-For NRT rules, it polls detection materialized views and compares row counts against each rule's
-threshold. For scheduled detections, Proton's scheduled task framework handles execution timing and
-the daemon consumes the alert dispatch stream.
+The .NET mediation service is intended to bridge the streaming and analytical worlds. In the target design, Proton owns detection execution, DuckDB owns immutable historical analytics and the append-only alert lake, and SQLite owns mutable operations state only. Current mediation code is scaffolded: it can consume alert payloads through the stream subscriber and call the alert sink, but durable cursor commits, DLQ/replay, deterministic materialization keys, and scheduled run monitoring remain incomplete.
 
 ```mermaid
 sequenceDiagram
@@ -565,7 +560,7 @@ sequenceDiagram
     end
 ```
 
-The implementation now includes the first production-shaped streaming path: Proton HTTP execution, schema application, NRT and scheduled deploy/retract services, typed Bronze publishers, an alert-dispatch stream subscriber, and `AlertMediationService` writing received alert payloads to `IAlertSink` with retry logging. Remaining work is durable stream cursoring/dead-letter behavior, NRT MV threshold polling, detection-run persistence, and live Proton integration coverage.
+The implementation now includes a useful Proton execution runtime scaffold: Proton HTTP execution, schema application/emission, NRT and scheduled deploy/retract adapters, typed Bronze publishers, an alert-dispatch stream subscriber, and `AlertMediationService` calling `IAlertSink`. This is not a completed target streaming ETL. Remaining work includes durable stream cursoring, dead-letter and replay behavior, deterministic append-only alert lake materialization, NRT MV threshold polling, deployment state reconciliation, detection-run persistence, and live Proton integration coverage.
 
 ### Clean architecture placement
 

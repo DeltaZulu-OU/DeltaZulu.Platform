@@ -16,10 +16,27 @@ public sealed class ProtonHttpExecutor : IDisposable
     private bool disposedValue;
 
     public ProtonHttpExecutor(ProtonHttpClientOptions options, ILogger<ProtonHttpExecutor> logger)
+        : this(options, logger, new HttpClient())
+    {
+    }
+
+    public ProtonHttpExecutor(
+        ProtonHttpClientOptions options,
+        ILogger<ProtonHttpExecutor> logger,
+        HttpMessageHandler handler)
+        : this(options, logger, new HttpClient(handler))
+    {
+    }
+
+    private ProtonHttpExecutor(
+        ProtonHttpClientOptions options,
+        ILogger<ProtonHttpExecutor> logger,
+        HttpClient httpClient)
     {
         _baseUrl = options.BaseUrl.TrimEnd('/');
         _logger = logger;
-        _http = new HttpClient { Timeout = options.ExecutionTimeout };
+        _http = httpClient;
+        _http.Timeout = options.ExecutionTimeout;
         if (!string.IsNullOrWhiteSpace(options.Username))
         {
             var credentials = Convert.ToBase64String(
@@ -44,12 +61,15 @@ public sealed class ProtonHttpExecutor : IDisposable
             throw;
         }
 
-        if (!response.IsSuccessStatusCode)
+        using (response)
         {
-            var body = await response.Content.ReadAsStringAsync(ct);
-            if (body.Length > 1000) body = body[..1000] + "…(truncated)";
-            throw new InvalidOperationException(
-                $"Proton SQL execution failed ({(int)response.StatusCode}): {body}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(ct);
+                if (body.Length > 1000) body = body[..1000] + "…(truncated)";
+                throw new InvalidOperationException(
+                    $"Proton SQL execution failed ({(int)response.StatusCode}): {body}");
+            }
         }
     }
 
