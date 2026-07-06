@@ -30,11 +30,11 @@ public sealed class ProtonHttpExecutorTests
         using var executor = CreateExecutor(new StubHandler(_ =>
             new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = content }));
 
-        var ex = await Assert.ThrowsExceptionAsync<InvalidOperationException>(
+        var ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(
             () => executor.ExecuteAsync("BAD SQL"));
 
-        Assert.Contains(ex.Message, "Proton SQL execution failed (400):");
-        Assert.Contains(ex.Message, new string('x', 1000) + "…(truncated)");
+        Assert.Contains("Proton SQL execution failed (400):", ex.Message);
+        Assert.Contains(new string('x', 1000) + "…(truncated)", ex.Message);
         Assert.IsTrue(content.WasSerialized);
         Assert.IsTrue(content.Disposed);
     }
@@ -46,7 +46,7 @@ public sealed class ProtonHttpExecutorTests
         var logger = new RecordingLogger<ProtonHttpExecutor>();
         using var executor = CreateExecutor(new StubHandler(_ => throw expected), logger: logger);
 
-        var actual = await Assert.ThrowsExceptionAsync<HttpRequestException>(
+        var actual = await Assert.ThrowsExactlyAsync<HttpRequestException>(
             () => executor.ExecuteAsync("SELECT 1"));
 
         Assert.AreSame(expected, actual);
@@ -61,7 +61,7 @@ public sealed class ProtonHttpExecutorTests
         await cts.CancelAsync();
         using var executor = CreateExecutor(new StubHandler(_ => throw new OperationCanceledException(cts.Token)));
 
-        await Assert.ThrowsExceptionAsync<OperationCanceledException>(
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(
             () => executor.ExecuteAsync("SELECT 1", cts.Token));
     }
 
@@ -70,8 +70,7 @@ public sealed class ProtonHttpExecutorTests
     {
         AuthenticationHeaderValue? auth = null;
         using var executor = CreateExecutor(
-            new StubHandler(request =>
-            {
+            new StubHandler(request => {
                 auth = request.Headers.Authorization;
                 return new HttpResponseMessage(HttpStatusCode.OK);
             }),
@@ -91,14 +90,13 @@ public sealed class ProtonHttpExecutorTests
     public async Task ExecuteAsync_AppliesTimeoutOption()
     {
         using var executor = CreateExecutor(
-            new StubHandler(async (_, ct) =>
-            {
+            new StubHandler(async (_, ct) => {
                 await Task.Delay(Timeout.InfiniteTimeSpan, ct);
                 return new HttpResponseMessage(HttpStatusCode.OK);
             }),
             timeout: TimeSpan.FromMilliseconds(50));
 
-        await Assert.ThrowsExceptionAsync<TaskCanceledException>(
+        await Assert.ThrowsExactlyAsync<TaskCanceledException>(
             () => executor.ExecuteAsync("SELECT 1"));
     }
 
@@ -109,8 +107,7 @@ public sealed class ProtonHttpExecutorTests
         TimeSpan? timeout = null,
         ILogger<ProtonHttpExecutor>? logger = null)
     {
-        var options = new ProtonHttpClientOptions
-        {
+        var options = new ProtonHttpClientOptions {
             BaseUrl = "http://proton.example",
             Username = username,
             Password = password,
