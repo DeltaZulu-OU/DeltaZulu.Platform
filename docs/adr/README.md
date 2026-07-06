@@ -14,6 +14,7 @@ This directory contains the current centralized ADR set for DeltaZulu Platform. 
 | [`0008-lake-first-operational-metrics.md`](0008-lake-first-operational-metrics.md) | Accepted | DuckDB-backed operational metrics, PascalCase internal views, tenant-scoped Overview dashboard semantics, and refresh posture. |
 | [`0009-collection-coverage-evaluation-boundaries.md`](0009-collection-coverage-evaluation-boundaries.md) | Accepted | Agent facts, CMDB context, Silver lookup resolution, and Platform-owned coverage/cost evaluation. |
 | [`0010-etw-collection-and-replay-boundaries.md`](0010-etw-collection-and-replay-boundaries.md) | Accepted | ETW Agent collection, Platform replay, provider profiles, and library boundary decisions. |
+| [`0011-rpc-correlation-evidence-architecture.md`](0011-rpc-correlation-evidence-architecture.md) | Proposed | Thin agent evidence layer, platform-owned RPC correlation and detection readiness, SCMR/DCSync scope, resolver packs, validation gates, and open alignment with ADR 0009 on deterministic resolution ownership. |
 
 ## Conversion policy
 
