@@ -57,24 +57,7 @@ public sealed class ProtonStreamSubscriber : IStreamSubscriber, IDisposable
         var baseUrl = _options.BaseUrl.TrimEnd('/');
         var requestUri = $"{baseUrl}/?query={Uri.EscapeDataString(sql)}&default_format=JSONEachRow";
 
-        HttpResponseMessage response;
-        try
-        {
-            response = await _http.GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead, ct);
-            if (!response.IsSuccessStatusCode)
-            {
-                var body = await response.Content.ReadAsStringAsync(ct);
-                if (body.Length > 1000) body = body[..1000] + "…(truncated)";
-                throw new InvalidOperationException(
-                    $"Proton subscription to '{channel}' failed ({(int)response.StatusCode}): {body}");
-            }
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _logger.LogError(ex, "Failed to open subscription to channel '{Channel}'.", channel);
-            throw;
-        }
-
+        using var response = await OpenSubscriptionAsync(requestUri, channel, ct);
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
@@ -108,6 +91,32 @@ public sealed class ProtonStreamSubscriber : IStreamSubscriber, IDisposable
             {
                 yield return line;
             }
+        }
+    }
+
+    private async Task<HttpResponseMessage> OpenSubscriptionAsync(
+        string requestUri,
+        string channel,
+        CancellationToken ct)
+    {
+        try
+        {
+            var response = await _http.GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(ct);
+                if (body.Length > 1000) body = body[..1000] + "…(truncated)";
+                response.Dispose();
+                throw new InvalidOperationException(
+                    $"Proton subscription to '{channel}' failed ({(int)response.StatusCode}): {body}");
+            }
+
+            return response;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Failed to open subscription to channel '{Channel}'.", channel);
+            throw;
         }
     }
 

@@ -80,23 +80,29 @@ public abstract class ProtonBronzePublisherBase : IDisposable
 
         using var content = new StringContent(bodyStr, Encoding.UTF8, "application/x-ndjson");
 
-        HttpResponseMessage response;
-        try
-        {
-            response = await _http.PostAsync(url, content, ct);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _logger.LogError(ex, "Failed to publish event(s) to channel '{Channel}'.", _channel);
-            throw;
-        }
-
+        using HttpResponseMessage response = await PostInsertAsync(url, content, ct);
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync(ct);
             if (errorBody.Length > 1000) errorBody = errorBody[..1000] + "…(truncated)";
             throw new InvalidOperationException(
                 $"Proton INSERT into '{_channel}' failed ({(int)response.StatusCode}): {errorBody}");
+        }
+    }
+
+    private async Task<HttpResponseMessage> PostInsertAsync(
+        string url,
+        HttpContent content,
+        CancellationToken ct)
+    {
+        try
+        {
+            return await _http.PostAsync(url, content, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Failed to publish event(s) to channel '{Channel}'.", _channel);
+            throw;
         }
     }
 

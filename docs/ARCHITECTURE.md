@@ -432,7 +432,7 @@ All detection execution targets Timeplus Proton. The platform compiles KQL detec
 Proton-compatible SQL and generates deployment artifacts (materialized view DDL or scheduled task
 definitions). Proton handles stateful stream processing, windowed aggregation, and scheduled
 execution natively. A .NET mediation daemon bridges Proton alert output back to the platform's
-operational state store.
+DuckDB alert lake through the application/domain `IAlertSink` boundary.
 
 ### Two detection modes
 
@@ -452,14 +452,11 @@ metadata model (YAML), and the same alert materialization path into the DuckDB d
 
 Raw events flow through a three-tier medallion architecture inside Timeplus Proton before reaching
 detection artifacts. Each tier is a **native Proton stream** (not a view) — the Proton ingestion
-pipeline owns the ETL and writes directly into the target stream at each tier. No aggregation or
-view logic occurs at the Bronze/Silver/Gold boundary; schema normalization and field extraction are
-handled by the ingestion pipeline before records land in those streams.
+pipeline owns the live ETL. Current code creates Bronze and Golden streams from the shared schema catalog and creates Silver materialized views that continuously transform raw source streams into the Golden canonical streams. Bronze publishers insert NDJSON rows into source-specific streams, and the mediation daemon subscribes to the `alert_dispatch` stream.
 
 ```mermaid
 flowchart LR
-    B["Bronze Stream<br/>Raw JSON ingestion"] -->|ETL pipeline| S["Silver Stream<br/>Typed columns"]
-    S -->|ETL pipeline| G["Gold Stream<br/>Common security schema"]
+    B["Bronze Streams<br/>Raw JSON ingestion"] -->|Silver MVs parse/normalize| G["Golden Streams<br/>Common security schema"]
     G -->|MV per rule| NRT["NRT Detection MVs"]
     G -->|scheduled task| SCH["Scheduled Detection Tasks"]
     NRT -->|threshold trigger| A["Alert dispatch stream"]
@@ -467,17 +464,11 @@ flowchart LR
     A -->|.NET daemon| DB["Alert Storage<br/>DuckDB lake"]
 ```
 
-**Bronze.** Raw JSON payloads land in high-throughput Proton streams with no schema enforcement.
-The Bronze tier is the ingestion sink for collectors, brokers, and development seeders.
+**Bronze.** Raw JSON payloads land in high-throughput Proton streams generated from `RawTableDef` definitions. Typed publishers such as `ProtonWindowsSysmonEventPublisher` and `ProtonDnsServerEventPublisher` stamp `ingest_time` and insert NDJSON via Proton's HTTP interface.
 
-**Silver.** Typed columns extracted by the ETL pipeline — timestamps, IP addresses, usernames,
-event codes. Field extraction happens once in the ingestion layer and the results are persisted
-directly into the Silver stream. There is no Silver MV or Silver view.
+**Silver.** Parser definitions (`ParserViewDef`) compile to Proton materialized views. These views parse raw JSON/text, cast fields, apply source filters, and write normalized rows continuously into their canonical target streams.
 
-**Gold.** Vendor-specific fields mapped to the common security schema by the ingestion pipeline.
-Distinct log sources (Windows AD, Linux SSH, cloud authentication) converge to predictable column
-names. There is no Gold MV or Gold view — the Gold stream is a plain Proton stream populated by
-the ingestion ETL.
+**Gold.** Canonical definitions (`CanonicalViewDef`) compile to native Proton streams under the `golden` schema. Distinct log sources converge to predictable security-event column names, and detection rules read these streams.
 
 **Detection.** NRT rules produce per-rule materialized views running continuously against Gold
 streams. Scheduled rules produce Timeplus scheduled tasks that execute periodically with defined
@@ -506,8 +497,8 @@ flowchart TD
     KC --> RN["RelNode IR<br/>(Domain)"]
     RN --> PE["ProtonSqlQueryEmitter<br/>(Application)"]
     PE --> SQL["Proton SELECT SQL"]
-    SQL --> MV["MaterializedViewDdl.Build()<br/>(Application.Analytics.Proton)"]
-    SQL --> ST["ScheduledTaskDdl.Build()<br/>(Application.Analytics.Proton)"]
+    SQL --> MV["MaterializedViewDdl.Build()<br/>(Data.Proton.Ddl)"]
+    SQL --> ST["ScheduledTaskDdl.Build()<br/>(Data.Proton.Ddl)"]
     MV --> NRT_DDL["CREATE MATERIALIZED VIEW<br/>mv_nrt_{ruleId}"]
     ST --> SCHED_DDL["CREATE OR REPLACE TASK<br/>sched_{ruleId}"]
 ```
@@ -515,7 +506,7 @@ flowchart TD
 ### Proton DDL builders
 
 All Proton deployment artifacts are produced through typed C# builders in the
-`DeltaZulu.Platform.Application.Analytics.Proton` namespace. Raw Proton SQL strings are never
+`DeltaZulu.Platform.Data.Proton.Ddl` namespace. Raw Proton SQL strings are never
 assembled by hand; the builders validate required fields and emit correct DDL.
 
 | Builder | Proton artifact | Key clauses |
@@ -530,8 +521,7 @@ operations (`BuildDrop()`, `BuildPause()`, `BuildResume()`, `BuildAlterSetting()
 ensures every Proton DDL string is generated through a single, testable path regardless of which
 module or service needs the artifact.
 
-`NrtRuleCompiler` uses `MaterializedViewDdl` to produce NRT detection MV DDL. Future scheduled
-detection and alert pipeline code will use `ScheduledTaskDdl` and `AlertDdl` respectively.
+`NrtRuleCompiler` uses `MaterializedViewDdl` to produce NRT detection MV DDL. `ScheduledDetectionService` deploys `ScheduledTaskDdl` artifacts, and Proton alert output is consumed through `ProtonStreamSubscriber` by `AlertMediationService`.
 
 Key dialect differences from DuckDB emission:
 
@@ -575,9 +565,7 @@ sequenceDiagram
     end
 ```
 
-Neither the mediation daemon nor the scheduled detection path is implemented yet. Current code
-covers NRT rule authoring, KQL-to-Proton compilation, and rule persistence. The mediation daemon,
-Proton connectivity, scheduled task generation, and alert materialization are target work.
+The implementation now includes the first production-shaped streaming path: Proton HTTP execution, schema application, NRT and scheduled deploy/retract services, typed Bronze publishers, an alert-dispatch stream subscriber, and `AlertMediationService` writing received alert payloads to `IAlertSink` with retry logging. Remaining work is durable stream cursoring/dead-letter behavior, NRT MV threshold polling, detection-run persistence, and live Proton integration coverage.
 
 ### Clean architecture placement
 
@@ -621,26 +609,18 @@ flowchart TB
     DapperRepo -.->|implements| INrtRepo
 ```
 
-**Why `ProtonSqlQueryEmitter` lives in Application, not Data.** The DuckDB emitter lives in
-`Data.DuckDb` because it is co-located with the DuckDB connection factory, schema applier, and
-query runtime — it is part of an infrastructure adapter that executes queries. The Proton emitter
-is a stateless code generator: it transforms a RelNode tree into a SQL string with no I/O, no
-Proton connection, and no runtime dependencies. It is a translation concern analogous to
-`KustoQueryCompiler`, which also lives in Application. If a Proton runtime adapter is added later
-(connection management, DDL deployment, stream tailing), that adapter belongs in a `Data.Proton`
-infrastructure project and should consume `IRelationalQueryEmitter` from Domain via DI — the
-emitter can move at that point without affecting the compilation pipeline.
+**Why `ProtonSqlQueryEmitter` lives in Data.Proton.** The DuckDB emitter lives in `Data.DuckDb` because it is infrastructure tied to a concrete runtime. The same rule now applies to Proton: `ProtonSqlQueryEmitter` lives in `DeltaZulu.Platform.Data.Proton.Sql` next to the Proton DDL builders, HTTP executor, schema applier, deployer, publishers, and subscriber. It still implements the Domain `IRelationalQueryEmitter` contract, so Application services depend on the abstraction and receive the Proton implementation through dependency injection.
 
 **No diamond dependencies.** The detection execution dependency graph is strictly layered:
 
 ```text
 Web (Nrt.razor)
-  → Application (NrtRuleService, NrtRuleCompiler, ProtonSqlQueryEmitter,
-                 MaterializedViewDdl, ScheduledTaskDdl, AlertDdl, ProtonInterval)
-    → Domain (NrtRule, INrtRuleRepository, NrtCompilationResult, IRelationalQueryEmitter)
-
-Data (DapperNrtRuleRepository)
-  → Domain (INrtRuleRepository)
+  → Application (NrtRuleService, NrtRuleCompiler, ScheduledDetectionService)
+    → Domain (NrtRule, INrtRuleRepository, NrtCompilationResult,
+               IRelationalQueryEmitter, IDetectionDeployer, IAlertSink)
+      ← Data.Proton (ProtonSqlQueryEmitter, DDL builders, deployer, schema applier,
+                     publishers, stream subscriber)
+      ← Data / Data.DuckDb (repositories and alert-lake sink)
 ```
 
 Web reaches Domain only through Application. Data reaches Domain directly for repository
@@ -712,9 +692,7 @@ strictly a hunting and analytical-investigation concern.
   suppression rules, or incident-candidate validity.
 - NRT rule compilation must reject unsupported KQL constructs with structured diagnostics rather
   than generating invalid Proton SQL silently.
-- The platform generates Proton DDL but does not deploy it. DDL deployment to a Proton instance is
-  an external operation, preserving the separation between the analytical platform and the streaming
-  runtime.
+- Proton DDL deployment goes through `IDetectionDeployer` and the `Data.Proton` HTTP adapter; Application services must not assemble ad hoc deployment strings or call Proton directly.
 - Demo/development identity controls must not be confused with production-like audit identity.
 
 ## Key boundaries
@@ -725,11 +703,10 @@ strictly a hunting and analytical-investigation concern.
 - DuckDB is the threat-hunting and historical-analytics engine. It powers interactive KQL queries,
   dashboards, and investigations. It is not part of the detection execution path.
 - Timeplus Proton is the detection execution engine. Both NRT (materialized views) and scheduled
-  (Timeplus scheduled tasks) detections compile to Proton SQL and run inside Proton. The platform
-  generates deployment artifacts but does not manage the Proton runtime.
+  (Timeplus scheduled tasks) detections compile to Proton SQL and run inside Proton. The platform deploys generated artifacts through the Proton adapter but keeps runtime-specific I/O behind Domain/Application contracts.
 - The `IRelationalQueryEmitter` contract in the Domain layer is the backend-neutral compilation
   boundary; `DeltaZulu.Platform.Data.DuckDb` provides the DuckDB implementation for hunting,
-  and `DeltaZulu.Platform.Application` provides the Proton implementation for detection DDL.
+  and `DeltaZulu.Platform.Data.Proton` provides the Proton implementation for detection DDL and streaming runtime integration.
 - The only connection between hunting (DuckDB) and detection (Proton) is at the business-logic
   level: an analyst can pivot from a saved threat-hunting query to a detection content proposal.
   There is no runtime coupling between the two engines.
