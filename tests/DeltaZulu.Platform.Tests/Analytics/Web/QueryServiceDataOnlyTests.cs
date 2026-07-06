@@ -8,7 +8,6 @@ using DeltaZulu.Platform.Domain.Analytics.Schema;
 using DeltaZulu.Platform.Tests.Analytics.Fixtures;
 using DeltaZulu.Platform.Web.Analytics.Services;
 using Microsoft.Extensions.Logging.Abstractions;
-using DeltaZulu.Platform.Data.DuckDb.DuckDb;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Web;
 

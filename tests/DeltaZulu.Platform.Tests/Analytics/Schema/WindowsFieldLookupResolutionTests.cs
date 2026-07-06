@@ -1,4 +1,3 @@
-using System.Globalization;
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Analytics.Mapping;
@@ -6,7 +5,6 @@ using DeltaZulu.Platform.Domain.Analytics.Schema;
 using DeltaZulu.Platform.Domain.Analytics.Schema.Definitions.Medallion;
 using DeltaZulu.Platform.Domain.Analytics.Schema.Definitions.Medallion.Silver.Lookups;
 using DeltaZulu.Platform.Tests.Analytics.Fixtures;
-using DuckDB.NET.Data;
 using static DeltaZulu.Platform.Domain.Analytics.Mapping.MapDsl;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Schema;
