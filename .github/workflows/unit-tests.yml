@@ -1,21 +1,23 @@
-name: Platform Unit Tests
+name: Unit Tests
 
 on:
   pull_request:
     paths:
-      - '.github/workflows/platform-unit-tests.yml'
+      - '.github/*.yml'
+      - '.github/workflows/*.yml'
       - 'Directory.Build.props'
       - 'Directory.Packages.props'
-      - 'DeltaZulu.Platform.slnx'
+      - '*.slnx'              # Triggers on any solution file changes without hardcoding the name
       - 'src/**'
       - 'tests/**'
   push:
     branches: [ main, master ]
     paths:
-      - '.github/workflows/platform-unit-tests.yml'
+      - '.github/*.yml'
+      - '.github/workflows/*.yml'
       - 'Directory.Build.props'
       - 'Directory.Packages.props'
-      - 'DeltaZulu.Platform.slnx'
+      - '*.slnx'
       - 'src/**'
       - 'tests/**'
   workflow_dispatch:
@@ -30,7 +32,6 @@ concurrency:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  SOLUTION_FILE: DeltaZulu.Platform.slnx
 
 jobs:
   unit-tests:
@@ -51,13 +52,13 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore packages
-        run: dotnet restore ${{ env.SOLUTION_FILE }} --locked-mode
+        run: dotnet restore --locked-mode
 
       - name: Build
-        run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release --no-restore
+        run: dotnet build --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test ${{ env.SOLUTION_FILE }} --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
+        run: dotnet test --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
 
       - name: Upload test results
         if: always()
