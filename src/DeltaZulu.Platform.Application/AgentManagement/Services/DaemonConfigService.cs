@@ -53,6 +53,16 @@ public sealed class DaemonConfigService(
         var version = await versionRepo.GetByIdAsync(id, ct)
             ?? throw new DomainException("configversion.not_found", $"Config version {id} not found.");
 
+        var findings = Validation.DaemonConfigValidator.Validate(version);
+        if (Validation.DaemonConfigValidator.HasBlockingFailures(findings))
+        {
+            var failures = findings
+                .Where(f => f.IsBlocking)
+                .Select(f => $"{f.ArtifactType}.{f.FieldPath}: {f.Message}");
+            throw new DomainException("configversion.validation_failed",
+                $"Config version failed validation: {string.Join(" | ", failures)}");
+        }
+
         var now = timeProvider.GetUtcNow();
         version.MarkValidated(now);
         versionRepo.Save(version);

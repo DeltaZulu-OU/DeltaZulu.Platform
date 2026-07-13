@@ -30,6 +30,20 @@ internal sealed class DaemonConfigVersionRepository(AgentManagementDapperSession
         return rows.Select(r => r.ToDomain()).ToList();
     }
 
+    public async Task<DaemonConfigVersion?> GetLatestPublishedAsync(
+        ConfigPolicyId configPolicyId, CancellationToken ct = default)
+    {
+        var row = await session.Connection.QuerySingleOrDefaultAsync<Row>(
+            """
+            SELECT * FROM daemon_config_versions
+            WHERE config_policy_id = @ConfigPolicyId AND state = 'Published'
+            ORDER BY sequence_number DESC LIMIT 1
+            """,
+            new { ConfigPolicyId = configPolicyId.Value.ToString() },
+            session.Transaction);
+        return row?.ToDomain();
+    }
+
     public void Add(DaemonConfigVersion version) => session.Connection.Execute("""
         INSERT INTO daemon_config_versions
             (id, config_policy_id, sequence_number, state, pipeline_json, buffer_json, relp_json,

@@ -27,6 +27,11 @@ public static class AgentManagementSqlitePersistenceExtensions
         services.AddScoped<IDaemonConfigPolicyRepository, DaemonConfigPolicyRepository>();
         services.AddScoped<IDaemonConfigVersionRepository, DaemonConfigVersionRepository>();
         services.AddScoped<IPolicyAssignmentRepository, PolicyAssignmentRepository>();
+        services.AddScoped<IEnrollmentTokenRepository, EnrollmentTokenRepository>();
+        services.AddScoped<IAgentCredentialRepository, AgentCredentialRepository>();
+        services.AddScoped<IPolicyBundleRepository, PolicyBundleRepository>();
+        services.AddScoped<IBundleAckRepository, BundleAckRepository>();
+        services.AddScoped<IAgentCommandRepository, AgentCommandRepository>();
 
         return services;
     }

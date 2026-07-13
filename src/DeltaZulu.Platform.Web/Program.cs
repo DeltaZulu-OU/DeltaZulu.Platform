@@ -8,8 +8,11 @@ using DeltaZulu.Platform.Data.Git;
 using DeltaZulu.Platform.Data.Seeding;
 using DeltaZulu.Platform.Data.Sqlite.AgentManagement;
 using DeltaZulu.Platform.Data.Sqlite.Governance;
+using DeltaZulu.Platform.Domain.Analytics.Observability;
 using DeltaZulu.Platform.Web.AgentManagement;
+using DeltaZulu.Platform.Web.AgentManagement.Hosting;
 using DeltaZulu.Platform.Web.Analytics;
+using DeltaZulu.Platform.Web.Api.AgentManagement;
 using DeltaZulu.Platform.Web.Analytics.Hosting;
 using DeltaZulu.Platform.Web.Governance;
 using DeltaZulu.Platform.Web.Governance.Services;
@@ -93,6 +96,12 @@ builder.Services.AddAgentManagementSqlitePersistence(agentManagementConnectionSt
 builder.Services.AddAgentManagementApplication();
 builder.Services.AddAgentManagementValidation();
 
+builder.Services.Configure<AgentControlPlaneOptions>(
+    builder.Configuration.GetSection(AgentControlPlaneOptions.SectionName));
+builder.Services.AddSingleton<IAgentObservationSink, DuckDbAgentObservationSinkAdapter>();
+builder.Services.AddSingleton<ISourceObservationSink, DuckDbSourceObservationSinkAdapter>();
+builder.Services.AddHostedService<AgentStatusMonitor>();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -119,6 +128,8 @@ await agentManagementBootstrapper.EnsureInitializedAsync();
 
 app.MapRazorComponents<DeltaZulu.Platform.Web.App>()
     .AddInteractiveServerRenderMode();
+
+app.MapAgentApiV1();
 
 app.Run();
 

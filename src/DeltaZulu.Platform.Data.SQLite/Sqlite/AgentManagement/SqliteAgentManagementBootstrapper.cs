@@ -113,5 +113,95 @@ public sealed class SqliteAgentManagementBootstrapper(string connectionString)
             updated_at          TEXT NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS enrollment_tokens (
+            id            TEXT PRIMARY KEY,
+            tenant_id     TEXT NOT NULL,
+            name          TEXT NOT NULL,
+            token_hash    TEXT NOT NULL,
+            expires_at    TEXT NOT NULL,
+            max_uses      INTEGER NOT NULL,
+            use_count     INTEGER NOT NULL DEFAULT 0,
+            created_by    TEXT,
+            revoked_at    TEXT,
+            created_at    TEXT NOT NULL,
+            updated_at    TEXT NOT NULL
+        );
+
+        CREATE UNIQUE INDEX IF NOT EXISTS ix_enrollment_tokens_hash
+            ON enrollment_tokens (token_hash);
+
+        CREATE TABLE IF NOT EXISTS agent_credentials (
+            agent_id               TEXT PRIMARY KEY,
+            secret_hash            TEXT NOT NULL,
+            certificate_thumbprint TEXT,
+            created_at             TEXT NOT NULL,
+            rotated_at             TEXT
+        );
+
+        CREATE UNIQUE INDEX IF NOT EXISTS ix_agent_credentials_secret_hash
+            ON agent_credentials (secret_hash);
+
+        CREATE TABLE IF NOT EXISTS agent_group_members (
+            group_id  TEXT NOT NULL,
+            agent_id  TEXT NOT NULL,
+            added_at  TEXT NOT NULL,
+            PRIMARY KEY (group_id, agent_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_agent_group_members_agent
+            ON agent_group_members (agent_id);
+
+        CREATE TABLE IF NOT EXISTS policy_bundles (
+            id                        TEXT PRIMARY KEY,
+            tenant_id                 TEXT NOT NULL,
+            agent_id                  TEXT NOT NULL,
+            content_hash              TEXT NOT NULL,
+            document_json             TEXT NOT NULL,
+            assignment_ids_json       TEXT NOT NULL DEFAULT '[]',
+            profile_version_ids_json  TEXT NOT NULL DEFAULT '[]',
+            config_version_id         TEXT,
+            created_at                TEXT NOT NULL,
+            UNIQUE (agent_id, content_hash)
+        );
+
+        CREATE TABLE IF NOT EXISTS bundle_acks (
+            id        TEXT PRIMARY KEY,
+            agent_id  TEXT NOT NULL,
+            bundle_id TEXT NOT NULL,
+            status    TEXT NOT NULL,
+            error     TEXT,
+            acked_at  TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_bundle_acks_agent
+            ON bundle_acks (agent_id, acked_at);
+
+        CREATE TABLE IF NOT EXISTS agent_commands (
+            id              TEXT PRIMARY KEY,
+            tenant_id       TEXT NOT NULL,
+            agent_id        TEXT NOT NULL,
+            type            TEXT NOT NULL,
+            status          TEXT NOT NULL DEFAULT 'Pending',
+            requested_by    TEXT,
+            timeout_seconds INTEGER NOT NULL,
+            requested_at    TEXT NOT NULL,
+            delivered_at    TEXT,
+            completed_at    TEXT,
+            result_json     TEXT,
+            error           TEXT,
+            updated_at      TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_agent_commands_agent_status
+            ON agent_commands (agent_id, status);
+
+        CREATE TABLE IF NOT EXISTS policy_assignment_pins (
+            assignment_id      TEXT NOT NULL,
+            kind               TEXT NOT NULL,
+            target_id          TEXT NOT NULL,
+            pinned_version_id  TEXT NOT NULL,
+            PRIMARY KEY (assignment_id, kind, target_id)
+        );
+
         """;
 }

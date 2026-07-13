@@ -3,7 +3,7 @@
 This directory contains the current centralized ADR set for DeltaZulu Platform. It intentionally does not preserve every imported Hunting/Workbench ADR verbatim. Historical decisions were reviewed and either folded into the central architecture/roadmap, superseded, or converted into the active platform ADRs below.
 
 | ADR | Status | Decision area |
-|---|---|---|
+| --- | --- | --- |
 | [`0001-platform-module-and-project-boundaries.md`](0001-platform-module-and-project-boundaries.md) | Accepted | Single host, module boundaries, project ownership, and dependency direction. |
 | [`0002-analytics-query-safety-and-execution.md`](0002-analytics-query-safety-and-execution.md) | Accepted | KQL surface, semantic guardrails, shared execution, and planner behavior. |
 | [`0003-schema-medallion-and-provenance.md`](0003-schema-medallion-and-provenance.md) | Superseded | Earlier Bronze/Silver/Gold contracts, parser specifications, and schema provenance. |
@@ -15,6 +15,8 @@ This directory contains the current centralized ADR set for DeltaZulu Platform. 
 | [`0009-collection-coverage-evaluation-boundaries.md`](0009-collection-coverage-evaluation-boundaries.md) | Accepted | Agent facts, CMDB context, Silver lookup resolution, and Platform-owned coverage/cost evaluation. |
 | [`0010-etw-collection-and-replay-boundaries.md`](0010-etw-collection-and-replay-boundaries.md) | Accepted | ETW Agent collection, Platform replay, provider profiles, and library boundary decisions. |
 | [`0011-rpc-correlation-evidence-architecture.md`](0011-rpc-correlation-evidence-architecture.md) | Proposed | Thin agent evidence layer, platform-owned RPC correlation and detection readiness, SCMR/DCSync scope, resolver packs, validation gates, and open alignment with ADR 0009 on deterministic resolution ownership. |
+| [`0012-agent-control-plane-pull-protocol-and-auth.md`](0012-agent-control-plane-pull-protocol-and-auth.md) | Accepted | Pull-based agent check-in protocol, bootstrap-token enrollment, bearer agent secrets, lazy hash-deduplicated bundle resolution, and lake drift mapping. |
+| [`0013-constrained-agent-command-queue.md`](0013-constrained-agent-command-queue.md) | Accepted | Allowlisted one-shot agent commands delivered through the pull loop with an audited lifecycle and timeout expiry. |
 
 ## Conversion policy
 

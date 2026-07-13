@@ -1,0 +1,175 @@
+@using MudBlazor
+@using DeltaZulu.Platform.Application.AgentManagement.Services
+@using DeltaZulu.Platform.Domain.AgentManagement.Agents
+@using DeltaZulu.Platform.Domain.AgentManagement.Configs
+@using DeltaZulu.Platform.Domain.AgentManagement.Enums
+@using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@using DeltaZulu.Platform.Domain.AgentManagement.Profiles
+@inject PolicyAssignmentService AssignmentService
+@inject AgentService AgentService
+@inject AgentGroupService GroupService
+@inject ResourceProfileService ProfileService
+@inject DaemonConfigService ConfigService
+
+<MudDialog>
+    <TitleContent>Create policy assignment</TitleContent>
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            <MudSelect @bind-Value="_scopeType" Label="Scope" T="AssignmentScopeType" Class="mb-3">
+                <MudSelectItem Value="AssignmentScopeType.Tenant">Tenant (all agents)</MudSelectItem>
+                <MudSelectItem Value="AssignmentScopeType.Group">Group</MudSelectItem>
+                <MudSelectItem Value="AssignmentScopeType.Agent">Agent</MudSelectItem>
+            </MudSelect>
+
+            @if (_scopeType == AssignmentScopeType.Group)
+            {
+                <MudSelect @bind-Value="_selectedGroupId" Label="Agent group" T="string" Class="mb-3">
+                    @foreach (var group in _groups)
+                    {
+                        <MudSelectItem Value="@group.Id.Value.ToString("D")">@group.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else if (_scopeType == AssignmentScopeType.Agent)
+            {
+                <MudSelect @bind-Value="_selectedAgentId" Label="Agent" T="string" Class="mb-3">
+                    @foreach (var agent in _agents)
+                    {
+                        <MudSelectItem Value="@agent.Id.Value.ToString("D")">@agent.Hostname</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
+            <MudSelect @bind-SelectedValues="_selectedProfileIds" Label="Resource profiles"
+                       T="string" MultiSelection="true" Class="mb-3">
+                @foreach (var profile in _profiles)
+                {
+                    <MudSelectItem Value="@profile.Id.Value.ToString("D")">
+                        @profile.Name
+                        @if (!_publishedProfileIds.Contains(profile.Id.Value.ToString("D")))
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary d-inline ml-2">(no published version)</MudText>
+                        }
+                    </MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSelect @bind-Value="_selectedConfigPolicyId" Label="Daemon config policy (optional)"
+                       T="string" Clearable="true" Class="mb-3">
+                @foreach (var policy in _configPolicies)
+                {
+                    <MudSelectItem Value="@policy.Id.Value.ToString("D")">@policy.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudNumericField @bind-Value="_precedence" Label="Precedence (higher wins within a scope)"
+                             Min="0" Max="1000" T="int" />
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-3">@_error</MudAlert>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Submit" Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="@(!CanSubmit || _saving)">
+            @(_saving ? "Creating..." : "Create")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private bool _loading = true;
+    private bool _saving;
+    private string? _error;
+
+    private AssignmentScopeType _scopeType = AssignmentScopeType.Tenant;
+    private string? _selectedGroupId;
+    private string? _selectedAgentId;
+    private IReadOnlyCollection<string> _selectedProfileIds = [];
+    private string? _selectedConfigPolicyId;
+    private int _precedence;
+
+    private IReadOnlyList<AgentGroup> _groups = [];
+    private IReadOnlyList<Agent> _agents = [];
+    private IReadOnlyList<ResourceProfile> _profiles = [];
+    private IReadOnlyList<DaemonConfigPolicy> _configPolicies = [];
+    private HashSet<string> _publishedProfileIds = [];
+
+    private bool CanSubmit =>
+        (_selectedProfileIds.Any() || !string.IsNullOrEmpty(_selectedConfigPolicyId))
+        && _scopeType switch
+        {
+            AssignmentScopeType.Group => !string.IsNullOrEmpty(_selectedGroupId),
+            AssignmentScopeType.Agent => !string.IsNullOrEmpty(_selectedAgentId),
+            _ => true,
+        };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _groups = await GroupService.ListByTenantAsync(TenantId.Default);
+            _agents = await AgentService.ListByTenantAsync(TenantId.Default);
+            _profiles = await ProfileService.ListByTenantAsync(TenantId.Default);
+            _configPolicies = await ConfigService.ListPoliciesAsync(TenantId.Default);
+
+            foreach (var profile in _profiles)
+            {
+                var published = await ProfileService.GetLatestPublishedVersionAsync(profile.Id);
+                if (published is not null)
+                    _publishedProfileIds.Add(profile.Id.Value.ToString("D"));
+            }
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        _saving = true;
+        _error = null;
+
+        try
+        {
+            var scopeId = _scopeType switch
+            {
+                AssignmentScopeType.Group => _selectedGroupId!,
+                AssignmentScopeType.Agent => _selectedAgentId!,
+                _ => TenantId.Default.Value.ToString("D"),
+            };
+
+            var profileIds = _selectedProfileIds
+                .Select(s => new ResourceProfileId(Guid.Parse(s)))
+                .ToList();
+            ConfigPolicyId? configPolicyId = string.IsNullOrEmpty(_selectedConfigPolicyId)
+                ? null
+                : new ConfigPolicyId(Guid.Parse(_selectedConfigPolicyId));
+
+            var assignment = await AssignmentService.CreateAsync(
+                TenantId.Default, _scopeType, scopeId, profileIds, configPolicyId, _precedence);
+            MudDialog.Close(DialogResult.Ok(assignment));
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

@@ -34,6 +34,23 @@ public sealed class PolicyAssignmentService(
         TenantId tenantId, AssignmentScopeType scopeType, string scopeId, CancellationToken ct = default) =>
         await assignmentRepo.ListByScopeAsync(tenantId, scopeType, scopeId, ct);
 
+    /// <summary>
+    /// Rollback tooling: pin resolved versions for this assignment's scope.
+    /// An empty pin map plus null config pin restores latest-published resolution.
+    /// </summary>
+    public async Task UpdatePinsAsync(
+        PolicyAssignmentId id,
+        IReadOnlyDictionary<ResourceProfileId, ProfileVersionId> profileVersionPins,
+        ConfigVersionId? pinnedConfigVersionId, CancellationToken ct = default)
+    {
+        var assignment = await assignmentRepo.GetByIdAsync(id, ct)
+            ?? throw new DomainException("assignment.not_found", $"Policy assignment {id} not found.");
+
+        assignment.SetPins(profileVersionPins, pinnedConfigVersionId, timeProvider.GetUtcNow());
+        assignmentRepo.Save(assignment);
+        await unitOfWork.SaveChangesAsync(ct);
+    }
+
     public async Task RemoveAsync(PolicyAssignmentId id, CancellationToken ct = default)
     {
         var assignment = await assignmentRepo.GetByIdAsync(id, ct)

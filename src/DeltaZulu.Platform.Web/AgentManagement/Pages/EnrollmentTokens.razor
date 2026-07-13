@@ -1,0 +1,137 @@
+@namespace DeltaZulu.Platform.Web.AgentManagement.Pages
+@page "/agents/enrollment-tokens"
+@rendermode InteractiveServer
+@using MudBlazor
+@using DeltaZulu.Platform.Application.AgentManagement.Services
+@using DeltaZulu.Platform.Domain.AgentManagement.Enrollment
+@using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@using DeltaZulu.Platform.Domain.Common
+@using DeltaZulu.Platform.Web.AgentManagement.Shared
+@inject EnrollmentTokenService TokenService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject TimeProvider Time
+
+<PageTitle>Enrollment Tokens</PageTitle>
+
+<DzPageHeader Eyebrow="Management"
+              Title="Enrollment Tokens"
+              Description="Bootstrap tokens that new agents exchange for a tenant-scoped identity and secret.">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.Add" OnClick="OpenCreateDialog">
+            Create Token
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.Refresh" OnClick="LoadAsync">
+            Refresh
+        </MudButton>
+    </Actions>
+</DzPageHeader>
+
+@if (_loading)
+{
+    <DzLoadingState Text="Loading enrollment tokens..." />
+}
+else if (_tokens.Count == 0)
+{
+    <DzEmptyState Title="No enrollment tokens"
+                  Description="Create a bootstrap token to onboard new agents. Tokens are shown once at creation."
+                  Icon="@Icons.Material.Outlined.Key" />
+}
+else
+{
+    <DzTableShell>
+        <MudTable Items="_tokens" Dense="true" Hover="true" T="EnrollmentToken" Elevation="0">
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Uses</MudTh>
+                <MudTh>Expires</MudTh>
+                <MudTh>Created</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Name"><strong>@context.Name</strong></MudTd>
+                <MudTd DataLabel="Status">
+                    <DzStatusChip Label="@StatusLabel(context)" Tone="@StatusTone(context)" />
+                </MudTd>
+                <MudTd DataLabel="Uses">
+                    <MudText Typo="Typo.body2">@context.UseCount / @context.MaxUses</MudText>
+                </MudTd>
+                <MudTd DataLabel="Expires">
+                    <MudText Typo="Typo.caption">@context.ExpiresAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Created">
+                    <MudText Typo="Typo.caption">@context.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    @if (context.RevokedAt is null)
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error"
+                                   StartIcon="@Icons.Material.Outlined.Block"
+                                   OnClick="@(() => RevokeAsync(context.Id))">Revoke</MudButton>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </DzTableShell>
+}
+
+@code {
+    private bool _loading = true;
+    private IReadOnlyList<EnrollmentToken> _tokens = [];
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _tokens = await TokenService.ListByTenantAsync(TenantId.Default);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var dialog = await DialogService.ShowAsync<CreateEnrollmentTokenDialog>("Create enrollment token",
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+            await LoadAsync();
+    }
+
+    private async Task RevokeAsync(EnrollmentTokenId id)
+    {
+        try
+        {
+            await TokenService.RevokeAsync(id);
+            Snackbar.Add("Token revoked.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (DomainException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private string StatusLabel(EnrollmentToken token)
+    {
+        if (token.RevokedAt is not null) return "Revoked";
+        if (Time.GetUtcNow() >= token.ExpiresAt) return "Expired";
+        if (token.UseCount >= token.MaxUses) return "Exhausted";
+        return "Active";
+    }
+
+    private string StatusTone(EnrollmentToken token) => StatusLabel(token) switch
+    {
+        "Active" => "success",
+        "Revoked" => "error",
+        _ => "warning",
+    };
+}

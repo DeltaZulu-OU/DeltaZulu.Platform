@@ -1,0 +1,48 @@
+@using MudBlazor
+@using DeltaZulu.Platform.Web.AgentManagement.Pages
+
+<MudSimpleTable Dense="true" Elevation="0">
+    <thead>
+        <tr>
+            <th></th>
+            <th style="text-align:right">Agents</th>
+            <th style="text-align:right">Healthy</th>
+            <th style="text-align:right">Degraded</th>
+            <th style="text-align:right">Stale/Offline</th>
+            <th style="text-align:right">Drift</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var rollup in Rollups)
+        {
+            <tr>
+                <td><strong>@rollup.Label</strong></td>
+                <td style="text-align:right">@rollup.Total</td>
+                <td style="text-align:right">
+                    <MudText Typo="Typo.body2" Color="@(rollup.Healthy == rollup.Total ? Color.Success : Color.Default)">
+                        @rollup.Healthy
+                    </MudText>
+                </td>
+                <td style="text-align:right">
+                    <MudText Typo="Typo.body2" Color="@(rollup.Degraded > 0 ? Color.Error : Color.Default)">
+                        @rollup.Degraded
+                    </MudText>
+                </td>
+                <td style="text-align:right">
+                    <MudText Typo="Typo.body2" Color="@(rollup.StaleOrOffline > 0 ? Color.Warning : Color.Default)">
+                        @rollup.StaleOrOffline
+                    </MudText>
+                </td>
+                <td style="text-align:right">
+                    <MudText Typo="Typo.body2" Color="@(rollup.Drifted > 0 ? Color.Warning : Color.Default)">
+                        @rollup.Drifted
+                    </MudText>
+                </td>
+            </tr>
+        }
+    </tbody>
+</MudSimpleTable>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Fleet.FleetRollup> Rollups { get; set; } = [];
+}

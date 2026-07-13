@@ -1,0 +1,194 @@
+@using MudBlazor
+@using DeltaZulu.Platform.Application.AgentManagement.Services
+@using DeltaZulu.Platform.Domain.AgentManagement.Agents
+@using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@using DeltaZulu.Platform.Domain.AgentManagement.Policy
+@using DeltaZulu.Platform.Domain.Common
+@inject AgentService AgentService
+@inject PolicyResolutionService ResolutionService
+@inject AgentCheckInService CheckInService
+@inject ISnackbar Snackbar
+
+<DzPanel Eyebrow="Effective policy">
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (_resolution is null || _resolution.IsEmpty)
+    {
+        <DzEmptyState Title="No effective policy"
+                      Description="No tenant, group, or agent assignment resolves to published content for this agent."
+                      Icon="@Icons.Material.Outlined.RuleFolder" />
+    }
+    else
+    {
+        <DzDetailList>
+            <DzDetailItem Label="Resolved bundle hash">
+                <MudText Typo="Typo.body2" Class="dz-config-value dz-config-value--mono">
+                    @_resolution.ContentHash[..12]
+                </MudText>
+            </DzDetailItem>
+            <DzDetailItem Label="Desired bundle">
+                <MudText Typo="Typo.body2" Class="dz-config-value dz-config-value--mono">
+                    @(_agent?.DesiredBundleId?.Value.ToString("D")[..8] ?? "Not assigned yet")
+                </MudText>
+            </DzDetailItem>
+            <DzDetailItem Label="Applied bundle">
+                <MudText Typo="Typo.body2" Class="dz-config-value dz-config-value--mono">
+                    @(_agent?.CurrentBundleId?.Value.ToString("D")[..8] ?? "None")
+                </MudText>
+            </DzDetailItem>
+            <DzDetailItem Label="Last acknowledgement">
+                @if (_latestAck is null)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">None recorded</MudText>
+                }
+                else
+                {
+                    <div class="d-flex gap-2 align-center">
+                        <DzStatusChip Label="@_latestAck.Status.ToString()" Tone="@AckTone(_latestAck)" />
+                        <MudText Typo="Typo.caption">@_latestAck.AckedAt.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                    </div>
+                }
+            </DzDetailItem>
+        </DzDetailList>
+
+        @if (_document is not null)
+        {
+            <MudText Typo="Typo.subtitle2" Class="mt-4 mb-2">Resolved profiles (@_document.Profiles.Count)</MudText>
+            @if (_document.Profiles.Count == 0)
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">No profiles resolved.</MudText>
+            }
+            else
+            {
+                <MudSimpleTable Dense="true" Elevation="0">
+                    <thead>
+                        <tr>
+                            <th>Profile version</th>
+                            <th>Sequence</th>
+                            <th>Content hash</th>
+                            <th>Flags</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var profile in _document.Profiles)
+                        {
+                            <tr>
+                                <td><code>@profile.ProfileVersionId[..8]</code></td>
+                                <td>v@(profile.SequenceNumber)</td>
+                                <td><code>@profile.ContentHash[..Math.Min(12, profile.ContentHash.Length)]</code></td>
+                                <td>
+                                    @if (profile.Mandatory)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">mandatory</MudChip>
+                                    }
+                                    @if (!profile.Enabled)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">disabled</MudChip>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+
+            <MudText Typo="Typo.subtitle2" Class="mt-4 mb-2">Daemon config</MudText>
+            @if (_document.Config is null)
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">No config policy in scope.</MudText>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2">
+                    Version <code>@_document.Config.ConfigVersionId[..8]</code> (v@(_document.Config.SequenceNumber)),
+                    hash <code>@_document.Config.ContentHash[..Math.Min(12, _document.Config.ContentHash.Length)]</code>
+                </MudText>
+            }
+
+            <MudText Typo="Typo.caption" Class="mud-text-secondary mt-3 d-block">
+                Composed from @_document.ContributingAssignmentIds.Count assignment(s) across tenant, group, and agent scope.
+            </MudText>
+        }
+
+        @if (_resolution.UnresolvedProfileIds.Count > 0)
+        {
+            <MudAlert Severity="Severity.Warning" Class="mt-3">
+                @_resolution.UnresolvedProfileIds.Count assigned profile(s) have no published version and were skipped.
+            </MudAlert>
+        }
+        @if (_resolution.UnresolvedConfigPolicyId is not null)
+        {
+            <MudAlert Severity="Severity.Warning" Class="mt-3">
+                The assigned daemon config policy has no published version and was skipped.
+            </MudAlert>
+        }
+    }
+
+    <div class="mt-4">
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.Sync"
+                   OnClick="RecomputeAsync" Disabled="_loading">
+            Recompute desired bundle
+        </MudButton>
+    </div>
+</DzPanel>
+
+@code {
+    [Parameter, EditorRequired] public AgentId AgentId { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool _loading = true;
+    private Agent? _agent;
+    private PolicyResolution? _resolution;
+    private PolicyBundleDocument? _document;
+    private BundleAck? _latestAck;
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _agent = await AgentService.GetByIdAsync(AgentId);
+            if (_agent is not null)
+            {
+                _resolution = await ResolutionService.ResolveAsync(_agent);
+                _document = PolicyResolutionService.ParseDocument(_resolution.DocumentJson);
+                _latestAck = await CheckInService.GetLatestAckAsync(AgentId);
+            }
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task RecomputeAsync()
+    {
+        try
+        {
+            var bundle = await ResolutionService.RecomputeDesiredBundleAsync(AgentId);
+            Snackbar.Add(bundle is null
+                ? "No applicable assignments; desired bundle unchanged."
+                : $"Desired bundle set to {bundle.Id.Value.ToString("D")[..8]}.",
+                Severity.Success);
+            await LoadAsync();
+            await OnChanged.InvokeAsync();
+        }
+        catch (DomainException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private static string AckTone(BundleAck ack) => ack.Status switch
+    {
+        Domain.AgentManagement.Enums.BundleAckStatus.Applied => "success",
+        Domain.AgentManagement.Enums.BundleAckStatus.Failed => "error",
+        Domain.AgentManagement.Enums.BundleAckStatus.RolledBack => "warning",
+        _ => "neutral",
+    };
+}

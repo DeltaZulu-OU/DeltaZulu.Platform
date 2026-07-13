@@ -36,4 +36,27 @@ public sealed class AgentGroupService(
         groupRepo.Save(group);
         await unitOfWork.SaveChangesAsync(ct);
     }
+
+    public async Task<IReadOnlyList<AgentId>> ListMemberAgentIdsAsync(
+        AgentGroupId groupId, CancellationToken ct = default) =>
+        await groupRepo.ListMemberAgentIdsAsync(groupId, ct);
+
+    public async Task<IReadOnlyList<AgentGroupId>> ListGroupIdsForAgentAsync(
+        AgentId agentId, CancellationToken ct = default) =>
+        await groupRepo.ListGroupIdsForAgentAsync(agentId, ct);
+
+    public async Task AddMemberAsync(AgentGroupId groupId, AgentId agentId, CancellationToken ct = default)
+    {
+        _ = await groupRepo.GetByIdAsync(groupId, ct)
+            ?? throw new DomainException("agentgroup.not_found", $"Agent group {groupId} not found.");
+
+        groupRepo.AddMember(groupId, agentId, timeProvider.GetUtcNow());
+        await unitOfWork.SaveChangesAsync(ct);
+    }
+
+    public async Task RemoveMemberAsync(AgentGroupId groupId, AgentId agentId, CancellationToken ct = default)
+    {
+        groupRepo.RemoveMember(groupId, agentId);
+        await unitOfWork.SaveChangesAsync(ct);
+    }
 }

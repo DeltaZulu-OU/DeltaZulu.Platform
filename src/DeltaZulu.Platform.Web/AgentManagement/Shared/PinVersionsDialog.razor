@@ -1,0 +1,159 @@
+@using MudBlazor
+@using DeltaZulu.Platform.Application.AgentManagement.Services
+@using DeltaZulu.Platform.Domain.AgentManagement.Enums
+@using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@using DeltaZulu.Platform.Domain.AgentManagement.Policy
+@using DeltaZulu.Platform.Domain.AgentManagement.Profiles
+@using DeltaZulu.Platform.Domain.AgentManagement.Configs
+@inject PolicyAssignmentService AssignmentService
+@inject ResourceProfileService ProfileService
+@inject DaemonConfigService ConfigService
+
+<MudDialog>
+    <TitleContent>Pin versions (rollback)</TitleContent>
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+                Pinned versions override latest-published resolution for every agent this assignment
+                reaches. Choose "Latest published" to clear a pin. Agents converge at their next check-in.
+            </MudText>
+
+            @foreach (var profile in _profileOptions)
+            {
+                <MudSelect T="string"
+                           Value="@GetProfilePin(profile.ProfileId)"
+                           ValueChanged="@(v => SetProfilePin(profile.ProfileId, v))"
+                           Label="@($"Profile: {profile.Name}")" Class="mb-3">
+                    <MudSelectItem Value="@LatestSentinel">Latest published (default)</MudSelectItem>
+                    @foreach (var version in profile.Versions)
+                    {
+                        <MudSelectItem Value="@version.Id.Value.ToString("D")">
+                            v@(version.SequenceNumber) — @version.State (@version.ContentHash[..Math.Min(8, version.ContentHash.Length)])
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
+            @if (_configVersions.Count > 0)
+            {
+                <MudSelect T="string" @bind-Value="_configPin"
+                           Label="Daemon config version" Class="mb-3">
+                    <MudSelectItem Value="@LatestSentinel">Latest published (default)</MudSelectItem>
+                    @foreach (var version in _configVersions)
+                    {
+                        <MudSelectItem Value="@version.Id.Value.ToString("D")">
+                            v@(version.SequenceNumber) — @version.State (@version.ContentHash[..Math.Min(8, version.ContentHash.Length)])
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-3">@_error</MudAlert>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="_saving">
+            @(_saving ? "Saving..." : "Save Pins")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private const string LatestSentinel = "__latest__";
+
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter, EditorRequired] public PolicyAssignment Assignment { get; set; } = null!;
+
+    private sealed record ProfileOption(
+        ResourceProfileId ProfileId, string Name, IReadOnlyList<ResourceProfileVersion> Versions);
+
+    private bool _loading = true;
+    private bool _saving;
+    private string? _error;
+    private List<ProfileOption> _profileOptions = [];
+    private List<DaemonConfigVersion> _configVersions = [];
+    private Dictionary<ResourceProfileId, string> _profilePins = [];
+    private string _configPin = LatestSentinel;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            foreach (var profileId in Assignment.ProfileIds)
+            {
+                var profile = await ProfileService.GetByIdAsync(profileId);
+                var versions = (await ProfileService.ListVersionsAsync(profileId))
+                    .Where(v => v.State is ProfileState.Published or ProfileState.Deprecated)
+                    .OrderByDescending(v => v.SequenceNumber)
+                    .ToList();
+                _profileOptions.Add(new ProfileOption(
+                    profileId, profile?.Name ?? profileId.Value.ToString("D")[..8], versions));
+            }
+
+            if (Assignment.ConfigPolicyId is not null)
+            {
+                _configVersions = (await ConfigService.ListVersionsAsync(Assignment.ConfigPolicyId.Value))
+                    .Where(v => v.State is ProfileState.Published or ProfileState.Deprecated)
+                    .OrderByDescending(v => v.SequenceNumber)
+                    .ToList();
+            }
+
+            _profilePins = Assignment.ProfileIds.ToDictionary(
+                id => id,
+                id => Assignment.ProfileVersionPins.TryGetValue(id, out var pin)
+                    ? pin.Value.ToString("D")
+                    : LatestSentinel);
+            _configPin = Assignment.PinnedConfigVersionId?.Value.ToString("D") ?? LatestSentinel;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string GetProfilePin(ResourceProfileId profileId) =>
+        _profilePins.GetValueOrDefault(profileId, LatestSentinel);
+
+    private void SetProfilePin(ResourceProfileId profileId, string value) =>
+        _profilePins[profileId] = value;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        _saving = true;
+        _error = null;
+
+        try
+        {
+            var pins = _profilePins
+                .Where(kv => kv.Value != LatestSentinel)
+                .ToDictionary(
+                    kv => kv.Key,
+                    kv => new ProfileVersionId(Guid.Parse(kv.Value)));
+            ConfigVersionId? configPin = _configPin == LatestSentinel
+                ? null
+                : new ConfigVersionId(Guid.Parse(_configPin));
+
+            await AssignmentService.UpdatePinsAsync(Assignment.Id, pins, configPin);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}
