@@ -33,7 +33,7 @@ public sealed class EChartsRenderOptionsBuilder
                 trigger = TooltipTrigger.Item;
                 series.AddRange(chart.Series.Select(s => new PieSeries {
                     Name = s.Name,
-                    Radius = new CircleRadius("65%"),
+                    Radius = new CircleRadius("58%"),
                     Data = BuildPieData(chart, s)
                 }));
                 break;
@@ -73,7 +73,7 @@ public sealed class EChartsRenderOptionsBuilder
 
         var options = new ChartOptions {
             Tooltip = new Tooltip { Trigger = trigger, Show = true },
-            Legend = new Legend { Show = ParseLegendVisibility(chart.Legend) == LegendVisibility.Visible },
+            Legend = new Legend { Show = ShouldShowEChartsLegend(chart) },
             Series = series
         };
 
@@ -99,6 +99,10 @@ public sealed class EChartsRenderOptionsBuilder
 
         return ParseLegendVisibility(chart.Legend) == LegendVisibility.Visible;
     }
+
+    private static bool ShouldShowEChartsLegend(RenderChartModel chart)
+        => chart.Kind != RenderKind.Piechart
+           && ParseLegendVisibility(chart.Legend) == LegendVisibility.Visible;
 
     private static LegendVisibility ParseLegendVisibility(string? legend)
     {

@@ -1,3 +1,4 @@
+using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
 using DeltaZulu.Platform.Domain.Analytics.Catalog;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
@@ -26,6 +27,32 @@ public sealed class LanguageServiceLiveValidationTests
         var service = CreateService();
 
         var markers = service.ValidateEditorQuery("ProcessEvent | take 1");
+
+        Assert.IsEmpty(markers, string.Join("\n", markers.Select(marker => marker.Message)));
+    }
+
+    [TestMethod]
+    public void ValidateEditorQuery_TerminalRenderCommand_ReturnsNoMarkers()
+    {
+        var service = CreateService();
+
+        var markers = service.ValidateEditorQuery("ProcessEvent | summarize Count=count() by AccountName | render barchart xcolumn=AccountName ycolumns=Count");
+
+        Assert.IsEmpty(markers, string.Join("\n", markers.Select(marker => marker.Message)));
+    }
+
+    [TestMethod]
+    public void ValidateEditorQuery_MultilineTerminalRenderCommand_ReturnsNoMarkers()
+    {
+        var service = CreateService();
+        const string query = """
+            Dns
+            | summarize QueryCount = count() by QueryName
+            | sort by QueryCount desc
+            | render piechart
+            """;
+
+        var markers = service.ValidateEditorQuery(query);
 
         Assert.IsEmpty(markers, string.Join("\n", markers.Select(marker => marker.Message)));
     }
@@ -72,7 +99,8 @@ public sealed class LanguageServiceLiveValidationTests
         return new LanguageService(
             new NoopJSRuntime(),
             NullLogger<LanguageService>.Instance,
-            catalog);
+            catalog,
+            new RenderDirectiveParser());
     }
 
     private sealed class NoopJSRuntime : IJSRuntime
