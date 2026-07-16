@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <RootNamespace>DeltaZulu.Agent.Simulator</RootNamespace>
+    <AssemblyName>DeltaZulu.Agent.Simulator</AssemblyName>
   </PropertyGroup>
-
 </Project>

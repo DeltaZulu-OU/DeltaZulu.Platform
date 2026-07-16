@@ -1,14 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <RootNamespace>DeltaZulu.Platform.Ingestion</RootNamespace>
     <AssemblyName>DeltaZulu.Platform.Ingestion</AssemblyName>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.HighPerformance" />
   </ItemGroup>
-
 </Project>

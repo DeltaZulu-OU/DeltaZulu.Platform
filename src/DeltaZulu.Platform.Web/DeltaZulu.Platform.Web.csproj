@@ -1,40 +1,34 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
-	<RootNamespace>DeltaZulu.Platform.Web</RootNamespace>
-	<AssemblyName>DeltaZulu.Platform.Web</AssemblyName>
-	<NoWarn>$(NoWarn);CS1591;NU1601</NoWarn>
+    <RootNamespace>DeltaZulu.Platform.Web</RootNamespace>
+    <AssemblyName>DeltaZulu.Platform.Web</AssemblyName>
+    <NoWarn>$(NoWarn);NU1601</NoWarn>
   </PropertyGroup>
-
   <ItemGroup>
-	<None Remove="hunting.db" />
-	<None Remove="hunting.db.wal" />
+    <None Remove="hunting.db" />
+    <None Remove="hunting.db.wal" />
   </ItemGroup>
-
   <ItemGroup>
-	<ProjectReference Include="..\DeltaZulu.Blazor.Interop\DeltaZulu.Blazor.Interop.csproj" />
-	<ProjectReference Include="..\DeltaZulu.Importing.Core\DeltaZulu.Importing.Core.csproj" />
-	<ProjectReference Include="..\DeltaZulu.Platform.Ingestion\DeltaZulu.Platform.Ingestion.csproj" />
-	<ProjectReference Include="..\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
-	<ProjectReference Include="..\DeltaZulu.Platform.Application\DeltaZulu.Platform.Application.csproj" />
-	<ProjectReference Include="..\DeltaZulu.Platform.Data\DeltaZulu.Platform.Data.csproj" />
-	<ProjectReference Include="..\DeltaZulu.Platform.Data.Git\DeltaZulu.Platform.Data.Git.csproj" />
-	<ProjectReference Include="..\DeltaZulu.Platform.Data.SQLite\DeltaZulu.Platform.Data.SQLite.csproj" />
-	<ProjectReference Include="..\DeltaZulu.Platform.Data.DuckDb\DeltaZulu.Platform.Data.DuckDb.csproj" />
-	<ProjectReference Include="..\DeltaZulu.Platform.Data.Proton\DeltaZulu.Platform.Data.Proton.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Blazor.Interop\DeltaZulu.Blazor.Interop.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Importing.Core\DeltaZulu.Importing.Core.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Ingestion\DeltaZulu.Platform.Ingestion.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Application\DeltaZulu.Platform.Application.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Data\DeltaZulu.Platform.Data.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Data.Git\DeltaZulu.Platform.Data.Git.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Data.SQLite\DeltaZulu.Platform.Data.SQLite.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Data.DuckDb\DeltaZulu.Platform.Data.DuckDb.csproj" />
+    <ProjectReference Include="..\DeltaZulu.Platform.Data.Proton\DeltaZulu.Platform.Data.Proton.csproj" />
   </ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="Markdig" />
-		<PackageReference Include="Blazorade.Mermaid" />
-		<PackageReference Include="MudBlazor" />
-		<PackageReference Include="SourceGear.sqlite3" />
-		<PackageReference Include="Vizor.ECharts" />
-
-		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
-		<PackageReference Include="SQLitePCLRaw.core" />
-		<PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
-		<PackageReference Include="SQLitePCLRaw.provider.e_sqlite3" />
-	</ItemGroup>
-
+  <ItemGroup>
+    <PackageReference Include="Markdig" />
+    <PackageReference Include="Blazorade.Mermaid" />
+    <PackageReference Include="MudBlazor" />
+    <PackageReference Include="SourceGear.sqlite3" />
+    <PackageReference Include="Vizor.ECharts" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <PackageReference Include="SQLitePCLRaw.core" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
+    <PackageReference Include="SQLitePCLRaw.provider.e_sqlite3" />
+  </ItemGroup>
 </Project>
