@@ -4,6 +4,8 @@ using DeltaZulu.Platform.Data.Seeding;
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Observability;
 using DeltaZulu.Platform.Domain.Analytics.Observability;
+using DeltaZulu.Platform.Domain.Analytics.Alerts;
+using DeltaZulu.Platform.Domain.Analytics.AlertEntities;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 
 namespace DeltaZulu.Platform.Web.Analytics.Hosting;
@@ -25,6 +27,8 @@ public static partial class AnalyticsModuleBootstrapExtensions
 
         if (options.BootstrapDuckDbSchema)
         {
+            await app.Services.GetRequiredService<IAlertLakeWriter>().EnsureInitializedAsync();
+            await app.Services.GetRequiredService<IAlertEntityLakeWriter>().EnsureInitializedAsync();
             await BootstrapSchemaAsync(app, options.SeedDevelopmentMedallionSources);
         }
 

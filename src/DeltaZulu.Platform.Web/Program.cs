@@ -82,10 +82,18 @@ builder.Services.AddAnalyticsWebModule(new AnalyticsModuleOptions {
         builder.Configuration["Analytics:DuckDbPath"],
         builder.Environment.ContentRootPath,
         "analytics.db"),
+    LakeDbPath = ResolveConfiguredPath(
+        builder.Configuration["Analytics:LakeDbPath"],
+        builder.Environment.ContentRootPath,
+        "analytics.db"),
     AppDbPath = ResolveConfiguredPath(
         builder.Configuration["Analytics:AppDbPath"],
         builder.Environment.ContentRootPath,
         "settings.db"),
+    OperationsDbPath = ResolveConfiguredPath(
+        builder.Configuration["Analytics:OperationsDbPath"],
+        builder.Environment.ContentRootPath,
+        "operations.db"),
     PlannerMaxIterations = builder.Configuration.GetValue("Planner:MaxIterations", 3),
     DeveloperMode = builder.Environment.IsDevelopment(),
     RegisterMudServices = false,

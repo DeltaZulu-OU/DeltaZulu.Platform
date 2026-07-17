@@ -8,7 +8,14 @@ namespace DeltaZulu.Platform.Web.Analytics.Hosting;
 public sealed record AnalyticsModuleOptions
 {
     public string DuckDbPath { get; init; } = "hunting.db";
+    /// <summary>
+    /// Append-only lake database. Alert events and alert entities are written here,
+    /// separate from mutable application and Operations SQLite state.
+    /// </summary>
+    public string LakeDbPath { get; init; } = "analytics.db";
     public string AppDbPath { get; init; } = "settings.db";
+    /// <summary>Dedicated SQLite database for mutable incident-candidate state.</summary>
+    public string OperationsDbPath { get; init; } = "operations.db";
     public string AppDatabaseAlias { get; init; } = "app";
     public string AppViewSchema { get; init; } = "app_state";
     public int PlannerMaxIterations { get; init; } = 3;
