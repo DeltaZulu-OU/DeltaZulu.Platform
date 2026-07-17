@@ -15,6 +15,7 @@ using DeltaZulu.Platform.Web.Analytics;
 using DeltaZulu.Platform.Web.Api.AgentManagement;
 using DeltaZulu.Platform.Web.Analytics.Hosting;
 using DeltaZulu.Platform.Web.Governance;
+using DeltaZulu.Platform.Web.Operations;
 using DeltaZulu.Platform.Web.Governance.Services;
 using DeltaZulu.Platform.Web.Platform;
 using MudBlazor.Services;
@@ -32,6 +33,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 // --- Platform module registry ---
 builder.Services.AddSingleton<IPlatformModule, AnalyticsModule>();
 builder.Services.AddSingleton<IPlatformModule, GovernanceModule>();
+builder.Services.AddSingleton<IPlatformModule, OperationsModule>();
 builder.Services.AddSingleton<IPlatformModule, AgentManagementModule>();
 
 // --- Governance module services ---
