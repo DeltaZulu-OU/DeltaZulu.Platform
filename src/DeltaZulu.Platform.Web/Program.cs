@@ -98,6 +98,7 @@ builder.Services.AddAgentManagementValidation();
 
 builder.Services.Configure<AgentControlPlaneOptions>(
     builder.Configuration.GetSection(AgentControlPlaneOptions.SectionName));
+builder.Services.AddAgentControlPlaneRateLimiting();
 builder.Services.AddSingleton<IAgentObservationSink, DuckDbAgentObservationSinkAdapter>();
 builder.Services.AddSingleton<ISourceObservationSink, DuckDbSourceObservationSinkAdapter>();
 builder.Services.AddHostedService<AgentStatusMonitor>();
@@ -113,6 +114,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+app.UseRateLimiter();
 app.UseAntiforgery();
 
 // Bootstrap Analytics module (schema, application persistence)

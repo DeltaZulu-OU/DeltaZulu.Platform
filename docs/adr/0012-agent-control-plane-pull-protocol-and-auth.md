@@ -63,4 +63,4 @@ certificate identity, with PKI lifecycle automation deferred to P2.
 - The lake's 15-minute staleness interval is hardcoded in the `AgentLatest` view while the
   inventory sweep thresholds are options-bound; defaults are aligned and divergence must be
   resolved when the view becomes configurable.
-- `/enroll` has no rate limiting yet; bootstrap tokens are the only brake (P1 hardening item).
+- `/enroll` is rate-limited to 10 requests per remote address per minute; bootstrap tokens remain the authorization boundary.

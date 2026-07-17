@@ -13,8 +13,8 @@ violated `DomainException` code in a `code` extension.
 
 | Step | Route | Auth | Behavior |
 |---|---|---|---|
-| Enroll | `POST /enroll` | none (bootstrap token in body) | Validates the token hash (`403` + `enrollmenttoken.invalid/.expired/.revoked/.exhausted`), creates or reuses the agent by tenant+hostname, issues/rotates the per-agent secret, returns `{agentId, tenantId, agentSecret, heartbeatIntervalSeconds}`. |
-| Heartbeat | `POST /heartbeat` | `Bearer dz-as-*` | Records last-seen/version, appends an `AgentObservationSnapshot` to the lake, lazily resolves the desired bundle, returns `{desiredBundleId, desiredBundleHash, policyChanged}` — the pull trigger. |
+| Enroll | `POST /enroll` | none (bootstrap token in body) | Rate-limited to 10 requests per remote address per minute; validates the token hash (`403` + `enrollmenttoken.invalid/.expired/.revoked/.exhausted`), creates or reuses the agent by tenant+hostname, issues/rotates the per-agent secret, returns `{agentId, tenantId, agentSecret, heartbeatIntervalSeconds}`. |
+| Heartbeat | `POST /heartbeat` | `Bearer dz-as-*` | Records last-seen/version, appends an `AgentObservationSnapshot` to the lake, lazily resolves the desired bundle, returns `{desiredBundleId, desiredBundleHash, policyChanged, commands}` — the pull trigger and command-delivery channel. |
 | Pull | `GET /policy/bundle` | bearer | Returns the caller's own desired bundle: `{bundleId, contentHash, createdAt, document}`; `404` + `bundle.none` when nothing is assigned. |
 | Ack | `POST /policy/ack` | bearer | `{bundleId, status: Received/Applied/Failed/RolledBack, error?}`; validates bundle ownership (`bundle.unknown`), updates `CurrentBundleId` on `Applied`, appends to the `bundle_acks` history. `204`. |
 | Command result | `POST /commands/{id}/result` | bearer | `{succeeded, resultJson?, error?}`; validates command ownership (`command.unknown`), completes the audited lifecycle. `204`. |
@@ -32,7 +32,7 @@ page shows a Sources tab filtered to the agent.
 
 ## Command queue
 
-One-shot operational commands (ADR 0010) ride the same pull loop: operators queue an allowlisted
+One-shot operational commands (ADR 0013) ride the same pull loop: operators queue an allowlisted
 `AgentCommandType` from the agent detail Commands tab; pending commands are delivered inside the
 next heartbeat response (`commands: [{commandId, type, timeoutSeconds, requestedAt}]`, marked
 `Delivered`), the agent executes and posts the outcome to the command-result endpoint, and the
@@ -45,7 +45,7 @@ history.
 `PolicyResolutionService` (Application layer) resolves assignments at check-in:
 
 1. Gather `PolicyAssignment` rows for the Tenant scope, each group the agent belongs to
-   (explicit `agent_group_members` rows, ordered by group id), then the Agent scope.
+   (explicit `agent_group_members` rows, ordered by group creation time and then group id), then the Agent scope.
 2. Order each bucket by `Precedence` ascending, then `CreatedAt`, then id; concatenate
    least-specific first.
 3. Profiles: additive union in walk order (first occurrence keeps position); each resolves to its
