@@ -128,6 +128,7 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
 
         services.AddAnalyticsRuntime(options);
         services.AddAnalyticsApplicationState(options);
+        services.AddOperationsPersistence($"Data Source={options.OperationsDbPath}");
         services.AddAnalyticsRenderWeb();
         services.AddScoped<EditorBus>();
         services.AddScoped<LanguageService>();

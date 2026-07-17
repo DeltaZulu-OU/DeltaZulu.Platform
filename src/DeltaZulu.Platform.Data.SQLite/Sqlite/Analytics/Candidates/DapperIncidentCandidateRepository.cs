@@ -198,7 +198,7 @@ public sealed class DapperIncidentCandidateRepository : DapperRepositoryBase, II
         ORDER BY alert_id;
         """;
 
-    public DapperIncidentCandidateRepository(IAppDbConnectionFactory connectionFactory)
+    public DapperIncidentCandidateRepository(IOperationsDbConnectionFactory connectionFactory)
         : base(connectionFactory, CreateSchemaSql)
     {
     }

@@ -22,6 +22,7 @@ public static partial class AnalyticsModuleBootstrapExtensions
         if (options.BootstrapApplicationPersistence)
         {
             await app.Services.InitializeApplicationPersistenceAsync();
+            await app.Services.InitializeOperationsPersistenceAsync();
             LogPersistenceInitialized(app.Logger);
         }
 
