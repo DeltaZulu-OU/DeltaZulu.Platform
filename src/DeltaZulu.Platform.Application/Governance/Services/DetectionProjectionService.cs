@@ -25,6 +25,7 @@ public interface IDetectionProjectionService
 
 public sealed class DetectionProjectionService(
     IDetectionRecordRepository detections,
+    IDetectionProjectionDiagnosticRepository diagnostics,
     IAcceptedContentStore contentStore,
     TimeProvider time) : IDetectionProjectionService
 {
@@ -36,23 +37,35 @@ public sealed class DetectionProjectionService(
         ArgumentNullException.ThrowIfNull(detection);
         ArgumentNullException.ThrowIfNull(acceptedVersion);
 
+        var projectionId = $"{detection.Id}-{acceptedVersion.Id}";
+
         // Project from the committed package instead of the draft: merges can contain only a
         // subset of a package's files, while Git is authoritative for accepted content.
         var metadata = await contentStore.GetFileAtCommitAsync(
             $"detections/{detection.Slug}.yaml", acceptedVersion.GitCommitSha, cancellationToken);
         if (metadata is null || metadata.IsBinary || !TryReadMetadata(metadata.Content, out var values))
         {
+            var message = metadata is null
+                ? "No detection.yaml metadata file was found in the accepted commit."
+                : metadata.IsBinary
+                    ? "detection.yaml was committed as binary content and cannot be parsed as YAML."
+                    : "detection.yaml could not be parsed as YAML.";
+            await RecordDiagnosticAsync(projectionId, detection, acceptedVersion,
+                DetectionProjectionDiagnosticReason.MetadataUnreadable, message, cancellationToken);
             return null;
         }
 
         if (!values.TryGetValue("query", out var query) || string.IsNullOrWhiteSpace(query))
         {
+            await RecordDiagnosticAsync(projectionId, detection, acceptedVersion,
+                DetectionProjectionDiagnosticReason.MissingQuery,
+                "Accepted detection metadata does not define a non-empty 'query' field.", cancellationToken);
             return null;
         }
 
         var now = time.GetUtcNow().UtcDateTime;
         var record = new DetectionRecord(
-            Id: $"{detection.Id}-{acceptedVersion.Id}",
+            Id: projectionId,
             DetectionId: detection.Id.ToString(),
             Version: acceptedVersion.SequenceNumber,
             RuleHash: Hash(query),
@@ -76,7 +89,30 @@ public sealed class DetectionProjectionService(
             AcceptedVersionId: acceptedVersion.Id.ToString());
 
         await detections.SaveAsync(record, cancellationToken);
+
+        // A previously invalid or missing projection for this exact accepted version is
+        // resolved now that it has projected successfully; the diagnostic would otherwise
+        // be a stale false positive.
+        await diagnostics.ClearAsync(projectionId, cancellationToken);
         return record;
+    }
+
+    private async Task RecordDiagnosticAsync(
+        string projectionId,
+        Detection detection,
+        DetectionVersion acceptedVersion,
+        DetectionProjectionDiagnosticReason reason,
+        string message,
+        CancellationToken cancellationToken)
+    {
+        var diagnostic = new DetectionProjectionDiagnostic(
+            projectionId,
+            detection.Id.ToString(),
+            acceptedVersion.Id.ToString(),
+            reason,
+            message,
+            time.GetUtcNow().UtcDateTime);
+        await diagnostics.SaveAsync(diagnostic, cancellationToken);
     }
 
     private static bool TryReadMetadata(string content, out Dictionary<string, string> values)

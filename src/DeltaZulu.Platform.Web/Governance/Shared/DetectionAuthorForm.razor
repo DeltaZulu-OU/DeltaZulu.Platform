@@ -11,13 +11,13 @@
 @* ── Trigger type toggle ── *@
 <MudGrid Spacing="2">
     <MudItem xs="12">
-        <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small">
-            <MudButton Color="@(_triggerType == TriggerKind.Nrt ? Color.Primary : Color.Default)"
+        <MudButtonGroup Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small">
+            <MudButton Color="@(_triggerType == TriggerKind.Nrt ? Color.Secondary : Color.Default)"
                        Variant="@(_triggerType == TriggerKind.Nrt ? Variant.Filled : Variant.Outlined)"
                        OnClick="@(() => SetTrigger(TriggerKind.Nrt))">
                 Realtime
             </MudButton>
-            <MudButton Color="@(_triggerType == TriggerKind.Scheduled ? Color.Primary : Color.Default)"
+            <MudButton Color="@(_triggerType == TriggerKind.Scheduled ? Color.Secondary : Color.Default)"
                        Variant="@(_triggerType == TriggerKind.Scheduled ? Variant.Filled : Variant.Outlined)"
                        OnClick="@(() => SetTrigger(TriggerKind.Scheduled))">
                 Scheduled

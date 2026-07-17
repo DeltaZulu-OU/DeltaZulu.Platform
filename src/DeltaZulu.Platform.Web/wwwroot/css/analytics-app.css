@@ -10,8 +10,15 @@
  *
  * Design tokens, typography classes, and shared component CSS come from
  * deltazulu-tokens.css / dz-components.css / dz-shell.css. This file
- * contains Hunting product-specific layout, the --hunt-* scoped alias
- * layer, and legacy --bg-* / --text-* compatibility aliases.
+ * contains Hunting product-specific layout and legacy --hunt-* / --bg-* /
+ * --text-* compatibility aliases.
+ *
+ * Quarantine boundary: these legacy alias names are intentionally confined
+ * to this file and kql-helper-drawer.css (its companion drawer stylesheet).
+ * DesignSystemAuditTests.SharedStylesheets_DoNotReintroduceLegacyHuntingAliasTokens
+ * enforces that no other stylesheet under wwwroot/css reintroduces them —
+ * new product/shared CSS must use the --dz-product-*/--color-*/--brand-*
+ * tokens directly instead of these shorthand aliases.
  */
 @import url("./dz-query-result-table.css");
 

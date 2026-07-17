@@ -6,6 +6,7 @@
 @using DeltaZulu.Platform.Domain.Common
 @using DeltaZulu.Platform.Domain.Governance.Identifiers
 @using DeltaZulu.Platform.Domain.Governance.Contracts
+@using DeltaZulu.Platform.Domain.Analytics.Detections
 @using DeltaZulu.Platform.Web.Analytics.Services
 @using DeltaZulu.Platform.Web.Governance.Services
 @rendermode InteractiveServer
@@ -13,6 +14,8 @@
 @inject IConfiguration Configuration
 @inject PocUserContext UserContext
 @inject MergeReconciliationService MergeReconciliation
+@inject DetectionProjectionBackfillService ProjectionBackfill
+@inject IDetectionProjectionDiagnosticRepository ProjectionDiagnostics
 @inject ISnackbar Snackbar
 
 <PageTitle>Settings</PageTitle>
@@ -28,7 +31,7 @@
             <MudRadioGroup @bind-Value="UserSettings.DefaultTimeFilter" @bind-Value:after="PersistSettingsAsync" T="string">
                 @foreach (var preset in UserSettings.AvailableTimeFilters)
                 {
-                    <MudRadio Value="@preset.Key" Color="Color.Primary" Class="d-block">@preset.Label</MudRadio>
+                    <MudRadio Value="@preset.Key" Color="Color.Secondary" Class="d-block">@preset.Label</MudRadio>
                 }
             </MudRadioGroup>
         </DzPanel>
@@ -165,6 +168,72 @@
         </DzPanel>
     </MudItem>
 
+    <MudItem xs="12">
+        <DzPanel Eyebrow="Operations" Title="Detection projection backfill" Class="mb-4">
+            <Actions>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Secondary"
+                           Disabled="_backfillRunning"
+                           OnClick="RunBackfillAsync"
+                           StartIcon="@Icons.Material.Outlined.PlayArrow">
+                    Run backfill
+                </MudButton>
+            </Actions>
+            <ChildContent>
+                <MudText Typo="Typo.body2" Class="text-secondary mb-3">
+                    Projects executable detection definitions for accepted content that predates the projection pipeline, or whose most recent projection attempt failed. Detections already projected for their current accepted version are left untouched.
+                </MudText>
+
+                @if (_backfillRunning)
+                {
+                    <MudProgressLinear Indeterminate="true" Class="mb-3" />
+                }
+                else if (_lastBackfillResult is not null)
+                {
+                    <MudAlert Severity="@(_lastBackfillResult.Failed > 0 ? Severity.Warning : Severity.Success)" Dense="true" Class="mb-3">
+                        @_lastBackfillResult.Summary
+                    </MudAlert>
+                }
+
+                @if (_loadingDiagnostics)
+                {
+                    <MudProgressLinear Indeterminate="true" />
+                }
+                else if (_diagnostics.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Success" Dense="true">No invalid or stale detection projections.</MudAlert>
+                }
+                else
+                {
+                    <DzTableShell>
+                        <MudTable Items="_diagnostics" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="DetectionProjectionDiagnostic" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Detection</MudTh>
+                                <MudTh>Accepted version</MudTh>
+                                <MudTh>Reason</MudTh>
+                                <MudTh>Message</MudTh>
+                                <MudTh>Recorded</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Detection"><code>@context.DetectionId</code></MudTd>
+                                <MudTd DataLabel="Accepted version"><code>@context.AcceptedVersionId</code></MudTd>
+                                <MudTd DataLabel="Reason">
+                                    <DzStatusChip Label="@DiagnosticReasonLabel(context.Reason)" Tone="warning" />
+                                </MudTd>
+                                <MudTd DataLabel="Message">
+                                    <MudText Typo="Typo.body2">@context.Message</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Recorded">
+                                    <MudText Typo="Typo.caption">@context.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</MudText>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </DzTableShell>
+                }
+            </ChildContent>
+        </DzPanel>
+    </MudItem>
+
 </MudGrid>
 
 <MudAlert Severity="Severity.Info" Class="mt-2">
@@ -180,6 +249,11 @@
     private string? _lastRepairMessage;
     private Severity _lastRepairSeverity = Severity.Info;
 
+    private bool _backfillRunning;
+    private bool _loadingDiagnostics = true;
+    private DetectionProjectionBackfillResult? _lastBackfillResult;
+    private readonly List<DetectionProjectionDiagnostic> _diagnostics = [];
+
     private string SelectedDefaultLimitValue
     {
         get => UserSettings.DefaultResultLimit?.ToString() ?? string.Empty;
@@ -193,7 +267,8 @@
 
         await Task.WhenAll(
             UserSettings.EnsureLoadedAsync(),
-            LoadMergeIntentsAsync());
+            LoadMergeIntentsAsync(),
+            LoadDiagnosticsAsync());
     }
 
     private Task PersistSettingsAsync() => UserSettings.SaveAsync();
@@ -237,6 +312,43 @@
             _repairingChangeId = null;
         }
     }
+
+    private async Task LoadDiagnosticsAsync()
+    {
+        _loadingDiagnostics = true;
+        try
+        {
+            _diagnostics.Clear();
+            _diagnostics.AddRange(await ProjectionDiagnostics.ListRecentAsync(50));
+        }
+        finally
+        {
+            _loadingDiagnostics = false;
+        }
+    }
+
+    private async Task RunBackfillAsync()
+    {
+        _backfillRunning = true;
+        try
+        {
+            _lastBackfillResult = await ProjectionBackfill.BackfillAsync();
+            Snackbar.Add(_lastBackfillResult.Summary,
+                _lastBackfillResult.Failed > 0 ? Severity.Warning : Severity.Success);
+            await LoadDiagnosticsAsync();
+        }
+        finally
+        {
+            _backfillRunning = false;
+        }
+    }
+
+    private static string DiagnosticReasonLabel(DetectionProjectionDiagnosticReason reason) => reason switch
+    {
+        DetectionProjectionDiagnosticReason.MetadataUnreadable => "Unreadable metadata",
+        DetectionProjectionDiagnosticReason.MissingQuery => "Missing query",
+        _ => reason.ToString(),
+    };
 
     private static MergeIntentRecoveryGuidance GuidanceFor(MergeIntent intent)
         => MergeReconciliationService.BuildRecoveryGuidance(intent);

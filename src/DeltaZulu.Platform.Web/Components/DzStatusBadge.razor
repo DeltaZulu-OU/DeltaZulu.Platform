@@ -1,0 +1,30 @@
+@* Dense, non-interactive status indicator for table cells and list rows. Unlike DzStatusChip
+   (a filled MudChip pill), this is a plain dot + label suited to dense evidence-grade tables
+   where a full chip is too heavy. Shares the same tone vocabulary as DzStatusChip. *@
+<span class="@BadgeClass" @attributes="AdditionalAttributes">
+    <span class="dz-status-badge__dot" aria-hidden="true"></span>
+    <span class="dz-status-badge__label">@Label</span>
+</span>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Tone { get; set; } = "neutral";
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string BadgeClass => string.Join(" ", new[]
+    {
+        "dz-status-badge",
+        Tone switch
+        {
+            "success" => "dz-status-badge--success",
+            "warning" => "dz-status-badge--warning",
+            "error" => "dz-status-badge--error",
+            "info" => "dz-status-badge--info",
+            "dark" => "dz-status-badge--dark",
+            "muted" => "dz-status-badge--muted",
+            _ => "dz-status-badge--neutral"
+        },
+        Class
+    }.Where(static value => !string.IsNullOrWhiteSpace(value)));
+}
