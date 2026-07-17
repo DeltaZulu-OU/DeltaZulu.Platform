@@ -1,20 +1,29 @@
+using DeltaZulu.Platform.Domain.Analytics.Detection;
 using DeltaZulu.Platform.Domain.Analytics.Nrt;
 
 namespace DeltaZulu.Platform.Application.Analytics.Nrt;
 
 /// <summary>
 /// Application-layer service for managing NRT detection rules.
-/// Orchestrates compilation (KQL → ProtonSQL MV DDL) and persistence.
+/// Orchestrates compilation (KQL → Proton MV DDL + Alert DDL), persistence, and deployment.
 /// </summary>
 public sealed class NrtRuleService
 {
     private readonly INrtRuleRepository _repository;
     private readonly NrtRuleCompiler _compiler;
+    private readonly IDetectionCompilationBackend _backend;
+    private readonly IDetectionDeployer _deployer;
 
-    public NrtRuleService(INrtRuleRepository repository, NrtRuleCompiler compiler)
+    public NrtRuleService(
+        INrtRuleRepository repository,
+        NrtRuleCompiler compiler,
+        IDetectionCompilationBackend backend,
+        IDetectionDeployer deployer)
     {
         _repository = repository;
         _compiler   = compiler;
+        _backend    = backend;
+        _deployer   = deployer;
     }
 
     public Task<IReadOnlyList<NrtRule>> ListRulesAsync(CancellationToken ct = default) =>
@@ -31,8 +40,8 @@ public sealed class NrtRuleService
         _compiler.Compile(ruleId, kql);
 
     /// <summary>
-    /// Compiles the KQL, then saves (upserts) the rule. Returns the saved rule
-    /// or a failed compilation result.
+    /// Compiles the KQL, saves (upserts) the rule, but does NOT deploy to Proton.
+    /// Use <see cref="DeployAsync"/> separately to activate the rule.
     /// </summary>
     public async Task<(NrtRule? Rule, NrtCompilationResult Compilation)> SaveRuleAsync(
         string? existingId,
@@ -68,6 +77,7 @@ public sealed class NrtRuleService
             KqlQuery:            kqlQuery,
             ProtonSelectSql:     compilation.SelectSql,
             MaterializedViewDdl: compilation.MaterializedViewDdl,
+            AlertDdl:            existing?.AlertDdl,
             Threshold:           threshold,
             Severity:            severity,
             Confidence:          confidence,
@@ -80,6 +90,83 @@ public sealed class NrtRuleService
 
         await _repository.SaveAsync(rule, ct);
         return (rule, compilation);
+    }
+
+    /// <summary>
+    /// Builds the Alert DDL for the persisted rule, deploys both the materialized view and
+    /// the alert to Proton, and persists the alert DDL on the rule record.
+    /// </summary>
+    public async Task DeployAsync(string ruleId, NrtAlertOptions alertOptions, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ruleId);
+        ArgumentNullException.ThrowIfNull(alertOptions);
+
+        var rule = await _repository.GetAsync(ruleId, ct)
+            ?? throw new InvalidOperationException($"NRT rule '{ruleId}' not found.");
+
+        if (string.IsNullOrWhiteSpace(rule.MaterializedViewDdl))
+            throw new InvalidOperationException($"NRT rule '{ruleId}' has no compiled MV DDL. Call SaveRuleAsync first.");
+
+        var alertDdl = _backend.BuildNrtAlertDdl(
+            ruleId,
+            alertOptions.UdfName,
+            alertOptions.BatchEvents,
+            alertOptions.BatchTimeout,
+            alertOptions.LimitAlerts,
+            alertOptions.LimitPer);
+
+        await _deployer.DeployNrtAsync(ruleId, rule.MaterializedViewDdl, alertDdl, ct);
+
+        try
+        {
+            await _repository.SaveAsync(
+                rule with { AlertDdl = alertDdl, IsEnabled = true, UpdatedAtUtc = DateTime.UtcNow },
+                ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            try { await _deployer.RetractNrtAsync(ruleId, ct); }
+            catch (Exception rollbackEx)
+            {
+                throw new AggregateException(
+                    $"NRT rule '{ruleId}' deployed to Proton but state save failed, and rollback also failed.",
+                    ex, rollbackEx);
+            }
+
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Retracts the NRT detection from Proton (drops MV + Alert) and marks the rule as disabled.
+    /// </summary>
+    public async Task RetractAsync(string ruleId, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ruleId);
+
+        var rule = await _repository.GetAsync(ruleId, ct)
+            ?? throw new InvalidOperationException($"NRT rule '{ruleId}' not found.");
+
+        await _deployer.RetractNrtAsync(ruleId, ct);
+
+        try
+        {
+            await _repository.SaveAsync(
+                rule with { IsEnabled = false, AlertDdl = null, UpdatedAtUtc = DateTime.UtcNow },
+                ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            try { await _deployer.DeployNrtAsync(ruleId, rule.MaterializedViewDdl!, rule.AlertDdl!, ct); }
+            catch (Exception rollbackEx)
+            {
+                throw new AggregateException(
+                    $"NRT rule '{ruleId}' retracted from Proton but state save failed, and re-deploy also failed.",
+                    ex, rollbackEx);
+            }
+
+            throw;
+        }
     }
 
     public async Task ToggleEnabledAsync(string id, bool enabled, CancellationToken ct = default)
