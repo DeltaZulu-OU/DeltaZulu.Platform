@@ -15,6 +15,7 @@ public sealed class DapperNrtRuleRepository : DapperRepositoryBase, INrtRuleRepo
             kql_query            TEXT NOT NULL,
             proton_select_sql    TEXT NULL,
             materialized_view_ddl TEXT NULL,
+            alert_ddl            TEXT NULL,
             threshold            INTEGER NOT NULL DEFAULT 0,
             severity             TEXT NOT NULL DEFAULT 'Medium',
             confidence           TEXT NOT NULL DEFAULT 'Medium',
@@ -38,6 +39,7 @@ public sealed class DapperNrtRuleRepository : DapperRepositoryBase, INrtRuleRepo
         kql_query             AS KqlQuery,
         proton_select_sql     AS ProtonSelectSql,
         materialized_view_ddl AS MaterializedViewDdl,
+        alert_ddl             AS AlertDdl,
         threshold             AS Threshold,
         severity              AS Severity,
         confidence            AS Confidence,
@@ -56,12 +58,12 @@ public sealed class DapperNrtRuleRepository : DapperRepositoryBase, INrtRuleRepo
     private const string UpsertSql =
         """
         INSERT INTO nrt_rules (
-            id, title, description, kql_query, proton_select_sql, materialized_view_ddl,
+            id, title, description, kql_query, proton_select_sql, materialized_view_ddl, alert_ddl,
             threshold, severity, confidence, risk_score,
             mitre_tactics, mitre_techniques, is_enabled,
             created_at_utc, updated_at_utc
         ) VALUES (
-            @Id, @Title, @Description, @KqlQuery, @ProtonSelectSql, @MaterializedViewDdl,
+            @Id, @Title, @Description, @KqlQuery, @ProtonSelectSql, @MaterializedViewDdl, @AlertDdl,
             @Threshold, @Severity, @Confidence, @RiskScore,
             @MitreTactics, @MitreTechniques, @IsEnabled,
             @CreatedAtUtc, @UpdatedAtUtc
@@ -72,6 +74,7 @@ public sealed class DapperNrtRuleRepository : DapperRepositoryBase, INrtRuleRepo
             kql_query             = excluded.kql_query,
             proton_select_sql     = excluded.proton_select_sql,
             materialized_view_ddl = excluded.materialized_view_ddl,
+            alert_ddl             = excluded.alert_ddl,
             threshold             = excluded.threshold,
             severity              = excluded.severity,
             confidence            = excluded.confidence,
@@ -120,6 +123,7 @@ public sealed class DapperNrtRuleRepository : DapperRepositoryBase, INrtRuleRepo
             rule.KqlQuery,
             rule.ProtonSelectSql,
             rule.MaterializedViewDdl,
+            rule.AlertDdl,
             rule.Threshold,
             rule.Severity,
             rule.Confidence,
@@ -147,6 +151,7 @@ public sealed class DapperNrtRuleRepository : DapperRepositoryBase, INrtRuleRepo
         r.KqlQuery,
         r.ProtonSelectSql,
         r.MaterializedViewDdl,
+        r.AlertDdl,
         r.Threshold,
         r.Severity,
         r.Confidence,
@@ -165,6 +170,7 @@ public sealed class DapperNrtRuleRepository : DapperRepositoryBase, INrtRuleRepo
         public string KqlQuery { get; init; } = string.Empty;
         public string? ProtonSelectSql { get; init; }
         public string? MaterializedViewDdl { get; init; }
+        public string? AlertDdl { get; init; }
         public int Threshold { get; init; }
         public string Severity { get; init; } = "Medium";
         public string Confidence { get; init; } = "Medium";

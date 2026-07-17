@@ -22,28 +22,75 @@ public sealed class MaterializedViewDdl
         _name = name;
     }
 
-    public MaterializedViewDdl IfNotExists(bool value = true)                  { _ifNotExists = value; return this; }
-    public MaterializedViewDdl Into(string targetStream)                        { _targetStream = targetStream; return this; }
-    public MaterializedViewDdl As(string selectSql)                             { _selectSql = selectSql; return this; }
-    public MaterializedViewDdl WithComment(string comment)                      { _comment = comment; return this; }
-    public MaterializedViewDdl WithCheckpointInterval(int seconds)              { _settings["checkpoint_interval"] = seconds.ToString(); return this; }
-    public MaterializedViewDdl WithCheckpointDisabled()                         { _settings["checkpoint_interval"] = "-1"; return this; }
-    public MaterializedViewDdl WithEnableDlq(bool enable = true)               { _settings["enable_dlq"] = enable ? "true" : "false"; return this; }
-    public MaterializedViewDdl WithPauseOnStart(bool pause = true)             { _settings["pause_on_start"] = pause ? "true" : "false"; return this; }
-    public MaterializedViewDdl WithRecoveryPolicy(RecoveryPolicy policy)        { _settings["recovery_policy"] = $"'{policy.ToString().ToLowerInvariant()}'"; return this; }
-    public MaterializedViewDdl WithMemoryWeight(int weight)                     { _settings["memory_weight"] = weight.ToString(); return this; }
-    public MaterializedViewDdl WithDefaultHashTable(HashTableMode mode)         { _settings["default_hash_table"] = $"'{mode.ToString().ToLowerInvariant()}'"; return this; }
-    public MaterializedViewDdl WithDefaultHashJoin(HashTableMode mode)          { _settings["default_hash_join"] = $"'{mode.ToString().ToLowerInvariant()}'"; return this; }
-    public MaterializedViewDdl WithMaxHotKeys(int maxKeys)                      { _settings["max_hot_keys"] = maxKeys.ToString(); return this; }
+    public MaterializedViewDdl IfNotExists(bool value = true)
+    { _ifNotExists = value; return this; }
+
+    public MaterializedViewDdl Into(string targetStream)
+    { _targetStream = targetStream; return this; }
+
+    public MaterializedViewDdl As(string selectSql)
+    { _selectSql = selectSql; return this; }
+
+    public MaterializedViewDdl WithComment(string comment)
+    { _comment = comment; return this; }
+
+    public MaterializedViewDdl WithCheckpointInterval(int seconds)
+    { _settings["checkpoint_interval"] = seconds.ToString(); return this; }
+
+    public MaterializedViewDdl WithCheckpointDisabled()
+    { _settings["checkpoint_interval"] = "-1"; return this; }
+
+    public MaterializedViewDdl WithEnableDlq(bool enable = true)
+    { _settings["enable_dlq"] = enable ? "true" : "false"; return this; }
+
+    public MaterializedViewDdl WithPauseOnStart(bool pause = true)
+    { _settings["pause_on_start"] = pause ? "true" : "false"; return this; }
+
+    public MaterializedViewDdl WithRecoveryPolicy(RecoveryPolicy policy)
+    {
+        var value = policy switch
+        {
+            RecoveryPolicy.Strict => "strict",
+            RecoveryPolicy.BestEffort => "best_effort",
+            _ => throw new ArgumentOutOfRangeException(nameof(policy), policy, "Unknown recovery policy.")
+        };
+        _settings["recovery_policy"] = $"'{value}'";
+        return this;
+    }
+
+    public MaterializedViewDdl WithMemoryWeight(int weight)
+    { _settings["memory_weight"] = weight.ToString(); return this; }
+
+    public MaterializedViewDdl WithDefaultHashTable(HashTableMode mode)
+    { _settings["default_hash_table"] = $"'{ToProtonString(mode)}'"; return this; }
+
+    public MaterializedViewDdl WithDefaultHashJoin(HashTableMode mode)
+    { _settings["default_hash_join"] = $"'{ToProtonString(mode)}'"; return this; }
+
+    private static string ToProtonString(HashTableMode mode) => mode switch
+    {
+        HashTableMode.Memory => "memory",
+        HashTableMode.Hybrid => "hybrid",
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown hash table mode.")
+    };
+
+    public MaterializedViewDdl WithMaxHotKeys(int maxKeys)
+    { _settings["max_hot_keys"] = maxKeys.ToString(); return this; }
 
     /// <summary>Builds and returns the <c>CREATE MATERIALIZED VIEW</c> DDL statement.</summary>
     public string Build()
     {
         if (string.IsNullOrWhiteSpace(_selectSql))
+        {
             throw new InvalidOperationException("SELECT query is required — call As(...).");
+        }
 
         var sb = new StringBuilder("CREATE MATERIALIZED VIEW ");
-        if (_ifNotExists) sb.Append("IF NOT EXISTS ");
+        if (_ifNotExists)
+        {
+            sb.Append("IF NOT EXISTS ");
+        }
+
         sb.Append(QuoteName(_name));
 
         if (_targetStream is not null)
@@ -58,11 +105,13 @@ public sealed class MaterializedViewDdl
         if (_settings.Count > 0)
         {
             sb.Append("\nSETTINGS\n    ");
-            sb.Append(string.Join(",\n    ", _settings.Select(kv => $"{kv.Key}={kv.Value}")));
+            sb.AppendJoin(",\n    ", _settings.Select(kv => $"{kv.Key}={kv.Value}"));
         }
 
         if (_comment is not null)
+        {
             sb.Append($"\nCOMMENT '{EscapeSingleQuote(_comment)}'");
+        }
 
         return sb.ToString();
     }
@@ -80,5 +129,8 @@ public sealed class MaterializedViewDdl
         $"ALTER VIEW {QuoteName(_name)} MODIFY COMMENT '{EscapeSingleQuote(comment)}';";
 }
 
-public enum RecoveryPolicy { Strict, BestEffort }
-public enum HashTableMode   { Memory, Hybrid }
+public enum RecoveryPolicy
+{ Strict, BestEffort }
+
+public enum HashTableMode
+{ Memory, Hybrid }
