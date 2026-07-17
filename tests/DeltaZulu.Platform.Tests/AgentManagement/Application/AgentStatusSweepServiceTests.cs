@@ -32,7 +32,7 @@ public sealed class AgentStatusSweepServiceTests
         var agent = NewHeartbeatedAgent();
         _clock.Advance(TimeSpan.FromMinutes(5));
 
-        var transitions = await CreateService().SweepAsync(TenantId.Default, StaleAfter, OfflineAfter);
+        var transitions = await CreateService().SweepAsync(TenantId.Default, StaleAfter, OfflineAfter, TestContext.CancellationToken);
 
         Assert.AreEqual(0, transitions);
         Assert.AreEqual(AgentStatus.Online, agent.Status);
@@ -44,7 +44,7 @@ public sealed class AgentStatusSweepServiceTests
         var agent = NewHeartbeatedAgent();
         _clock.Advance(TimeSpan.FromMinutes(20));
 
-        var transitions = await CreateService().SweepAsync(TenantId.Default, StaleAfter, OfflineAfter);
+        var transitions = await CreateService().SweepAsync(TenantId.Default, StaleAfter, OfflineAfter, TestContext.CancellationToken);
 
         Assert.AreEqual(1, transitions);
         Assert.AreEqual(AgentStatus.Stale, agent.Status);
@@ -56,7 +56,7 @@ public sealed class AgentStatusSweepServiceTests
         var agent = NewHeartbeatedAgent();
         _clock.Advance(TimeSpan.FromMinutes(90));
 
-        var transitions = await CreateService().SweepAsync(TenantId.Default, StaleAfter, OfflineAfter);
+        var transitions = await CreateService().SweepAsync(TenantId.Default, StaleAfter, OfflineAfter, TestContext.CancellationToken);
 
         Assert.AreEqual(1, transitions);
         Assert.AreEqual(AgentStatus.Offline, agent.Status);
@@ -70,7 +70,7 @@ public sealed class AgentStatusSweepServiceTests
         _agents.Add(agent);
         _clock.Advance(TimeSpan.FromMinutes(90));
 
-        await CreateService().SweepAsync(TenantId.Default, StaleAfter, OfflineAfter);
+        await CreateService().SweepAsync(TenantId.Default, StaleAfter, OfflineAfter, TestContext.CancellationToken);
 
         Assert.AreEqual(AgentStatus.Offline, agent.Status);
     }
@@ -81,11 +81,13 @@ public sealed class AgentStatusSweepServiceTests
         var agent = NewHeartbeatedAgent();
         _clock.Advance(TimeSpan.FromMinutes(90));
         var service = CreateService();
-        await service.SweepAsync(TenantId.Default, StaleAfter, OfflineAfter);
+        await service.SweepAsync(TenantId.Default, StaleAfter, OfflineAfter, TestContext.CancellationToken);
 
-        var secondPass = await service.SweepAsync(TenantId.Default, StaleAfter, OfflineAfter);
+        var secondPass = await service.SweepAsync(TenantId.Default, StaleAfter, OfflineAfter, TestContext.CancellationToken);
 
         Assert.AreEqual(0, secondPass);
         Assert.AreEqual(AgentStatus.Offline, agent.Status);
     }
+
+    public TestContext TestContext { get; set; }
 }

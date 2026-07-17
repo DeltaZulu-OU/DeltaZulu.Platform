@@ -13,6 +13,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<IssueService>();
         services.AddScoped<ChangeService>();
         services.AddScoped<MergeService>();
+        services.AddScoped<IDetectionProjectionService, DetectionProjectionService>();
         services.AddScoped<VersionService>();
         services.AddScoped<RestoreService>();
         services.AddScoped<AcceptedContentReadService>();

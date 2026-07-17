@@ -22,17 +22,17 @@ public sealed class DuckDbOperationalMetricsTests
         await agentWriter.AppendAsync(new AgentObservationSnapshot(
             "tenant-a", "agent-1", "host-1", "host-1", "Windows", "1.0.0",
             now, now, true, "Running", 0.10, 2, 0, 0,
-            "cfg-1", "cfg-1", "profile-1", "profile-1"));
+            "cfg-1", "cfg-1", "profile-1", "profile-1"), TestContext.CancellationToken);
         await agentWriter.AppendAsync(new AgentObservationSnapshot(
             "tenant-b", "agent-1", "host-1", "host-1", "Windows", "1.0.0",
             now, now, true, "Running", 0.90, 4, 0, 1,
-            "cfg-1", "cfg-2", "profile-1", "profile-1"));
+            "cfg-1", "cfg-2", "profile-1", "profile-1"), TestContext.CancellationToken);
 
         await sourceWriter.AppendBatchAsync([
             Source("tenant-a", "agent-1", "Security", 100, 10),
             Source("tenant-a", "agent-2", "Security", 50, 5),
             Source("tenant-b", "agent-1", "Security", 25, 0)
-        ]);
+        ], TestContext.CancellationToken);
 
         var reader = new DuckDbOperationalMetricsReader(factory);
         var tenantA = reader.ReadOverviewSummary("tenant-a");
@@ -61,7 +61,7 @@ public sealed class DuckDbOperationalMetricsTests
         await writer.AppendAsync(new AgentObservationSnapshot(
             "default", "agent-stale", "host-stale", "host-stale", "Windows", "1.0.0",
             now, now.AddHours(-1), true, "Running", 0.95, 10, 3, 2,
-            "cfg-1", "cfg-1", "profile-1", "profile-1"));
+            "cfg-1", "cfg-1", "profile-1", "profile-1"), TestContext.CancellationToken);
 
         var reader = new DuckDbOperationalMetricsReader(factory);
         var row = reader.ReadLatestAgents().Single();
@@ -81,7 +81,7 @@ public sealed class DuckDbOperationalMetricsTests
         await writer.AppendBatchAsync([
             Source("default", "agent-1", "Security", 100, 10, sourceInstanceId: ""),
             Source("default", "agent-1", "Application", 50, 0, sourceInstanceId: "")
-        ]);
+        ], TestContext.CancellationToken);
 
         var reader = new DuckDbOperationalMetricsReader(factory);
         var rows = reader.ReadLatestSources();
@@ -119,4 +119,6 @@ public sealed class DuckDbOperationalMetricsTests
             ForwardFailedCount: 0, ObservedAtUtc: DateTime.UtcNow,
             TenantId: tenantId, SourceInstanceId: sourceInstanceId,
             ResourceFamily: "EventLog", Provider: "Microsoft-Windows-Eventlog");
+
+    public TestContext TestContext { get; set; }
 }

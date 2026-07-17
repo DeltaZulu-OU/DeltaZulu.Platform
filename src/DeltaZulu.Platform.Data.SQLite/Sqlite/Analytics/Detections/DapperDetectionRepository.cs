@@ -28,6 +28,9 @@ public sealed class DapperDetectionRepository : DapperRepositoryBase, IDetection
             test_metadata_json TEXT NULL,
             created_at_utc TEXT NOT NULL,
             updated_at_utc TEXT NOT NULL,
+            lookback_policy TEXT NULL,
+            materialization_mode TEXT NOT NULL DEFAULT 'PerResultRow',
+            accepted_version_id TEXT NULL,
             UNIQUE(detection_id, version)
         );
 
@@ -59,7 +62,10 @@ public sealed class DapperDetectionRepository : DapperRepositoryBase, IDetection
             d.is_enabled AS IsEnabled,
             d.test_metadata_json AS TestMetadataJson,
             d.created_at_utc AS CreatedAtUtc,
-            d.updated_at_utc AS UpdatedAtUtc
+            d.updated_at_utc AS UpdatedAtUtc,
+            d.lookback_policy AS LookbackPolicy,
+            d.materialization_mode AS MaterializationMode,
+            d.accepted_version_id AS AcceptedVersionId
         FROM detections d
         INNER JOIN (
             SELECT detection_id, MAX(version) AS max_version
@@ -90,7 +96,10 @@ public sealed class DapperDetectionRepository : DapperRepositoryBase, IDetection
             is_enabled AS IsEnabled,
             test_metadata_json AS TestMetadataJson,
             created_at_utc AS CreatedAtUtc,
-            updated_at_utc AS UpdatedAtUtc
+            updated_at_utc AS UpdatedAtUtc,
+            lookback_policy AS LookbackPolicy,
+            materialization_mode AS MaterializationMode,
+            accepted_version_id AS AcceptedVersionId
         FROM detections
         WHERE id = @Id;
         """;
@@ -116,7 +125,10 @@ public sealed class DapperDetectionRepository : DapperRepositoryBase, IDetection
             is_enabled AS IsEnabled,
             test_metadata_json AS TestMetadataJson,
             created_at_utc AS CreatedAtUtc,
-            updated_at_utc AS UpdatedAtUtc
+            updated_at_utc AS UpdatedAtUtc,
+            lookback_policy AS LookbackPolicy,
+            materialization_mode AS MaterializationMode,
+            accepted_version_id AS AcceptedVersionId
         FROM detections
         WHERE detection_id = @DetectionId
         ORDER BY version DESC
@@ -144,7 +156,10 @@ public sealed class DapperDetectionRepository : DapperRepositoryBase, IDetection
             is_enabled AS IsEnabled,
             test_metadata_json AS TestMetadataJson,
             created_at_utc AS CreatedAtUtc,
-            updated_at_utc AS UpdatedAtUtc
+            updated_at_utc AS UpdatedAtUtc,
+            lookback_policy AS LookbackPolicy,
+            materialization_mode AS MaterializationMode,
+            accepted_version_id AS AcceptedVersionId
         FROM detections
         WHERE detection_id = @DetectionId
         ORDER BY version DESC;
@@ -156,13 +171,15 @@ public sealed class DapperDetectionRepository : DapperRepositoryBase, IDetection
             id, detection_id, version, rule_hash, name, description, query_text,
             severity, confidence, risk_score, mitre_tactics, mitre_techniques,
             entity_mapping_hints, schedule_cron, suppression_policy_json,
-            is_enabled, test_metadata_json, created_at_utc, updated_at_utc
+            is_enabled, test_metadata_json, created_at_utc, updated_at_utc,
+            lookback_policy, materialization_mode, accepted_version_id
         )
         VALUES (
             @Id, @DetectionId, @Version, @RuleHash, @Name, @Description, @QueryText,
             @Severity, @Confidence, @RiskScore, @MitreTactics, @MitreTechniques,
             @EntityMappingHints, @ScheduleCron, @SuppressionPolicyJson,
-            @IsEnabled, @TestMetadataJson, @CreatedAtUtc, @UpdatedAtUtc
+            @IsEnabled, @TestMetadataJson, @CreatedAtUtc, @UpdatedAtUtc,
+            @LookbackPolicy, @MaterializationMode, @AcceptedVersionId
         )
         ON CONFLICT(id) DO UPDATE SET
             rule_hash = excluded.rule_hash,
@@ -179,7 +196,10 @@ public sealed class DapperDetectionRepository : DapperRepositoryBase, IDetection
             suppression_policy_json = excluded.suppression_policy_json,
             is_enabled = excluded.is_enabled,
             test_metadata_json = excluded.test_metadata_json,
-            updated_at_utc = excluded.updated_at_utc;
+            updated_at_utc = excluded.updated_at_utc,
+            lookback_policy = excluded.lookback_policy,
+            materialization_mode = excluded.materialization_mode,
+            accepted_version_id = excluded.accepted_version_id;
         """;
 
     private const string SetEnabledSql =
@@ -199,6 +219,33 @@ public sealed class DapperDetectionRepository : DapperRepositoryBase, IDetection
     public DapperDetectionRepository(IAppDbConnectionFactory connectionFactory)
         : base(connectionFactory, CreateSchemaSql)
     {
+    }
+
+    public override async Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
+    {
+        await base.EnsureInitializedAsync(cancellationToken);
+
+        await using var connection = await ConnectionFactory.OpenConnectionAsync(cancellationToken);
+        var columns = (await connection.QueryAsync<string>(new CommandDefinition(
+            "SELECT name FROM pragma_table_info('detections');", cancellationToken: cancellationToken)))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var migration in new[]
+        {
+            ("lookback_policy", "ALTER TABLE detections ADD COLUMN lookback_policy TEXT NULL;"),
+            ("materialization_mode", "ALTER TABLE detections ADD COLUMN materialization_mode TEXT NOT NULL DEFAULT 'PerResultRow';"),
+            ("accepted_version_id", "ALTER TABLE detections ADD COLUMN accepted_version_id TEXT NULL;")
+        })
+        {
+            if (!columns.Contains(migration.Item1))
+            {
+                await connection.ExecuteAsync(new CommandDefinition(migration.Item2, cancellationToken: cancellationToken));
+            }
+        }
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_detections_accepted_version ON detections (accepted_version_id) WHERE accepted_version_id IS NOT NULL;",
+            cancellationToken: cancellationToken));
     }
 
     public async Task<IReadOnlyList<DetectionRecord>> ListAsync(CancellationToken cancellationToken = default)
@@ -288,7 +335,10 @@ public sealed class DapperDetectionRepository : DapperRepositoryBase, IDetection
                 IsEnabled = detection.IsEnabled ? 1 : 0,
                 detection.TestMetadataJson,
                 CreatedAtUtc = Format(detection.CreatedAtUtc),
-                UpdatedAtUtc = Format(detection.UpdatedAtUtc)
+                UpdatedAtUtc = Format(detection.UpdatedAtUtc),
+                detection.LookbackPolicy,
+                detection.MaterializationMode,
+                detection.AcceptedVersionId
             },
             cancellationToken: cancellationToken));
     }
@@ -344,7 +394,10 @@ public sealed class DapperDetectionRepository : DapperRepositoryBase, IDetection
             row.IsEnabled != 0,
             row.TestMetadataJson,
             Parse(row.CreatedAtUtc),
-            Parse(row.UpdatedAtUtc));
+            Parse(row.UpdatedAtUtc),
+            row.LookbackPolicy,
+            row.MaterializationMode,
+            row.AcceptedVersionId);
 
     private sealed class DetectionRow
     {
@@ -367,5 +420,8 @@ public sealed class DapperDetectionRepository : DapperRepositoryBase, IDetection
         public string? TestMetadataJson { get; init; }
         public string CreatedAtUtc { get; init; } = string.Empty;
         public string UpdatedAtUtc { get; init; } = string.Empty;
+        public string? LookbackPolicy { get; init; }
+        public string MaterializationMode { get; init; } = "PerResultRow";
+        public string? AcceptedVersionId { get; init; }
     }
 }

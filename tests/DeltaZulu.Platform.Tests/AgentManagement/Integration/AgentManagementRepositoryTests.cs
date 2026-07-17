@@ -38,7 +38,9 @@ public sealed class AgentManagementRepositoryTests
         _provider.Dispose();
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         if (File.Exists(_databasePath))
+        {
             File.Delete(_databasePath);
+        }
     }
 
     private T Resolve<T>() where T : notnull => _scope.ServiceProvider.GetRequiredService<T>();
@@ -53,7 +55,7 @@ public sealed class AgentManagementRepositoryTests
         token.RecordUse(Now);
         repo.Add(token);
 
-        var byHash = await repo.GetByTokenHashAsync("token-hash");
+        var byHash = await repo.GetByTokenHashAsync("token-hash", TestContext.CancellationToken);
         Assert.IsNotNull(byHash);
         Assert.AreEqual(token.Id, byHash.Id);
         Assert.AreEqual(1, byHash.UseCount);
@@ -61,10 +63,10 @@ public sealed class AgentManagementRepositoryTests
         byHash.Revoke(Now.AddMinutes(1));
         repo.Save(byHash);
 
-        var reloaded = await repo.GetByIdAsync(token.Id);
+        var reloaded = await repo.GetByIdAsync(token.Id, TestContext.CancellationToken);
         Assert.IsNotNull(reloaded);
         Assert.IsNotNull(reloaded.RevokedAt);
-        Assert.HasCount(1, await repo.ListByTenantAsync(TenantId.Default));
+        Assert.HasCount(1, await repo.ListByTenantAsync(TenantId.Default, TestContext.CancellationToken));
     }
 
     [TestMethod]
@@ -74,15 +76,15 @@ public sealed class AgentManagementRepositoryTests
         var agentId = AgentId.New();
         repo.Add(AgentCredential.Issue(agentId, "hash-1", Now));
 
-        var bySecret = await repo.GetBySecretHashAsync("hash-1");
+        var bySecret = await repo.GetBySecretHashAsync("hash-1", TestContext.CancellationToken);
         Assert.IsNotNull(bySecret);
         Assert.AreEqual(agentId, bySecret.Id);
 
         bySecret.Rotate("hash-2", Now.AddMinutes(2));
         repo.Save(bySecret);
 
-        Assert.IsNull(await repo.GetBySecretHashAsync("hash-1"));
-        var rotated = await repo.GetByAgentIdAsync(agentId);
+        Assert.IsNull(await repo.GetBySecretHashAsync("hash-1", TestContext.CancellationToken));
+        var rotated = await repo.GetByAgentIdAsync(agentId, TestContext.CancellationToken);
         Assert.IsNotNull(rotated);
         Assert.AreEqual("hash-2", rotated.SecretHash);
         Assert.IsNotNull(rotated.RotatedAt);
@@ -99,14 +101,14 @@ public sealed class AgentManagementRepositoryTests
             [PolicyAssignmentId.New()], [ProfileVersionId.New()], ConfigVersionId.New(), Now);
         repo.Add(bundle);
 
-        var byHash = await repo.GetByAgentAndHashAsync(agentId, "bundle-hash");
+        var byHash = await repo.GetByAgentAndHashAsync(agentId, "bundle-hash", TestContext.CancellationToken);
         Assert.IsNotNull(byHash);
         Assert.AreEqual(bundle.Id, byHash.Id);
         Assert.HasCount(1, byHash.ContributingAssignmentIds);
         Assert.HasCount(1, byHash.ProfileVersionIds);
         Assert.IsNotNull(byHash.ConfigVersionId);
-        Assert.HasCount(1, await repo.ListByAgentAsync(agentId));
-        Assert.IsNull(await repo.GetByAgentAndHashAsync(AgentId.New(), "bundle-hash"));
+        Assert.HasCount(1, await repo.ListByAgentAsync(agentId, TestContext.CancellationToken));
+        Assert.IsNull(await repo.GetByAgentAndHashAsync(AgentId.New(), "bundle-hash", TestContext.CancellationToken));
     }
 
     [TestMethod]
@@ -118,7 +120,7 @@ public sealed class AgentManagementRepositoryTests
         repo.Add(new BundleAck(Guid.NewGuid(), agentId, bundleId, BundleAckStatus.Received, null, Now));
         repo.Add(new BundleAck(Guid.NewGuid(), agentId, bundleId, BundleAckStatus.Applied, null, Now.AddMinutes(1)));
 
-        var latest = await repo.GetLatestByAgentAsync(agentId);
+        var latest = await repo.GetLatestByAgentAsync(agentId, TestContext.CancellationToken);
 
         Assert.IsNotNull(latest);
         Assert.AreEqual(BundleAckStatus.Applied, latest.Status);
@@ -136,12 +138,12 @@ public sealed class AgentManagementRepositoryTests
         repo.AddMember(group.Id, agentId, Now); // idempotent
 
         CollectionAssert.AreEqual(new[] { agentId },
-            (await repo.ListMemberAgentIdsAsync(group.Id)).ToArray());
+            (await repo.ListMemberAgentIdsAsync(group.Id, TestContext.CancellationToken)).ToArray());
         CollectionAssert.AreEqual(new[] { group.Id },
-            (await repo.ListGroupIdsForAgentAsync(agentId)).ToArray());
+            (await repo.ListGroupIdsForAgentAsync(agentId, TestContext.CancellationToken)).ToArray());
 
         repo.RemoveMember(group.Id, agentId);
-        Assert.IsEmpty(await repo.ListMemberAgentIdsAsync(group.Id));
+        Assert.IsEmpty(await repo.ListMemberAgentIdsAsync(group.Id, TestContext.CancellationToken));
     }
 
     [TestMethod]
@@ -161,7 +163,7 @@ public sealed class AgentManagementRepositoryTests
             pinnedConfigVersion, Now);
         repo.Add(assignment);
 
-        var reloaded = await repo.GetByIdAsync(assignment.Id);
+        var reloaded = await repo.GetByIdAsync(assignment.Id, TestContext.CancellationToken);
         Assert.IsNotNull(reloaded);
         Assert.AreEqual(pinnedProfileVersion, reloaded.ProfileVersionPins[profileId]);
         Assert.AreEqual(pinnedConfigVersion, reloaded.PinnedConfigVersionId);
@@ -169,13 +171,13 @@ public sealed class AgentManagementRepositoryTests
         reloaded.SetPins(new Dictionary<ResourceProfileId, ProfileVersionId>(), null, Now.AddMinutes(1));
         repo.Save(reloaded);
 
-        var cleared = await repo.GetByIdAsync(assignment.Id);
+        var cleared = await repo.GetByIdAsync(assignment.Id, TestContext.CancellationToken);
         Assert.IsNotNull(cleared);
         Assert.IsEmpty(cleared.ProfileVersionPins);
         Assert.IsNull(cleared.PinnedConfigVersionId);
 
         var byScope = await repo.ListByScopeAsync(
-            TenantId.Default, AssignmentScopeType.Tenant, TenantId.Default.Value.ToString("D"));
+            TenantId.Default, AssignmentScopeType.Tenant, TenantId.Default.Value.ToString("D"), TestContext.CancellationToken);
         Assert.HasCount(1, byScope);
     }
 
@@ -190,10 +192,12 @@ public sealed class AgentManagementRepositoryTests
         repo.Add(v1);
         repo.Add(v2);
 
-        var latest = await repo.GetLatestPublishedAsync(configPolicyId);
+        var latest = await repo.GetLatestPublishedAsync(configPolicyId, TestContext.CancellationToken);
 
         Assert.IsNotNull(latest);
         Assert.AreEqual(v2.Id, latest.Id);
         Assert.AreEqual(2, latest.SequenceNumber);
     }
+
+    public TestContext TestContext { get; set; }
 }

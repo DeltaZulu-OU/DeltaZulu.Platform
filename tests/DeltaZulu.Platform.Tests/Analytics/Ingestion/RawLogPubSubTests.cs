@@ -69,7 +69,7 @@ public sealed class RawLogPubSubTests
                 "WS-001",
                 "{\"EventID\":\"1\"}")]);
 
-        bus.PublishAsync(batch).AsTask().GetAwaiter().GetResult();
+        bus.PublishAsync(batch, TestContext.CancellationToken).AsTask().GetAwaiter().GetResult();
 
         Assert.AreSame(batch, subscriber.LastBatch);
     }
@@ -94,7 +94,7 @@ public sealed class RawLogPubSubTests
                 "WS-001",
                 "{\"EventID\":\"1\"}")]);
 
-        bus.PublishAsync(batch).AsTask().GetAwaiter().GetResult();
+        bus.PublishAsync(batch, TestContext.CancellationToken).AsTask().GetAwaiter().GetResult();
 
         Assert.AreEqual(1, subscriber.Count);
     }
@@ -133,4 +133,6 @@ public sealed class RawLogPubSubTests
             return ValueTask.CompletedTask;
         }
     }
+
+    public TestContext TestContext { get; set; }
 }

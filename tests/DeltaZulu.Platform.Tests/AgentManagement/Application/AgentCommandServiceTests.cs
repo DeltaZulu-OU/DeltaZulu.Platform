@@ -30,7 +30,7 @@ public sealed class AgentCommandServiceTests
         var agent = NewAgent();
 
         var command = await CreateService().IssueAsync(
-            agent.Id, AgentCommandType.CollectDiagnostics, "operator");
+            agent.Id, AgentCommandType.CollectDiagnostics, "operator", ct: TestContext.CancellationToken);
 
         Assert.AreEqual(AgentCommandStatus.Pending, command.Status);
         Assert.AreEqual("operator", command.RequestedBy);
@@ -41,7 +41,7 @@ public sealed class AgentCommandServiceTests
     public async Task Issue_UnknownAgent_Throws()
     {
         var ex = await Assert.ThrowsExactlyAsync<DomainException>(() =>
-            CreateService().IssueAsync(AgentId.New(), AgentCommandType.FlushBuffer, null));
+            CreateService().IssueAsync(AgentId.New(), AgentCommandType.FlushBuffer, null, ct: TestContext.CancellationToken));
         Assert.AreEqual("agent.not_found", ex.Code);
     }
 
@@ -50,9 +50,9 @@ public sealed class AgentCommandServiceTests
     {
         var agent = NewAgent();
         var service = CreateService();
-        var command = await service.IssueAsync(agent.Id, AgentCommandType.TestOutput, null);
+        var command = await service.IssueAsync(agent.Id, AgentCommandType.TestOutput, null, ct: TestContext.CancellationToken);
 
-        await service.CancelAsync(command.Id);
+        await service.CancelAsync(command.Id, TestContext.CancellationToken);
 
         Assert.AreEqual(AgentCommandStatus.Cancelled, _commands.Commands[command.Id].Status);
     }
@@ -62,14 +62,16 @@ public sealed class AgentCommandServiceTests
     {
         var agent = NewAgent();
         var service = CreateService();
-        var shortCommand = await service.IssueAsync(agent.Id, AgentCommandType.FlushBuffer, null, timeoutSeconds: 60);
-        var longCommand = await service.IssueAsync(agent.Id, AgentCommandType.FlushBuffer, null, timeoutSeconds: 3600);
+        var shortCommand = await service.IssueAsync(agent.Id, AgentCommandType.FlushBuffer, null, timeoutSeconds: 60, TestContext.CancellationToken);
+        var longCommand = await service.IssueAsync(agent.Id, AgentCommandType.FlushBuffer, null, timeoutSeconds: 3600, TestContext.CancellationToken);
 
         _clock.Advance(TimeSpan.FromMinutes(5));
-        var expired = await service.ExpireOverdueAsync(TenantId.Default);
+        var expired = await service.ExpireOverdueAsync(TenantId.Default, TestContext.CancellationToken);
 
         Assert.AreEqual(1, expired);
         Assert.AreEqual(AgentCommandStatus.Expired, _commands.Commands[shortCommand.Id].Status);
         Assert.AreEqual(AgentCommandStatus.Pending, _commands.Commands[longCommand.Id].Status);
     }
+
+    public TestContext TestContext { get; set; }
 }
