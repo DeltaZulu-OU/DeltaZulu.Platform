@@ -1,0 +1,30 @@
+{
+  "source": "cef_firewall",
+  "fields": [
+    { "name": "cefVersion", "kqlScalar": "String", "parserGrammarRef": "cef:header:version" },
+    { "name": "deviceVendor", "kqlScalar": "String", "parserGrammarRef": "cef:header:deviceVendor" },
+    { "name": "deviceProduct", "kqlScalar": "String", "parserGrammarRef": "cef:header:deviceProduct" },
+    { "name": "deviceVersion", "kqlScalar": "String", "parserGrammarRef": "cef:header:deviceVersion" },
+    { "name": "signatureId", "kqlScalar": "String", "parserGrammarRef": "cef:header:signatureId" },
+    { "name": "name", "kqlScalar": "String", "parserGrammarRef": "cef:header:name" },
+    { "name": "severity", "kqlScalar": "Long", "parserGrammarRef": "cef:header:severity" },
+    { "name": "rt", "kqlScalar": "DateTime", "parserGrammarRef": "cef:extension:rt", "canonicalization": "Utc" },
+    { "name": "src", "kqlScalar": "String", "parserGrammarRef": "cef:extension:src", "annotation": { "kind": "Ipv4" } },
+    { "name": "dst", "kqlScalar": "String", "parserGrammarRef": "cef:extension:dst", "annotation": { "kind": "Ipv4" } },
+    { "name": "spt", "kqlScalar": "Long", "parserGrammarRef": "cef:extension:spt" },
+    { "name": "dpt", "kqlScalar": "Long", "parserGrammarRef": "cef:extension:dpt" },
+    { "name": "proto", "kqlScalar": "String", "parserGrammarRef": "cef:extension:proto" },
+    { "name": "act", "kqlScalar": "String", "parserGrammarRef": "cef:extension:act" },
+    { "name": "smac", "kqlScalar": "String", "parserGrammarRef": "cef:extension:smac", "annotation": { "kind": "Mac48" }, "canonicalization": "MacLowerColon" },
+    { "name": "dmac", "kqlScalar": "String", "parserGrammarRef": "cef:extension:dmac", "annotation": { "kind": "Mac48" }, "canonicalization": "MacLowerColon" },
+    { "name": "suser", "kqlScalar": "String", "parserGrammarRef": "cef:extension:suser" },
+    { "name": "duser", "kqlScalar": "String", "parserGrammarRef": "cef:extension:duser" },
+    { "name": "extensionsRaw", "kqlScalar": "Dynamic", "parserGrammarRef": "cef:extension:* (unmapped keys)" },
+    { "name": "agentBuild", "kqlScalar": "String", "parserGrammarRef": "cef:extension:cs3 (cs3Label=AgentBuild)", "annotation": { "kind": "NestedPath", "path": "$.cs3" } },
+    { "name": "ruleName", "kqlScalar": "String", "parserGrammarRef": "cef:extension:cs1 (cs1Label=RuleName)", "promoted": true },
+    { "name": "sessionGuid", "kqlScalar": "String", "parserGrammarRef": "cef:extension:cs2 (cs2Label=SessionGuid)", "annotation": { "kind": "Guid" }, "promoted": true },
+    { "name": "blocked", "kqlScalar": "String", "parserGrammarRef": "cef:extension:cs4 (cs4Label=Blocked)", "annotation": { "kind": "Bool", "lexemes": ["true", "false"] }, "promoted": true },
+    { "name": "sessionDurationMs", "kqlScalar": "Long", "parserGrammarRef": "cef:extension:cn1 (cn1Label=SessionDurationMs)", "annotation": { "kind": "Duration", "unit": "ms" }, "promoted": true },
+    { "name": "transactionAmount", "kqlScalar": "Real", "parserGrammarRef": "cef:extension:cn2 (cn2Label=TransactionAmount)", "annotation": { "kind": "Decimal", "precision": 18, "scale": 2 }, "promoted": true }
+  ]
+}

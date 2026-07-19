@@ -10,6 +10,9 @@
     <Folder Include="Analytics\Sample\" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Analytics\Schema\Catalog\Sources\*.catalog.json" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Kusto.Toolkit" />
     <PackageReference Include="Microsoft.Azure.Kusto.Language" />
   </ItemGroup>
