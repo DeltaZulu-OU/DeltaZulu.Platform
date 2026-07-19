@@ -5,6 +5,5 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
-    <ProjectReference Include="..\DeltaZulu.Platform.Application\DeltaZulu.Platform.Application.csproj" />
   </ItemGroup>
 </Project>

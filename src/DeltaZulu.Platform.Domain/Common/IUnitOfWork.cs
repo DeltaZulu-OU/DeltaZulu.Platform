@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Domain.Governance.Contracts;
+namespace DeltaZulu.Platform.Domain.Common;
 
 /// <summary>
 /// Coordinates persistence across repositories. Implemented by the persistence layer

@@ -1,6 +1,7 @@
 using Dapper;
 using DeltaZulu.Platform.Application.Governance.Services;
 using DeltaZulu.Platform.Data.Sqlite.Governance;
+using DeltaZulu.Platform.Domain.Common;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
 
 namespace DeltaZulu.Platform.Tests.Governance.Integration;

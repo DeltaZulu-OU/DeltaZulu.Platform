@@ -163,6 +163,15 @@ AuditBuddy-like provider -> Cmdb.AuditPolicyState
 
 It must not produce final coverage decisions. The Platform joins `Cmdb.AuditPolicyState` with reference event lookups, rule log requirements, Agent pipeline observations, storage state, and alert outcomes. For example, if a rule requires Security 4688, reference data maps 4688 to Audit Process Creation, CMDB reports Audit Process Creation Success disabled, and the Agent reports zero 4688 reads, Analytics can produce `BlockedByGeneration` with opportunity cost and a recommendation.
 
+## Amendment: volatile endpoint context (ADR 0011)
+
+[ADR 0011: RPC correlation evidence architecture](0011-rpc-correlation-evidence-architecture.md) proposed a narrow, initially-conflicting carve-out: the Agent resolving perishable, point-in-time endpoint context (open handles, live process/socket ownership, in-memory pointers) and known RPC UUID/opnum pairs. This ADR's `_resolved`-centralization rule targets *deterministic, static* lookups that a central catalog can compute identically at any time, including on replay — it does not extend to context that is genuinely lost once a process exits or a handle closes and cannot be reconstructed centrally after the fact. That distinction resolves the conflict:
+
+- Agent-emitted volatile-context and RPC hint fields must not use the `_resolved` suffix; they use distinctly namespaced fields (e.g. `Rpc.InterfaceName`, `Rpc.OperationName`) so they are never confused with this ADR's Silver-owned `_resolved` lookups.
+- RPC UUID/opnum resolution remains a static lookup in principle, so the Agent's copy of it is a provisional hint used only to drive local profile filtering; Platform Silver still independently re-resolves UUID/opnum from raw Bronze evidence as the authoritative source, per this ADR's centralization principle.
+
+See ADR 0011 for the full field list and rationale.
+
 ## Consequences
 
 - The Agent remains small and reliable because it emits bounded local facts rather than central evaluation verdicts.
@@ -177,4 +186,5 @@ It must not produce final coverage decisions. The Platform joins `Cmdb.AuditPoli
 
 - [ADR 0007: Schema medallion and Proton alignment](0007-schema-medallion-and-proton-alignment.md)
 - [ADR 0008: Lake-first operational metrics and Overview dashboard](0008-lake-first-operational-metrics.md)
+- [ADR 0011: RPC correlation evidence architecture](0011-rpc-correlation-evidence-architecture.md)
 - [DeltaZulu agent management roadmap](../AGENT_MANAGEMENT_ROADMAP.md)

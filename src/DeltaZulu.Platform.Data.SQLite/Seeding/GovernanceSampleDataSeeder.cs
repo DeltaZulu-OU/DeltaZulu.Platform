@@ -3,7 +3,12 @@ using Microsoft.Data.Sqlite;
 
 namespace DeltaZulu.Platform.Data.Seeding;
 
-public static class DemoSeeder
+/// <summary>
+/// Seeds deterministic Governance sample data (detections, issues, change requests, reviews) for
+/// local development. Unrelated to the Importing.Core "DemoSeed" import mode / DemoSeedImportCatalog
+/// (file-fixture data for the bulk-import preview UI) despite the historically similar names.
+/// </summary>
+public static class GovernanceSampleDataSeeder
 {
     private static readonly string AnalystId = "a0000000-0000-0000-0000-000000000001";
     private static readonly string ReviewerId = "a0000000-0000-0000-0000-000000000002";

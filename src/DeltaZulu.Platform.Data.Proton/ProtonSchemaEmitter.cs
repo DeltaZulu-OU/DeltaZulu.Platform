@@ -1,6 +1,7 @@
 using System.Text;
 using DeltaZulu.Platform.Domain.Analytics.Mapping;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
+using DeltaZulu.Platform.Domain.Common;
 using static DeltaZulu.Platform.Data.Proton.Ddl.ProtonDdlHelpers;
 
 namespace DeltaZulu.Platform.Data.Proton;
@@ -147,7 +148,7 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
             {
                 // Emit a typed NULL so Proton does not infer an incorrect column type
                 var nullType = $"nullable({colDef.DuckDbType.ToProtonSql()})";
-                sb.Append($"CAST(NULL, '{EscapeSql(nullType)}')");
+                sb.Append($"CAST(NULL, '{SqlLiteralEscaping.EscapeSingleQuotes(nullType)}')");
             }
             else
             {
@@ -189,11 +190,11 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
     private string EmitExpr(ExprDef expr) => expr switch {
         ColumnExpr col => QuoteIdentifier(col.Name),
         LiteralExpr lit => EmitLiteral(lit),
-        JsonTextExpr json => $"JSON_VALUE({EmitExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}')",
-        JsonExistsExpr json => $"isNotNull(JSON_VALUE({EmitExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}'))",
+        JsonTextExpr json => $"JSON_VALUE({EmitExpr(json.JsonColumn)}, '{SqlLiteralEscaping.EscapeSingleQuotes(json.Path)}')",
+        JsonExistsExpr json => $"isNotNull(JSON_VALUE({EmitExpr(json.JsonColumn)}, '{SqlLiteralEscaping.EscapeSingleQuotes(json.Path)}'))",
         RegexExtractExpr re => EmitRegexExtract(re),
-        CastExpr cast => $"CAST({EmitExpr(cast.Input)}, '{EscapeSql(cast.TargetType.ToProtonSql())}')",
-        TryCastExpr cast => $"accurateCastOrNull({EmitExpr(cast.Input)}, '{EscapeSql(cast.TargetType.ToProtonSql())}')",
+        CastExpr cast => $"CAST({EmitExpr(cast.Input)}, '{SqlLiteralEscaping.EscapeSingleQuotes(cast.TargetType.ToProtonSql())}')",
+        TryCastExpr cast => $"accurateCastOrNull({EmitExpr(cast.Input)}, '{SqlLiteralEscaping.EscapeSingleQuotes(cast.TargetType.ToProtonSql())}')",
         FunctionExpr fn => $"{fn.Name}({string.Join(", ", fn.Args.Select(EmitExpr))})",
         BinaryExpr bin => EmitBinary(bin),
         CaseExpr cs => EmitCase(cs),
@@ -209,7 +210,7 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
 
         if (lit.Value is string s)
         {
-            return $"'{EscapeSql(s)}'";
+            return $"'{SqlLiteralEscaping.EscapeSingleQuotes(s)}'";
         }
 
         if (lit.Value is bool b)
@@ -225,7 +226,7 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
         // Proton's extract() returns the first captured group.
         // For group 0 (full-match semantics), wrap the pattern in a capture group.
         var pattern = re.Group == 0 ? $"({re.Pattern})" : re.Pattern;
-        return $"extract({EmitExpr(re.Input)}, '{EscapeSql(pattern)}')";
+        return $"extract({EmitExpr(re.Input)}, '{SqlLiteralEscaping.EscapeSingleQuotes(pattern)}')";
     }
 
     private string EmitBinary(BinaryExpr bin)
@@ -256,5 +257,4 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
         return sb.ToString();
     }
 
-    private static string EscapeSql(string s) => s.Replace("'", "''");
 }

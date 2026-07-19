@@ -2,6 +2,7 @@
 using System.Text;
 using DeltaZulu.Platform.Domain.Analytics.Mapping;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
+using DeltaZulu.Platform.Domain.Common;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 /// <summary>
@@ -284,7 +285,7 @@ public sealed class SchemaEmitter
 
         if (lit.Value is string s)
         {
-            return $"'{EscapeSql(s)}'";
+            return $"'{SqlLiteralEscaping.EscapeSingleQuotes(s)}'";
         }
 
         if (lit.Value is bool b)
@@ -294,8 +295,6 @@ public sealed class SchemaEmitter
 
         return lit.Value.ToString()!;
     }
-
-    private static string EscapeSql(string s) => s.Replace("'", "''");
 
     private string EmitMappingBinary(BinaryExpr bin)
     {
@@ -331,9 +330,9 @@ public sealed class SchemaEmitter
     {
         ColumnExpr col => DuckDbSqlText.EscapeIdent(col.Name),
         LiteralExpr lit => EmitMappingLiteral(lit),
-        JsonTextExpr json => $"json_extract_string({EmitMappingExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}')",
-        JsonExistsExpr json => $"json_exists({EmitMappingExpr(json.JsonColumn)}, '{EscapeSql(json.Path)}')",
-        RegexExtractExpr re => $"regexp_extract({EmitMappingExpr(re.Input)}, '{EscapeSql(re.Pattern)}', {re.Group})",
+        JsonTextExpr json => $"json_extract_string({EmitMappingExpr(json.JsonColumn)}, '{SqlLiteralEscaping.EscapeSingleQuotes(json.Path)}')",
+        JsonExistsExpr json => $"json_exists({EmitMappingExpr(json.JsonColumn)}, '{SqlLiteralEscaping.EscapeSingleQuotes(json.Path)}')",
+        RegexExtractExpr re => $"regexp_extract({EmitMappingExpr(re.Input)}, '{SqlLiteralEscaping.EscapeSingleQuotes(re.Pattern)}', {re.Group})",
         CastExpr cast => $"CAST({EmitMappingExpr(cast.Input)} AS {cast.TargetType.ToSql()})",
         TryCastExpr cast => $"TRY_CAST({EmitMappingExpr(cast.Input)} AS {cast.TargetType.ToSql()})",
         FunctionExpr fn => $"{fn.Name}({string.Join(", ", fn.Args.Select(EmitMappingExpr))})",

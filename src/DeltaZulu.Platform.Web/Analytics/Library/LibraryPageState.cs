@@ -5,7 +5,6 @@ namespace DeltaZulu.Platform.Web.Analytics.Library;
 
 public sealed class LibraryPageState
 {
-    public const int PageSize = 12;
     public const int DefaultRowsPerPage = 20;
 
     public static readonly int[] PageSizeOptions = [10, 20, 50, 100];
@@ -26,24 +25,10 @@ public sealed class LibraryPageState
 
     public bool Deleting { get; set; }
 
-    public int Page { get; set; } = 1;
-
     public LibraryItemKind? KindFilter { get; set; }
 
     public IReadOnlyList<LibraryItem> FilteredItems
         => Items.Where(FilterItem).ToArray();
-
-    public IReadOnlyList<LibraryItem> PagedItems
-        => FilteredItems
-            .Skip((Page - 1) * PageSize)
-            .Take(PageSize)
-            .ToArray();
-
-    public int TotalPages
-        => Math.Max(1, (int)Math.Ceiling(FilteredItems.Count / (double)PageSize));
-
-    public bool HasPagination
-        => !Loading && FilteredItems.Count > PageSize;
 
     public string FilterTitle
         => KindFilter switch {
@@ -103,19 +88,6 @@ public sealed class LibraryPageState
             || ContainsSearchText(item.DependencyLabel)
             || ContainsSearchText(LibraryLabels.KindLabel(item.Kind))
             || ContainsSearchText(LibraryLabels.StatusLabel(item.Status));
-    }
-
-    public void ClampPage()
-    {
-        if (Page > TotalPages)
-        {
-            Page = TotalPages;
-        }
-
-        if (Page < 1)
-        {
-            Page = 1;
-        }
     }
 
     public bool IsDeletePendingFor(LibraryItem item)

@@ -4,6 +4,12 @@ namespace DeltaZulu.Importing.Core;
 
 public sealed record DemoSeedDataset(string Name, IReadOnlyDictionary<string, string> Files, IReadOnlyDictionary<string, int> ExpectedCounts);
 
+/// <summary>
+/// Fixture files (sysmon/security/dns) materialized to disk for the <see cref="ImportMode.DemoSeed"/>
+/// import-preview flow. Unrelated to Data.SQLite's GovernanceSampleDataSeeder (dev-database seed
+/// data) or the Agent Simulator's SyntheticHealth (live telemetry generation) despite all three
+/// being "generate fake data for local use" utilities - they serve different subsystems.
+/// </summary>
 public static class DemoSeedImportCatalog
 {
     public static DemoSeedDataset Baseline { get; } = new(

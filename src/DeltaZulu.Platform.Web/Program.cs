@@ -63,9 +63,9 @@ builder.Services.AddGovernanceGitAcceptedContentStore(options =>
         ? acceptedContentRepositoryPath
         : Path.Combine(builder.Environment.ContentRootPath, acceptedContentRepositoryPath));
 
-if (builder.Configuration.GetValue<bool>("DemoSeed:Enabled"))
+if (builder.Configuration.GetValue<bool>("GovernanceSampleData:Enabled"))
 {
-    DemoSeeder.Seed(connectionString);
+    GovernanceSampleDataSeeder.Seed(connectionString);
 }
 
 var seedSampleDetectionCatalog = builder.Configuration.GetValue<bool?>("SampleDetectionContent:SeedGovernanceCatalog")

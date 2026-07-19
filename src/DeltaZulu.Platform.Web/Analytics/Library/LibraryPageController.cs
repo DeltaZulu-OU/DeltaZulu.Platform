@@ -31,7 +31,6 @@ public sealed class LibraryPageController
             var items = await _library.ListAsync(cancellationToken);
             State.Items.Clear();
             State.Items.AddRange(items);
-            State.ClampPage();
         }
         catch (Exception ex)
         {
@@ -135,14 +134,12 @@ public sealed class LibraryPageController
     public void SetFilter(LibraryItemKind? kind)
     {
         State.KindFilter = kind;
-        State.Page = 1;
         State.ResetPendingDelete();
     }
 
     public void SetSearchText(string? searchText)
     {
         State.SearchText = searchText ?? string.Empty;
-        State.Page = 1;
         State.ResetPendingDelete();
     }
 
@@ -150,29 +147,6 @@ public sealed class LibraryPageController
     {
         State.SearchText = string.Empty;
         State.KindFilter = null;
-        State.Page = 1;
-        State.ResetPendingDelete();
-    }
-
-    public void PreviousPage()
-    {
-        if (State.Page <= 1)
-        {
-            return;
-        }
-
-        State.Page--;
-        State.ResetPendingDelete();
-    }
-
-    public void NextPage()
-    {
-        if (State.Page >= State.TotalPages)
-        {
-            return;
-        }
-
-        State.Page++;
         State.ResetPendingDelete();
     }
 

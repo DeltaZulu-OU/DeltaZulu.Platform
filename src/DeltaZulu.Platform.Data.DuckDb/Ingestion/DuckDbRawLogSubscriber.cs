@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using DeltaZulu.Platform.Domain.Common;
 using DeltaZulu.Platform.Ingestion.PubSub;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Ingestion;
@@ -91,15 +92,15 @@ public sealed class DuckDbRawLogSubscriber : IRawLogSubscriber, IDisposable
             builder.Append("(TIMESTAMP '");
             builder.Append(item.IngestTimeUtc.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
             builder.Append("', '");
-            builder.Append(EscapeSql(item.SourceName));
+            builder.Append(SqlLiteralEscaping.EscapeSingleQuotes(item.SourceName));
             builder.Append("', '");
-            builder.Append(EscapeSql(item.Provider));
+            builder.Append(SqlLiteralEscaping.EscapeSingleQuotes(item.Provider));
             builder.Append("', '");
-            builder.Append(EscapeSql(item.Host));
+            builder.Append(SqlLiteralEscaping.EscapeSingleQuotes(item.Host));
             builder.Append("', CAST('");
-            builder.Append(EscapeSql(item.RawLog));
+            builder.Append(SqlLiteralEscaping.EscapeSingleQuotes(item.RawLog));
             builder.Append("' AS JSON), '");
-            builder.Append(EscapeSql(item.RawText));
+            builder.Append(SqlLiteralEscaping.EscapeSingleQuotes(item.RawText));
             builder.Append("')");
         }
 
@@ -115,5 +116,4 @@ public sealed class DuckDbRawLogSubscriber : IRawLogSubscriber, IDisposable
         }
     }
 
-    private static string EscapeSql(string value) => value.Replace("'", "''", StringComparison.Ordinal);
 }
