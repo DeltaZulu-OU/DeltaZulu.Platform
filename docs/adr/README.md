@@ -18,6 +18,7 @@ This directory contains the current centralized ADR set for DeltaZulu Platform. 
 | [`0012-agent-control-plane-pull-protocol-and-auth.md`](0012-agent-control-plane-pull-protocol-and-auth.md) | Accepted | Pull-based agent check-in protocol, bootstrap-token enrollment, bearer agent secrets, lazy hash-deduplicated bundle resolution, and lake drift mapping. |
 | [`0013-constrained-agent-command-queue.md`](0013-constrained-agent-command-queue.md) | Accepted | Allowlisted one-shot agent commands delivered through the pull loop with an audited lifecycle and timeout expiry. |
 | [`0014-type-contract-catalog.md`](0014-type-contract-catalog.md) | Accepted | Type contract catalog for the Bronze→Silver parser boundary: closed KQL scalar/annotation/canonicalization vocabulary, and Avro/Arrow/Proton/DuckDB/parser-contract projections from one source of truth. |
+| [`0015-semantic-deferral.md`](0015-semantic-deferral.md) | Accepted | Semantic normalization deferred; the catalog's reserved `semantic` column stays empty until a portable detection-pack requirement triggers populating it with OpenTelemetry semantic convention names. |
 
 ## Conversion policy
 
