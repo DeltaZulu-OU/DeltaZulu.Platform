@@ -12,7 +12,10 @@ public sealed class DuckDbAlertLakeWriter(DuckDbConnectionFactory connectionFact
             id VARCHAR NOT NULL, detection_id VARCHAR NOT NULL, detection_version INTEGER NOT NULL,
             detection_run_id VARCHAR NOT NULL, alert_time_utc TIMESTAMP NOT NULL, source_view VARCHAR NOT NULL,
             source_event_id VARCHAR, severity VARCHAR NOT NULL, confidence VARCHAR NOT NULL,
-            risk_score INTEGER NOT NULL, evidence_json JSON NOT NULL, created_at_utc TIMESTAMP NOT NULL
+            risk_score INTEGER NOT NULL, evidence_json JSON NOT NULL, evidence_hash VARCHAR NOT NULL,
+            materialization_key VARCHAR NOT NULL, materialization_mode VARCHAR NOT NULL,
+            rule_hash VARCHAR NOT NULL, is_suppressed BOOLEAN NOT NULL, suppression_key VARCHAR,
+            created_at_utc TIMESTAMP NOT NULL
         );
         """;
 
@@ -44,11 +47,19 @@ public sealed class DuckDbAlertLakeWriter(DuckDbConnectionFactory connectionFact
     }
 
     private static string BuildInsertSql(AlertRecord alert) => $"""
-        INSERT INTO lake.alert_events VALUES (
+        INSERT INTO lake.alert_events (
+            id, detection_id, detection_version, detection_run_id, alert_time_utc, source_view,
+            source_event_id, severity, confidence, risk_score, evidence_json, evidence_hash,
+            materialization_key, materialization_mode, rule_hash, is_suppressed, suppression_key,
+            created_at_utc)
+        VALUES (
             {StringLiteral(alert.Id)}, {StringLiteral(alert.DetectionId)}, {alert.DetectionVersion},
             {StringLiteral(alert.DetectionRunId)}, {TimestampLiteral(alert.AlertTimeUtc)}, {StringLiteral(alert.SourceView)},
             {NullableStringLiteral(alert.SourceEventId)}, {StringLiteral(alert.Severity)}, {StringLiteral(alert.Confidence)},
-            {alert.RiskScore}, CAST({StringLiteral(alert.EvidenceJson)} AS JSON), {TimestampLiteral(alert.CreatedAtUtc)});
+            {alert.RiskScore}, CAST({StringLiteral(alert.EvidenceJson)} AS JSON), {StringLiteral(alert.EvidenceHash)},
+            {StringLiteral(alert.MaterializationKey)}, {StringLiteral(alert.MaterializationMode)}, {StringLiteral(alert.RuleHash)},
+            {alert.IsSuppressed.ToString().ToLowerInvariant()}, {NullableStringLiteral(alert.SuppressionKey)},
+            {TimestampLiteral(alert.CreatedAtUtc)});
         """;
 
     private static string StringLiteral(string value) => $"'{value.Replace("'", "''", StringComparison.Ordinal)}'";

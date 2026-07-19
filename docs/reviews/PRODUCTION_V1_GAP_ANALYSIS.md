@@ -1,14 +1,14 @@
 # DeltaZulu Platform production v1 gap analysis
 
-**Review date:** 2026-06-26  
-**Scope:** repository-wide static review of architecture, host composition, persistence/runtime boundaries, product modules, tests, and existing documentation.  
+**Review date:** 2026-07-19
+**Scope:** repository-wide static review of architecture, host composition, persistence/runtime boundaries, product modules, tests, and existing documentation, refreshed after the type-fidelity documentation/code gap analysis.
 **Target:** production-ready v1 of the consolidated DeltaZulu Platform.
 
 ## Executive summary
 
-DeltaZulu Platform is a strong pre-v1 platform prototype with a coherent Clean Architecture direction, a unified Blazor host, mature Analytics and Governance feature areas, and a substantial automated test suite. The codebase already contains important production foundations: centralized module registration, typed JS interop wrappers, application-layer query execution contracts, DuckDB SQL emission/runtime, SQLite repositories, Git-backed accepted-content storage, NRT rule compilation to Proton DDL, curated analytics records, dashboard components, and governed detection-content workflows.
+DeltaZulu Platform is a strong pre-v1 platform prototype with a coherent Clean Architecture direction, a unified Blazor host, mature Analytics and Governance feature areas, and a substantial automated test suite. The codebase already contains important production foundations: centralized module registration, typed JS interop wrappers, application-layer query execution contracts, DuckDB SQL emission/runtime, SQLite repositories, Git-backed accepted-content storage, NRT rule compilation to Proton DDL, curated analytics records, dashboard components, governed detection-content workflows, DuckDB alert/entity lake writers, partial Operations KQL views, and a dedicated operations SQLite connection for candidate lifecycle state.
 
-The platform is **not production-ready for v1** yet. The largest blockers are operational rather than cosmetic: there is no real authentication/authorization boundary, user identity is still a proof-of-concept switcher, Operations has no registered module or end-to-end alert pipeline, alert storage still violates the documented append-only lake model, executable detection projection from accepted governance content is incomplete, scheduled/NRT mediation is missing, and build/test validation could not be run in this environment because the .NET SDK is not installed.
+The platform is **not production-ready for v1** yet. The largest blockers are operational rather than cosmetic: there is no real authentication/authorization boundary, user identity is still a proof-of-concept switcher, Operations has no registered module or end-to-end alert pipeline, detection-run ownership and runtime materialization still deviate from the documented append-only lake model, scheduled/NRT mediation is not durable, ADR 0014 type-fidelity ingestion is not implemented, and the current `dotnet test` run is blocked by infrastructure/pre-existing failures.
 
 Recommended readiness classification: **v0.6 / advanced prototype**.
 
@@ -26,10 +26,10 @@ Raw data -> KQL/curated analytics -> governed detection draft -> accepted versio
 |---|---|---|
 | Host | `DeltaZulu.Platform.Web` is the only runnable host and registers Analytics + Governance modules. | Good consolidation baseline, but Operations is not registered. |
 | Identity | `PocUserContext` is documented as a session-scoped POC user switcher until authentication is introduced. | P0 production blocker. |
-| Persistence | Governance uses SQLite; analytics uses DuckDB + attached SQLite app state; Git store persists accepted content. | Good local development architecture, but production tenancy, backup, migration, encryption, and ops-state separation need work. |
-| Alerts | `alerts` and `alert_entities` are still listed as SQLite app-state views attached into DuckDB. | Conflicts with documented append-only alert lake target. |
-| Operations | Domain/repository scaffolding exists, but no Operations module, routes, UI, execution daemon, alert materialization, or triage loop. | P0/P1 blocker depending on v1 scope. |
-| Tests | 113 test files across the consolidated test project. | Strong base, but build/test could not be verified in this environment. |
+| Persistence | Governance uses SQLite; analytics uses DuckDB + attached SQLite app state; Git store persists accepted content; candidate/evidence lifecycle repositories use a dedicated operations SQLite connection. | Good local development architecture, but production tenancy, backup, migration, encryption, full ops-state separation, and detection-run lake ownership need work. |
+| Alerts | `alerts`/`alert_entities` are no longer app-state attachments; `DuckDbAlertLakeWriter`, `DuckDbAlertEntityLakeWriter`, and approved `AlertEvent`/`AlertEntity` views exist. `AlertRecord` no longer carries mutable status/update fields and now includes evidence hash, materialization, rule-hash, and suppression fields. | Storage/model hardening is materially complete; production still needs durable cursoring/replay/deduplication around generated materialization/evidence values. |
+| Operations | Domain/repository scaffolding exists, candidate/evidence persistence is split to operations SQLite, and two alert views exist; no Operations module, routes, UI, reliable execution daemon, deterministic materialization loop, or triage loop exists. | P0/P1 blocker depending on v1 scope. |
+| Tests | The consolidated test project runs under .NET 10, but the latest local `dotnet test` failed: DuckDB `inet` extension download returned HTTP 403, causing DuckDB-dependent tests to fail. | Strong base, but CI/local environment needs deterministic extension availability and fixed integration expectations before release gating. |
 | Dependencies | Central package management is present. | Need vulnerability/license checks and pinned production runtime strategy. |
 
 ## Overall readiness by domain
@@ -42,7 +42,7 @@ Raw data -> KQL/curated analytics -> governed detection draft -> accepted versio
 | Operations | 15% | Scaffolded records/repositories only. No production module or alert lifecycle. |
 | Security | 20% | HTTPS/HSTS/antiforgery basics exist, but authn/authz, secrets, roles, tenancy, audit, and secure storage are not production-ready. |
 | Reliability / operability | 25% | Local bootstrap works by design, but migrations, health checks, observability, background workers, backups, and runbooks are incomplete. |
-| Testing / QA | 55% | Broad tests exist; current environment cannot run `dotnet build` or `dotnet test`; production e2e/perf/security tests are absent. |
+| Testing / QA | 55% | Broad tests exist; current `dotnet test` executes but is not green because of DuckDB extension download failures. Production e2e/perf/security tests are absent. |
 | Documentation | 75% | Central docs are good and candid. This gap analysis should now be treated as the v1 release readiness checklist. |
 
 ## P0 production blockers
@@ -76,34 +76,35 @@ Raw data -> KQL/curated analytics -> governed detection draft -> accepted versio
 
 ### 3. Complete executable detection projection
 
-**Current state:** Governance can accept detection content, and analytics/NRT compilation foundations exist, but accepted content is not yet projected into operations-ready executable detection definitions with schedule, lookback, entity mapping, materialization mode, suppression, accepted-version traceability, and diagnostics.
+**Current state:** Governance acceptance now projects executable `detection.yaml` metadata into `DetectionRecord` with accepted-version identity, schedule, lookback, entity mappings, suppression policy, materialization mode, rule hash, diagnostics, and backfill support. The remaining production gap is runtime integration and operations-facing visibility rather than the core projection write path.
 
 **Risk:** Accepted content does not become production-running detection logic. This breaks the main v1 value proposition.
 
 **Required for v1:**
 
-- Introduce a projection service triggered by governance acceptance and restore/reconcile flows.
-- Persist executable detection definitions with accepted version ID, rule hash, schedule, lookback, entity mapping, materialization mode, suppression policy, and projection diagnostics.
-- Add backfill/reconciliation for previously accepted content.
-- Add tests proving acceptance creates/updates executable definitions idempotently.
+- Keep governance acceptance/backfill projection as the source of executable detection definitions.
+- Add operations-facing diagnostics/list views for stale or invalid projections.
+- Wire projected executable definitions into scheduled/NRT deployment and run recording.
+- Add production tests proving accepted definitions deploy only through the controlled execution path.
 
 ### 4. Move alerts to an append-only lake model
 
-**Current state:** The documented roadmap says alert and alert-entity state should be append-only lake data, but the current app-state bridge still includes `alerts` and `alert_entities`, and incident/candidate tables are attached in the same SQLite app-state list.
+**Current state:** The documented roadmap says alert and alert-entity state should be append-only lake data, current storage now writes alerts/entities to DuckDB lake, and alert/entity records now match the immutable evidence model. Detection-run persistence and runtime materialization still lag the target.
 
 **Risk:** Mutable alert state undermines evidence integrity, replayability, deduplication, and analytics over operational events. It also tangles user/application settings with operational evidence.
 
 **Required for v1:**
 
-- Remove `alerts` and `alert_entities` from SQLite app-state tables.
-- Add DuckDB lake schemas/writers for immutable `AlertEvent` and `AlertEntity` records.
-- Move incident/candidate mutable state into a dedicated operations SQLite database.
-- Add materialization key, evidence hash, rule hash, run ID, accepted version ID, and suppression markers.
-- Publish approved KQL views for `AlertEvent`, `AlertEntity`, `DetectionRun`, candidate, enrichment, and suppression read models.
+- Keep `alerts` and `alert_entities` out of SQLite app-state tables.
+- Keep DuckDB lake schemas/writers for immutable `AlertEvent` and `AlertEntity` records as the active write path.
+- Keep incident/candidate mutable state in the dedicated operations SQLite database and move remaining operations services into explicit Operations namespaces.
+- Keep mutable status/update fields out of immutable alert evidence.
+- Use generated materialization key, evidence hash, rule hash, run ID, accepted version ID, and suppression markers as durable deduplication/cursor inputs during mediation/materialization.
+- Publish approved KQL views for `DetectionRun`, candidate, enrichment, and suppression read models in addition to existing `AlertEvent`/`AlertEntity`.
 
 ### 5. Implement scheduled/NRT execution and mediation
 
-**Current state:** Proton DDL builders and NRT rule compilation exist, but there is no production mediation daemon, scheduled task deployment, polling/consumption loop, alert lake writer, retry/deduplication model, or run recording.
+**Current state:** Proton DDL builders and NRT rule compilation exist, and the alert lake writer exists, but there is no production-grade mediation daemon, durable scheduled task output handling, polling/consumption loop, retry/deduplication model, or run recording.
 
 **Risk:** Rules can be authored and previewed but not operated reliably.
 
@@ -131,9 +132,9 @@ Raw data -> KQL/curated analytics -> governed detection draft -> accepted versio
 
 ### 7. Build/test/CI must be green in a production-like environment
 
-**Current state:** This review environment does not have `dotnet`, so repository build and test execution could not be verified. The repo contains 11 C# project files, 548 C#/Razor files, and 113 `*Tests.cs` files.
+**Current state:** The current environment has .NET 10 and can execute the test suite, but `dotnet test` is not green. The latest run failed because DuckDB could not download the `inet` extension from `extensions.duckdb.org` (HTTP 403); the latest full `--no-restore` run reported 94 failed and 1130 passed tests.
 
-**Risk:** Release readiness cannot be asserted without repeatable builds, tests, packaging, and dependency checks.
+**Risk:** Release readiness cannot be asserted until test dependencies are deterministic and the integration suite has stable expectations.
 
 **Required for v1:**
 

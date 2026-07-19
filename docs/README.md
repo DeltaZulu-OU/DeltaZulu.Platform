@@ -16,6 +16,7 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for project ownership, dependency direc
 | [`ROADMAP.md`](ROADMAP.md) | Current target state, implementation phases, and active priorities. |
 | [`TARGET_USER_STORIES.md`](TARGET_USER_STORIES.md) | Target product-level user stories for the full-cycle security analytics platform. |
 | [`reviews/PRODUCTION_V1_GAP_ANALYSIS.md`](reviews/PRODUCTION_V1_GAP_ANALYSIS.md) | Production-v1 readiness review, blocker list, and milestone checklist. |
+| [`reviews/DOCUMENTATION_CODE_GAP_ANALYSIS_2026-07-19.md`](reviews/DOCUMENTATION_CODE_GAP_ANALYSIS_2026-07-19.md) | Current documentation/code gap analysis for ingestion, medallion schema, alerts, Operations, and Proton runtime. |
 | [`design/PRODUCT_IDENTITY.md`](design/PRODUCT_IDENTITY.md) | Product identity and binding UI language/design rules for Phase 1A. |
 | [`adr/README.md`](adr/README.md) | Current centralized ADR set converted from still-relevant historical decisions. |
 
@@ -29,6 +30,8 @@ These documents are still useful for detailed domain rules. They are subordinate
 | Analytics | [`analytics/kql-syntax-coverage-checklist.md`](analytics/kql-syntax-coverage-checklist.md) | Active supported-KQL coverage tracker. |
 | Analytics | [`analytics/README.md`](analytics/README.md) | Index for active Analytics references. |
 | ADRs | [`adr/README.md`](adr/README.md) | Current centralized decision records. |
+| ADRs | [`adr/0014-type-fidelity-registry-and-avro-arrow-ingestion.md`](adr/0014-type-fidelity-registry-and-avro-arrow-ingestion.md) | Proposed type-fidelity decision for the schema registry, Avro wire, Arrow server representation, and NDJSON edge use. |
+| Reviews | [`reviews/DOCUMENTATION_CODE_GAP_ANALYSIS_2026-07-19.md`](reviews/DOCUMENTATION_CODE_GAP_ANALYSIS_2026-07-19.md) | Current documentation/code gap analysis for ingestion, medallion schema, alerts, Operations, and Proton runtime. |
 
 ## Documentation rules
 

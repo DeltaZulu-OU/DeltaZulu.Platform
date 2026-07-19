@@ -9,4 +9,6 @@ public sealed record AlertEntityRecord(
     double SpecificityWeight,
     double CriticalityWeight,
     bool IsHighFanout,
+    string? EntityValueJson,
+    string EntityTypeContract,
     DateTime CreatedAtUtc);

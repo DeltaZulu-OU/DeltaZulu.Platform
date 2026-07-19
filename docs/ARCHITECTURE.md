@@ -45,7 +45,7 @@ legacy CSS aliases, table/state primitives, and Operations validation surfaces r
 src/
   DeltaZulu.Platform.Domain/       # Core model and contracts
   DeltaZulu.Platform.Application/  # Use cases and application services
-  DeltaZulu.Platform.Ingestion/    # Raw-log pub-sub boundary and NDJSON codec
+  DeltaZulu.Platform.Ingestion/    # Raw-log pub-sub boundary; target Avro/registry transport plus NDJSON edge codec
   DeltaZulu.Platform.Data.DuckDb/  # DuckDB SQL emission, schema, and runtime
   DeltaZulu.Platform.Data/         # Shared data abstractions
   DeltaZulu.Platform.Data.SQLite/  # SQLite repositories and seed data
@@ -136,9 +136,10 @@ MudBlazor, Elsa workflow internals, or platform hosting.
 
 - Analytics translation, validation, relational planning, rendering, catalog/sample-query services,
   and query/runtime coordination that can report structured diagnostics.
-- Target shared analytics execution contract used by interactive queries, dashboards, validation
-  checks, scheduled detection execution, and recovery with purpose-specific policies. The current
-  implementation still needs this application-layer contract extracted from the Web-shaped query path.
+- Shared analytics execution contract used by interactive queries, dashboards, and governance
+  validation checks with purpose-specific policies. `IAnalyticsQueryExecutor`/`AnalyticsQueryExecutor`
+  are implemented; scheduled detection and recovery callers remain deferred to the Proton execution
+  phases rather than reopening the Phase 2 extraction work.
 - Governance change services, merge/readiness services, validation checks, workflow orchestration
   abstractions, and canonical content pipeline services.
 - Target Operations services including executable detection projection, scheduled execution
@@ -159,16 +160,15 @@ DeltaZulu is evaluating an RPC correlation evidence boundary for the first high-
 
 ### Ingestion
 
-`DeltaZulu.Platform.Ingestion` owns the raw-log pub-sub boundary:
+`DeltaZulu.Platform.Ingestion` owns the raw-log pub-sub boundary and is moving from a JSON-shaped exchange contract to a registry-governed typed contract:
 
-- `IRawLogPubSub`, `InMemoryRawLogBus`, and `RawLogBatch`/`RawLogEnvelope` types define the pub-sub
-  contract for raw-log delivery between producers and consumers.
-- `RawLogNdjsonCodec` serializes/deserializes the NDJSON wire format (one envelope per line).
-- Exchange format is NDJSON with channel, ingest metadata, host/provider/source metadata, and the
-  source-shaped `rawLog` JSON payload.
-- Producers today are development seeders; future producers include collectors and broker adapters.
-- Consumers today are the DuckDB Bronze table loaders; future consumers include Golden data-lake
-  writers and near-real-time Proton loaders.
+- `IRawLogPubSub`, `InMemoryRawLogBus`, and `RawLogBatch`/`RawLogEnvelope` types define the current in-process raw-log delivery contract between producers and consumers.
+- Target ingestion is governed by a producer-agnostic schema registry that defines logical field types, nullability, timestamp precision, duration units, nested-shape policy, and per-backend physical mappings. The registry projects Avro schemas for the agent-to-server wire, Arrow schemas for server memory, DuckDB DDL, Proton DDL, KQL metadata, and translator type policy. See [ADR 0014](adr/0014-type-fidelity-registry-and-avro-arrow-ingestion.md).
+- The target agent-to-server wire is Avro, not NDJSON. The server decodes Avro once into Arrow record batches, fans out Arrow to DuckDB, and writes a typed stream to Proton through Proton's native protocol unless Proton OSS Avro/schema-registry ingest is verified.
+- `RawLogNdjsonCodec` remains a compatibility/debug edge codec for development seeders, third-party JSON ingress, public/customer egress, dead-letter diagnostics, and operator debug taps. It is not the target type-bearing transport.
+- Timestamps are UTC microsecond values by registry contract. Durations carry explicit units. Exact 64-bit integers and decimals must not depend on JSON number behavior.
+- Producers today are development seeders; future producers include collectors and broker adapters. Direct XML, CSV, and producer-JSON paths must pass through the same registry-backed normalization checkpoint instead of bypassing type classification.
+- Consumers today are the DuckDB Bronze table loaders; target consumers are generated DuckDB lake writers and generated Proton Golden-compatible stream loaders that share one logical schema authority.
 - Windows ETW collection follows [ADR 0010](adr/0010-etw-collection-and-replay-boundaries.md):
   Agent producers should emit replayable ETW raw envelopes through provider-profile policies, while
   Platform replay/import tooling may use richer managed ETL processors behind the same ingestion
@@ -333,8 +333,8 @@ Governance rules:
 
 Operations is the target module for detection execution and security operations state. The current
 codebase has scaffolded records/repositories, but it has not crossed the operational threshold: there
-is no registered Operations module, no alert materialization service, no approved operations KQL
-views, no Operations UI, and no enrichment/suppression/correlation/triage feedback loop yet.
+is no registered Operations module, no complete alert materialization loop, only partial approved operations KQL
+views (`AlertEvent` and `AlertEntity` exist), no Operations UI, and no enrichment/suppression/correlation/triage feedback loop yet.
 
 All detection execution — both near-real-time and scheduled — runs on Timeplus Proton. DuckDB is the
 threat-hunting and historical-analytics engine only; it is not part of the detection execution path.
@@ -472,9 +472,9 @@ Both modes share the same compilation pipeline (KQL → RelNode → ProtonSQL) a
 
 ### Schema medallion and Proton alignment
 
-DeltaZulu uses one logical schema model across two physical execution environments. DuckDB/DuckLake is the durable lake for replay, hunting, scheduled analytics, and evidence reconstruction. Timeplus Proton is the near-real-time detection engine and should run against Golden-compatible streams or materialized views, not a long-retention duplicate of the full lake. ADR 0007 is authoritative for this boundary.
+DeltaZulu uses one logical schema model across two physical execution environments. DuckDB/DuckLake is the durable lake for replay, hunting, scheduled analytics, and evidence reconstruction. Timeplus Proton is the near-real-time detection engine and should run against Golden-compatible streams or materialized views, not a long-retention duplicate of the full lake. ADR 0007 is authoritative for medallion semantics; ADR 0014 adds the type-fidelity rule that this logical schema must be a producer-agnostic registry projected into Avro, Arrow, DuckDB, Proton, KQL metadata, and translator policy.
 
-Current code scaffolds the Proton side of this integration path: Bronze and Golden streams are created from the shared schema catalog, Silver materialized views transform raw source streams into Golden canonical streams, typed publishers (`ProtonWindowsSysmonEventPublisher`, `ProtonDnsServerEventPublisher`) insert NDJSON rows into source-specific streams via Proton's HTTP interface, and the platform subscribes to the `alert_dispatch` stream. Live end-to-end validation and durable alert delivery are still required before this path is complete.
+Current code scaffolds the Proton side of this integration path: Bronze and Golden streams are created from the shared schema catalog, Silver materialized views transform raw source streams into Golden canonical streams, typed publishers (`ProtonWindowsSysmonEventPublisher`, `ProtonDnsServerEventPublisher`) insert NDJSON rows into source-specific streams via Proton's HTTP interface, and the platform subscribes to the `alert_dispatch` stream. This is a transitional implementation shape. Target ingestion decodes registry-governed Avro into Arrow once, writes DuckDB from Arrow, and writes Proton from the decoded typed stream. Live end-to-end validation, Proton OSS capability verification, durable alert delivery, and removal of NDJSON as the type-bearing transport are still required before this path is complete.
 
 ```mermaid
 flowchart LR
@@ -705,7 +705,7 @@ strictly a hunting and analytical-investigation concern.
 | Analytics saved-query, curated-analytic, and dashboard state | Analytics/Data | SQLite application state, surfaced through application services. |
 | Governance drafts, checks, reviews, workflow state, and read models | Governance/Data | SQLite governance database. |
 | Accepted detection content | Governance/Data | Git repository managed by the accepted-content store. |
-| Executable detection definitions, detection runs, alerts, alert entities, enrichment, suppression, incident candidates, triage state | Operations/Data | Target SQLite operations database; currently partially scaffolded under Analytics persistence. |
+| Executable detection definitions, detection runs, alerts, alert entities, enrichment, suppression, incident candidates, triage state | Operations/Data | Split target: immutable alerts/entities and completed detection runs belong in the DuckDB lake; mutable incident/candidate/triage lifecycle belongs in operations SQLite. Current code has DuckDB alert/entity lake writers and operations SQLite candidate/evidence repositories, but detection runs still use application SQLite and most operations services remain scaffolded under Analytics namespaces. |
 | Workflow orchestration state | Data | Elsa workflow store (SQLite or configured provider). |
 | Approved operations read models | Operations/Data | Target DuckDB approved views projected from operations SQLite state. |
 | NRT detection rules, compiled DDL, and rule metadata | Analytics/Application/Data | SQLite `nrt_rules` table; compiled Proton DDL stored as text alongside rule metadata. |
