@@ -32,8 +32,8 @@
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
     <!-- Overridden -->
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
-    <PackageVersion Include="SQLitePCLRaw.core" Version="3.0.3" />
+    <PackageVersion Include="SQLitePCLRaw.core" Version="3.0.4" />
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
-    <PackageVersion Include="SQLitePCLRaw.provider.e_sqlite3" Version="3.0.3" />
+    <PackageVersion Include="SQLitePCLRaw.provider.e_sqlite3" Version="3.0.4" />
   </ItemGroup>
 </Project>
