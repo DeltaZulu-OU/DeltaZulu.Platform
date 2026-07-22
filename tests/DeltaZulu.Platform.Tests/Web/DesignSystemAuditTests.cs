@@ -114,18 +114,15 @@ public sealed partial class DesignSystemAuditTests
         var repositoryRoot = FindRepositoryRoot();
         var webRoot = Path.Combine(repositoryRoot, "src", "DeltaZulu.Platform.Web");
 
-        // DzQueryResultTable is itself the canonical evidence-grade table primitive.
-        // Library.razor's "dashboard-list-panel" container predates DzTableShell and already
-        // supplies its own bordered/rounded chrome; nesting DzTableShell there would double
-        // the border and is tracked as follow-up design-system work rather than papered over.
+        // DzQueryResultTable is itself an evidence-grade table primitive, so it wraps its
+        // raw MudTable in DzTableShell directly instead of relying on the generic DzDataTable.
         var exemptRelativePaths = new HashSet<string>(StringComparer.Ordinal) {
             Path.Combine("Analytics", "Components", "Dz", "DzQueryResultTable.razor"),
-            Path.Combine("Analytics", "Pages", "Library.razor"),
         };
 
         var offenders = Directory.EnumerateFiles(webRoot, "*.razor", SearchOption.AllDirectories)
             .Select(path => (Relative: Path.GetRelativePath(webRoot, path), Text: File.ReadAllText(path)))
-            .Where(file => file.Text.Contains("<MudTable", StringComparison.Ordinal)
+            .Where(file => RawMudTableRegex().IsMatch(file.Text)
                 && !file.Text.Contains("DzTableShell", StringComparison.Ordinal)
                 && !exemptRelativePaths.Contains(file.Relative))
             .Select(file => file.Relative)
@@ -206,6 +203,9 @@ public sealed partial class DesignSystemAuditTests
 
     [GeneratedRegex(@"^[^\S\r\n]*--radius-(?:xs|sm|md|lg|xl|2xl):(?![^\S\r\n]*var\(--radius-structure\);)[^\r\n;]+;", RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex MediumRadiusLiteralRegex();
+
+    [GeneratedRegex(@"<MudTable(?:\s|>|/)", RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    private static partial Regex RawMudTableRegex();
 
     [GeneratedRegex(@"<(MudRadio|MudCheckBox|MudSwitch|MudRadioGroup)\b[^>]*?Color\s*=\s*""[^""]*Color\.Primary[^""]*""", RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex PrimaryColoredInputControlRegex();
