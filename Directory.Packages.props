@@ -23,7 +23,7 @@
     <PackageVersion Include="DuckDB.NET.Bindings.Full" Version="1.5.3" />
     <PackageVersion Include="DuckDB.NET.Data.Full" Version="1.5.3" />
     <PackageVersion Include="Kusto.Toolkit" Version="2.2.0" />
-    <PackageVersion Include="Microsoft.Azure.Kusto.Language" Version="12.4.0" />
+    <PackageVersion Include="Microsoft.Azure.Kusto.Language" Version="12.4.1" />
     <PackageVersion Include="SourceGear.sqlite3" Version="3.53.3" />
     <PackageVersion Include="Vizor.ECharts" Version="0.9.7" />
     <!-- Governance-specific -->
@@ -31,9 +31,9 @@
     <PackageVersion Include="LibGit2Sharp" Version="0.31.0" />
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
     <!-- Overridden -->
-    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
-    <PackageVersion Include="SQLitePCLRaw.core" Version="3.0.3" />
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.4" />
+    <PackageVersion Include="SQLitePCLRaw.core" Version="3.0.4" />
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
-    <PackageVersion Include="SQLitePCLRaw.provider.e_sqlite3" Version="3.0.3" />
+    <PackageVersion Include="SQLitePCLRaw.provider.e_sqlite3" Version="3.0.4" />
   </ItemGroup>
 </Project>
