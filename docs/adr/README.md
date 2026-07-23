@@ -17,7 +17,7 @@ This directory contains the current centralized ADR set for DeltaZulu Platform. 
 | [`0011-rpc-correlation-evidence-architecture.md`](0011-rpc-correlation-evidence-architecture.md) | Proposed | Thin agent evidence layer, platform-owned RPC correlation and detection readiness, SCMR/DCSync scope, resolver packs, validation gates, and open alignment with ADR 0009 on deterministic resolution ownership. |
 | [`0012-agent-control-plane-pull-protocol-and-auth.md`](0012-agent-control-plane-pull-protocol-and-auth.md) | Accepted | Pull-based agent check-in protocol, bootstrap-token enrollment, bearer agent secrets, lazy hash-deduplicated bundle resolution, and lake drift mapping. |
 | [`0013-constrained-agent-command-queue.md`](0013-constrained-agent-command-queue.md) | Accepted | Allowlisted one-shot agent commands delivered through the pull loop with an audited lifecycle and timeout expiry. |
-| [`0014-type-fidelity-registry-and-avro-arrow-ingestion.md`](0014-type-fidelity-registry-and-avro-arrow-ingestion.md) | Proposed | Producer-agnostic schema registry, Avro agent wire, Arrow server representation, governed NDJSON edge use, and type-fidelity gates for Proton/DuckDB parity. |
+| [`0014-deltazulu-forward-type-fidelity-registry.md`](0014-deltazulu-forward-type-fidelity-registry.md) | Proposed | Producer-agnostic schema registry, external DeltaZulu.Forward agent wire and DeltaZulu.Parse normalization dependencies, Arrow server representation, governed NDJSON edge use, and type-fidelity gates for Proton/DuckDB parity. |
 
 ## Conversion policy
 

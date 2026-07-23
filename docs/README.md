@@ -30,7 +30,7 @@ These documents are still useful for detailed domain rules. They are subordinate
 | Analytics | [`analytics/kql-syntax-coverage-checklist.md`](analytics/kql-syntax-coverage-checklist.md) | Active supported-KQL coverage tracker. |
 | Analytics | [`analytics/README.md`](analytics/README.md) | Index for active Analytics references. |
 | ADRs | [`adr/README.md`](adr/README.md) | Current centralized decision records. |
-| ADRs | [`adr/0014-type-fidelity-registry-and-avro-arrow-ingestion.md`](adr/0014-type-fidelity-registry-and-avro-arrow-ingestion.md) | Proposed type-fidelity decision for the schema registry, Avro wire, Arrow server representation, and NDJSON edge use. |
+| ADRs | [`adr/0014-deltazulu-forward-type-fidelity-registry.md`](adr/0014-deltazulu-forward-type-fidelity-registry.md) | Proposed type-fidelity decision for the schema registry, external DeltaZulu.Forward and DeltaZulu.Parse dependencies, Arrow server representation, and NDJSON edge use. |
 | Reviews | [`reviews/DOCUMENTATION_CODE_GAP_ANALYSIS_2026-07-19.md`](reviews/DOCUMENTATION_CODE_GAP_ANALYSIS_2026-07-19.md) | Current documentation/code gap analysis for ingestion, medallion schema, alerts, Operations, and Proton runtime. |
 
 ## Documentation rules
