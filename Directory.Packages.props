@@ -14,7 +14,7 @@
     <PackageVersion Include="Microsoft.JSInterop" Version="10.0.10" />
     <PackageVersion Include="MudBlazor" Version="9.7.0" />
     <!-- Testing -->
-    <PackageVersion Include="bunit" Version="2.7.2" />
+    <PackageVersion Include="bunit" Version="2.8.6" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageVersion Include="MSTest.TestAdapter" Version="4.3.2" />
     <PackageVersion Include="MSTest.TestFramework" Version="4.3.2" />
