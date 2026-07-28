@@ -28,7 +28,7 @@
     <PackageVersion Include="Vizor.ECharts" Version="0.9.7" />
     <!-- Governance-specific -->
     <PackageVersion Include="Elsa" Version="3.7.1" />
-    <PackageVersion Include="LibGit2Sharp" Version="0.31.0" />
+    <PackageVersion Include="LibGit2Sharp" Version="0.32.0" />
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
     <!-- Overridden -->
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.4" />
