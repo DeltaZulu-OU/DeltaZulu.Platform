@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted.
+Superseded by [ADR 0007: Schema medallion and Proton alignment](0007-schema-medallion-and-proton-alignment.md).
 
 ## Context
 

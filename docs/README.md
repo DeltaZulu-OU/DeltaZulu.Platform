@@ -34,6 +34,7 @@ There are no standalone Hunting or Workbench hosts. The `/analytics` and `/gover
 | Executable detections | Detection records are scaffolded with useful metadata fields. | Add projection from accepted governance content into operations-ready executable definitions. | Critical |
 | Operations pipeline | Operations records and some repositories are scaffolded. | Build `/operations`, detection runs, alert materialization, approved KQL read models, alert/candidate UI, enrichment, suppression, correlation, and triage feedback. | Critical |
 | Alert storage | Alerts/entities are still attached through SQLite app-state views. | Move alerts/entities to an append-only DuckDB lake and move mutable incident/candidate state into an operations SQLite boundary. | Critical |
+| Schema medallion alignment | Bronze/Silver/Golden concepts and Proton detection support exist. | Migrate toward ADR 0007: `RawEventEnvelope`, grouped Silver records, Golden activity schemas with lineage, and generated Proton-compatible Golden streams. | Critical |
 | Production identity | Demo actor context exists for Governance. | Replace POC persona switching with production authentication, authorization, and audit identity. | Critical |
 | Design-system enforcement | Shared tokens and components exist in Web. | Finish legacy CSS alias quarantine, evidence-table states, dashboard primitives, Operations placeholders, and audit checks. | High |
 
