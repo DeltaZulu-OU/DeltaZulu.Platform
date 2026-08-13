@@ -30,6 +30,7 @@ The current code is a precursor, not the final target:
 ## Consequences
 
 - New schema work should add the target contracts in parallel and migrate existing views incrementally; avoid a flag-day rewrite.
+- ETW-specific producer envelopes are governed by [ADR 0010](0010-etw-collection-and-replay-boundaries.md) and must map into the same `RawEventEnvelope v1`/`RawEvent` Bronze evidence contract rather than creating a separate ETW lake path.
 - Existing `Dns`, `NetworkSession`, and `ProcessEvent` contracts may remain as compatibility aliases during migration, but new content should prefer the target Golden activity names.
 - Parser and normalizer code should be split at the Bronze→Silver and Silver→Golden boundary.
 - Drift checks should cover both DuckDB/DuckLake and Proton generation from the shared schema catalog.
