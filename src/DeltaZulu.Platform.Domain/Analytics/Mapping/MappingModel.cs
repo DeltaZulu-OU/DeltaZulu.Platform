@@ -64,6 +64,23 @@ public static class MapDsl
     public static BinaryExpr And(ExprDef left, ExprDef right) => new(left, BinaryOp.And, right);
 
     public static BinaryExpr Or(ExprDef left, ExprDef right) => new(left, BinaryOp.Or, right);
+
+    public static CaseExpr LookupCase(ExprDef input, IReadOnlyDictionary<string, string> lookup, bool caseInsensitive = false)
+    {
+        var effectiveInput = caseInsensitive ? Fn("UPPER", input) : input;
+        var branches = lookup
+            .Select(kvp => new CaseBranch(
+                Eq(effectiveInput, Lit(caseInsensitive ? kvp.Key.ToUpperInvariant() : kvp.Key)),
+                Lit(kvp.Value)))
+            .ToList();
+        return new CaseExpr(branches, Lit(null));
+    }
+
+    public static ProjectionDef MapResolved(string fieldName, ExprDef rawExpr, IReadOnlyDictionary<string, string> lookup, bool caseInsensitive = false) =>
+        Map(fieldName + "_resolved", LookupCase(rawExpr, lookup, caseInsensitive));
+
+    public static ProjectionDef[] MapWithResolved(string fieldName, ExprDef rawExpr, IReadOnlyDictionary<string, string> lookup, bool caseInsensitive = false) =>
+        [Map(fieldName, rawExpr), MapResolved(fieldName, rawExpr, lookup, caseInsensitive)];
 }
 
 #endregion Builder helpers for concise mapping authoring

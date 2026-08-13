@@ -20,7 +20,8 @@ public static class MedallionSchemaCatalog
     [
         GoldenEventContracts.Dns,
         GoldenEventContracts.NetworkSession,
-        GoldenEventContracts.ProcessEvent
+        GoldenEventContracts.ProcessEvent,
+        GoldenEventContracts.Authentication
     ];
 
     /// <summary>
@@ -33,7 +34,9 @@ public static class MedallionSchemaCatalog
         SilverParserContributors.NetworkSessionWindowsSysmonEid3,
         SilverParserContributors.NetworkSessionWindowsSecurityEid5156,
         SilverParserContributors.DnsWindowsSysmonEid22,
-        SilverParserContributors.DnsServerQueryEvent
+        SilverParserContributors.DnsServerQueryEvent,
+        SilverParserContributors.AuthenticationWindowsSecurityEid4624,
+        SilverParserContributors.AuthenticationWindowsSecurityEid4625
     ];
 
     /// <summary>
