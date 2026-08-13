@@ -636,7 +636,7 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
                 return $"'{prefix}{EscapeString(Regex.Escape(term))}{suffix}'";
             }
             var raw = escapeRegex
-                ? $"regexp_replace(toString({rhsSql}), '([\\[\\](){{}}^$*+?.|\\\\])', '\\\\$1', 'g')"
+                ? $"replaceRegexpAll(toString({rhsSql}), '([\\[\\](){{}}^$*+?.|\\\\])', '\\\\$1')"
                 : $"toString({rhsSql})";
             var inner = ci ? $"lower({raw})" : raw;
             var parts = new List<string>();
@@ -737,6 +737,7 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
                 "strcat" => $"concat({string.Join(", ", args)})",
                 "strcat_array" => $"arrayStringConcat({args[0]}, {args[1]})",
                 "strcat_delim" => $"concat({string.Join(", ", args)})",
+                "substring" when args.Count == 2 => $"substring({args[0]}, ({args[1]}) + 1)",
                 "substring" => $"substring({args[0]}, ({args[1]}) + 1, {args[2]})",
                 "replace_string" => $"replace({args[0]}, {args[1]}, {args[2]})",
                 "replace_regex" => $"replaceRegexpAll({args[0]}, {args[1]}, {args[2]})",
@@ -746,7 +747,7 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
                 "trim" => $"trimBoth({args[1]})",
                 "trim_start" => $"trimLeft({args[1]})",
                 "trim_end" => $"trimRight({args[1]})",
-                "extract" => $"extract({args[2]}, {args[0]})",
+                "extract" => EmitExtract(fn.Args, args),
                 "countof" => $"((length({args[0]}) - length(replaceAll({args[0]}, {args[1]}, ''))) / nullif(length({args[1]}), 0))",
 
                 "ago" => EmitAgo(fn.Args, args),
@@ -871,6 +872,44 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
 
         private static string EmitAgo(IReadOnlyList<ScalarExpr> rawArgs, List<string> args) =>
             $"(now() - {args[0]})";
+
+        /// <summary>
+        /// extract(regularExpression, captureGroup, source[, typeLiteral]). KustoFunctionArgumentValidator
+        /// guarantees captureGroup is a literal int/long. Proton's extract() only ever returns the first
+        /// captured group, so captureGroup 1 maps directly; group 0 (full-match semantics) requires
+        /// wrapping a literal pattern in its own capture group; any other group index needs
+        /// extractGroups(), which returns all groups of the first match as a 1-based array.
+        /// </summary>
+        private static string EmitExtract(IReadOnlyList<ScalarExpr> rawArgs, List<string> args)
+        {
+            var pattern = args[0];
+            var source = args[2];
+
+            if (rawArgs[1] is not LiteralScalar { Value: not null } groupLit)
+            {
+                throw new NotSupportedException("extract() requires a literal integer captureGroup.");
+            }
+
+            var group = Convert.ToInt64(groupLit.Value, CultureInfo.InvariantCulture);
+
+            if (group == 1)
+            {
+                return $"extract({source}, {pattern})";
+            }
+
+            if (group == 0)
+            {
+                if (rawArgs[0] is LiteralScalar { Kind: LiteralKind.String, Value: string patternText })
+                {
+                    return $"extract({source}, '({EscapeString(patternText)})')";
+                }
+
+                throw new NotSupportedException(
+                    "extract() with captureGroup 0 requires a literal regular expression pattern.");
+            }
+
+            return $"extractGroups({source}, {pattern})[{group}]";
+        }
 
         private static string EmitBin(IReadOnlyList<ScalarExpr> rawArgs, List<string> args)
         {

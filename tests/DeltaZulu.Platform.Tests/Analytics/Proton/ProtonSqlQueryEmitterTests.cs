@@ -70,6 +70,91 @@ public sealed class ProtonSqlQueryEmitterTests
         AssertSqlContains(sql, "WHERE (LowerName = 'cmd.exe')");
     }
 
+    [TestMethod]
+    public void Emit_SubstringWithTwoArgs_OmitsLengthInsteadOfThrowing()
+    {
+        var node = new ProjectNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("Tail", new FunctionCall("substring", [new ColumnRef("FileName"), new LiteralScalar(2L, LiteralKind.Long)]))]);
+
+        var sql = _emitter.Emit(node).Sql;
+
+        AssertSqlContains(sql, "substring(FileName, (2) + 1) AS Tail");
+    }
+
+    [TestMethod]
+    public void Emit_SubstringWithThreeArgs_IncludesLength()
+    {
+        var node = new ProjectNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("Mid", new FunctionCall("substring", [new ColumnRef("FileName"), new LiteralScalar(2L, LiteralKind.Long), new LiteralScalar(4L, LiteralKind.Long)]))]);
+
+        var sql = _emitter.Emit(node).Sql;
+
+        AssertSqlContains(sql, "substring(FileName, (2) + 1, 4) AS Mid");
+    }
+
+    [TestMethod]
+    public void Emit_ExtractCaptureGroupOne_UsesPlainExtract()
+    {
+        var node = new ProjectNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("Ver", new FunctionCall("extract", [
+                new LiteralScalar(@"v(\d+)", LiteralKind.String),
+                new LiteralScalar(1L, LiteralKind.Long),
+                new ColumnRef("CommandLine")]))]);
+
+        var sql = _emitter.Emit(node).Sql;
+
+        AssertSqlContains(sql, @"extract(CommandLine, 'v(\d+)') AS Ver");
+    }
+
+    [TestMethod]
+    public void Emit_ExtractCaptureGroupTwo_UsesExtractGroups()
+    {
+        var node = new ProjectNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("Ver", new FunctionCall("extract", [
+                new LiteralScalar(@"(\w+)=(\d+)", LiteralKind.String),
+                new LiteralScalar(2L, LiteralKind.Long),
+                new ColumnRef("CommandLine")]))]);
+
+        var sql = _emitter.Emit(node).Sql;
+
+        AssertSqlContains(sql, @"extractGroups(CommandLine, '(\w+)=(\d+)')[2] AS Ver");
+    }
+
+    [TestMethod]
+    public void Emit_ExtractCaptureGroupZero_WrapsPatternForFullMatch()
+    {
+        var node = new ProjectNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("Whole", new FunctionCall("extract", [
+                new LiteralScalar(@"\d+", LiteralKind.String),
+                new LiteralScalar(0L, LiteralKind.Long),
+                new ColumnRef("CommandLine")]))]);
+
+        var sql = _emitter.Emit(node).Sql;
+
+        AssertSqlContains(sql, @"extract(CommandLine, '(\d+)') AS Whole");
+    }
+
+    [TestMethod]
+    public void Emit_HasWithDynamicRightHandSide_UsesValidThreeArgRegexReplace()
+    {
+        var node = new ProjectNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("IsMatch", new BinaryScalar(
+                new ColumnRef("CommandLine"),
+                ScalarBinaryOp.Has,
+                new ColumnRef("Needle")))]);
+
+        var sql = _emitter.Emit(node).Sql;
+
+        Assert.DoesNotContain("regexp_replace", sql);
+        AssertSqlContains(sql, "replaceRegexpAll(toString(Needle), '([\\[\\](){}^$*+?.|\\\\])', '\\\\$1')");
+    }
+
     private static void AssertSqlContains(string sql, string expected) =>
         Assert.Contains(Normalize(expected), Normalize(sql));
 
