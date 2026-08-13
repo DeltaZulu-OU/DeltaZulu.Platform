@@ -1,0 +1,242 @@
+@page "/analytics/investigations/{InvestigationId}"
+@namespace DeltaZulu.Platform.Web.Analytics.Pages
+@using System.Text.Json
+@using DeltaZulu.Platform.Domain.Analytics.Investigations
+@inject IInvestigationRepository Repository
+@inject InvestigationService InvestigationService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<div class="dashboard-list-page investigations-page">
+    @if (_loading)
+    {
+        <DzLoadingState Text="Building investigation handover summary." />
+    }
+    else if (_summary is null)
+    {
+        <DzEmptyState Title="Investigation not found" Description="The requested investigation could not be loaded." Icon="@Icons.Material.Filled.SearchOff" Outlined="true">
+            <Actions><button class="hunt-btn" @onclick="BackToList">Back to investigations</button></Actions>
+        </DzEmptyState>
+    }
+    else
+    {
+        <DzPageHeader Eyebrow="Investigation"
+                      Title="@_summary.Investigation.Title"
+                      Description="@(_summary.Investigation.Description ?? "Collect pivots, promoted evidence, annotations, links, and handover notes.")">
+            <Actions>
+                <DzToolbar>
+                    <DzStatusChip Label="@_summary.Investigation.Status" />
+                    <button class="hunt-btn" @onclick="BackToList">Back</button>
+                    <button class="hunt-btn dashboard-primary-action" @onclick="RefreshAsync">Refresh</button>
+                </DzToolbar>
+            </Actions>
+        </DzPageHeader>
+
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div class="dashboard-error">@_error</div>
+        }
+
+        <div class="dashboard-list" aria-label="Investigation metrics">
+            <article class="dashboard-list-card"><div class="dashboard-card-main"><h2>@_summary.Pivots.Count</h2><p>Pivots</p></div></article>
+            <article class="dashboard-list-card"><div class="dashboard-card-main"><h2>@_summary.QueryRuns.Count</h2><p>Query runs</p></div></article>
+            <article class="dashboard-list-card"><div class="dashboard-card-main"><h2>@_summary.Evidence.Count</h2><p>Evidence items</p></div></article>
+            <article class="dashboard-list-card"><div class="dashboard-card-main"><h2>@_summary.Timeline.Count</h2><p>Timeline events</p></div></article>
+        </div>
+
+        <MudTabs Elevation="0" Rounded="true" PanelClass="investigation-tab-panel">
+            <MudTabPanel Text="Pivots">
+                <DzPanel Title="Create pivot" Elevation="0" Outlined="true">
+                    <ChildContent>
+                        <div class="investigation-form-grid">
+                            <label><span>Name</span><input class="hunt-input" @bind="_pivotName" placeholder="Encoded commands" /></label>
+                            <label class="investigation-form-grid-wide"><span>Description</span><input class="hunt-input" @bind="_pivotDescription" placeholder="Why this pivot matters" /></label>
+                            <label class="investigation-form-grid-wide"><span>Query text</span><textarea class="hunt-input" rows="5" @bind="_pivotQuery" placeholder="ProcessEvent | where ..."></textarea></label>
+                        </div>
+                    </ChildContent>
+                    <Actions><button class="hunt-btn dashboard-primary-action" @onclick="SavePivotAsync">Save pivot</button></Actions>
+                </DzPanel>
+                <MudTable T="InvestigationPivotRecord" Items="@_summary.Pivots" Dense="true" Hover="true" Elevation="0">
+                    <HeaderContent><MudTh>Name</MudTh><MudTh>Query</MudTh><MudTh>Updated</MudTh></HeaderContent>
+                    <RowTemplate><MudTd>@context.Name</MudTd><MudTd><code>@context.QueryText</code></MudTd><MudTd>@context.UpdatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd></RowTemplate>
+                    <NoRecordsContent><DzEmptyState Title="No pivots" Description="Save a pivot query to document investigative paths." Elevation="0" /></NoRecordsContent>
+                </MudTable>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Evidence">
+                <DzPanel Title="Add evidence" Elevation="0" Outlined="true">
+                    <ChildContent>
+                        <div class="investigation-form-grid">
+                            <label><span>Source table</span><input class="hunt-input" @bind="_evidenceSourceTable" placeholder="process_event" /></label>
+                            <label><span>Created by</span><input class="hunt-input" @bind="_actor" placeholder="analyst" /></label>
+                            <label class="investigation-form-grid-wide"><span>Summary</span><input class="hunt-input" @bind="_evidenceSummary" placeholder="host-a ran encoded PowerShell" /></label>
+                            <label class="investigation-form-grid-wide"><span>Row snapshot JSON</span><textarea class="hunt-input" rows="6" @bind="_evidenceJson"></textarea></label>
+                        </div>
+                    </ChildContent>
+                    <Actions><button class="hunt-btn dashboard-primary-action" @onclick="SaveEvidenceAsync">Add evidence</button></Actions>
+                </DzPanel>
+                <MudTable T="EvidenceRecord" Items="@_summary.Evidence" Dense="true" Hover="true" Elevation="0">
+                    <HeaderContent><MudTh>Summary</MudTh><MudTh>Tags</MudTh><MudTh>Entities</MudTh><MudTh>Created</MudTh><MudTh>Actions</MudTh></HeaderContent>
+                    <RowTemplate>
+                        <MudTd><strong>@(context.Summary ?? "Evidence promoted")</strong><br /><small>@context.SourceTable</small></MudTd>
+                        <MudTd>@string.Join(", ", _summary.Tags.Where(t => t.EvidenceId == context.Id).Select(t => t.Tag))</MudTd>
+                        <MudTd>@string.Join(", ", _summary.EntityLinks.Where(l => l.EvidenceId == context.Id).Select(l => $"{l.EntityKind}:{l.EntityDisplay ?? l.EntityKey}"))</MudTd>
+                        <MudTd>@context.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
+                        <MudTd><button class="hunt-btn" @onclick="() => SelectEvidence(context.Id)">Annotate</button></MudTd>
+                    </RowTemplate>
+                    <NoRecordsContent><DzEmptyState Title="No evidence" Description="Add or promote rows to preserve investigation evidence." Elevation="0" /></NoRecordsContent>
+                </MudTable>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Annotate">
+                <DzPanel Title="Annotate selected evidence" Elevation="0" Outlined="true">
+                    <ChildContent>
+                        <div class="investigation-form-grid">
+                            <label><span>Evidence id</span><input class="hunt-input" @bind="_selectedEvidenceId" /></label>
+                            <label><span>Actor</span><input class="hunt-input" @bind="_actor" /></label>
+                            <label><span>Tags (comma-separated)</span><input class="hunt-input" @bind="_tags" placeholder="malware,powershell" /></label>
+                            <label class="investigation-form-grid-wide"><span>Comment</span><textarea class="hunt-input" rows="3" @bind="_commentBody"></textarea></label>
+                            <label><span>Entity kind</span><select class="hunt-input" @bind="_entityKind">@foreach (var kind in Enum.GetValues<InvestigationEntityKind>()) { <option value="@kind">@kind</option> }</select></label>
+                            <label><span>Entity key</span><input class="hunt-input" @bind="_entityKey" placeholder="host-a" /></label>
+                            <label><span>Entity display</span><input class="hunt-input" @bind="_entityDisplay" placeholder="host-a" /></label>
+                        </div>
+                    </ChildContent>
+                    <Actions>
+                        <button class="hunt-btn" @onclick="AddTagsAsync">Add tags</button>
+                        <button class="hunt-btn" @onclick="AddCommentAsync">Add comment</button>
+                        <button class="hunt-btn dashboard-primary-action" @onclick="AddEntityLinkAsync">Link entity</button>
+                    </Actions>
+                </DzPanel>
+                <MudTable T="EvidenceCommentRecord" Items="@_summary.Comments" Dense="true" Hover="true" Elevation="0">
+                    <HeaderContent><MudTh>Evidence</MudTh><MudTh>Comment</MudTh><MudTh>By</MudTh><MudTh>Created</MudTh></HeaderContent>
+                    <RowTemplate><MudTd>@context.EvidenceId</MudTd><MudTd>@context.Body</MudTd><MudTd>@context.CreatedBy</MudTd><MudTd>@context.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd></RowTemplate>
+                </MudTable>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Timeline">
+                <MudTimeline TimelinePosition="TimelinePosition.Start">
+                    @foreach (var item in _summary.Timeline)
+                    {
+                        <MudTimelineItem Color="@TimelineColor(item.ItemKind)" Size="Size.Small">
+                            <ItemContent>
+                                <MudText Typo="Typo.subtitle2">@item.Summary</MudText>
+                                <MudText Typo="Typo.caption">@item.ItemKind · @item.OccurredAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") @(!string.IsNullOrWhiteSpace(item.Actor) ? $"· {item.Actor}" : string.Empty)</MudText>
+                            </ItemContent>
+                        </MudTimelineItem>
+                    }
+                </MudTimeline>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Handover">
+                <DzPanel Title="Handover JSON" Elevation="0" Outlined="true">
+                    <ChildContent><pre class="hunt-code-block">@JsonSerializer.Serialize(_summary, JsonOptions)</pre></ChildContent>
+                </DzPanel>
+            </MudTabPanel>
+        </MudTabs>
+    }
+</div>
+
+@code {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { WriteIndented = true };
+
+    [Parameter] public string InvestigationId { get; set; } = string.Empty;
+
+    private InvestigationHandoverSummary? _summary;
+    private bool _loading = true;
+    private string? _error;
+    private string _pivotName = string.Empty;
+    private string? _pivotDescription;
+    private string _pivotQuery = string.Empty;
+    private string? _evidenceSourceTable;
+    private string? _evidenceSummary;
+    private string _evidenceJson = "{}";
+    private string _actor = "analyst";
+    private string _selectedEvidenceId = string.Empty;
+    private string _tags = string.Empty;
+    private string _commentBody = string.Empty;
+    private InvestigationEntityKind _entityKind = InvestigationEntityKind.Host;
+    private string _entityKey = string.Empty;
+    private string? _entityDisplay;
+
+    protected override async Task OnParametersSetAsync() => await RefreshAsync();
+
+    private async Task RefreshAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _summary = await InvestigationService.BuildHandoverSummaryAsync(InvestigationId);
+            _selectedEvidenceId = string.IsNullOrWhiteSpace(_selectedEvidenceId) ? _summary.Evidence.FirstOrDefault()?.Id ?? string.Empty : _selectedEvidenceId;
+        }
+        catch (Exception ex)
+        {
+            _summary = null;
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SavePivotAsync()
+    {
+        if (!EnsureTitle(_pivotName, "Enter a pivot name.")) return;
+        if (!EnsureTitle(_pivotQuery, "Enter pivot query text.")) return;
+        var now = DateTime.UtcNow;
+        await Repository.SavePivotAsync(new InvestigationPivotRecord(Guid.NewGuid().ToString("N"), InvestigationId, _pivotName.Trim(), _pivotQuery.Trim(), NullIfWhiteSpace(_pivotDescription), now, now));
+        _pivotName = string.Empty; _pivotDescription = null; _pivotQuery = string.Empty;
+        Snackbar.Add("Pivot saved.", Severity.Success);
+        await RefreshAsync();
+    }
+
+    private async Task SaveEvidenceAsync()
+    {
+        if (!JsonIsValid(_evidenceJson)) return;
+        await Repository.SaveEvidenceAsync([new EvidenceRecord(Guid.NewGuid().ToString("N"), InvestigationId, null, NullIfWhiteSpace(_evidenceSourceTable), null, _evidenceJson, NullIfWhiteSpace(_evidenceSummary), NullIfWhiteSpace(_actor) ?? "analyst", DateTime.UtcNow)]);
+        _evidenceSummary = null; _evidenceJson = "{}";
+        Snackbar.Add("Evidence added.", Severity.Success);
+        await RefreshAsync();
+    }
+
+    private async Task AddTagsAsync()
+    {
+        if (!EnsureEvidenceSelected()) return;
+        await InvestigationService.BulkTagEvidenceAsync([_selectedEvidenceId], _tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), NullIfWhiteSpace(_actor) ?? "analyst");
+        _tags = string.Empty;
+        Snackbar.Add("Tags added.", Severity.Success);
+        await RefreshAsync();
+    }
+
+    private async Task AddCommentAsync()
+    {
+        if (!EnsureEvidenceSelected() || !EnsureTitle(_commentBody, "Enter a comment.")) return;
+        await Repository.AddCommentAsync(new EvidenceCommentRecord(Guid.NewGuid().ToString("N"), _selectedEvidenceId, _commentBody.Trim(), NullIfWhiteSpace(_actor) ?? "analyst", DateTime.UtcNow));
+        _commentBody = string.Empty;
+        Snackbar.Add("Comment added.", Severity.Success);
+        await RefreshAsync();
+    }
+
+    private async Task AddEntityLinkAsync()
+    {
+        if (!EnsureEvidenceSelected() || !EnsureTitle(_entityKey, "Enter an entity key.")) return;
+        await Repository.AddEntityLinkAsync(new EvidenceEntityLinkRecord(Guid.NewGuid().ToString("N"), _selectedEvidenceId, _entityKind, _entityKey.Trim(), NullIfWhiteSpace(_entityDisplay), NullIfWhiteSpace(_actor) ?? "analyst", DateTime.UtcNow));
+        _entityKey = string.Empty; _entityDisplay = null;
+        Snackbar.Add("Entity linked.", Severity.Success);
+        await RefreshAsync();
+    }
+
+    private void SelectEvidence(string evidenceId)
+    {
+        _selectedEvidenceId = evidenceId;
+        Snackbar.Add("Evidence selected for annotation.", Severity.Info);
+    }
+
+    private bool EnsureEvidenceSelected() => EnsureTitle(_selectedEvidenceId, "Select an evidence item first.");
+    private bool EnsureTitle(string? value, string message) { if (!string.IsNullOrWhiteSpace(value)) return true; Snackbar.Add(message, Severity.Warning); return false; }
+    private bool JsonIsValid(string value) { try { JsonDocument.Parse(value); return true; } catch (JsonException ex) { Snackbar.Add($"Invalid JSON: {ex.Message}", Severity.Warning); return false; } }
+    private static string? NullIfWhiteSpace(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static Color TimelineColor(string kind) => kind switch { "evidence" => Color.Success, "comment" => Color.Info, "tag" => Color.Secondary, "entity-link" => Color.Warning, "query-run" => Color.Primary, _ => Color.Default };
+    private void BackToList() => Navigation.NavigateTo("/analytics/investigations");
+}
