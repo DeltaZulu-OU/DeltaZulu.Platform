@@ -117,6 +117,10 @@ public sealed class AgentEnrollmentService(
         logger.LogInformation("Agent {AgentId}'s credential was revoked.", agentId);
     }
 
+    /// <summary>Read-only status for display; null means the agent has never completed enrollment.</summary>
+    public async Task<AgentCredential?> GetCredentialAsync(AgentId agentId, CancellationToken ct = default) =>
+        await credentialRepo.GetByAgentIdAsync(agentId, ct);
+
     private static string HashOrEmpty(string? plaintext) =>
         string.IsNullOrWhiteSpace(plaintext) ? string.Empty : AgentSecrets.Hash(plaintext);
 }

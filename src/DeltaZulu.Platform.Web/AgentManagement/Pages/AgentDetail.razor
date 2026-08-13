@@ -6,11 +6,13 @@
 @using DeltaZulu.Platform.Domain.AgentManagement.Enums
 @using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
 @using DeltaZulu.Platform.Domain.AgentManagement.Commands
+@using DeltaZulu.Platform.Domain.AgentManagement.Enrollment
 @using DeltaZulu.Platform.Domain.AgentManagement.Policy
 @using DeltaZulu.Platform.Domain.Analytics.Observability
 @using DeltaZulu.Platform.Domain.Common
 @using DeltaZulu.Platform.Web.AgentManagement.ViewModels
 @inject AgentService AgentService
+@inject AgentEnrollmentService EnrollmentService
 @inject PolicyAssignmentService AssignmentService
 @inject AgentCommandService CommandService
 @inject IOperationalMetricsReader MetricsReader
@@ -39,6 +41,16 @@ else
                     }
                     <AgentStatusChip Status="_row.Status" />
                 </Metadata>
+                <Actions>
+                    @if (_credential is { IsUsable: true })
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Outlined.Block"
+                                   OnClick="RevokeCredentialAsync">
+                            Revoke Credential
+                        </MudButton>
+                    }
+                </Actions>
             </DzPageHeader>
         </MudItem>
         <MudItem xs="12" md="4">
@@ -81,6 +93,22 @@ else
                         else
                         {
                             <MudText Typo="Typo.body2" Class="mud-text-secondary">OK</MudText>
+                        }
+                    </DzDetailItem>
+                    <DzDetailItem Label="Credential">
+                        @if (_credential is null)
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">Never issued</MudText>
+                        }
+                        else if (_credential.IsUsable)
+                        {
+                            <DzStatusChip Label="Active" Tone="success" />
+                        }
+                        else
+                        {
+                            <MudTooltip Text="@($"Revoked {_credential.RevokedAt:yyyy-MM-dd HH:mm:ss}")">
+                                <DzStatusChip Label="Revoked" Tone="error" />
+                            </MudTooltip>
                         }
                     </DzDetailItem>
                     <DzDetailItem Label="Tags">
@@ -310,6 +338,7 @@ else
 
     private AgentInventoryRow? _row;
     private AgentId? _agentId;
+    private AgentCredential? _credential;
     private List<PolicyAssignment> _assignments = [];
     private List<SourceLatestRow> _sources = [];
     private List<AgentCommand> _commands = [];
@@ -346,6 +375,25 @@ else
             .ToList();
 
         _commands = (await CommandService.ListByAgentAsync(agentId)).ToList();
+        _credential = await EnrollmentService.GetCredentialAsync(agentId);
+    }
+
+    private async Task RevokeCredentialAsync()
+    {
+        if (_agentId is null) return;
+
+        try
+        {
+            await EnrollmentService.RevokeCredentialAsync(_agentId.Value);
+            Snackbar.Add(
+                "Credential revoked. The agent's current secret no longer authenticates; " +
+                "re-enroll with a valid bootstrap token to reissue one.", Severity.Success);
+            _credential = await EnrollmentService.GetCredentialAsync(_agentId.Value);
+        }
+        catch (DomainException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
     }
 
     private async Task IssueCommandAsync(AgentCommandType type)
