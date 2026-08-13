@@ -1,7 +1,5 @@
 # KQL Syntax Coverage Checklist
 
-<!-- Retention note: Retained analytics reference. Central platform docs supersede any old Hunting project or standalone-host references in this file. -->
-
 Authoritative translation reference: `docs/KQL-to-DuckDB-translation-spec.md`
 
 ## Status labels
@@ -32,7 +30,7 @@ Operations boundary note: the alert/candidate operations boundary is design docu
 Translator decomposition is also structural only: public `KustoToRelational` remains the compatibility adapter over internal `KustoQueryTranslator`. Document analysis, management-command guarding, approved-table policy, Kusto SDK syntax adaptation, projection naming, function validation, and integer-literal reading are isolated internal services. This refactor does not change construct coverage or translation semantics.
 
 
-Validation adapter note: reusable query validation is now structural only and does not change KQL construct coverage. `Hunting.Core.Validation.IQuerySyntaxValidator` runs the approved-catalog translator path and returns `QueryDiagnostic` results without executing DuckDB SQL or referencing `Hunting.Web`.
+Validation adapter note: reusable query validation is now structural only and does not change KQL construct coverage. `DeltaZulu.Platform.Domain.Validation.IQuerySyntaxValidator` runs the approved-catalog translator path and returns `QueryDiagnostic` results without executing DuckDB SQL or referencing `DeltaZulu.Platform.Web`.
 
 Platform module hardening note: splitting Hunting registration into runtime, application-state, and web-module layers and documenting the future shared platform route manifest are composition-only changes. They do not add KQL tables, translation constructs, or emitted SQL semantics.
 
@@ -131,7 +129,7 @@ Editor metadata projection is structural only: the same Golden C# contracts used
 ### 1.9 Rendering and Visualization
 
 - [m] `render` — terminal parser/resolver/UI subset shipped for `timechart`, `linechart`, `areachart`, `scatterchart`, `barchart`, `columnchart`, `piechart`, and `card`; supports both `render kind key=value ...` and `render kind with (...)`; supports `kind=stacked`, legend suppression, `series=<column>`, downsampling warnings, and diagnostics-first table fallback.
-  - Note: render is now decoupled from the data runtime. `Hunting.Render` owns directive parsing, render binding resolution, tabular abstraction, and chart-model construction. `Hunting.Web` owns the concrete `QueryResult` adapter, rendered-query orchestration, and ECharts options.
+  - Note: render is now decoupled from the data runtime. `DeltaZulu.Platform.Application.Analytics.Rendering` owns directive parsing, render binding resolution, tabular abstraction, and chart-model construction. `DeltaZulu.Platform.Web` owns the concrete `QueryResult` adapter, rendered-query orchestration, and ECharts options.
   - Unsupported UI chart adapter kinds fail closed with a red UI error and disabled Render tab.
 
 ### 1.10 Search and Find

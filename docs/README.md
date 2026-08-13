@@ -1,80 +1,68 @@
 # DeltaZulu Platform documentation
 
-This directory is the authoritative documentation entry point for the consolidated DeltaZulu
-Platform repository. The old Hunting and Workbench documentation trees were imported to preserve
-context, ADR history, and domain-specific notes, but the platform is no longer two runnable
-applications.
+This directory is the authoritative documentation entry point for the current DeltaZulu Platform repository. It intentionally keeps only current architecture, roadmap, product, and active domain-reference material. Completed consolidation/audit/import-retirement records have been removed so contributors are not sent through obsolete Hunting/Workbench-era planning documents.
 
 ## Current status
 
-DeltaZulu is a full-cycle security analytics platform built as a single Clean Architecture solution.
-The repository is aligned at the documentation and consolidation level, while implementation is still
-mostly pre-Operations: Analytics and Governance are usable, and scheduled detection execution, alert
-materialization, operations KQL views, Operations UI, enrichment, suppression, candidate correlation,
-and triage feedback remain the main gaps.
+DeltaZulu is a full-cycle security analytics platform built as a single Clean Architecture-oriented solution. Analytics and Governance are usable inside the unified Blazor host. The primary remaining production-v1 gaps are Operations, executable detection projection, append-only alert storage, scheduled/NRT execution, production identity, migrations, and operational hardening.
 
 Current project ownership is:
 
 | Layer | Project | Owns |
 |---|---|---|
-| Domain | `src/DeltaZulu.Platform.Domain` | Detection contracts, analytics query model/schema records, governance aggregates, initial operations records (executable detections, runs, alerts, entities, candidates, triage), repository interfaces, identifiers, enums, and invariants. |
-| Application | `src/DeltaZulu.Platform.Application` | Analytics translation/planning/rendering services, governance use cases, validation, workflows, and content pipeline services. Target shared execution and Operations services are next-phase work. |
-| Data | `src/DeltaZulu.Platform.Data` | DuckDB SQL/runtime infrastructure, SQLite repositories, Git accepted-content store, and seed data. Initial operations repositories exist, but an operations namespace boundary and DuckDB read-model projection remain target work. |
-| Web | `src/DeltaZulu.Platform.Web` | The only Blazor web host, shared components/design tokens, analytics pages, governance pages, platform shell, and module registry. Operations pages are target work. |
-| Tests | `tests/DeltaZulu.Platform.Tests` | Consolidated tests for the platform projects. Operations pipeline coverage is target work. |
+| Domain | `src/DeltaZulu.Platform.Domain` | Detection contracts, analytics query/schema records, governance aggregates, initial operations records, repository interfaces, identifiers, enums, and invariants. |
+| Application | `src/DeltaZulu.Platform.Application` | Analytics translation/planning/rendering services, governance use cases, validation, workflows, and content pipeline services. |
+| Ingestion | `src/DeltaZulu.Platform.Ingestion` | Raw-log pub-sub boundary and NDJSON codec. |
+| Data.DuckDb | `src/DeltaZulu.Platform.Data.DuckDb` | DuckDB SQL emission, query runtime, schema application, provenance, drift detection, and raw-log subscription. |
+| Data.Proton | `src/DeltaZulu.Platform.Data.Proton` | Proton/ClickHouse dialect compilation and detection DDL builders. |
+| Data.SQLite | `src/DeltaZulu.Platform.Data.SQLite` | SQLite repositories, schema initialization, application persistence, and development/demo seeders. |
+| Data.Git | `src/DeltaZulu.Platform.Data.Git` | Git-backed accepted-content storage. |
+| Data | `src/DeltaZulu.Platform.Data` | Shared data abstractions that remain below Application/Web. |
+| Blazor.Interop | `src/DeltaZulu.Blazor.Interop` | Typed Blazor JavaScript interop wrappers. |
+| Web | `src/DeltaZulu.Platform.Web` | The Blazor host, shared components/design tokens, analytics pages, governance pages, platform shell, and module registry. |
+| Tests | `tests/DeltaZulu.Platform.Tests` | Consolidated tests for the platform projects. |
 
-There are no standalone Hunting or Workbench hosts, no separate Razor Class Library modules, and no
-separate shared component/contract projects. The `/analytics` and `/governance` route prefixes are
-implemented product navigation boundaries inside `DeltaZulu.Platform.Web`; `/operations` is the target
-route boundary for the pending Operations module, not a separate deployable.
+There are no standalone Hunting or Workbench hosts. The `/analytics` and `/governance` route prefixes are implemented product navigation boundaries inside `DeltaZulu.Platform.Web`; `/operations` is the target route boundary for the pending Operations module, not a separate deployable.
 
 ## Current implementation gap snapshot
 
 | Area | Current state | Gap | Priority |
 |---|---|---|---|
-| Consolidation | One host, four source projects, one test project, Analytics and Governance modules. | No major consolidation gap. | Closed |
-| Product framing | Central docs describe the full-cycle platform. | Keep root-level and imported docs from drifting back to Hunting-first language. | Low |
-| Shared analytics execution | Query execution remains shaped around the Web/UI service path. | Add an application-layer `IAnalyticsQueryExecutor` with `ExecutionPurpose` policies before scheduled alerting. | Critical |
-| Curated analytics | Query history and saved queries exist. | Add curated analytic semantics: purpose, expected shape, entity mappings, tuning hints, notes, and promotion metadata. | High |
-| Executable detections | Detection records are scaffolded. | Add accepted-version identity, lookback, materialization mode, entity mapping contract, projection metadata, and operational overrides. | Critical |
-| Operations pipeline | Operations domain primitives and some repositories are scaffolded. | Build manual/scheduled runs, alert materialization, entity extraction, KQL read models, Operations UI, Elsa orchestration, enrichment, suppression, correlation, and triage feedback. Add Operations navigation/placeholders early enough to validate operational dashboard and triage patterns. | Critical |
-| Design-system enforcement | Shared tokens and components exist in Web, but identity, radius, typography scope, legacy CSS aliases, evidence-table metadata, dashboard states, and audit checks are incomplete. | Resolve DZNS/DeltaZulu Platform identity, enforce binary radius/product typography/orange action semantics, quarantine legacy aliases, build canonical dashboard primitives, and add a design-system audit. | High |
-| Audit identity | Demo actor context exists for Governance. | Separate demo actor switching from production-like audit identity across governance and operations actions. | Medium |
+| Repository shape | One Blazor host, ten source projects, one consolidated test project, and Analytics/Governance modules. | No major consolidation gap. Keep dependency-direction cleanup on the architecture backlog. | Closed / monitor |
+| Shared analytics execution | Application-layer `IAnalyticsQueryExecutor` and purpose-specific execution contracts exist. | Extend the same execution path to scheduled detection, recovery, and Operations callers. | High |
+| Curated analytics | Curated analytic records, repository, and promotion service exist. | Add list/detail UX and governed promote-to-proposal workflow if included in v1 scope. | Medium |
+| Executable detections | Detection records are scaffolded with useful metadata fields. | Add projection from accepted governance content into operations-ready executable definitions. | Critical |
+| Operations pipeline | Operations records and some repositories are scaffolded. | Build `/operations`, detection runs, alert materialization, approved KQL read models, alert/candidate UI, enrichment, suppression, correlation, and triage feedback. | Critical |
+| Alert storage | Alerts/entities are still attached through SQLite app-state views. | Move alerts/entities to an append-only DuckDB lake and move mutable incident/candidate state into an operations SQLite boundary. | Critical |
+| Production identity | Demo actor context exists for Governance. | Replace POC persona switching with production authentication, authorization, and audit identity. | Critical |
+| Design-system enforcement | Shared tokens and components exist in Web. | Finish legacy CSS alias quarantine, evidence-table states, dashboard primitives, Operations placeholders, and audit checks. | High |
 
 ## Authoritative documents
 
 | Document | Purpose |
 |---|---|
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Current system architecture, project boundaries, runtime ownership, module boundaries, and workflow orchestration. |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Current system architecture, project boundaries, runtime ownership, module boundaries, storage ownership, and workflow orchestration. |
 | [`ROADMAP.md`](ROADMAP.md) | Current target state, implementation phases, and active priorities. |
-| [`TARGET_USER_STORIES.md`](TARGET_USER_STORIES.md) | Target product-level user stories for the full-cycle security analytics platform (US-01 through US-28). |
-| [`CONSOLIDATION_ROADMAP.md`](CONSOLIDATION_ROADMAP.md) | Completed consolidation record retained for audit/history. |
+| [`TARGET_USER_STORIES.md`](TARGET_USER_STORIES.md) | Target product-level user stories for the full-cycle security analytics platform. |
+| [`reviews/PRODUCTION_V1_GAP_ANALYSIS.md`](reviews/PRODUCTION_V1_GAP_ANALYSIS.md) | Production-v1 readiness review, blocker list, and milestone checklist. |
 | [`design/PRODUCT_IDENTITY.md`](design/PRODUCT_IDENTITY.md) | Product identity and binding UI language/design rules for Phase 1A. |
+| [`adr/README.md`](adr/README.md) | Current centralized ADR set converted from still-relevant historical decisions. |
 
-## Domain-specific retained documents
+## Active domain references
 
-These documents are still useful for detailed domain rules. They are subordinate to the central
-architecture and roadmap above when repository layout or platform ownership differs.
+These documents are still useful for detailed domain rules. They are subordinate to the central architecture and roadmap when implementation structure differs.
 
 | Area | Document | Status |
 |---|---|---|
-| Analytics | [`modules/hunting/docs/KQL-to-DuckDB-translation-spec.md`](modules/hunting/docs/KQL-to-DuckDB-translation-spec.md) | Active translation semantics reference. |
-| Analytics | [`modules/hunting/docs/kql-syntax-coverage-checklist.md`](modules/hunting/docs/kql-syntax-coverage-checklist.md) | Active supported-KQL coverage tracker. |
-| Analytics | [`modules/hunting/docs/DASHBOARD-ARCHITECTURE.md`](modules/hunting/docs/DASHBOARD-ARCHITECTURE.md) | Active dashboard/rendering design notes unless superseded by central architecture. |
-| Analytics | [`adr/analytics/`](adr/analytics/) | Historical and active analytics ADRs. |
-| Governance | [`adr/governance/`](adr/governance/) | Historical and active governance ADRs. |
+| Analytics | [`analytics/KQL-to-DuckDB-translation-spec.md`](analytics/KQL-to-DuckDB-translation-spec.md) | Active translation semantics reference. |
+| Analytics | [`analytics/kql-syntax-coverage-checklist.md`](analytics/kql-syntax-coverage-checklist.md) | Active supported-KQL coverage tracker. |
+| Analytics | [`analytics/README.md`](analytics/README.md) | Index for active Analytics references. |
+| ADRs | [`adr/README.md`](adr/README.md) | Current centralized decision records. |
 
 ## Documentation rules
 
-1. Update `docs/ARCHITECTURE.md` for changes to project boundaries, dependency direction, runtime
-   ownership, module ownership, routing, storage ownership, workflow orchestration, or safety invariants.
-2. Update `docs/ROADMAP.md` for target changes, priority changes, phase completion, active priority
-   changes, or design-system remediation order changes.
-3. Update `docs/TARGET_USER_STORIES.md` for product-level user story changes, new user stories, or
-   acceptance criteria updates.
-4. Keep imported module documents only for deep domain detail, ADR provenance, or historical context.
-   Do not revive stale references to old standalone projects such as `Hunting.Web`, `Workbench.Web`,
-   `DeltaZulu.Blazor.Components`, `DeltaZulu.DetectionContent`, or `Platform.Web.Abstractions` as
-   current architecture.
-5. If a module document conflicts with central docs, treat the central docs as authoritative and fix
-   or redirect the module document during the same change.
+1. Update `docs/ARCHITECTURE.md` for changes to project boundaries, dependency direction, runtime ownership, module ownership, routing, storage ownership, workflow orchestration, or safety invariants.
+2. Update `docs/ROADMAP.md` for target changes, priority changes, phase completion, active priority changes, or design-system remediation order changes.
+3. Update `docs/TARGET_USER_STORIES.md` for product-level user story changes, new user stories, or acceptance criteria updates.
+4. Do not add new consolidation retrospectives, import-retirement notes, obsolete standalone-host redirects, or broad historical ADR dumps. Convert still-relevant historical decisions into concise centralized ADRs under `docs/adr/`.
+5. If a domain reference conflicts with central docs, treat the central docs as authoritative and fix or delete the stale reference in the same change.

@@ -4,7 +4,7 @@ DeltaZulu Platform is a local, schema-governed, full-cycle security analytics pl
 interactive analytics, detection content governance, scheduled detection execution, alerting,
 enrichment, incident-candidate correlation, triage, and feedback into detection improvement. The
 repository has completed its host merge and Clean Architecture consolidation: one Blazor web app,
-four source projects, and one test project.
+ten source projects, and one consolidated test project.
 
 ## Product model
 
@@ -47,7 +47,10 @@ src/
   DeltaZulu.Platform.Application/  # Use cases and application services
   DeltaZulu.Platform.Ingestion/    # Raw-log pub-sub boundary and NDJSON codec
   DeltaZulu.Platform.Data.DuckDb/  # DuckDB SQL emission, schema, and runtime
-  DeltaZulu.Platform.Data/         # SQLite repositories, Git store, seed data
+  DeltaZulu.Platform.Data/         # Shared data abstractions
+  DeltaZulu.Platform.Data.SQLite/  # SQLite repositories and seed data
+  DeltaZulu.Platform.Data.Git/     # Git accepted-content store
+  DeltaZulu.Platform.Data.Proton/  # Proton SQL/DDL backend
   DeltaZulu.Blazor.Interop/        # Typed Blazor JS interop wrappers
   DeltaZulu.Platform.Web/          # Blazor host, platform shell, UI, components
 
@@ -63,6 +66,9 @@ DeltaZulu.Platform.Web
   -> DeltaZulu.Platform.Application
   -> DeltaZulu.Platform.Data
   -> DeltaZulu.Platform.Data.DuckDb
+  -> DeltaZulu.Platform.Data.Git
+  -> DeltaZulu.Platform.Data.Proton
+  -> DeltaZulu.Platform.Data.SQLite
   -> DeltaZulu.Platform.Domain
   -> DeltaZulu.Platform.Ingestion
 
@@ -71,9 +77,20 @@ DeltaZulu.Platform.Application
 
 DeltaZulu.Platform.Data
   -> DeltaZulu.Platform.Application
+  -> DeltaZulu.Platform.Domain
+
+DeltaZulu.Platform.Data.SQLite
+  -> DeltaZulu.Platform.Application
+  -> DeltaZulu.Platform.Data
   -> DeltaZulu.Platform.Data.DuckDb
   -> DeltaZulu.Platform.Domain
   -> DeltaZulu.Platform.Ingestion
+
+DeltaZulu.Platform.Data.Git
+  -> DeltaZulu.Platform.Domain
+
+DeltaZulu.Platform.Data.Proton
+  -> DeltaZulu.Platform.Domain
 
 DeltaZulu.Platform.Data.DuckDb
   -> DeltaZulu.Platform.Application
@@ -162,22 +179,20 @@ historical analytics:
   repositories and Git storage.
 - `IRelationalQueryEmitter` and `IRelationalQueryEmitterFactory` in the Domain layer define the
   backend-neutral compilation contract; `DeltaZulu.Platform.Data.DuckDb` provides the DuckDB
-  implementation for hunting, and `DeltaZulu.Platform.Application` provides the Proton
+  implementation for analytics, and `DeltaZulu.Platform.Data.Proton` provides the Proton
   implementation for detection DDL generation (see [Detection execution architecture](#detection-execution-architecture)).
 
-### Data
+### Data projects
 
-`DeltaZulu.Platform.Data` owns SQLite and Git infrastructure:
+The storage/runtime layer is split by backend:
 
-- SQLite repositories for analytics, governance, and scaffolded operations operational state.
-- Target Operations persistence should move conceptually under a clean operations namespace/database
-  boundary and publish approved DuckDB-facing read models for KQL.
-- Git accepted-content store for accepted governance content history.
-- Development/demo seed data.
-- References `DeltaZulu.Platform.Data.DuckDb` to compose the full storage tier.
+- `DeltaZulu.Platform.Data` contains shared data abstractions. It should stay small and avoid becoming a catch-all infrastructure project.
+- `DeltaZulu.Platform.Data.SQLite` owns SQLite repositories, schema initialization, application persistence, and development/demo seed data.
+- `DeltaZulu.Platform.Data.Git` owns the Git accepted-content store for accepted governance content history.
+- `DeltaZulu.Platform.Data.Proton` owns Proton/ClickHouse SQL emission and detection DDL builders for streaming detection targets.
+- Target Operations persistence should move conceptually under a clean operations namespace/database boundary and publish approved DuckDB-facing read models for KQL.
 
-Data code implements storage and runtime adapters. It should not leak storage details into user-facing
-routes or UI components.
+Data code implements storage and runtime adapters. It should not leak storage details into user-facing routes or UI components.
 
 ### Blazor.Interop
 
@@ -233,12 +248,7 @@ includes Analytics and Governance; Operations is the target next module to add:
 
 ## Product identity and design-system rules
 
-The architecture intentionally uses one coherent product UI rather than separate visual systems per
-module. The current product name is `DeltaZulu Platform`, while the imported design-system rules are
-DZNS-first for hero, CTA, and dark featured treatment. Before adding broad Operations UI, the product
-identity decision must be explicit: the app is either DZNS-branded, DeltaZulu Platform-branded, or an
-internal DeltaZulu platform. That decision owns visible naming, home/hero copy, CTA labels, and any dark
-featured treatment.
+The architecture intentionally uses one coherent product UI rather than separate visual systems per module. The current product name is `DeltaZulu Platform`; visible naming, home/hero copy, CTA labels, and dark featured treatment must follow the product identity rules in `docs/design/PRODUCT_IDENTITY.md` before broad Operations UI expansion.
 
 Design-system enforcement rules:
 
@@ -262,7 +272,7 @@ Design-system enforcement rules:
 
 ## Analytics architecture
 
-Analytics is the consolidated successor to the imported Hunting runtime. Its core rules remain:
+Analytics owns query, dashboard, library, curated-analytic, and investigation workflows. Its core rules are:
 
 - Analysts query governed Golden contracts, not internal Bronze/Silver/runtime tables.
 - KQL is parsed with Microsoft Kusto tooling and translated through a controlled relational
@@ -287,7 +297,7 @@ from `docs/README.md`.
 
 ## Governance architecture
 
-Governance is the consolidated successor to the imported Workbench runtime. Its core product rule is:
+Governance owns detection-content proposal, validation, review, acceptance, restore, and version-history workflows. Its core product rule is:
 
 > Edit a detection, prove it is safe, accept it into history.
 
@@ -414,12 +424,12 @@ flowchart LR
   incorporates. Owned by the incident candidate; stored in operations SQLite.
 - Triage decisions are analyst decisions recorded against incident candidates. Operations SQLite.
 
-### Hunting → detection pivot
+### Analytics → detection pivot
 
 The pivot from saved query to detection content is a user-initiated action, not an automated
 pipeline. The analyst:
 
-1. Writes and refines a KQL query during a threat hunt (executed against DuckDB).
+1. Writes and refines a KQL query during an analytics or threat-hunting workflow (executed against DuckDB).
 2. Saves the query for reuse.
 3. Decides the query has detection value and initiates a detection content proposal.
 4. Authors detection metadata (severity, confidence, MITRE mappings, threshold, schedule).
@@ -743,12 +753,4 @@ strictly a hunting and analytical-investigation concern.
 
 ## Documentation authority
 
-This file is the current architecture source of truth. The target product-level user stories are
-defined in [`TARGET_USER_STORIES.md`](TARGET_USER_STORIES.md). Platform ADRs live under `docs/adr/`,
-with Analytics decisions in `docs/adr/analytics/` and Governance decisions in `docs/adr/governance/`.
-Imported module architecture files are retained only for domain detail and history. If an imported
-document describes standalone `Hunting.*`, `Workbench.*`, `DeltaZulu.Blazor.Components`,
-`DeltaZulu.DetectionContent`, or `Platform.Web.Abstractions` projects as current architecture, this
-file supersedes it. If a document describes DuckDB infrastructure as living inside
-`DeltaZulu.Platform.Data` rather than `DeltaZulu.Platform.Data.DuckDb`, or describes raw-log
-ingestion as lacking a pub-sub boundary, this file supersedes it.
+This file is the current architecture source of truth. The target product-level user stories are defined in [`TARGET_USER_STORIES.md`](TARGET_USER_STORIES.md). Current centralized ADRs live under `docs/adr/`. Active domain references are retained only when they still describe useful platform behavior. If a domain reference conflicts with this file on project ownership, routing, storage ownership, or runtime boundaries, this file is authoritative and the stale reference should be fixed or deleted.

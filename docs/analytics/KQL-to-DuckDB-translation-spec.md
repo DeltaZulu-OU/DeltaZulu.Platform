@@ -1,7 +1,5 @@
 # KQL-to-DuckDB Translation Dictionary
 
-<!-- Retention note: Retained analytics reference. Central platform docs supersede any old Hunting project or standalone-host references in this file. -->
-
 ## Preface
 
 This document defines a translation specification for converting a practical subset of Kusto Query Language (KQL) into DuckDB SQL. It is written for a DuckDB-backed security analytics environment where KQL-like syntax is used as an analyst-facing query layer, while DuckDB executes the translated relational plan over registered views, normalized log tables, and JSON-backed sources.
