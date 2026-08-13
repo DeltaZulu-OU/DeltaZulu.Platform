@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Extended by [ADR 0014](0014-deltazulu-forward-type-fidelity-registry.md) for ingestion type fidelity across Proton and DuckDB.
+Accepted. Extended by [ADR 0014](0014-http-ingestion-type-fidelity-registry.md) for ingestion type fidelity across Proton and DuckDB.
 
 ## Context
 
@@ -10,7 +10,7 @@ The roadmap and historical Proton/streaming ADRs converge on a separation betwee
 
 ## Decision
 
-- Timeplus Proton is the target execution engine for NRT and scheduled detections; the Proton ingest leg must consume registry-derived typed streams rather than independently inferring types from NDJSON.
+- Timeplus Proton is the target execution engine for NRT and scheduled detections; the Proton HTTP ingest leg must validate registry-derived types rather than independently inferring them from NDJSON.
 - DuckDB remains the analytics and historical investigation engine; its lake DDL and append paths must be generated or validated from the same logical type registry as Proton.
 - Accepted detections project into executable definitions before deployment/execution.
 - Detection runs record execution windows, status, diagnostics, counts, duration, retries, and failures.

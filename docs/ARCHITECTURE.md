@@ -47,7 +47,7 @@ legacy CSS aliases, table/state primitives, and Operations validation surfaces r
 src/
   DeltaZulu.Platform.Domain/       # Core model and contracts
   DeltaZulu.Platform.Application/  # Use cases and application services
-  DeltaZulu.Platform.Ingestion/    # Raw-log pub-sub boundary; target DeltaZulu.Forward/registry transport plus NDJSON edge codec
+  DeltaZulu.Platform.Ingestion/    # Raw-log pub-sub boundary; registry-governed HTTP ingestion and payload codecs
   DeltaZulu.Platform.Data.DuckDb/  # DuckDB SQL emission, schema, and runtime
   DeltaZulu.Platform.Data/         # Shared data abstractions
   DeltaZulu.Platform.Data.SQLite/  # SQLite repositories and seed data
@@ -190,13 +190,13 @@ DeltaZulu has adopted an RPC correlation evidence boundary for the first high-va
 
 ### Ingestion
 
-`DeltaZulu.Platform.Ingestion` owns the raw-log pub-sub boundary and is moving from a JSON-shaped exchange contract to a registry-governed typed contract:
+`DeltaZulu.Platform.Ingestion` owns the raw-log pub-sub boundary and its registry-governed HTTP ingestion contracts:
 
 - `IRawLogPubSub`, `InMemoryRawLogBus`, and `RawLogBatch`/`RawLogEnvelope` types define the current in-process raw-log delivery contract between producers and consumers.
-- Target ingestion is governed by a producer-agnostic schema registry that defines logical field types, nullability, timestamp precision, duration units, nested-shape policy, and per-backend physical mappings. The registry projects DeltaZulu.Forward envelope schemas for the agent-to-server wire, Arrow schemas for server memory, DuckDB DDL, Proton DDL, KQL metadata, and translator type policy. See [ADR 0014](adr/0014-deltazulu-forward-type-fidelity-registry.md).
-- The target agent-to-server wire uses the external DeltaZulu.Forward protocol dependency (KQL-aligned envelope serialized as MessagePack bytes over a RELP-based custom transport), not NDJSON. The server decodes DeltaZulu.Forward MessagePack envelopes once into Arrow record batches, fans out Arrow to DuckDB, and writes a typed stream to Proton through Proton's native protocol unless Proton OSS schema-registry ingest is verified.
-- `RawLogNdjsonCodec` remains a compatibility/debug edge codec for development seeders, third-party JSON ingress, public/customer egress, dead-letter diagnostics, and operator debug taps. It is not the target type-bearing transport.
-- Timestamps are UTC microsecond values by registry contract. Durations carry explicit units. Exact 64-bit integers and decimals must not depend on JSON number behavior.
+- A producer-agnostic logical schema registry defines field types, nullability, timestamp precision, duration units, nested-shape policy, and DuckDB/Proton/KQL mappings. It does not project Arrow, Avro, or a custom transport schema. See [ADR 0014](adr/0014-http-ingestion-type-fidelity-registry.md).
+- DuckDB/DuckLake access uses DuckDB.NET temporarily and will migrate behind `Data.DuckDb` to the [DuckDB Quack HTTP API](https://duckdb.org/docs/current/quack/overview). Proton publishing and streaming uses Proton's HTTP interface. Payload framing may differ because HTTP, not an identical body format, is the shared operational boundary.
+- `RawLogNdjsonCodec` remains available wherever an HTTP endpoint, development seeder, external integration, replay path, dead-letter diagnostic, or debug tap requires NDJSON. The registry and explicit parsing own type interpretation.
+- Timestamps are UTC values with declared precision. Durations carry explicit units. Exact 64-bit integers and decimals must not depend on JSON number inference.
 - Producers today are development seeders; future producers include collectors and broker adapters. Direct XML, CSV, and producer-JSON paths must pass through the same registry-backed normalization checkpoint instead of bypassing type classification. Parser/normalization behavior comes from the external DeltaZulu.Parse NuGet dependency, not an in-repo placeholder.
 - Consumers today are the DuckDB Bronze table loaders; target consumers are generated DuckDB lake writers and generated Proton Golden-compatible stream loaders that share one logical schema authority.
 - Windows ETW collection follows [ADR 0010](adr/0010-etw-collection-and-replay-boundaries.md):
@@ -512,9 +512,9 @@ Both modes share the same compilation pipeline (KQL → RelNode → ProtonSQL) a
 
 ### Schema medallion and Proton alignment
 
-DeltaZulu uses one logical schema model across two physical execution environments. DuckDB/DuckLake is the durable lake for replay, hunting, scheduled analytics, and evidence reconstruction. Timeplus Proton is the near-real-time detection engine and should run against Golden-compatible streams or materialized views, not a long-retention duplicate of the full lake. ADR 0007 is authoritative for medallion semantics; ADR 0014 adds the type-fidelity rule that this logical schema must be a producer-agnostic registry projected into DeltaZulu.Forward envelope, Arrow, DuckDB, Proton, KQL metadata, and translator policy.
+DeltaZulu uses one logical schema model across two physical execution environments. DuckDB/DuckLake is the durable lake for replay, hunting, scheduled analytics, and evidence reconstruction. Timeplus Proton is the near-real-time detection engine and should run against Golden-compatible streams or materialized views, not a long-retention duplicate of the full lake. ADR 0007 is authoritative for medallion semantics; ADR 0014 adds the type-fidelity rule that this logical schema must be a producer-agnostic registry projected into DuckDB, Proton, KQL metadata, and translator policy while both storage legs communicate over HTTP.
 
-Current code scaffolds the Proton side of this integration path: Bronze and Golden streams are created from the shared schema catalog, Silver materialized views transform raw source streams into Golden canonical streams, typed publishers (`ProtonWindowsSysmonEventPublisher`, `ProtonDnsServerEventPublisher`) insert NDJSON rows into source-specific streams via Proton's HTTP interface, and the platform subscribes to the `alert_dispatch` stream. This is a transitional implementation shape. Target ingestion consumes the external DeltaZulu.Forward dependency and decodes registry-governed MessagePack envelopes into Arrow once, writes DuckDB from Arrow, and writes Proton from the decoded typed stream. Live end-to-end validation, Proton OSS capability verification, durable alert delivery, and removal of NDJSON as the type-bearing transport are still required before this path is complete.
+Current code scaffolds the Proton side of this integration path: Bronze and Golden streams are created from the shared schema catalog, Silver materialized views transform raw source streams into Golden canonical streams, typed publishers (`ProtonWindowsSysmonEventPublisher`, `ProtonDnsServerEventPublisher`) insert NDJSON rows into source-specific streams via Proton's HTTP interface, and the platform subscribes to the `alert_dispatch` stream. The lake currently uses DuckDB.NET; its next infrastructure step is a Quack HTTP adapter. Live HTTP integration validation, durable delivery, replay, and registry-backed physical-schema drift checks are still required before this path is complete.
 
 ```mermaid
 flowchart LR

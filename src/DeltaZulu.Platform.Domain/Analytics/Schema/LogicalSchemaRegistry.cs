@@ -2,8 +2,8 @@ namespace DeltaZulu.Platform.Domain.Analytics.Schema;
 
 /// <summary>
 /// Producer-agnostic logical field families used by the Phase 3C type-fidelity registry.
-/// These values describe event meaning before the DeltaZulu.Forward envelope,
-/// Arrow, DuckDB, Proton, or KQL projection chooses a physical representation.
+/// These values describe event meaning before DuckDB, Proton, or KQL chooses a physical representation.
+/// HTTP is the transport boundary and does not add another in-memory or wire-schema projection.
 /// </summary>
 public enum LogicalFieldFamily
 {
@@ -44,16 +44,9 @@ public enum LogicalDurationUnit
 
 public enum RegistryProjectionTarget
 {
-    ForwardEnvelope,
-    Arrow,
     DuckDb,
     Proton,
     Kql
-}
-
-public enum LogicalEnvelopeEncoding
-{
-    MessagePack
 }
 
 /// <summary>
@@ -96,8 +89,6 @@ public sealed record LogicalFieldType(
         new(LogicalFieldFamily.Integer, nullable, IntegerWidth: width, BackendMappings: width == LogicalIntegerWidth.Int32
             ?
             [
-                new(RegistryProjectionTarget.ForwardEnvelope, KustoType.Int.ToKustoName(), "MessagePack serialized"),
-                new(RegistryProjectionTarget.Arrow, "int32"),
                 new(RegistryProjectionTarget.DuckDb, DuckDbType.Integer.ToSql()),
                 new(RegistryProjectionTarget.Proton, "int32"),
                 new(RegistryProjectionTarget.Kql, KustoType.Int.ToKustoName())
@@ -109,8 +100,6 @@ public sealed record LogicalFieldType(
         bool nullable = true) =>
         new(LogicalFieldFamily.Timestamp, nullable, TimestampPrecision: precision, BackendMappings:
         [
-            new(RegistryProjectionTarget.ForwardEnvelope, KustoType.DateTime.ToKustoName(), $"MessagePack serialized; {precision.ToString().ToLowerInvariant()} UTC precision"),
-            new(RegistryProjectionTarget.Arrow, "timestamp", precision.ToString().ToLowerInvariant()),
             new(RegistryProjectionTarget.DuckDb, DuckDbType.Timestamp.ToSql()),
             new(RegistryProjectionTarget.Proton, "datetime64", precision.ToString().ToLowerInvariant()),
             new(RegistryProjectionTarget.Kql, KustoType.DateTime.ToKustoName())
@@ -121,8 +110,6 @@ public sealed record LogicalFieldType(
         bool nullable = true) =>
         new(LogicalFieldFamily.Duration, nullable, DurationUnit: unit, BackendMappings:
         [
-            new(RegistryProjectionTarget.ForwardEnvelope, KustoType.Timespan.ToKustoName(), $"MessagePack serialized; {unit.ToString().ToLowerInvariant()} duration unit"),
-            new(RegistryProjectionTarget.Arrow, "duration", unit.ToString().ToLowerInvariant()),
             new(RegistryProjectionTarget.DuckDb, DuckDbType.BigInt.ToSql(), "stored as integer duration units"),
             new(RegistryProjectionTarget.Proton, "int64", "stored as integer duration units"),
             new(RegistryProjectionTarget.Kql, KustoType.Timespan.ToKustoName())
@@ -144,48 +131,36 @@ public sealed record LogicalFieldType(
     {
         LogicalFieldFamily.String =>
         [
-            new(RegistryProjectionTarget.ForwardEnvelope, KustoType.String.ToKustoName(), "MessagePack serialized"),
-            new(RegistryProjectionTarget.Arrow, "utf8"),
             new(RegistryProjectionTarget.DuckDb, DuckDbType.Varchar.ToSql()),
             new(RegistryProjectionTarget.Proton, "string"),
             new(RegistryProjectionTarget.Kql, KustoType.String.ToKustoName())
         ],
         LogicalFieldFamily.Boolean =>
         [
-            new(RegistryProjectionTarget.ForwardEnvelope, KustoType.Bool.ToKustoName(), "MessagePack serialized"),
-            new(RegistryProjectionTarget.Arrow, "bool"),
             new(RegistryProjectionTarget.DuckDb, DuckDbType.Boolean.ToSql()),
             new(RegistryProjectionTarget.Proton, "bool"),
             new(RegistryProjectionTarget.Kql, KustoType.Bool.ToKustoName())
         ],
         LogicalFieldFamily.Integer =>
         [
-            new(RegistryProjectionTarget.ForwardEnvelope, KustoType.Long.ToKustoName(), "MessagePack serialized"),
-            new(RegistryProjectionTarget.Arrow, "int64"),
             new(RegistryProjectionTarget.DuckDb, DuckDbType.BigInt.ToSql()),
             new(RegistryProjectionTarget.Proton, "int64"),
             new(RegistryProjectionTarget.Kql, KustoType.Long.ToKustoName())
         ],
         LogicalFieldFamily.Uuid =>
         [
-            new(RegistryProjectionTarget.ForwardEnvelope, KustoType.Guid.ToKustoName(), "MessagePack serialized"),
-            new(RegistryProjectionTarget.Arrow, "fixed_size_binary[16]"),
             new(RegistryProjectionTarget.DuckDb, DuckDbType.Varchar.ToSql()),
             new(RegistryProjectionTarget.Proton, "uuid"),
             new(RegistryProjectionTarget.Kql, KustoType.Guid.ToKustoName())
         ],
         LogicalFieldFamily.IpAddress =>
         [
-            new(RegistryProjectionTarget.ForwardEnvelope, KustoType.String.ToKustoName(), "MessagePack serialized IP literal"),
-            new(RegistryProjectionTarget.Arrow, "utf8"),
             new(RegistryProjectionTarget.DuckDb, DuckDbType.Varchar.ToSql()),
             new(RegistryProjectionTarget.Proton, "ipv6", "IPv4 stored as IPv4-mapped IPv6"),
             new(RegistryProjectionTarget.Kql, KustoType.String.ToKustoName())
         ],
         LogicalFieldFamily.Dynamic or LogicalFieldFamily.Nested =>
         [
-            new(RegistryProjectionTarget.ForwardEnvelope, KustoType.Dynamic.ToKustoName(), "MessagePack serialized object"),
-            new(RegistryProjectionTarget.Arrow, "struct"),
             new(RegistryProjectionTarget.DuckDb, DuckDbType.Json.ToSql()),
             new(RegistryProjectionTarget.Proton, "tuple", "or shredded arrays/maps when supported"),
             new(RegistryProjectionTarget.Kql, KustoType.Dynamic.ToKustoName())
@@ -209,8 +184,7 @@ public sealed record LogicalSchemaVersion(
     string SchemaName,
     int Version,
     IReadOnlyList<LogicalFieldDef> Fields,
-    string? Description = null,
-    LogicalEnvelopeEncoding EnvelopeEncoding = LogicalEnvelopeEncoding.MessagePack)
+    string? Description = null)
 {
     public string RegistryKey => $"{ProducerFamily.Trim()}/{SchemaName.Trim()}/v{Version}";
 }
@@ -218,7 +192,7 @@ public sealed record LogicalSchemaVersion(
 /// <summary>
 /// Contract for the Phase 3C registry. Implementations may be backed by static catalogs,
 /// files, database rows, or a remote registry, but must expose immutable schema versions
-/// whose DeltaZulu.Forward envelopes are serialized as MessagePack bytes and carried by the RELP-based transport.
+/// that drive DuckDB, Proton, and KQL type mappings independently of the HTTP payload framing.
 /// </summary>
 public interface ILogicalSchemaRegistry
 {

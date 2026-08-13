@@ -1,5 +1,7 @@
 # Documentation/code gap analysis — 2026-07-19
 
+> **Historical review:** The DeltaZulu.Forward/Arrow recommendation in this document was superseded by [ADR 0014](../adr/0014-http-ingestion-type-fidelity-registry.md). The accepted direction uses DuckDB.NET temporarily, then Quack HTTP for DuckDB/DuckLake, and Proton HTTP publishing/streaming. Do not use the former transport recommendations as implementation guidance.
+
 ## Purpose
 
 This review compares the current documentation claims against the repository implementation after ADR 0014 introduced the type-fidelity registry and DeltaZulu.Forward/Arrow ingestion target. The goal is to keep the project honest: target architecture remains useful only when current implementation gaps are explicit, prioritized, and not described as already complete.

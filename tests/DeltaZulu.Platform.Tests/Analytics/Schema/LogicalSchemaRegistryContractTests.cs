@@ -49,9 +49,7 @@ public sealed class LogicalSchemaRegistryContractTests
         Assert.AreEqual("windows/security-event/v3", schema.RegistryKey);
         Assert.HasCount(3, schema.Fields);
         Assert.AreEqual(LogicalIntegerWidth.Int32, schema.Fields[1].Type.IntegerWidth);
-        Assert.AreEqual(LogicalEnvelopeEncoding.MessagePack, schema.EnvelopeEncoding);
         Assert.AreEqual("INTEGER", schema.Fields[1].Type.BackendMappings.Single(m => m.Target == RegistryProjectionTarget.DuckDb).TypeName);
-        Assert.AreEqual("int", schema.Fields[1].Type.BackendMappings.Single(m => m.Target == RegistryProjectionTarget.ForwardEnvelope).TypeName);
     }
 
     private static void AssertHasTargets(LogicalFieldType type)
