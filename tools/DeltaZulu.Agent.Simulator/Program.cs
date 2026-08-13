@@ -7,7 +7,17 @@ using DeltaZulu.Agent.Simulator;
 // Usage:
 //   dotnet run --project tools/DeltaZulu.Agent.Simulator -- \
 //     --token dz-et-... [--base-url https://localhost:56196] [--hostname NAME] \
-//     [--interval 30] [--state-file agent-identity.json] [--insecure]
+//     [--interval 30] [--state-file agent-identity.json] [--insecure] \
+//     [--previous-secret dz-as-...] [--source-count 0]
+//
+// --previous-secret proves ownership of an already-credentialed hostname (the
+//   credential-recovery path); omit it for a fresh hostname or after an operator
+//   has revoked the credential (revocation itself authorizes the next enroll to
+//   reissue, per AgentEnrollmentService). A stale/omitted secret on an
+//   already-credentialed, still-active hostname gets 409 agent.hostname_taken.
+// --source-count adds N synthetic filler sources to every heartbeat's Sources
+//   array, beyond the two fixed named ones, to exercise the server's
+//   MaxSourcesPerHeartbeat cap end to end (e.g. --source-count 1001).
 
 var arguments = ParseArguments(args);
 var baseUrl = new Uri(arguments.GetValueOrDefault("base-url", "https://localhost:56196"));
@@ -16,6 +26,8 @@ var hostname = arguments.GetValueOrDefault("hostname", Environment.MachineName.T
 var intervalSeconds = int.Parse(arguments.GetValueOrDefault("interval", "30"), CultureInfo.InvariantCulture);
 var stateFile = arguments.GetValueOrDefault("state-file", "agent-identity.json");
 var insecure = arguments.ContainsKey("insecure");
+var previousSecret = arguments.GetValueOrDefault("previous-secret");
+var extraSourceCount = int.Parse(arguments.GetValueOrDefault("source-count", "0"), CultureInfo.InvariantCulture);
 
 using var cancellation = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) =>
@@ -36,9 +48,22 @@ if (identity is null || !string.Equals(identity.Hostname, hostname, StringCompar
     }
 
     Log($"Enrolling '{hostname}' at {baseUrl}...");
-    var enrollment = await client.EnrollAsync(new EnrollRequest(
-        bootstrapToken, hostname, OperatingSystem.IsWindows() ? "Windows" : "Linux",
-        AgentVersion: "1.0.0-sim", Tags: ["simulator"]), cancellation.Token);
+    EnrollResponse enrollment;
+    try
+    {
+        enrollment = await client.EnrollAsync(new EnrollRequest(
+            bootstrapToken, hostname, OperatingSystem.IsWindows() ? "Windows" : "Linux",
+            AgentVersion: "1.0.0-sim", Tags: ["simulator"], PreviousAgentSecret: previousSecret),
+            cancellation.Token);
+    }
+    catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Conflict)
+    {
+        Console.Error.WriteLine(
+            $"Hostname '{hostname}' already has an active credential ({ex.Message}). " +
+            "Pass --previous-secret <its current dz-as-... secret> to recover it, " +
+            "or have an operator revoke the credential from the Agent Detail page first.");
+        return 1;
+    }
 
     identity = new AgentIdentity(enrollment.AgentId, enrollment.AgentSecret, hostname);
     AgentIdentityStore.Save(stateFile, identity);
@@ -66,7 +91,7 @@ while (!cancellation.IsCancellationRequested)
         var heartbeat = await client.HeartbeatAsync(new HeartbeatRequest(
             "1.0.0-sim", appliedBundleId, appliedBundleHash, status,
             bufferPressure, queueDepth, dropped, forwardFailed,
-            health.NextSources(DateTimeOffset.UtcNow)), cancellation.Token);
+            health.NextSources(DateTimeOffset.UtcNow, extraSourceCount)), cancellation.Token);
 
         Log($"Heartbeat ok (status={status}, buffer={bufferPressure:P0}); " +
             $"desired={Short(heartbeat.DesiredBundleId)} changed={heartbeat.PolicyChanged} " +
@@ -102,6 +127,43 @@ while (!cancellation.IsCancellationRequested)
     catch (OperationCanceledException)
     {
         break;
+    }
+    catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+    {
+        // The stored secret no longer authenticates - most likely an operator
+        // revoked the credential from the Agent Detail page. A revoked credential
+        // skips proof-of-possession on the next enroll (the revoke itself is the
+        // authorization to reissue), so recovery only needs a valid bootstrap
+        // token, not the dead secret. Without one, there is nothing this process
+        // can do automatically; stop rather than hammering the API every interval.
+        if (string.IsNullOrWhiteSpace(bootstrapToken))
+        {
+            Log("ERROR: credential rejected (401) and no --token was given to re-enroll with. " +
+                "Get a fresh bootstrap token and restart the simulator.");
+            break;
+        }
+
+        Log("Credential rejected (401); attempting recovery re-enrollment...");
+        try
+        {
+            var recovered = await client.EnrollAsync(new EnrollRequest(
+                bootstrapToken, hostname, OperatingSystem.IsWindows() ? "Windows" : "Linux",
+                AgentVersion: "1.0.0-sim", Tags: ["simulator"], PreviousAgentSecret: identity.AgentSecret),
+                cancellation.Token);
+
+            identity = new AgentIdentity(recovered.AgentId, recovered.AgentSecret, hostname);
+            AgentIdentityStore.Save(stateFile, identity);
+            client.UseAgentSecret(identity.AgentSecret);
+            appliedBundleId = null;
+            appliedBundleHash = null;
+            Log($"Recovered as agent {recovered.AgentId}; new secret stored in {stateFile}.");
+        }
+        catch (Exception recoveryEx)
+        {
+            Log($"ERROR: recovery re-enrollment failed ({recoveryEx.Message}). " +
+                "The bootstrap token may be invalid, expired, or exhausted; stopping rather than retrying blindly.");
+            break;
+        }
     }
     catch (Exception ex)
     {

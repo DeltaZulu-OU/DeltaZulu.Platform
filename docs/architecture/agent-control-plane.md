@@ -5,6 +5,11 @@ pull-based HTTPS protocol and feeds agent health into the operational lake. Deci
 in [ADR 0012](../adr/0012-agent-control-plane-pull-protocol-and-auth.md); the capability targets
 the P0 rows of [`AGENT_MANAGEMENT_ROADMAP.md`](../AGENT_MANAGEMENT_ROADMAP.md).
 
+This document describes the Platform side of the protocol. For what the `DeltaZulu.Agent` daemon
+itself is responsible for implementing against this protocol — identity/credential recovery,
+bundle application, local filtering, forwarding, and health reporting — see
+[agent-daemon-responsibilities.md](agent-daemon-responsibilities.md).
+
 ## Protocol
 
 All endpoints are JSON minimal APIs under `/api/agent/v1` in `DeltaZulu.Platform.Web`
@@ -171,3 +176,20 @@ dotnet run --project tools/DeltaZulu.Agent.Simulator -- \
 
 `--insecure` trusts the ASP.NET dev certificate; the simulator must target the HTTPS URL because
 `UseHttpsRedirection` would drop POST bodies on the plain-HTTP redirect.
+
+It also exercises the credential-recovery and revocation paths added alongside the heartbeat
+source cap:
+
+- `--previous-secret dz-as-...` proves ownership of an already-credentialed hostname on enroll
+  (the recovery path); a fresh hostname or a hostname whose credential an operator has revoked
+  from the Agent Detail page needs no secret, since revocation itself authorizes the next
+  enrollment to reissue. Enrolling an active hostname without it, or with the wrong secret,
+  surfaces the real `409 agent.hostname_taken` from the API.
+- If a running simulator's stored secret starts getting `401`s (an operator revoked it mid-run),
+  the pull loop attempts one automatic recovery re-enrollment using the bootstrap token it was
+  started with, persists the new identity, and continues; without a bootstrap token, or if
+  recovery itself fails, it logs the reason and stops rather than hammering the API every
+  interval.
+- `--source-count N` adds `N` synthetic filler sources to every heartbeat's `sources` array
+  beyond the two fixed named ones, to exercise `AgentCheckInService.MaxSourcesPerHeartbeat`
+  end to end against the real API (`--source-count 1001` triggers the server's rejection).

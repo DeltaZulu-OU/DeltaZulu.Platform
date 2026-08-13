@@ -29,16 +29,24 @@ public sealed class SyntheticHealth
         return (_bufferPressure, _queueDepth, _droppedTotal, _forwardFailedTotal, status);
     }
 
-    public IReadOnlyList<SourceHealthEntry> NextSources(DateTimeOffset now)
+    /// <summary>
+    /// The two fixed named sources every simulated agent reports, plus
+    /// <paramref name="extraSourceCount"/> synthetic filler sources beyond that.
+    /// The filler knob exists to exercise
+    /// <c>AgentCheckInService.MaxSourcesPerHeartbeat</c> end to end against the
+    /// real API (e.g. <c>--source-count 1001</c> to trigger the server's rejection)
+    /// rather than only in unit tests.
+    /// </summary>
+    public IReadOnlyList<SourceHealthEntry> NextSources(DateTimeOffset now, int extraSourceCount = 0)
     {
         _securityReadTotal += _random.Next(50, 400);
         _sysmonReadTotal += _random.Next(20, 200);
         if (_random.NextDouble() < 0.08)
             _sysmonErrorTotal += _random.Next(1, 3);
 
-        return
-        [
-            new SourceHealthEntry(
+        var sources = new List<SourceHealthEntry>(2 + Math.Max(0, extraSourceCount))
+        {
+            new(
                 "WindowsEventLog", "Security", IsEnabled: true, CanRead: true,
                 LastReadAt: now, ReadErrorCount: 0, LastError: null,
                 ReadCount: _securityReadTotal,
@@ -49,7 +57,7 @@ public sealed class SyntheticHealth
                 SourceInstanceId: "security-eventlog",
                 ResourceFamily: "EventLog",
                 Provider: "Microsoft-Windows-Security-Auditing"),
-            new SourceHealthEntry(
+            new(
                 "WindowsEventLog", "Microsoft-Windows-Sysmon/Operational", IsEnabled: true,
                 CanRead: _sysmonErrorTotal < 5,
                 LastReadAt: now, ReadErrorCount: _sysmonErrorTotal,
@@ -62,7 +70,19 @@ public sealed class SyntheticHealth
                 SourceInstanceId: "sysmon-operational",
                 ResourceFamily: "EventLog",
                 Provider: "Microsoft-Windows-Sysmon"),
-        ];
+        };
+
+        for (var i = 0; i < extraSourceCount; i++)
+        {
+            sources.Add(new SourceHealthEntry(
+                "File", $"synthetic-{i}", IsEnabled: true, CanRead: true,
+                LastReadAt: now, ReadErrorCount: 0, LastError: null,
+                ReadCount: 1, KeptAfterFilterCount: 1, DiscardedCount: 0,
+                ForwardedCount: 1, ForwardFailedCount: 0,
+                SourceInstanceId: $"synthetic-{i}"));
+        }
+
+        return sources;
     }
 
     private long _securityReadTotal;
