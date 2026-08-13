@@ -40,7 +40,7 @@ Raw data -> KQL/curated analytics -> governed detection draft -> accepted versio
 | Analytics | 75% | Mature interactive query, schema, rendering, dashboards, query history, curated analytics, and NRT authoring foundations. Needs production data governance, limits, and Operations pivots. |
 | Governance | 70% | Mature proposal/check/review/acceptance workflow. Needs real identity, audit hardening, executable projection, and triage feedback. |
 | Operations | 15% | Scaffolded records/repositories only. No production module or alert lifecycle. |
-| Security | 20% | HTTPS/HSTS/antiforgery basics exist, but authn/authz, secrets, roles, tenancy, audit, and secure storage are not production-ready. |
+| Security | 20% | HTTPS/HSTS/antiforgery basics exist, but authn/authz, secrets, roles, tenancy, audit, and secure storage are not production-ready. Agent control-plane content is unsigned; see blocker 7 and ADR 0015. |
 | Reliability / operability | 25% | Local bootstrap works by design, but migrations, health checks, observability, background workers, backups, and runbooks are incomplete. |
 | Testing / QA | 55% | Broad tests exist; current `dotnet test` executes but is not green because of DuckDB extension download failures. Production e2e/perf/security tests are absent. |
 | Documentation | 75% | Central docs are good and candid. This gap analysis should now be treated as the v1 release readiness checklist. |
@@ -130,7 +130,40 @@ Raw data -> KQL/curated analytics -> governed detection draft -> accepted versio
 - Define backup/restore and retention policies for SQLite, DuckDB lake, Git accepted content, and Proton state.
 - Add configuration documentation and sample production appsettings.
 
-### 7. Build/test/CI must be green in a production-like environment
+### 7. Sign agent control-plane content (TUF)
+
+**Current state:** The agent policy pull protocol (ADR 0012) delivers `ResourceProfileVersion`,
+`DaemonConfigVersion`, and resolved `PolicyBundle` content to agents entirely unsigned. The fields
+named for this purpose do not do the job: `PolicyBundle.ContentHash` hashes the set of contributing
+version IDs, not the transmitted bytes, and `ResourceProfileVersion.ContentHash` /
+`DaemonConfigVersion.ContentHash` are caller-supplied strings nothing computes or verifies. No
+signature exists anywhere in `DeltaZulu.Platform.Domain.AgentManagement` or
+`DeltaZulu.Platform.Application.AgentManagement`, and `DeltaZulu.Agent` has no bundle-apply/verify
+path yet to enforce one even if it existed. This is explicitly acceptable for POC/MVP.
+
+**Risk:** A compromised or misconfigured Platform API process — or, once any content-delivery layer
+sits in front of it, a compromised mirror/CDN edge — can push arbitrary configuration to the entire
+managed fleet with no cryptographic check catching it, and no rollback/freeze/mix-and-match
+protection exists to limit the blast radius of a compromised online credential.
+
+**Required for v1:**
+
+- Adopt TUF's role model (targets/timestamp/snapshot/root), mapped onto the existing pull loop per
+  [ADR 0015](../adr/0015-tuf-agent-content-signing.md).
+- Evaluate the candidate client/repository library (`tuf-dotnet`) against the official TUF
+  conformance test vectors before any production key depends on it.
+- Establish root-of-trust key custody as an explicit, owner-assigned decision — not an implicit
+  default.
+- Sign accepted profile/config/bundle content at Governance's accept gate, outside the online
+  request pipeline.
+- Build `DeltaZulu.Agent`'s bundle-apply path with TUF verification as a hard precondition to
+  applying any bundle — no reduced-trust fallback.
+- Add a production-environment check that refuses to serve unsigned bundles; leave POC/MVP paths
+  unaffected.
+- Track the concrete, sequenced subtasks in `AGENT_MANAGEMENT_ROADMAP.md` under the `Production
+  gate` priority so this cannot be silently deferred the way a low-priority roadmap item could be.
+
+### 8. Build/test/CI must be green in a production-like environment
 
 **Current state:** The current environment has .NET 10 and can execute the test suite, but `dotnet test` is not green. The latest run failed because DuckDB could not download the `inet` extension from `extensions.duckdb.org` (HTTP 403); the latest full `--no-restore` run reported 94 failed and 1130 passed tests.
 
@@ -202,6 +235,7 @@ Raw data -> KQL/curated analytics -> governed detection draft -> accepted versio
 | Milestone 3: Executable detection projection | Phase 4 | Projection service, reconciliation, diagnostics, rule metadata |
 | Milestone 4: Detection execution loop | Phase 6, Phase 7, Phase 9 | Scheduled/NRT execution, alert materialization, alert queue/detail UI |
 | Milestone 5: Triage and feedback loop | Phase 10, Phase 11, Phase 12 | Enrichment/suppression, candidate correlation, triage feedback |
+| Milestone 6: Agent control-plane content signing | *(`AGENT_MANAGEMENT_ROADMAP.md`, `Production gate` rows — independent of `ROADMAP.md` phases, same as the rest of agent management)* | TUF conformance evaluation, root-of-trust key management, targets/timestamp/snapshot signing, agent-side verification gate, production-ship enforcement |
 
 Phases not mapped to a milestone: Phase 1A (design-system enforcement) and Phase 8 (operations KQL views) are in-progress or incremental work that spans multiple milestones rather than gating a single one.
 
@@ -252,6 +286,22 @@ Exit criteria:
 - Suppression/enrichment are deterministic and visible.
 - Feedback can create governance tuning proposals or curated follow-up hunts.
 
+### Milestone 6: Agent control-plane content signing
+
+Exit criteria:
+
+- The candidate TUF client/repository library has passed the official conformance test vectors, or
+  a from-spec client verification implementation has replaced it.
+- A documented root-of-trust key exists outside every online process, with an owner-assigned
+  custody decision and a documented rotation procedure.
+- Accepted `ResourceProfileVersion`, `DaemonConfigVersion`, and resolved `PolicyBundle` content is
+  signed at Governance's accept gate under the targets role.
+- The heartbeat freshness claim and a targets-version manifest are signed under the timestamp and
+  snapshot roles respectively.
+- `DeltaZulu.Agent` refuses to apply any bundle that fails TUF verification, with no reduced-trust
+  fallback mode.
+- Production deployments refuse to serve unsigned bundles; POC/MVP deployments are unaffected.
+
 ## Production-v1 definition of done
 
 A v1 release should not be declared until all of the following are true:
@@ -263,3 +313,7 @@ A v1 release should not be declared until all of the following are true:
 - CI is green and includes tests, analyzers, vulnerability checks, and packaging.
 - Health, metrics, logs, migrations, backups, retention, and runbooks are documented and exercised.
 - The release has rollback guidance for app binaries, schemas, and operational data.
+- Agent control-plane content (policy bundles, profiles, configs) is signed and verified end to end
+  under a documented TUF root of trust ([ADR 0015](../adr/0015-tuf-agent-content-signing.md)); the
+  platform refuses to serve unsigned content in production. This item does not block a POC/MVP
+  release, only a production one.
