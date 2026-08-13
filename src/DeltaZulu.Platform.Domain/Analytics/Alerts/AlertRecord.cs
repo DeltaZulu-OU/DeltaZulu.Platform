@@ -12,6 +12,10 @@ public sealed record AlertRecord(
     string Confidence,
     int RiskScore,
     string EvidenceJson,
-    string Status,
-    DateTime CreatedAtUtc,
-    DateTime UpdatedAtUtc);
+    string EvidenceHash,
+    string MaterializationKey,
+    string MaterializationMode,
+    string RuleHash,
+    bool IsSuppressed,
+    string? SuppressionKey,
+    DateTime CreatedAtUtc);

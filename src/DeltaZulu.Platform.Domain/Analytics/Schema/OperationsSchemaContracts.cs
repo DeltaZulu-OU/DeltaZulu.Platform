@@ -17,6 +17,12 @@ public static class OperationsSchemaContracts
             new("confidence", DuckDbType.Varchar, KustoType.String, Nullable: false),
             new("risk_score", DuckDbType.Integer, KustoType.Int, Nullable: false),
             new("evidence_json", DuckDbType.Json, KustoType.Dynamic, Nullable: false),
+            new("evidence_hash", DuckDbType.Varchar, KustoType.String, Nullable: false),
+            new("materialization_key", DuckDbType.Varchar, KustoType.String, Nullable: false),
+            new("materialization_mode", DuckDbType.Varchar, KustoType.String, Nullable: false),
+            new("rule_hash", DuckDbType.Varchar, KustoType.String, Nullable: false),
+            new("is_suppressed", DuckDbType.Boolean, KustoType.Bool, Nullable: false),
+            new("suppression_key", DuckDbType.Varchar, KustoType.String),
             new("created_at_utc", DuckDbType.Timestamp, KustoType.DateTime, Nullable: false)
         ], "Append-only alert evidence lake table.");
 
@@ -31,6 +37,8 @@ public static class OperationsSchemaContracts
             new("specificity_weight", DuckDbType.Double, KustoType.Real, Nullable: false),
             new("criticality_weight", DuckDbType.Double, KustoType.Real, Nullable: false),
             new("is_high_fanout", DuckDbType.Boolean, KustoType.Bool, Nullable: false),
+            new("entity_value_json", DuckDbType.Json, KustoType.Dynamic),
+            new("entity_type_contract", DuckDbType.Varchar, KustoType.String, Nullable: false),
             new("created_at_utc", DuckDbType.Timestamp, KustoType.DateTime, Nullable: false)
         ], "Append-only entities extracted from alert evidence.");
 
@@ -48,6 +56,12 @@ public static class OperationsSchemaContracts
             new("confidence", DuckDbType.Varchar, KustoType.String),
             new("risk_score", DuckDbType.Integer, KustoType.Int),
             new("evidence_json", DuckDbType.Json, KustoType.Dynamic),
+            new("evidence_hash", DuckDbType.Varchar, KustoType.String),
+            new("materialization_key", DuckDbType.Varchar, KustoType.String),
+            new("materialization_mode", DuckDbType.Varchar, KustoType.String),
+            new("rule_hash", DuckDbType.Varchar, KustoType.String),
+            new("is_suppressed", DuckDbType.Boolean, KustoType.Bool),
+            new("suppression_key", DuckDbType.Varchar, KustoType.String),
             new("created_at_utc", DuckDbType.Timestamp, KustoType.DateTime)
         ], "Immutable alert evidence materialized by detection execution.");
 
@@ -62,6 +76,8 @@ public static class OperationsSchemaContracts
             new("specificity_weight", DuckDbType.Double, KustoType.Real),
             new("criticality_weight", DuckDbType.Double, KustoType.Real),
             new("is_high_fanout", DuckDbType.Boolean, KustoType.Bool),
+            new("entity_value_json", DuckDbType.Json, KustoType.Dynamic),
+            new("entity_type_contract", DuckDbType.Varchar, KustoType.String),
             new("created_at_utc", DuckDbType.Timestamp, KustoType.DateTime)
         ], "Immutable entity values extracted from alert evidence.");
 }

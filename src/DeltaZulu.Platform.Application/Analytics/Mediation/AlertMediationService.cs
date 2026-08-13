@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using DeltaZulu.Platform.Domain.Analytics.Alerts;
 using DeltaZulu.Platform.Domain.Analytics.Streaming;
@@ -66,6 +68,39 @@ public sealed class AlertMediationService : BackgroundService
         _logger.LogInformation("Alert mediation stopped.");
     }
 
+    private static AlertRecord NormalizeAlert(AlertRecord alert)
+    {
+        var evidenceJson = string.IsNullOrWhiteSpace(alert.EvidenceJson) ? "{}" : alert.EvidenceJson;
+        var evidenceHash = string.IsNullOrWhiteSpace(alert.EvidenceHash)
+            ? $"sha256:{Sha256Hex(evidenceJson)}"
+            : alert.EvidenceHash;
+        var materializationMode = string.IsNullOrWhiteSpace(alert.MaterializationMode)
+            ? "PerResultRow"
+            : alert.MaterializationMode;
+        var materializationKey = string.IsNullOrWhiteSpace(alert.MaterializationKey)
+            ? string.Join(':', alert.DetectionId, alert.DetectionVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                alert.DetectionRunId, alert.SourceView, alert.SourceEventId ?? alert.Id, evidenceHash)
+            : alert.MaterializationKey;
+        var ruleHash = string.IsNullOrWhiteSpace(alert.RuleHash) ? "unknown" : alert.RuleHash;
+        var createdAtUtc = alert.CreatedAtUtc == default ? DateTime.UtcNow : alert.CreatedAtUtc;
+
+        return alert with
+        {
+            EvidenceJson = evidenceJson,
+            EvidenceHash = evidenceHash,
+            MaterializationKey = materializationKey,
+            MaterializationMode = materializationMode,
+            RuleHash = ruleHash,
+            CreatedAtUtc = createdAtUtc
+        };
+    }
+
+    private static string Sha256Hex(string value)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
     private async Task HandlePayloadAsync(string payload, CancellationToken ct)
     {
         AlertRecord? alert;
@@ -84,6 +119,8 @@ public sealed class AlertMediationService : BackgroundService
             _logger.LogWarning("Alert payload deserialized to null; skipping.");
             return;
         }
+
+        alert = NormalizeAlert(alert);
 
         const int maxRetries = 3;
         for (var attempt = 1; attempt <= maxRetries; attempt++)

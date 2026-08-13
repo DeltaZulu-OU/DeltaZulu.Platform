@@ -11,7 +11,8 @@ public sealed class DuckDbAlertEntityLakeWriter(DuckDbConnectionFactory connecti
         CREATE TABLE IF NOT EXISTS lake.alert_entities (
             id VARCHAR NOT NULL, alert_id VARCHAR NOT NULL, entity_type VARCHAR NOT NULL,
             entity_value VARCHAR NOT NULL, role VARCHAR NOT NULL, specificity_weight DOUBLE NOT NULL,
-            criticality_weight DOUBLE NOT NULL, is_high_fanout BOOLEAN NOT NULL, created_at_utc TIMESTAMP NOT NULL
+            criticality_weight DOUBLE NOT NULL, is_high_fanout BOOLEAN NOT NULL, entity_value_json JSON,
+            entity_type_contract VARCHAR NOT NULL, created_at_utc TIMESTAMP NOT NULL
         );
         """;
     public Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
@@ -36,13 +37,19 @@ public sealed class DuckDbAlertEntityLakeWriter(DuckDbConnectionFactory connecti
     }
 
     private static string BuildInsertSql(AlertEntityRecord entity) => $"""
-        INSERT INTO lake.alert_entities VALUES (
+        INSERT INTO lake.alert_entities (
+            id, alert_id, entity_type, entity_value, role, specificity_weight, criticality_weight,
+            is_high_fanout, entity_value_json, entity_type_contract, created_at_utc)
+        VALUES (
             {StringLiteral(entity.Id)}, {StringLiteral(entity.AlertId)}, {StringLiteral(entity.EntityType)},
             {StringLiteral(entity.EntityValue)}, {StringLiteral(entity.Role)},
             {entity.SpecificityWeight.ToString(System.Globalization.CultureInfo.InvariantCulture)},
             {entity.CriticalityWeight.ToString(System.Globalization.CultureInfo.InvariantCulture)},
-            {entity.IsHighFanout.ToString().ToLowerInvariant()}, {TimestampLiteral(entity.CreatedAtUtc)});
+            {entity.IsHighFanout.ToString().ToLowerInvariant()}, {NullableJsonLiteral(entity.EntityValueJson)},
+            {StringLiteral(entity.EntityTypeContract)}, {TimestampLiteral(entity.CreatedAtUtc)});
         """;
+
+    private static string NullableJsonLiteral(string? value) => value is null ? "NULL" : $"CAST({StringLiteral(value)} AS JSON)";
 
     private static string StringLiteral(string value) => $"'{value.Replace("'", "''", StringComparison.Ordinal)}'";
 
