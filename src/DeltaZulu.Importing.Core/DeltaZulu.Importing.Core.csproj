@@ -2,7 +2,5 @@
   <PropertyGroup>
     <RootNamespace>DeltaZulu.Importing.Core</RootNamespace>
     <AssemblyName>DeltaZulu.Importing.Core</AssemblyName>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 </Project>
