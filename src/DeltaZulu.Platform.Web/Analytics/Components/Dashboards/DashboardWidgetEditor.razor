@@ -6,6 +6,7 @@
 @inject QueryLibraryService QueryLibrary
 @inject VisualizationLibraryService VisualizationLibrary
 @inject WidgetEditorInterop WidgetEditor
+@inject IJSRuntime JS
 @implements IAsyncDisposable
 
 @if (IsOpen)
@@ -89,14 +90,12 @@
                     <div class="dashboard-editor-wide">
                         <div class="dashboard-editor-label-row">
                             <span>@EditorTextLabel</span>
-                            @if (_monacoReady)
-                            {
-                                <span class="dashboard-editor-mode">Monaco</span>
-                            }
-                            else
-                            {
-                                <span class="dashboard-editor-mode">Textarea fallback</span>
-                            }
+                            <span class="hunt-toolbar-actions">
+                                @if (CanUseVisualizationWizard)
+                                {
+                                    <VisualizationHelperDrawer ApplyRequested="ApplyVisualizationRenderAsync" RefreshRequested="RefreshVisualizationRenderAsync" />
+                                }
+                            </span>
                         </div>
 
                         <div class="dashboard-editor-text-shell">
@@ -181,6 +180,9 @@
 
     private bool ShouldShowTextEditor
         => !IsVisualizationSource;
+
+    private bool CanUseVisualizationWizard
+        => _kind == DashboardWidgetKind.Query && _querySource == WidgetQuerySource.QueryText;
 
     private string KindValue
         => _kind.ToString();
@@ -415,6 +417,78 @@ Lorem *ipsum* **dolor** sit amet.
 
         await RequestRenderAsync();
     }
+
+    private async Task ApplyVisualizationRenderAsync(string renderClause)
+    {
+        if (!CanUseVisualizationWizard)
+        {
+            return;
+        }
+
+        var currentText = await GetQueryTextAsync();
+        if (!RenderClauseQueryValidator.TryAppendOrReplaceTerminalRender(
+            currentText,
+            renderClause,
+            out var nextQuery,
+            out var error))
+        {
+            _errors.Add(error);
+            await RequestRenderAsync();
+            return;
+        }
+
+        _queryText = nextQuery;
+
+        if (_editorInitialized)
+        {
+            await SetDashboardEditorValueAsync(nextQuery);
+        }
+
+        await RequestRenderAsync();
+    }
+
+    private async Task SetDashboardEditorValueAsync(string value)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("huntingDashboardWidgetEditor.setValue", _editorElementId, value);
+        }
+        catch (JSDisconnectedException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "setValue");
+            MarkEditorDisposed();
+        }
+        catch (TaskCanceledException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "setValue");
+            MarkEditorDisposed();
+        }
+        catch (OperationCanceledException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "setValue");
+            MarkEditorDisposed();
+        }
+        catch (JSException ex)
+        {
+            Logger.LogDebug(
+                ex,
+                "Dashboard widget editor JS interop setValue failed for {EditorElementId}; keeping the last known query text.",
+                _editorElementId);
+        }
+        catch (ObjectDisposedException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "setValue");
+            MarkEditorDisposed();
+        }
+        catch (InvalidOperationException ex)
+        {
+            LogEditorInteropLifecycleDebug(ex, "setValue");
+            MarkEditorDisposed();
+        }
+    }
+
+    private async Task RefreshVisualizationRenderAsync(string renderClause)
+        => await RequestRenderAsync();
 
     private async Task SaveAsync()
     {

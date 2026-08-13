@@ -1,4 +1,5 @@
 using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
+using DeltaZulu.Platform.Web.Analytics.Rendering;
 
 namespace DeltaZulu.Platform.Web.Analytics.Dashboards;
 
@@ -138,6 +139,14 @@ public static class DashboardModelValidator
         int index,
         List<string> errors)
     {
+        var renderCommandCount = RenderClauseQueryValidator.CountRenderCommands(widget.QueryText);
+        if (renderCommandCount > 1)
+        {
+            errors.Add(
+                $"Query widget '{DisplayWidgetId(widget, index)}' must not include more than one render command. Remove the extra render command before saving.");
+            return;
+        }
+
         var parsed = RenderDirectiveParser.Parse(widget.QueryText);
         if (!parsed.HasRenderDirective)
         {

@@ -40,6 +40,7 @@
                         <span class="hunt-editor-label">KQL Query</span>
                         <div class="hunt-toolbar-actions">
                             <KqlHelperDrawer InsertRequested="InsertHelperQueryAsync" AppendRequested="AppendHelperQueryAsync" />
+                            <VisualizationHelperDrawer ApplyRequested="ApplyVisualizationRenderAsync" RefreshRequested="RefreshVisualizationRenderAsync" />
 
                             <button class="hunt-btn hunt-btn-run"
                                     disabled="@_running"
@@ -446,6 +447,30 @@
             await RunQuery();
             StateHasChanged();
         });
+    }
+
+
+    private async Task ApplyVisualizationRenderAsync(string renderClause)
+    {
+        var currentText = await GetCurrentEditorTextAsync();
+        if (!RenderClauseQueryValidator.TryAppendOrReplaceTerminalRender(
+            currentText,
+            renderClause,
+            out var nextQuery,
+            out var error))
+        {
+            Snackbar.Add(error, Severity.Warning);
+            return;
+        }
+
+        _kql = nextQuery;
+        _cachedEditorText = nextQuery;
+        await LanguageService.SetEditorValueAsync(nextQuery);
+    }
+
+    private async Task RefreshVisualizationRenderAsync(string renderClause)
+    {
+        await RunQuery();
     }
 
     private async Task SaveCurrentQueryAsync()

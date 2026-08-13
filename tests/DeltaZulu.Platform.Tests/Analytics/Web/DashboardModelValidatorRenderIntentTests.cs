@@ -41,6 +41,19 @@ public sealed class DashboardModelValidatorRenderIntentTests
             string.Join(Environment.NewLine, errors));
     }
 
+
+    [TestMethod]
+    public void Validate_QueryWidgetWithMultipleRenderCommands_ReturnsRenderCommandCountError()
+    {
+        var dashboard = CreateDashboard(CreateQueryWidget("ProcessEvent | render table | summarize Count = count() | render barchart"));
+
+        var errors = DashboardModelValidator.Validate(dashboard);
+
+        Assert.Contains(
+            error => error.Contains("must not include more than one render command", StringComparison.OrdinalIgnoreCase), errors,
+            "Query widgets should not allow multiple render commands.");
+    }
+
     [TestMethod]
     public void Validate_QueryWidgetWithVisualizationId_DoesNotRequireInlineRenderCommand()
     {
