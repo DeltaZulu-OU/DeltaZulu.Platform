@@ -24,7 +24,6 @@ public sealed class ProtonRegistryDriftTests
     [DataRow(KustoType.Long, "Integer")]
     [DataRow(KustoType.Guid, "Uuid")]
     [DataRow(KustoType.Timespan, "Duration")]
-    [DataRow(KustoType.Decimal, "Decimal")]
     public void KustoMapping_MatchesRegistry(KustoType kustoType, string familyName)
     {
         var family = Enum.Parse<LogicalFieldFamily>(familyName);
@@ -79,8 +78,10 @@ public sealed class ProtonRegistryDriftTests
         Assert.AreEqual("ipv6", RegistryProtonType(LogicalFieldType.IpAddress()));
         Assert.AreEqual("string", KustoType.String.ToProtonSql());
 
-        // Decimal: agrees with the registry, but both are lossy — KustoType carries no
-        // precision/scale, so DecimalPrecision/DecimalScale cannot reach the emitter.
+        // Decimal: the generic Kusto mapping has no precision/scale metadata and therefore
+        // remains float64 for backward compatibility. Registry-projected ColumnDefs carry a
+        // ProtonTypeOverride that preserves their exact decimal(p,s) physical type.
+        Assert.AreEqual("decimal(38,9)", RegistryProtonType(LogicalFieldType.Decimal()));
         Assert.AreEqual("float64", KustoType.Decimal.ToProtonSql());
     }
 

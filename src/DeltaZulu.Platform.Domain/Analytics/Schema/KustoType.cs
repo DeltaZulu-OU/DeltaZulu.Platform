@@ -50,7 +50,7 @@ public static class KustoTypeExtensions
         KustoType.Timespan => DuckDbType.BigInt,      // stored as microseconds
         KustoType.Dynamic => DuckDbType.Json,
         KustoType.Guid => DuckDbType.Varchar,
-        KustoType.Decimal => DuckDbType.Double,
+        KustoType.Decimal => DuckDbType.Decimal,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown Kusto type")
     };
 }

@@ -26,7 +26,8 @@ The current lake implementation is embedded through DuckDB.NET, on the platform 
 - **`RegistryProjectionTarget` stays DuckDB, Proton, and KQL. Neither Forward nor the Agent becomes a target.** The rationale is below.
 - Do not introduce Arrow, Avro, MessagePack, or another shared wire/in-memory representation as an *internal* platform exchange format between ingestion, the lake, and the streaming engine. This constrains the platform's own conversion boundaries; it does not constrain the Agent's edge protocol.
 - Use DuckDB.NET for platform lake access until the Agent's [Quack](https://duckdb.org/docs/current/quack/overview) output sink exists. The Quack sink is Agent-side and HTTP-based, in the same shape as its ClickHouse sink; it is not a platform-side HTTP lake client.
-- Publish and stream to Proton over Proton's HTTP interface.
+- Add Quack and Proton output sinks to DeltaZulu.Agent. The agent owns collection, local buffering, batching, retry/backpressure, routing, destination authentication, timeout handling, replay, and delivery acknowledgements.
+- Use HTTP-based communication for both agent destinations: upload logs to DuckDB/DuckLake through Quack and publish logs through Proton's HTTP interface.
 - Keep transport payload framing destination-specific. HTTP is the common operational boundary; it is not a requirement that DuckDB and Proton accept an identical request body or ingestion mode.
 - Preserve exact timestamps, durations, signed 64-bit integers, decimals, nullability, and nested-data policy through registry validation and destination mappings. Do not depend on transport-level type inference.
 - Retain JSON/NDJSON where required by an HTTP endpoint, diagnostics, replay, or external integration. Its use is governed by the registry and explicit parsing; it is not itself the schema authority.
@@ -89,7 +90,7 @@ existing targets**, not a fourth member.
 
 `DeltaZulu.Platform.Data.DuckDb` owns the DuckDB.NET implementation and remains the platform's lake adapter for query execution against DuckLake. The Quack migration is different in kind from what this ADR previously described: it does not swap a platform-side client, it moves the *write* path out of the platform and into the server-side Agent's Quack sink. The platform's read/query path stays behind `Data.DuckDb`; what retires is platform-side ingestion writing, not platform-side lake access.
 
-`DeltaZulu.Platform.Data.Proton` owns Proton HTTP publishing, streaming subscriptions, and SQL/DDL execution. Application services orchestrate through interfaces and do not construct HTTP requests directly.
+`DeltaZulu.Platform.Data.Proton` owns platform-side Proton SQL/DDL, subscriptions, and detection deployment. The producer-side Proton output client belongs to DeltaZulu.Agent. Application and Web services do not buffer or route telemetry and do not construct agent sink requests.
 
 ## Consequences
 
@@ -97,5 +98,5 @@ existing targets**, not a fourth member.
 - The registry has only DuckDB, Proton, and KQL projection targets. HTTP payload codecs and the Agent validate against those logical definitions rather than becoming additional projection targets. When the Agent needs per-sink schemas, they are exported from existing targets.
 - `DeltaZulu.Agent` is a named external dependency with its own release cadence. Changes to the Bronze `RawEventEnvelope` contract, and to the Forward protocol itself, are coordination points between the platform and the Agent, and must be treated as compatibility surfaces rather than internal refactors.
 - DuckDB.NET is not on a deprecation path for query execution. New *ingestion write* work should target the Agent's Quack sink rather than deepening platform-side write coupling to an in-process DuckDB connection.
-- DuckDB and Proton HTTP integrations require independent retry, backpressure, batching, authentication, timeout, replay, and idempotency policies appropriate to upload versus streaming workloads.
+- The Quack and Proton agent sinks require independent retry, backpressure, batching, authentication, timeout, replay, idempotency, and acknowledgement policies appropriate to upload versus streaming workloads.
 - Drift checks must prove that both physical schemas map back to the same logical types even though their HTTP payload formats and physical types may differ.

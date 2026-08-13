@@ -10,6 +10,7 @@ public enum LogicalFieldFamily
     String,
     Boolean,
     Integer,
+    FloatingPoint,
     Decimal,
     Timestamp,
     Duration,
@@ -85,14 +86,34 @@ public sealed record LogicalFieldType(
     public static LogicalFieldType Boolean(bool nullable = true) =>
         new(LogicalFieldFamily.Boolean, nullable, BackendMappings: DefaultMappings(LogicalFieldFamily.Boolean));
 
-    /// <summary>
-    /// Exact-decimal logical field. Precision and scale are recorded here, but neither backend
-    /// mapping preserves them yet — both project to a 64-bit float. Closing that is an open
-    /// Phase 3C item; the metadata is carried so the gap is measurable rather than invisible.
-    /// </summary>
-    public static LogicalFieldType Decimal(int precision = 38, int scale = 9, bool nullable = true) =>
-        new(LogicalFieldFamily.Decimal, nullable, DecimalPrecision: precision, DecimalScale: scale,
-            BackendMappings: DefaultMappings(LogicalFieldFamily.Decimal));
+    public static LogicalFieldType Decimal(int precision = 38, int scale = 9, bool nullable = true)
+    {
+        if (precision is <= 0 or > 38)
+        {
+            throw new ArgumentOutOfRangeException(nameof(precision), "Precision must be between 1 and 38.");
+        }
+
+        if (scale < 0 || scale > precision)
+        {
+            throw new ArgumentOutOfRangeException(nameof(scale), "Scale must be between 0 and precision.");
+        }
+
+        return new(LogicalFieldFamily.Decimal, nullable, DecimalPrecision: precision, DecimalScale: scale,
+            BackendMappings:
+            [
+                new(RegistryProjectionTarget.DuckDb, $"DECIMAL({precision},{scale})"),
+                new(RegistryProjectionTarget.Proton, $"decimal({precision},{scale})"),
+                new(RegistryProjectionTarget.Kql, KustoType.Decimal.ToKustoName())
+            ]);
+    }
+
+    public static LogicalFieldType FloatingPoint(bool nullable = true) =>
+        new(LogicalFieldFamily.FloatingPoint, nullable, BackendMappings:
+        [
+            new(RegistryProjectionTarget.DuckDb, DuckDbType.Double.ToSql()),
+            new(RegistryProjectionTarget.Proton, "float64"),
+            new(RegistryProjectionTarget.Kql, KustoType.Real.ToKustoName())
+        ]);
 
     public static LogicalFieldType Integer(LogicalIntegerWidth width = LogicalIntegerWidth.Int64, bool nullable = true) =>
         new(LogicalFieldFamily.Integer, nullable, IntegerWidth: width, BackendMappings: width == LogicalIntegerWidth.Int32
@@ -109,8 +130,20 @@ public sealed record LogicalFieldType(
         bool nullable = true) =>
         new(LogicalFieldFamily.Timestamp, nullable, TimestampPrecision: precision, BackendMappings:
         [
-            new(RegistryProjectionTarget.DuckDb, DuckDbType.Timestamp.ToSql()),
-            new(RegistryProjectionTarget.Proton, "datetime64", precision.ToString().ToLowerInvariant()),
+            new(RegistryProjectionTarget.DuckDb, precision switch
+            {
+                LogicalTimestampPrecision.Milliseconds => "TIMESTAMP_MS",
+                LogicalTimestampPrecision.Microseconds => "TIMESTAMP",
+                LogicalTimestampPrecision.Nanoseconds => "TIMESTAMP_NS",
+                _ => throw new ArgumentOutOfRangeException(nameof(precision), precision, null)
+            }),
+            new(RegistryProjectionTarget.Proton, $"datetime64({precision switch
+            {
+                LogicalTimestampPrecision.Milliseconds => 3,
+                LogicalTimestampPrecision.Microseconds => 6,
+                LogicalTimestampPrecision.Nanoseconds => 9,
+                _ => throw new ArgumentOutOfRangeException(nameof(precision), precision, null)
+            }}, 'UTC')"),
             new(RegistryProjectionTarget.Kql, KustoType.DateTime.ToKustoName())
         ]);
 
@@ -174,12 +207,6 @@ public sealed record LogicalFieldType(
             new(RegistryProjectionTarget.Proton, "tuple", "or shredded arrays/maps when supported"),
             new(RegistryProjectionTarget.Kql, KustoType.Dynamic.ToKustoName())
         ],
-        LogicalFieldFamily.Decimal =>
-        [
-            new(RegistryProjectionTarget.DuckDb, DuckDbType.Double.ToSql(), "lossy; exact decimal storage is an open Phase 3C item"),
-            new(RegistryProjectionTarget.Proton, "float64", "lossy; exact decimal storage is an open Phase 3C item"),
-            new(RegistryProjectionTarget.Kql, KustoType.Decimal.ToKustoName())
-        ],
         _ => Array.Empty<LogicalFieldBackendMapping>()
     };
 }
@@ -188,7 +215,8 @@ public sealed record LogicalFieldDef(
     string Name,
     LogicalFieldType Type,
     string? Description = null,
-    IReadOnlyDictionary<string, string>? Tags = null)
+    IReadOnlyDictionary<string, string>? Tags = null,
+    ParserFieldContract? Parser = null)
 {
     public IReadOnlyDictionary<string, string> Tags { get; init; } =
         Tags ?? new Dictionary<string, string>();

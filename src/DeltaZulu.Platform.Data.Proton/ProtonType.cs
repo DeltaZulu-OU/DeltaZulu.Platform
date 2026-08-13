@@ -36,7 +36,9 @@ public static class KustoTypeExtensions
         KustoType.Timespan => "int64",     // stored as integer duration units; Proton has no native duration type
         KustoType.Dynamic => "string",     // registry declares "tuple"; see ProtonRegistryDriftTests
         KustoType.Guid => "uuid",
-        KustoType.Decimal => "float64",    // lossy; KustoType carries no precision/scale
+        // KustoType alone carries no precision or scale, so retain the legacy lossy mapping.
+        // Registry-projected columns use ProtonTypeOverride to emit decimal(p,s) exactly.
+        KustoType.Decimal => "float64",
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown Kusto type")
     };
 
@@ -102,6 +104,7 @@ public static class ProtonTypeExtensions
         DuckDbType.BigInt => "int64",
         DuckDbType.Integer => "int32",
         DuckDbType.Double => "float64",
+        DuckDbType.Decimal => "decimal(38,9)",
         DuckDbType.Boolean => "bool",
         DuckDbType.Timestamp => "datetime64(3, 'UTC')",
         DuckDbType.Date => "date32",
@@ -114,7 +117,7 @@ public static class ProtonTypeExtensions
     public static string ToProtonColumnType(this ColumnDef col)
     {
         ArgumentNullException.ThrowIfNull(col);
-        var baseType = col.KustoType.ToProtonSql();
+        var baseType = col.ProtonTypeOverride ?? col.KustoType.ToProtonSql();
         return col.Nullable ? $"nullable({baseType})" : baseType;
     }
 }

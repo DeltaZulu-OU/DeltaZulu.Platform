@@ -16,7 +16,7 @@ Consumers:
 
 ## Target exchange contract
 
-HTTP is the target infrastructure boundary for both destinations. DuckDB/DuckLake uses DuckDB.NET temporarily and will move to the [DuckDB Quack HTTP API](https://duckdb.org/docs/current/quack/overview); Proton publishing and streaming uses Proton's HTTP interface.
+HTTP is the target infrastructure boundary for both destinations. DeltaZulu.Agent owns the Quack and Proton output sinks, including collection routing, local buffering, batching, retry/backpressure, replay, authentication, and delivery state. Platform ingestion contracts validate what arrives; they do not implement the agent's output pipeline.
 
 The producer-agnostic logical schema registry defines field types, nullability, timestamp precision, duration units, nested-shape policy, and DuckDB/Proton/KQL mappings. HTTP payload framing remains destination-specific and is validated against that registry. The platform does not introduce Arrow, Avro, DeltaZulu.Forward, MessagePack, RELP, or another shared wire representation. See `docs/adr/0014-http-ingestion-type-fidelity-registry.md`.
 

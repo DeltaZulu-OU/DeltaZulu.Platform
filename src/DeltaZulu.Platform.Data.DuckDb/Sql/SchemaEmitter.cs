@@ -115,7 +115,7 @@ public sealed class SchemaEmitter
             sb.Append("    ");
             sb.Append(DuckDbSqlText.EscapeIdent(col.Name));
             sb.Append(' ');
-            sb.Append(col.DuckDbType.ToSql());
+            sb.Append(col.DuckDbTypeOverride ?? col.DuckDbType.ToSql());
 
             if (i < table.Columns.Count - 1)
             {

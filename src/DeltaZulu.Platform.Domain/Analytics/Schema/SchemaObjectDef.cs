@@ -10,7 +10,10 @@ public sealed record ColumnDef(
     DuckDbType DuckDbType,
     KustoType KustoType,
     bool Nullable = true,
-    string? Description = null);
+    string? Description = null,
+    string? DuckDbTypeOverride = null,
+    string? ProtonTypeOverride = null,
+    LogicalFieldType? LogicalType = null);
 
 /// <summary>
 /// Base for all schema objects that have a schema, name, and column list.
