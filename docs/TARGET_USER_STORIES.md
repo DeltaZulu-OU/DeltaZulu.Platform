@@ -9,7 +9,7 @@ DeltaZulu Platform is one product with three module boundaries inside the unifie
 | Module | Route | v1 purpose |
 |---|---|---|
 | Analytics | `/analytics` | Query approved analytical views, preserve reusable analytical artifacts, build dashboards, and promote useful analytics into governed detection work. |
-| Governance | `/governance` | Author, validate, review, accept, restore, and version detection content with auditable approval rules. |
+| Detection Content Governance | `/governance` | Author, validate, review, accept, restore, and version detection content with auditable approval rules. |
 | Operations | `/operations` | Project accepted detections into executable definitions, run detections, materialize immutable alerts, triage candidates, and feed improvements back to Governance. |
 
 ## Actors
@@ -46,6 +46,14 @@ DeltaZulu Platform is one product with three module boundaries inside the unifie
 | US-18 | Feedback loop | As a detection engineer, I can turn triage outcomes into tuning work. | False positives, missed context, suppression changes, and visibility gaps can create governed proposals or curated follow-up analytics. |
 | US-19 | Observability | As a platform operator, I can monitor health and failures. | Health checks cover SQLite, DuckDB, Git, Proton, background workers, migrations, lake writer lag, and schema drift. |
 | US-20 | Data lifecycle | As a platform operator, I can upgrade, back up, restore, retain, and recover platform data. | Migrations are versioned; production startup blocks unsafe defaults; runbooks cover backup/restore, failed runs, drift, and rollback. |
+| US-21 | Scheduled/NRT execution | As an operations responder, I can run scheduled and near-real-time detections through Proton with traceable execution records. | Proton scheduled tasks and materialized views deploy through a controlled service; the mediation daemon records run windows, status, duration, diagnostics, result counts, alert counts, retries, and failures. |
+| US-22 | Append-only alert lake | As an operations responder, I can investigate immutable alert events and entities stored in the append-only data lake. | Alert events and entities are DuckDB lake records with no status column; materialization keys, evidence hash, rule hash, run ID, accepted version ID, and extracted entities are present; no upsert or update logic exists. |
+| US-23 | Operations module UI | As an operations responder, I can use dedicated Operations pages for detection runs, alert queues, alert detail, and incident candidates. | `/operations` routes exist; `OperationsModule` is registered; run list, alert queue, alert detail, entity views, incident candidate list, and operations health pages are usable; UI calls application services, not storage directly. |
+| US-24 | Candidate correlation | As an operations responder, I can review explainable incident candidates built from correlated alerts. | Candidates group related alerts with rationale, scoring factors, entity/window context, evidence links, and deterministic dedupe behavior; candidate lifecycle is Pending → Active → Closed/Dismissed. |
+| US-25 | Triage feedback | As a detection engineer, I can turn triage outcomes into detection tuning work. | False positives, missed context, suppression changes, and visibility gaps can create governed proposals or curated follow-up analytics; triage decisions are auditable. |
+| US-26 | Operations KQL views | As an analyst, I can query operational state through approved KQL views. | DetectionRun, AlertEvent, AlertEntity, AlertEnrichment, and IncidentCandidate read models are queryable through the approved view catalog; views cover both lake data and operations SQLite projections. |
+| US-27 | Design-system enforcement | As a platform operator, I can trust that the product UI follows consistent identity and design-system rules. | Product identity is documented and enforced; binary radius, product typography, orange action semantics, legacy CSS quarantine, and canonical dashboard/table/state primitives are in place; a design-system audit catches forbidden patterns. |
+| US-28 | Operations persistence | As a platform operator, I can rely on correctly separated operations storage boundaries. | Alert records are append-only lake data; incident candidates, links, and evidence are in dedicated operations SQLite; detection runs have alert counts, lookback windows, and diagnostics; concrete repository implementations exist with tests. |
 
 ## Non-goals for production v1
 

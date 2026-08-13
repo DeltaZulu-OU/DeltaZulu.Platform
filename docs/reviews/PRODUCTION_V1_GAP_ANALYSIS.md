@@ -192,6 +192,18 @@ Raw data -> KQL/curated analytics -> governed detection draft -> accepted versio
 
 ## Suggested production-v1 milestone plan
 
+### Milestone-to-roadmap-phase mapping
+
+| Milestone | ROADMAP.md phases | Primary scope |
+|---|---|---|
+| Milestone 1: Production shell and identity | (Pre-phase / cross-cutting) | Authentication, authorization, CI, startup validation |
+| Milestone 2: Operations data foundation | Phase 3B, Phase 5 | Append-only alert lake, operations SQLite, detection run records, approved KQL views |
+| Milestone 3: Executable detection projection | Phase 4 | Projection service, reconciliation, diagnostics, rule metadata |
+| Milestone 4: Detection execution loop | Phase 6, Phase 7, Phase 9 | Scheduled/NRT execution, alert materialization, alert queue/detail UI |
+| Milestone 5: Triage and feedback loop | Phase 10, Phase 11, Phase 12 | Enrichment/suppression, candidate correlation, triage feedback |
+
+Phases not mapped to a milestone: Phase 1A (design-system enforcement) and Phase 8 (operations KQL views) are in-progress or incremental work that spans multiple milestones rather than gating a single one.
+
 ### Milestone 1: Production shell and identity
 
 Exit criteria:

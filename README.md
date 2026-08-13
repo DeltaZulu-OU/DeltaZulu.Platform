@@ -1,7 +1,7 @@
 # DeltaZulu.Platform
 
 DeltaZulu.Platform is the consolidated repository for the DeltaZulu full-cycle security analytics
-platform: interactive Analytics, detection-content Governance, target Operations workflows, shared UI,
+platform: interactive Analytics, Detection Content Governance, target Operations workflows, shared UI,
 persistence adapters, and the unified Blazor web application.
 
 The repository keeps the current platform documentation under `docs/`. Obsolete consolidation,
