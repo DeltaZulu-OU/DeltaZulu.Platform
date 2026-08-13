@@ -158,7 +158,7 @@ public sealed class WorkflowOrchestratorTests : IDisposable
             Assert.AreEqual(ChangeStatus.Merged, loaded.Status);
         }
 
-        Assert.IsTrue(await _host.ContentStore.ExistsAsync("detections/ctrl-orch/detection.yaml", TestContext.CancellationToken));
+        Assert.IsTrue(await _host.ContentStore.ExistsAsync("detections/ctrl-orch.yaml", TestContext.CancellationToken));
     }
 
     [TestMethod]

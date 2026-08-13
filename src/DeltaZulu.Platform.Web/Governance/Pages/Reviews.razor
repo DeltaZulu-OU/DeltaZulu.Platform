@@ -15,7 +15,7 @@
 <PageTitle>Reviews</PageTitle>
 
 <DzPageHeader Title="Your reviews"
-              Description="Proposals awaiting your review decision and your review history." />
+              Description="Detection drafts awaiting your review decision and your review history." />
 
 @if (_loading)
 {
@@ -27,12 +27,12 @@ else
         <MudItem xs="12" sm="6" md="4">
             <DzMetricTile Eyebrow="Awaiting your decision"
                           Value="@_awaitingCount.ToString()"
-                          Label="Proposals needing your review" />
+                          Label="Detection drafts needing your review" />
         </MudItem>
         <MudItem xs="12" sm="6" md="4">
             <DzMetricTile Eyebrow="Reviewed by you"
                           Value="@_reviewedByYouCount.ToString()"
-                          Label="Proposals you have reviewed" />
+                          Label="Detection drafts you have reviewed" />
         </MudItem>
     </MudGrid>
 
@@ -41,7 +41,7 @@ else
         @if (_awaitingChanges.Count == 0 && _reviewedByYou.Count == 0)
         {
             <DzEmptyState Title="No review activity for your account yet."
-                          Description="Proposals awaiting your review and your review history will appear here."
+                          Description="Detection drafts awaiting your review and your review history will appear here."
                           Icon="@Icons.Material.Outlined.RateReview" />
         }
 
@@ -50,7 +50,7 @@ else
             <MudText Typo="Typo.subtitle2" Class="dz-section-title">Awaiting your decision</MudText>
             <DzTableShell Class="mb-4">
                 <MudTable Items="_awaitingChanges" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
-                          OnRowClick="@(args => Nav.NavigateTo($"/governance/proposals/{args.Item!.Id}"))"
+                          OnRowClick="@(args => Nav.NavigateTo($"/governance/drafts/{args.Item!.Id}"))"
                           T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
                     <HeaderContent>
                         <MudTh>Key</MudTh>
@@ -76,14 +76,14 @@ else
             <DzTableShell>
                 <MudTable Items="_reviewedByYou" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="ReviewRow" Elevation="0">
                     <HeaderContent>
-                        <MudTh>Proposal</MudTh>
+                        <MudTh>Detection draft</MudTh>
                         <MudTh>Decision</MudTh>
                         <MudTh>State</MudTh>
                         <MudTh>Recorded</MudTh>
                     </HeaderContent>
                     <RowTemplate>
-                        <MudTd DataLabel="Proposal">
-                            <DzActionLink OnClick="@(() => Nav.NavigateTo($"/governance/proposals/{context.Change.Id}"))">
+                        <MudTd DataLabel="Detection draft">
+                            <DzActionLink OnClick="@(() => Nav.NavigateTo($"/governance/drafts/{context.Change.Id}"))">
                                 <code>@context.Change.Key</code>
                             </DzActionLink>
                             <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>
@@ -107,15 +107,15 @@ else
         <DzTableShell>
             <MudTable Items="_allRows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="ReviewRow" Elevation="0">
                 <HeaderContent>
-                    <MudTh>Proposal</MudTh>
+                    <MudTh>Detection draft</MudTh>
                     <MudTh>Decision</MudTh>
                     <MudTh>State</MudTh>
                     <MudTh>Comment</MudTh>
                     <MudTh>Recorded</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="Proposal">
-                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/governance/proposals/{context.Change.Id}"))">
+                    <MudTd DataLabel="Detection draft">
+                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/governance/drafts/{context.Change.Id}"))">
                             <code>@context.Change.Key</code>
                         </DzActionLink>
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Change.Title</MudText>

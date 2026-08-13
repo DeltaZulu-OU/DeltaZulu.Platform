@@ -38,17 +38,36 @@ const registerKqlLanguage = async () => {
     monaco.languages.register({ id: 'kql' });
 
     const language = window.huntingMonaco?._schema?.language ?? {};
+    const defaultKeywords = [
+        'where', 'project', 'take', 'limit', 'extend', 'summarize',
+        'by', 'join', 'on', 'kind', 'lookup', 'sort', 'order', 'asc', 'desc',
+        'count', 'distinct', 'top', 'print', 'sample', 'sample-distinct', 'render'
+    ];
+    const defaultOperators = [
+        '==', '!=', '=~', '!~', '>', '<', '>=', '<=',
+        'between', '!between', 'in', '!in', 'and', 'or', 'not',
+        'contains', '!contains', 'contains_cs', '!contains_cs',
+        'startswith', '!startswith', 'startswith_cs', '!startswith_cs',
+        'endswith', '!endswith', 'endswith_cs', '!endswith_cs',
+        'has', '!has', 'has_cs', '!has_cs',
+        'hasprefix', '!hasprefix', 'hasprefix_cs', '!hasprefix_cs',
+        'hassuffix', '!hassuffix', 'hassuffix_cs', '!hassuffix_cs'
+    ];
+    const defaultRenderKinds = ['table', 'timechart', 'linechart', 'barchart', 'columnchart', 'piechart', 'areachart', 'scatterchart'];
     const keywords = language.keywords ?? [];
-    const renderKinds = language.renderKinds ?? [];
     const operators = language.operators ?? [];
-    const hyphenatedKeywords = keywords.filter((keyword) => keyword.includes('-'));
+    const renderKinds = language.renderKinds ?? [];
+    const effectiveKeywords = keywords.length ? keywords : defaultKeywords;
+    const effectiveOperators = operators.length ? operators : defaultOperators;
+    const effectiveRenderKinds = renderKinds.length ? renderKinds : defaultRenderKinds;
+    const hyphenatedKeywords = effectiveKeywords.filter((keyword) => keyword.includes('-'));
     const hyphenatedKeywordPattern = hyphenatedKeywords.length > 0
         ? new RegExp(`(?:${hyphenatedKeywords.map((keyword) => keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?![\\w-])`)
         : /(?!)/;
 
     monaco.languages.setMonarchTokensProvider('kql', {
-        keywords,
-        operators,
+        keywords: effectiveKeywords,
+        operators: effectiveOperators,
         tokenizer: {
             root: [
                 [hyphenatedKeywordPattern, 'keyword'],
@@ -97,14 +116,14 @@ const registerKqlLanguage = async () => {
                 endColumn: word.endColumn
             };
 
-            const keywordSuggestions = keywords.map((keyword) => ({
+            const keywordSuggestions = effectiveKeywords.map((keyword) => ({
                 label: keyword,
                 kind: monaco.languages.CompletionItemKind.Keyword,
                 insertText: keyword,
                 range
             }));
 
-            const operatorSuggestions = operators.map((operator) => ({
+            const operatorSuggestions = effectiveOperators.map((operator) => ({
                 label: operator,
                 kind: monaco.languages.CompletionItemKind.Operator,
                 insertText: operator,
@@ -146,7 +165,7 @@ const registerKqlLanguage = async () => {
                     range
                 })));
 
-            const renderKindSuggestions = renderKinds.map((kind) => ({
+            const renderKindSuggestions = effectiveRenderKinds.map((kind) => ({
                 label: kind,
                 kind: monaco.languages.CompletionItemKind.EnumMember,
                 insertText: afterRender ? kind : `render ${kind}`,

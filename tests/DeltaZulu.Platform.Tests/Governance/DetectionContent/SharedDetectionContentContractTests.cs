@@ -14,11 +14,11 @@ public sealed class SharedDetectionContentContractTests
     public void DetectionContentPathResolver_UsesCanonicalAcceptedDetectionLayout()
     {
         var slug = DetectionSlug.Parse("anomalous-sign-in");
-        var path = DetectionLogicalPath.Parse("tests/baseline.yaml");
+        var path = DetectionLogicalPath.Parse("detection.yaml");
 
         var repositoryPath = DetectionContentPathResolver.Resolve(slug, path);
 
-        Assert.AreEqual("detections/anomalous-sign-in/tests/baseline.yaml", repositoryPath);
+        Assert.AreEqual("detections/anomalous-sign-in.yaml", repositoryPath);
         Assert.AreEqual("anomalous-sign-in", DetectionContentPathResolver.ExtractDetectionSlug(repositoryPath)?.Value);
     }
 
@@ -110,7 +110,7 @@ public sealed class SharedDetectionContentContractTests
             var path = LogicalPath.Parse(logicalPath);
             var repositoryPath = CanonicalPathResolver.Resolve("anomalous-sign-in", path);
 
-            Assert.AreEqual($"detections/anomalous-sign-in/{logicalPath}", repositoryPath);
+            Assert.AreEqual($"detections/anomalous-sign-in{(logicalPath == "detection.yaml" ? ".yaml" : "-" + logicalPath.Replace('/', '-'))}", repositoryPath);
         }
     }
 }

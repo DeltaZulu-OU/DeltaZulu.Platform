@@ -73,18 +73,19 @@ public sealed class DetectionContentContractTests
     [TestMethod]
     public void DetectionRepositoryPath_ParsesSlugAndLogicalPath()
     {
-        var path = DetectionRepositoryPath.Parse("detections/login-anomaly/queries/main.kql");
+        var path = DetectionRepositoryPath.Parse("detections/login-anomaly.yaml");
 
-        Assert.AreEqual("detections/login-anomaly/queries/main.kql", path.Value);
+        Assert.AreEqual("detections/login-anomaly.yaml", path.Value);
         Assert.AreEqual("login-anomaly", path.Slug.Value);
-        Assert.AreEqual("queries/main.kql", path.LogicalPath.Value);
+        Assert.AreEqual("detection.yaml", path.LogicalPath.Value);
     }
 
     [TestMethod]
     [DataRow("other/login-anomaly/queries/main.kql", "repository_path.root")]
-    [DataRow("/detections/login-anomaly/queries/main.kql", "repository_path.boundary_slash")]
+    [DataRow("/detections/login-anomaly.yaml", "repository_path.boundary_slash")]
     [DataRow("detections/login-anomaly/", "repository_path.boundary_slash")]
     [DataRow("detections/login-anomaly", "repository_path.shape")]
+    [DataRow("detections/login-anomaly/queries/main.kql", "repository_path.shape")]
     [DataRow("detections/login-anomaly\\queries\\main.kql", "repository_path.backslash")]
     public void DetectionRepositoryPath_RejectsPathsOutsideAcceptedConvention(string raw, string code) =>
         AssertContractError(code, () => DetectionRepositoryPath.Parse(raw));
@@ -93,13 +94,13 @@ public sealed class DetectionContentContractTests
     public void DetectionContentPathResolver_RoundTripsRepositoryConventions()
     {
         var slug = DetectionSlug.Parse("login-anomaly");
-        var logicalPath = DetectionLogicalPath.Parse("queries/main.kql");
+        var logicalPath = DetectionLogicalPath.Parse("detection.yaml");
 
         var resolved = DetectionContentPathResolver.Resolve(slug, logicalPath);
         var prefix = DetectionContentPathResolver.DetectionPrefix(slug);
         var extracted = DetectionContentPathResolver.ExtractDetectionSlug(resolved);
 
-        Assert.AreEqual("detections/login-anomaly/queries/main.kql", resolved);
+        Assert.AreEqual("detections/login-anomaly.yaml", resolved);
         Assert.AreEqual("detections/login-anomaly", prefix);
         Assert.IsNotNull(extracted);
         Assert.AreEqual("login-anomaly", extracted.Value);
@@ -110,9 +111,9 @@ public sealed class DetectionContentContractTests
     [TestMethod]
     public void DetectionContentFile_PreservesValidatedPathAndPayloadMetadata()
     {
-        var file = new DetectionContentFile("detections/login-anomaly/queries/main.kql", "SecurityEvent | take 10", isBinary: false);
+        var file = new DetectionContentFile("detections/login-anomaly.yaml", "SecurityEvent | take 10", isBinary: false);
 
-        Assert.AreEqual("detections/login-anomaly/queries/main.kql", file.RepositoryPath);
+        Assert.AreEqual("detections/login-anomaly.yaml", file.RepositoryPath);
         Assert.AreEqual("login-anomaly", file.Path.Slug.Value);
         Assert.AreEqual("SecurityEvent | take 10", file.Content);
         Assert.IsFalse(file.IsBinary);

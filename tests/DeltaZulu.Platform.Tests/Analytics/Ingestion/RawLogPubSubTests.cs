@@ -44,7 +44,7 @@ public sealed class RawLogPubSubTests
 
         var events = RawLogNdjsonCodec.Read(RawLogNdjsonCodec.Write([first, second]));
 
-        Assert.AreEqual(2, events.Count);
+        Assert.HasCount(2, events);
         Assert.IsTrue(ReferenceEquals(events[0].Channel, events[1].Channel));
         Assert.IsTrue(ReferenceEquals(events[0].SourceName, events[1].SourceName));
         Assert.IsTrue(ReferenceEquals(events[0].Provider, events[1].Provider));

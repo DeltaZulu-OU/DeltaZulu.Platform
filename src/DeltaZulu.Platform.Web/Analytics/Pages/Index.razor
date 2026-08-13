@@ -611,9 +611,19 @@
         _toolbar.SelectedTimeFilter = UserSettings.DefaultTimeFilter;
         _toolbar.SelectedResultLimit = UserSettings.DefaultResultLimit;
         EditorBus.InsertRequested += HandleInsertRequested;
+        EditorBus.ReplaceRequested += HandleReplaceRequested;
     }
 
     private void HandleInsertRequested(string text)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await InsertHelperQueryAsync(text);
+            StateHasChanged();
+        });
+    }
+
+    private void HandleReplaceRequested(string text)
     {
         _kql = text;
         _cachedEditorText = text;
@@ -971,6 +981,7 @@
     public async ValueTask DisposeAsync()
     {
         EditorBus.InsertRequested -= HandleInsertRequested;
+        EditorBus.ReplaceRequested -= HandleReplaceRequested;
         _cts.Cancel();
         _cts.Dispose();
         await LanguageService.DisposeAsync();

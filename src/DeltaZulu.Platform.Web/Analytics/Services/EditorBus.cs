@@ -8,34 +8,61 @@
 public sealed class EditorBus
 {
     private Action<string>? _insertRequested;
-    private string? _pendingInsert;
+    private Action<string>? _replaceRequested;
+    private PendingEditorRequest? _pendingRequest;
 
     public event Action<string> InsertRequested {
         add {
             _insertRequested += value;
-
-            if (_pendingInsert is not { } pendingInsert)
-            {
-                return;
-            }
-
-            _pendingInsert = null;
-            value(pendingInsert);
+            ReplayPendingIfReady();
         }
 
         remove => _insertRequested -= value;
     }
 
-    public void RequestInsert(string kql)
+    public event Action<string> ReplaceRequested {
+        add {
+            _replaceRequested += value;
+            ReplayPendingIfReady();
+        }
+
+        remove => _replaceRequested -= value;
+    }
+
+    public void RequestInsert(string kql) => Request(kql, replace: false);
+
+    public void RequestReplace(string kql) => Request(kql, replace: true);
+
+    private void Request(string kql, bool replace)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(kql);
 
-        if (_insertRequested is null)
+        var handler = replace ? _replaceRequested : _insertRequested;
+        if (handler is null)
         {
-            _pendingInsert = kql;
+            _pendingRequest = new PendingEditorRequest(kql, replace);
             return;
         }
 
-        _insertRequested.Invoke(kql);
+        handler.Invoke(kql);
     }
+
+    private void ReplayPendingIfReady()
+    {
+        if (_pendingRequest is not { } pendingRequest)
+        {
+            return;
+        }
+
+        var handler = pendingRequest.Replace ? _replaceRequested : _insertRequested;
+        if (handler is null)
+        {
+            return;
+        }
+
+        _pendingRequest = null;
+        handler.Invoke(pendingRequest.Kql);
+    }
+
+    private sealed record PendingEditorRequest(string Kql, bool Replace);
 }

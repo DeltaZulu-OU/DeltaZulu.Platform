@@ -12,7 +12,7 @@
 <PageTitle>History</PageTitle>
 
 <DzPageHeader Title="History"
-              Description="Accepted detection content versions. Compare proposals and restore previous content safely." />
+              Description="Accepted detection content versions. Compare detection drafts and restore previous content safely." />
 
 @if (_loading)
 {
@@ -21,7 +21,7 @@
 else if (_rows.Count == 0)
 {
     <DzEmptyState Title="No accepted versions yet."
-                  Description="Accept an approved proposal to create the first version."
+                  Description="Accept an approved detection draft to create the first version."
                   Icon="@Icons.Material.Outlined.History" />
 }
 else

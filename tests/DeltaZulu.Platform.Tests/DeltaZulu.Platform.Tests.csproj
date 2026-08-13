@@ -14,6 +14,7 @@
     <ProjectReference Include="..\..\src\DeltaZulu.Platform.Application\DeltaZulu.Platform.Application.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Platform.Data\DeltaZulu.Platform.Data.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Platform.Data.DuckDb\DeltaZulu.Platform.Data.DuckDb.csproj" />
+    <ProjectReference Include="..\..\src\DeltaZulu.Platform.Data.Proton\DeltaZulu.Platform.Data.Proton.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Platform.Web\DeltaZulu.Platform.Web.csproj" />
   </ItemGroup>
 

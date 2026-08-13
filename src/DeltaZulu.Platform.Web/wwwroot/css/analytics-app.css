@@ -3020,3 +3020,185 @@ body.hunt-splitter-active {
 .hunt-module-main {
     min-width: 0;
 }
+
+/* =========================================================================
+   Realtime rules page
+   ========================================================================= */
+
+.nrt-layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 20px;
+    padding: 20px;
+    align-items: start;
+}
+
+@media (max-width: 1100px) {
+    .nrt-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.nrt-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.nrt-form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.nrt-field {
+    flex: 1 1 160px;
+}
+
+.nrt-field--wide {
+    flex: 2 1 280px;
+}
+
+.nrt-field--narrow {
+    flex: 0 0 120px;
+}
+
+.nrt-editor-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.nrt-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dz-product-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.nrt-editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nrt-kql-editor {
+    border: 1px solid var(--dz-product-border-strong);
+    border-radius: 6px;
+    overflow: hidden;
+    min-height: 200px;
+    background: var(--dz-code-bg);
+}
+
+.nrt-kql-editor #nrt-kql-editor {
+    height: 200px;
+}
+
+.nrt-ddl-preview {
+    background: var(--dz-code-bg);
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--dz-product-border);
+}
+
+.nrt-ddl-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--dz-code-bg-alt);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.nrt-ddl-header .nrt-label {
+    color: var(--dz-code-muted);
+}
+
+.nrt-ddl-code {
+    margin: 0;
+    padding: 12px 16px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--dz-code-text);
+    overflow-x: auto;
+    white-space: pre;
+}
+
+.nrt-form-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 4px;
+}
+
+/* Rule list */
+.nrt-rule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.nrt-rule-card {
+    border: 1px solid var(--dz-product-border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: var(--dz-product-surface);
+    transition: border-color 0.15s;
+}
+
+.nrt-rule-card:hover {
+    border-color: var(--dz-product-border-strong);
+}
+
+.nrt-rule-card--disabled {
+    opacity: 0.6;
+}
+
+.nrt-rule-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.nrt-rule-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--dz-product-text);
+}
+
+.nrt-rule-desc {
+    font-size: 13px;
+    color: var(--dz-product-text-secondary);
+    margin: 0 0 8px 0;
+}
+
+.nrt-rule-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.nrt-meta-item {
+    font-size: 11px;
+    color: var(--dz-product-text-muted);
+    background: var(--dz-product-surface-subtle);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.nrt-meta-updated {
+    margin-left: auto;
+}
+
+.nrt-rule-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}

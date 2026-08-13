@@ -121,7 +121,7 @@ public static class DemoSeeder
                 VALUES
                     (@VersionId, @DetectionId, 1, '1.0', @Title, 'Initial version',
                      @AuthorId, 'StandardReview', @CrId, NULL,
-                     @AcceptedAt, 'detection.yml;query.kql', @CommitSha, 'All checks passed', 'Approved')
+                     @AcceptedAt, 'detection.yaml', @CommitSha, 'All checks passed', 'Approved')
                 """, new {
                 VersionId = versionId,
                 DetectionId = d.Id,
@@ -330,13 +330,11 @@ public static class DemoSeeder
     {
         var files = new[]
         {
-            new { CrId = cr1, Path = "detection.yml", ContentType = "DetectionMetadata", Content = DemoYaml.PsExecMetadata, By = AnalystId },
-            new { CrId = cr1, Path = "query.kql", ContentType = "AnalyticsQuery", Content = DemoYaml.PsExecQuery, By = AnalystId },
+            new { CrId = cr1, Path = "detection.yaml", ContentType = "DetectionMetadata", Content = DemoYaml.PsExecDetection, By = AnalystId },
             new { CrId = cr2, Path = "tests/mimikatz-lsass.yml", ContentType = "TestDefinition", Content = DemoYaml.LsassTestDef, By = AnalystId },
             new { CrId = cr2, Path = "fixtures/mimikatz-dump.ndjson", ContentType = "Fixture", Content = DemoYaml.MimikatzFixture, By = AnalystId },
-            new { CrId = cr3, Path = "query.kql", ContentType = "AnalyticsQuery", Content = DemoYaml.SchtasksQuery, By = ReviewerId },
-            new { CrId = cr4, Path = "detection.yml", ContentType = "DetectionMetadata", Content = DemoYaml.DnsTunnelMetadata, By = AnalystId },
-            new { CrId = cr4, Path = "query.kql", ContentType = "AnalyticsQuery", Content = DemoYaml.DnsTunnelQuery, By = AnalystId },
+            new { CrId = cr3, Path = "detection.yaml", ContentType = "DetectionMetadata", Content = DemoYaml.SchtasksDetection, By = ReviewerId },
+            new { CrId = cr4, Path = "detection.yaml", ContentType = "DetectionMetadata", Content = DemoYaml.DnsTunnelDetection, By = AnalystId },
         };
 
         const string sql = """
@@ -413,28 +411,36 @@ public static class DemoSeeder
 
 internal static class DemoYaml
 {
-    public const string PsExecMetadata = """
-        name: lateral-movement-psexec
-        title: Lateral Movement via PsExec
+    public const string PsExecDetection = """
+        id: "lateral-movement-psexec"
+        title: "Lateral Movement via PsExec"
+        description: >-
+          Detects remote service creation indicative of PsExec-style lateral movement.
         severity: high
-        mitre:
-          tactics: [lateral-movement]
-          techniques: [T1570, T1021.002]
-        platforms: [windows]
-        data_sources: [process_creation, service_creation]
-        exclusions:
-          - field: user.name
-            values: []
-        """;
-
-    public const string PsExecQuery = """
-        DeviceProcessEvents
-        | where Timestamp > ago(1h)
-        | where FileName in~ ("psexec.exe", "psexesvc.exe")
-           or (FileName == "services.exe"
-               and ProcessCommandLine has "PSEXESVC")
-        | project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine
-        | sort by Timestamp desc
+        confidence: high
+        risk_score: 80
+        content_type: detection
+        query_language: kql
+        trigger_type: nrt
+        threshold: 1
+        query: |
+          DeviceProcessEvents
+          | where Timestamp > ago(1h)
+          | where FileName in~ ("psexec.exe", "psexesvc.exe")
+             or (FileName == "services.exe"
+                 and ProcessCommandLine has "PSEXESVC")
+          | project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine
+          | sort by Timestamp desc
+        techniques:
+          - T1570
+          - T1021.002
+        entity_mappings:
+          - type: host
+            field: DeviceName
+          - type: account
+            field: AccountName
+        false_positive_notes:
+          - Authorized administrative PsExec usage may match this detection.
         """;
 
     public const string LsassTestDef = """
@@ -454,37 +460,67 @@ internal static class DemoYaml
         {"Timestamp":"2025-11-10T08:12:01Z","DeviceName":"WKS-042","ProcessName":"mimikatz.exe","TargetProcess":"lsass.exe","AccessMask":"0x1FFFFF"}
         """;
 
-    public const string SchtasksQuery = """
-        DeviceProcessEvents
-        | where FileName =~ "schtasks.exe"
-        | where ProcessCommandLine has_any ("/create", "/change")
-        | where ProcessCommandLine !has "/delete"
-        | project Timestamp, DeviceName, AccountName, ProcessCommandLine
-        | where
-        """;
-
-    public const string DnsTunnelMetadata = """
-        name: exfil-dns-tunneling
-        title: Data Exfiltration via DNS Tunneling
+    public const string SchtasksDetection = """
+        id: "persistence-scheduled-task"
+        title: "Persistence via Scheduled Task Creation"
+        description: >-
+          Alerts on scheduled task creation used for persistence by threat actors.
         severity: medium
-        mitre:
-          tactics: [exfiltration]
-          techniques: [T1048.003]
-        platforms: [windows, linux]
-        data_sources: [dns_query]
-        status: draft
+        confidence: medium
+        risk_score: 55
+        content_type: detection
+        query_language: kql
+        trigger_type: scheduled
+        schedule: '0 * * * *'
+        lookback: 1h
+        max_alerts_per_run: 100
+        query: |
+          DeviceProcessEvents
+          | where FileName =~ "schtasks.exe"
+          | where ProcessCommandLine has_any ("/create", "/change")
+          | where ProcessCommandLine !has "/delete"
+          | project Timestamp, DeviceName, AccountName, ProcessCommandLine
+          | where
+        techniques:
+          - T1053.005
+        entity_mappings:
+          - type: host
+            field: DeviceName
+          - type: account
+            field: AccountName
         """;
 
-    public const string DnsTunnelQuery = """
-        DnsEvents
-        | where Timestamp > ago(24h)
-        | extend QueryLength = strlen(Name)
-        | where QueryLength > 50
-        | summarize
-            QueryCount = count(),
-            AvgLength = avg(QueryLength),
-            DistinctSubdomains = dcount(Name)
-          by ClientIP, bin(Timestamp, 5m)
-        | where QueryCount > 100 or AvgLength > 60
+    public const string DnsTunnelDetection = """
+        id: "exfil-dns-tunneling"
+        title: "Data Exfiltration via DNS Tunneling"
+        description: >-
+          Detects unusually long DNS queries or high query volume suggesting DNS tunneling.
+        severity: medium
+        confidence: high
+        risk_score: 65
+        content_type: detection
+        query_language: kql
+        trigger_type: scheduled
+        schedule: '*/15 * * * *'
+        lookback: 24h
+        max_alerts_per_run: 100
+        query: |
+          DnsEvents
+          | where Timestamp > ago(24h)
+          | extend QueryLength = strlen(Name)
+          | where QueryLength > 50
+          | summarize
+              QueryCount = count(),
+              AvgLength = avg(QueryLength),
+              DistinctSubdomains = dcount(Name)
+            by ClientIP, bin(Timestamp, 5m)
+          | where QueryCount > 100 or AvgLength > 60
+        techniques:
+          - T1048.003
+        entity_mappings:
+          - type: ip
+            field: ClientIP
+        false_positive_notes:
+          - Some DNS security tools and software updaters can generate long query names.
         """;
 }

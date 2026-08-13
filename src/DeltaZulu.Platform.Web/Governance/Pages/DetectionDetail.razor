@@ -14,10 +14,8 @@
 @inject ChangeService ChangeService
 @inject VersionService VersionService
 @inject AcceptedContentReadService AcceptedContentReadService
-@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
-@inject PocUserContext UserContext
 
 <PageTitle>Detection — @(_detection?.Title ?? "Loading")</PageTitle>
 
@@ -40,8 +38,8 @@ else
                 </Metadata>
                 <Actions>
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                               StartIcon="@Icons.Material.Outlined.Add" OnClick="OpenChangeDialog">
-                        Open proposal
+                               StartIcon="@Icons.Material.Outlined.Edit" OnClick="OpenChangeDialog">
+                        Edit
                     </MudButton>
                     @if (_detection.Lifecycle == DetectionLifecycle.Accepted)
                     {
@@ -73,7 +71,7 @@ else
                         }
                     </DzDetailItem>
 
-                    <DzDetailItem Label="Active proposals" Value="@_activeChangeCount.ToString()" />
+                    <DzDetailItem Label="Active detection drafts" Value="@_activeChangeCount.ToString()" />
 
                     <DzDetailItem Label="Updated">
                         <MudText Typo="Typo.body2" Class="dz-config-value dz-config-value--mono">
@@ -91,7 +89,7 @@ else
                 @if (_versions.Count == 0)
                 {
                     <DzEmptyState Title="No accepted versions yet."
-                                  Description="Accept a proposal to create the first version."
+                                  Description="Accept a detection draft to create the first version."
                                   Icon="@Icons.Material.Outlined.History" />
                 }
                 else
@@ -128,19 +126,19 @@ else
             </DzTabBody>
         </MudTabPanel>
 
-        <MudTabPanel Text="Proposal history" BadgeData="@_changes.Count" BadgeColor="Color.Secondary">
+        <MudTabPanel Text="Draft history" BadgeData="@_changes.Count" BadgeColor="Color.Secondary">
             <DzTabBody>
                 @if (_changes.Count == 0)
                 {
-                    <DzEmptyState Title="No proposals linked to this detection."
-                                  Description="Open a proposal to start editing this detection."
+                    <DzEmptyState Title="No detection drafts linked to this detection."
+                                  Description="Open a detection draft to start editing this detection."
                                   Icon="@Icons.Material.Outlined.WorkHistory" />
                 }
                 else
                 {
                     <DzTableShell>
                         <MudTable Items="_changes" Dense="true" Hover="true"
-                                  OnRowClick="@(args => Nav.NavigateTo($"/governance/proposals/{args.Item!.Id}"))"
+                                  OnRowClick="@(args => Nav.NavigateTo($"/governance/drafts/{args.Item!.Id}"))"
                                   T="ChangeRequest" RowClass="cursor-pointer" Elevation="0">
                             <HeaderContent>
                                 <MudTh>Key</MudTh>
@@ -162,8 +160,8 @@ else
 
         <MudTabPanel Text="Related issues" BadgeColor="Color.Info">
             <DzTabBody>
-                <DzEmptyState Title="Issues are linked through proposals."
-                              Description="Open a proposal to see its linked issue."
+                <DzEmptyState Title="Issues are linked through detection drafts."
+                              Description="Open a detection draft to see its linked issue."
                               Icon="@Icons.Material.Outlined.Link" />
             </DzTabBody>
         </MudTabPanel>
@@ -173,7 +171,7 @@ else
                 @if (_acceptedFiles.Count == 0)
                 {
                     <DzEmptyState Title="No accepted content yet."
-                                  Description="Accepted files will appear after the first approved proposal is accepted."
+                                  Description="Accepted files will appear after the first approved detection draft is accepted."
                                   Icon="@Icons.Material.Outlined.FolderOff" />
                 }
                 else
@@ -266,21 +264,10 @@ else
         catch (DomainException ex) { Snackbar.Add(ex.Message, Severity.Error); }
     }
 
-    private async Task OpenChangeDialog()
+    private void OpenChangeDialog()
     {
         if (_detection is null) return;
-        var parameters = new DialogParameters<OpenChangeDialog>
-        {
-            { x => x.DetectionId, _detection.Id },
-            { x => x.AuthorId, UserContext.CurrentUser.Id },
-        };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<OpenChangeDialog>("Open proposal", parameters, options);
-        var result = await dialog.Result;
-        if (result is not null && !result.Canceled && result.Data is ChangeRequestId changeId)
-        {
-            Nav.NavigateTo($"/governance/proposals/{changeId}");
-        }
+        Nav.NavigateTo($"/governance/detections/new?detectionId={_detection.Id.Value}");
     }
     
     private async Task OpenAcceptedFileAsync(AcceptedContentFileSummary file)

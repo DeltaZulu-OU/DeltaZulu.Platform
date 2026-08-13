@@ -12,7 +12,7 @@ public static class DetectionContentPathResolver
         ArgumentNullException.ThrowIfNull(detectionSlug);
         ArgumentNullException.ThrowIfNull(logicalPath);
 
-        return $"{DetectionsRoot}/{detectionSlug.Value}/{logicalPath.Value}";
+        return $"{DetectionsRoot}/{BuildFileName(detectionSlug, logicalPath)}";
     }
 
     /// <summary>Returns the repository-relative prefix for all accepted files for a detection.</summary>
@@ -43,14 +43,20 @@ public static class DetectionContentPathResolver
 
         var afterPrefix = repositoryPath[(DetectionsRoot.Length + 1)..];
         var slashIndex = afterPrefix.IndexOf('/');
-        if (slashIndex <= 0)
+        var rawSlug = slashIndex > 0
+            ? afterPrefix[..slashIndex]
+            : afterPrefix.EndsWith(".yaml", StringComparison.Ordinal)
+                ? afterPrefix[..^".yaml".Length]
+                : null;
+
+        if (string.IsNullOrWhiteSpace(rawSlug))
         {
             return false;
         }
 
         try
         {
-            slug = DetectionSlug.Parse(afterPrefix[..slashIndex]);
+            slug = DetectionSlug.Parse(rawSlug);
             return true;
         }
         catch (DetectionContentException)
@@ -62,4 +68,15 @@ public static class DetectionContentPathResolver
     /// <summary>Compatibility helper that returns the extracted detection slug value as a raw string.</summary>
     public static string? ExtractDetectionSlugValue(string repositoryPath) =>
         ExtractDetectionSlug(repositoryPath)?.Value;
+
+    private static string BuildFileName(DetectionSlug detectionSlug, DetectionLogicalPath logicalPath)
+    {
+        if (string.Equals(logicalPath.Value, "detection.yaml", StringComparison.Ordinal))
+        {
+            return $"{detectionSlug.Value}.yaml";
+        }
+
+        var fileName = logicalPath.Value.Replace('/', '-');
+        return $"{detectionSlug.Value}-{fileName}";
+    }
 }

@@ -7,14 +7,10 @@ confidence: Medium
 risk_score: 60
 content_type: detection
 query_language: kql
-query_file: query.kql
-schedule:
-  type: cron
-  expression: '0 */1 * * *'
+trigger_type: scheduled
+schedule: '0 */1 * * *'
 lookback: 1d
-materialization:
-  mode: per_result_row
-  max_alerts_per_run: 100
+max_alerts_per_run: 100
 source:
   repository: Sentinel-Queries-main sample extract
   original_path: Derived from Defender endpoint command-line hunting patterns in sample extract
@@ -25,6 +21,12 @@ description: >-
   governance workflows.
 required_tables:
   - ProcessEvent
+query: |
+  ProcessEvent
+  | where Timestamp > ago(1d)
+  | where ProcessCommandLine has_any ("Invoke-WebRequest", "DownloadString", "curl", "wget", "bitsadmin")
+  | project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine, ParentFileName, SourceType
+  | sort by Timestamp desc
 tactics:
   - Command and Control
   - Execution

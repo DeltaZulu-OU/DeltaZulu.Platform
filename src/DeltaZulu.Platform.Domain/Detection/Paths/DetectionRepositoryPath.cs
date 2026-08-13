@@ -40,14 +40,13 @@ public sealed class DetectionRepositoryPath : IEquatable<DetectionRepositoryPath
         }
 
         var afterRoot = raw[(DetectionContentPathResolver.DetectionsRoot.Length + 1)..];
-        var slashIndex = afterRoot.IndexOf('/');
-        if (slashIndex <= 0 || slashIndex == afterRoot.Length - 1)
+        if (!afterRoot.EndsWith(".yaml", StringComparison.Ordinal) || afterRoot.Contains('/', StringComparison.Ordinal))
         {
-            throw new DetectionContentException("repository_path.shape", "Detection repository paths must use detections/<slug>/<logical-path>.");
+            throw new DetectionContentException("repository_path.shape", "Detection repository paths must use detections/<slug>.yaml.");
         }
 
-        var slug = DetectionSlug.Parse(afterRoot[..slashIndex]);
-        var logicalPath = DetectionLogicalPath.Parse(afterRoot[(slashIndex + 1)..]);
+        var slug = DetectionSlug.Parse(afterRoot[..^".yaml".Length]);
+        var logicalPath = DetectionLogicalPath.Parse("detection.yaml");
 
         return new DetectionRepositoryPath(
             DetectionContentPathResolver.Resolve(slug, logicalPath),

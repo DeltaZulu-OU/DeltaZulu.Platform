@@ -37,7 +37,7 @@ else
                 <Actions>
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                                StartIcon="@Icons.Material.Outlined.Restore" Disabled="_restoring" OnClick="RestoreVersion">
-                        Restore as new proposal
+                        Restore as new detection draft
                     </MudButton>
                     <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small"
                                OnClick="@(() => Nav.NavigateTo($"/governance/detections/{_comparison.Detection.Id}"))">
@@ -65,9 +65,9 @@ else
 
                     <DzDetailItem Label="Changed files" Value="@_comparison.ChangedFiles.Count.ToString()" />
 
-                    <DzDetailItem Label="Source proposal">
-                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/governance/proposals/{_comparison.AfterVersion.SourceChangeRequestId}"))" Class="mt-1">
-                            View proposal
+                    <DzDetailItem Label="Source detection draft">
+                        <DzActionLink OnClick="@(() => Nav.NavigateTo($"/governance/drafts/{_comparison.AfterVersion.SourceChangeRequestId}"))" Class="mt-1">
+                            View detection draft
                         </DzActionLink>
                     </DzDetailItem>
 
@@ -267,8 +267,8 @@ else
                 _comparison.AfterVersion.Id,
                 UserContext.CurrentUser.Id,
                 WorkflowProfileId.QuickLab);
-            Snackbar.Add($"Opened proposal {change.Key} from {_comparison.AfterVersion.DisplayVersion}.", Severity.Success);
-            Nav.NavigateTo($"/governance/proposals/{change.Id}");
+            Snackbar.Add($"Opened detection draft {change.Key} from {_comparison.AfterVersion.DisplayVersion}.", Severity.Success);
+            Nav.NavigateTo($"/governance/drafts/{change.Id}");
         }
         catch (DomainException ex)
         {
