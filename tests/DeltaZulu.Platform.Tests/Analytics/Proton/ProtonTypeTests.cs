@@ -12,7 +12,7 @@ public sealed class ProtonTypeTests
     [DataRow(KustoType.Int, "int32")]
     [DataRow(KustoType.Real, "float64")]
     [DataRow(KustoType.Bool, "bool")]
-    [DataRow(KustoType.DateTime, "datetime64(3, 'UTC')")]
+    [DataRow(KustoType.DateTime, "datetime64(6, 'UTC')")]
     [DataRow(KustoType.Timespan, "int64")]
     [DataRow(KustoType.Dynamic, "string")]
     [DataRow(KustoType.Guid, "uuid")]
@@ -43,7 +43,7 @@ public sealed class ProtonTypeTests
     {
         var column = new ColumnDef("EventTime", DuckDbType.Timestamp, KustoType.DateTime, Nullable: false);
 
-        Assert.AreEqual("datetime64(3, 'UTC')", column.ToProtonColumnType());
+        Assert.AreEqual("datetime64(6, 'UTC')", column.ToProtonColumnType());
     }
 
     [TestMethod]

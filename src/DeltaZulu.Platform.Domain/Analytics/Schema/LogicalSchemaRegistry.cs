@@ -85,6 +85,15 @@ public sealed record LogicalFieldType(
     public static LogicalFieldType Boolean(bool nullable = true) =>
         new(LogicalFieldFamily.Boolean, nullable, BackendMappings: DefaultMappings(LogicalFieldFamily.Boolean));
 
+    /// <summary>
+    /// Exact-decimal logical field. Precision and scale are recorded here, but neither backend
+    /// mapping preserves them yet — both project to a 64-bit float. Closing that is an open
+    /// Phase 3C item; the metadata is carried so the gap is measurable rather than invisible.
+    /// </summary>
+    public static LogicalFieldType Decimal(int precision = 38, int scale = 9, bool nullable = true) =>
+        new(LogicalFieldFamily.Decimal, nullable, DecimalPrecision: precision, DecimalScale: scale,
+            BackendMappings: DefaultMappings(LogicalFieldFamily.Decimal));
+
     public static LogicalFieldType Integer(LogicalIntegerWidth width = LogicalIntegerWidth.Int64, bool nullable = true) =>
         new(LogicalFieldFamily.Integer, nullable, IntegerWidth: width, BackendMappings: width == LogicalIntegerWidth.Int32
             ?
@@ -164,6 +173,12 @@ public sealed record LogicalFieldType(
             new(RegistryProjectionTarget.DuckDb, DuckDbType.Json.ToSql()),
             new(RegistryProjectionTarget.Proton, "tuple", "or shredded arrays/maps when supported"),
             new(RegistryProjectionTarget.Kql, KustoType.Dynamic.ToKustoName())
+        ],
+        LogicalFieldFamily.Decimal =>
+        [
+            new(RegistryProjectionTarget.DuckDb, DuckDbType.Double.ToSql(), "lossy; exact decimal storage is an open Phase 3C item"),
+            new(RegistryProjectionTarget.Proton, "float64", "lossy; exact decimal storage is an open Phase 3C item"),
+            new(RegistryProjectionTarget.Kql, KustoType.Decimal.ToKustoName())
         ],
         _ => Array.Empty<LogicalFieldBackendMapping>()
     };

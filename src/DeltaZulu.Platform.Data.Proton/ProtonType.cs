@@ -9,19 +9,46 @@ namespace DeltaZulu.Platform.Data.Proton;
 /// </summary>
 public static class KustoTypeExtensions
 {
-    /// <summary>Returns the Proton/ClickHouse column type string for the given Kusto type.</summary>
-    public static string ToProtonSql(this KustoType type) => type switch {
+    /// <summary>
+    /// Returns the Proton/ClickHouse column type string for the given Kusto type.
+    /// </summary>
+    /// <param name="type">The Kusto type to map.</param>
+    /// <param name="timestampPrecision">
+    /// Sub-second precision for <see cref="KustoType.DateTime" />. Defaults to
+    /// <see cref="LogicalTimestampPrecision.Microseconds" /> to match the
+    /// <c>LogicalFieldType.Timestamp</c> default in the registry, which ADR 0014 makes the
+    /// authority. Ignored for every other type.
+    /// </param>
+    /// <remarks>
+    /// Where this mapping is knowingly narrower than the registry's declared Proton mapping,
+    /// the divergence is asserted and explained in <c>ProtonRegistryDriftTests</c> rather than
+    /// left implicit here.
+    /// </remarks>
+    public static string ToProtonSql(
+        this KustoType type,
+        LogicalTimestampPrecision timestampPrecision = LogicalTimestampPrecision.Microseconds) => type switch {
         KustoType.String => "string",
         KustoType.Long => "int64",
         KustoType.Int => "int32",
         KustoType.Real => "float64",
         KustoType.Bool => "bool",
-        KustoType.DateTime => "datetime64(3, 'UTC')",
-        KustoType.Timespan => "int64",     // stored as microseconds; Proton has no native duration type
-        KustoType.Dynamic => "string",     // Proton OSS has no documented native JSON type (ADR 0014)
+        KustoType.DateTime => $"datetime64({timestampPrecision.ToSubSecondDigits()}, 'UTC')",
+        KustoType.Timespan => "int64",     // stored as integer duration units; Proton has no native duration type
+        KustoType.Dynamic => "string",     // registry declares "tuple"; see ProtonRegistryDriftTests
         KustoType.Guid => "uuid",
-        KustoType.Decimal => "float64",    // precision/scale not yet tracked on KustoType (ADR 0014 gap)
+        KustoType.Decimal => "float64",    // lossy; KustoType carries no precision/scale
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown Kusto type")
+    };
+
+    /// <summary>
+    /// Maps a logical timestamp precision onto the sub-second digit count Proton's
+    /// <c>datetime64(N)</c> expects.
+    /// </summary>
+    public static int ToSubSecondDigits(this LogicalTimestampPrecision precision) => precision switch {
+        LogicalTimestampPrecision.Milliseconds => 3,
+        LogicalTimestampPrecision.Microseconds => 6,
+        LogicalTimestampPrecision.Nanoseconds => 9,
+        _ => throw new ArgumentOutOfRangeException(nameof(precision), precision, "Unknown timestamp precision")
     };
 
     /// <summary>
