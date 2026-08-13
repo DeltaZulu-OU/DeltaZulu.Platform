@@ -2,6 +2,7 @@ using System.Reflection;
 using DeltaZulu.Platform.Web.AgentManagement;
 using DeltaZulu.Platform.Web.Analytics;
 using DeltaZulu.Platform.Web.Governance;
+using DeltaZulu.Platform.Web.Operations;
 using DeltaZulu.Platform.Web.Platform;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
@@ -15,6 +16,7 @@ public sealed class PlatformCompositionTests
     [
         new AnalyticsModule(),
         new GovernanceModule(),
+        new OperationsModule(),
         new AgentManagementModule(),
     ];
 

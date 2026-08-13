@@ -1,0 +1,16 @@
+<DzPageHeader Eyebrow="Operations"
+              Title="@Title"
+              Description="@Description" />
+
+<DzEmptyState Title="@EmptyTitle"
+              Description="@EmptyDescription"
+              Icon="@Icon"
+              Outlined="true" />
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string EmptyTitle { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string EmptyDescription { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+}
