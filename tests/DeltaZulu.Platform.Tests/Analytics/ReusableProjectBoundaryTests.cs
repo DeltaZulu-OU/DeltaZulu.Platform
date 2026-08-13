@@ -29,6 +29,30 @@ public sealed class ReusableProjectBoundaryTests
         }
     }
 
+    [TestMethod]
+    [Description("Backend Data projects must stay isolated from each other (ADR 0001).")]
+    public void BackendDataProjects_DoNotReferenceEachOther()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        string[] backendProjects = ["Data.DuckDb", "Data.SQLite", "Data.Git", "Data.Proton"];
+
+        foreach (var owner in backendProjects)
+        {
+            var projectPath = Path.Combine(
+                repositoryRoot,
+                $"src/DeltaZulu.Platform.{owner}/DeltaZulu.Platform.{owner}.csproj");
+            var projectXml = File.ReadAllText(projectPath);
+
+            foreach (var other in backendProjects.Where(p => p != owner))
+            {
+                Assert.IsFalse(
+                    projectXml.Contains($"DeltaZulu.Platform.{other}.csproj", StringComparison.OrdinalIgnoreCase),
+                    $"Backend project {owner} must not reference {other}. ADR 0001 keeps backend-specific "
+                    + "concerns split by project; cross-backend code belongs in the project that owns the backend.");
+            }
+        }
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

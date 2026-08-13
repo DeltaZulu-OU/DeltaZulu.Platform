@@ -167,8 +167,7 @@ via a new ADR 0015 amending ADR 0001.
   concedes the isolation becomes "a code-review convention… not a build-break guarantee". Roadmap
   P7 wants the opposite. That trade is wrong while two backends are mid-rewrite.
 - It buries the one real defect it found: `Data.SQLite → Data.DuckDb`, caused by `Sqlite/Seeding`
-  constructing DuckDB types. The current structure *caught* that. It remains tracked in
-  `ARCHITECTURE.md` as a known dependency-direction gap and is **still open**.
+  constructing DuckDB types. The current structure *caught* that. **Now fixed** — see below.
 
 **Kept:** the `Blazor.Interop` → `Web/Interop` fold. Exactly one consumer, no reuse case, no ADR
 tied to it. The JS module path changed from `_content/DeltaZulu.Blazor.Interop/interop.js` to
@@ -216,6 +215,7 @@ formats. Cross-referenced from ADR 0010, ADR 0012, and the `ARCHITECTURE.md` ing
 | + `security/agent-control-plane-hardening` | 1309 |
 | + `external-tool-kql-validation` and revisions | 1312 |
 | + interop fold | 1312 |
+| + seeding cleanup | 1312 |
 
 ## Open items
 
@@ -227,5 +227,8 @@ formats. Cross-referenced from ADR 0010, ADR 0012, and the `ARCHITECTURE.md` ing
 4. **Baseline and ratchet** the cost-shape check, then decide whether the seed detections'
    `sort`-without-`take` style should change, before making KQL005 blocking.
 5. **Rebase `feature/type-contract-catalog`** per the disposition above.
-6. **`Data.SQLite → Data.DuckDb`** — move `Sqlite/Seeding` DuckDB code into `Data.DuckDb`. Not
-   addressed here; still tracked in `ARCHITECTURE.md`.
+6. **`SeedFixtureBatchApplier` / `SeedFixtureBatchRecorder` are unused.** Surfaced by the seeding
+   cleanup: 262 lines with no caller, no DI registration, and no tests. `MockDataSeeder` produces
+   fixture batches that nothing applies, so this looks like half-wired Phase 1C infrastructure.
+   Moved with the rest of the DuckDB seeding cluster rather than deleted — decide whether to
+   finish wiring them or drop them.

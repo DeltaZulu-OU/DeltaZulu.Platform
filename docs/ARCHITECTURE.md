@@ -81,7 +81,6 @@ DeltaZulu.Platform.Data
 DeltaZulu.Platform.Data.SQLite
   -> DeltaZulu.Platform.Application
   -> DeltaZulu.Platform.Data
-  -> DeltaZulu.Platform.Data.DuckDb
   -> DeltaZulu.Platform.Domain
   -> DeltaZulu.Platform.Ingestion
 
@@ -109,11 +108,6 @@ implements persistence/runtime adapters; web composes and renders the platform.
 
 **Known dependency-direction gaps (tracked for future cleanup, not yet resolved):**
 
-- `Data.SQLite → Data.DuckDb` exists solely because `Data.SQLite/Seeding/` contains DuckDB Bronze
-  seed code (`MockDataSeeder`, `SeedFixtureBatchRecorder`/`Applier`, `SeedSqlRawLogNdjsonConverter`)
-  that constructs `DuckDbConnectionFactory`/`SchemaApplier` directly. Moving those files into
-  `Data.DuckDb` would remove this edge entirely and restore the isolation this document already
-  claims DuckDB-vs-SQLite separation provides.
 - `Data.DuckDb`'s `QueryRuntime`/`QueryRuntime.DataOnly` depend on concrete Application orchestration
   types (`IRelationalPlanner`/`RelationalPlanner`/`PlannerRunner` from
   `Application.Analytics.Planning`, `KustoQueryCompiler`/`KustoToRelational` from
@@ -227,7 +221,7 @@ historical analytics:
 The storage/runtime layer is split by backend:
 
 - `DeltaZulu.Platform.Data` contains shared data abstractions. It should stay small and avoid becoming a catch-all infrastructure project.
-- `DeltaZulu.Platform.Data.SQLite` owns SQLite repositories, schema initialization, application persistence, and development/demo seed data, for Analytics, Governance, and Agent Management alike. `Seeding/` currently also holds DuckDB Bronze-table seed code that targets `Data.DuckDb` types directly; that content should move to `Data.DuckDb` (see the dependency-direction note below).
+- `DeltaZulu.Platform.Data.SQLite` owns SQLite repositories, schema initialization, application persistence, and development/demo seed data, for Analytics, Governance, and Agent Management alike. Its `Seeding/` folder holds the SQLite- and Git-backed seeders only; DuckDB Bronze-table seed code lives in `Data.DuckDb/Seeding/`.
 - `DeltaZulu.Platform.Data.Git` owns the Git accepted-content store for accepted governance content history.
 - `DeltaZulu.Platform.Data.Proton` owns Proton/ClickHouse SQL emission and detection DDL builders for streaming detection targets.
 - Target Operations persistence should move conceptually under a clean operations namespace/database boundary and publish approved DuckDB-facing read models for KQL.

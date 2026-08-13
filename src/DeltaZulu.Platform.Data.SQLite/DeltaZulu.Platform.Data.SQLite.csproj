@@ -21,6 +21,5 @@
     <ProjectReference Include="..\DeltaZulu.Platform.Ingestion\DeltaZulu.Platform.Ingestion.csproj" />
     <ProjectReference Include="..\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
     <ProjectReference Include="..\DeltaZulu.Platform.Application\DeltaZulu.Platform.Application.csproj" />
-    <ProjectReference Include="..\DeltaZulu.Platform.Data.DuckDb\DeltaZulu.Platform.Data.DuckDb.csproj" />
   </ItemGroup>
 </Project>
