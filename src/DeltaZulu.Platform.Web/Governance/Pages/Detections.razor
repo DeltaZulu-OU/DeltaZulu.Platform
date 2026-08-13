@@ -4,42 +4,44 @@
 @using MudBlazor
 @rendermode InteractiveServer
 @using DeltaZulu.Platform.Application.Governance.Services
+@using DeltaZulu.Platform.Domain.Governance.Changes
 @using DeltaZulu.Platform.Domain.Governance.Detections
 @using DeltaZulu.Platform.Domain.Governance.Enums
 @using DeltaZulu.Platform.Domain.Governance.Identifiers
 @using DeltaZulu.Platform.Web.Governance.Services
 @inject DetectionContentService DetectionService
+@inject ChangeService ChangeService
 @inject NavigationManager Nav
 
 <PageTitle>Detections</PageTitle>
 
 <DzPageHeader Title="Detections"
-              Description="Detection content packages and their accepted versions.">
+              Description="Detection rules, lifecycle status, and open governed drafts.">
     <Actions>
         <MudButton Variant="Variant.Filled" Color="Color.Primary"
                    StartIcon="@Icons.Material.Outlined.Add"
                    OnClick="OpenNewDetectionPage">
-            New detection
+            Create rule
         </MudButton>
     </Actions>
 </DzPageHeader>
 
 <DzToolbar>
-    <MudTextField Value="_searchText" ValueChanged="OnSearchChanged" Placeholder="Search by slug or title"
+    <MudTextField Value="_searchText" ValueChanged="OnSearchChanged" Placeholder="Search slug, title, or summary"
                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
                   Immediate="true" DebounceInterval="200" Class="dz-search-field"
                   T="string" />
     <DzFilterRow>
-        <DzFilterChip Value="all" Selected="@(_lifecycleFilter == "all")" OnClick="@(() => OnLifecycleFilterChanged("all"))">
+        <DzFilterChip Value="@FilterAll" Selected="@(_lifecycleFilter == FilterAll)" OnClick="@(() => OnLifecycleFilterChanged(FilterAll))">
             All (@_detections.Count)
         </DzFilterChip>
-        <DzFilterChip Value="Draft" Selected="@(_lifecycleFilter == "Draft")" OnClick="@(() => OnLifecycleFilterChanged("Draft"))">
+        <DzFilterChip Value="@FilterDraft" Selected="@(_lifecycleFilter == FilterDraft)" OnClick="@(() => OnLifecycleFilterChanged(FilterDraft))">
             Draft (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Draft))
         </DzFilterChip>
-        <DzFilterChip Value="Accepted" Selected="@(_lifecycleFilter == "Accepted")" OnClick="@(() => OnLifecycleFilterChanged("Accepted"))">
+        <DzFilterChip Value="@FilterAccepted" Selected="@(_lifecycleFilter == FilterAccepted)" OnClick="@(() => OnLifecycleFilterChanged(FilterAccepted))">
             Accepted (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Accepted))
         </DzFilterChip>
-        <DzFilterChip Value="Deprecated" Selected="@(_lifecycleFilter == "Deprecated")" OnClick="@(() => OnLifecycleFilterChanged("Deprecated"))">
+        <DzFilterChip Value="@FilterDeprecated" Selected="@(_lifecycleFilter == FilterDeprecated)" OnClick="@(() => OnLifecycleFilterChanged(FilterDeprecated))">
             Deprecated (@_detections.Count(d => d.Lifecycle == DetectionLifecycle.Deprecated))
         </DzFilterChip>
     </DzFilterRow>
@@ -51,14 +53,14 @@
 }
 else if (_filteredDetections.Count == 0)
 {
-    <DzEmptyState Title="No detections match the current filter."
-                  Description="Create a new detection or adjust the current search and status filters."
+    <DzEmptyState Title="No rules match the current filter."
+                  Description="Create a new rule or adjust the current search and status filters."
                   Icon="@Icons.Material.Outlined.SearchOff">
         <Actions>
             <MudButton Variant="Variant.Filled" Color="Color.Primary"
                        StartIcon="@Icons.Material.Outlined.Add"
                        OnClick="OpenNewDetectionPage">
-                New detection
+                Create rule
             </MudButton>
         </Actions>
     </DzEmptyState>
@@ -68,24 +70,33 @@ else
     <DzTableShell>
         <MudTable Items="_filteredDetections" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0"
                   OnRowClick="@(args => Nav.NavigateTo($"/governance/detections/{args.Item!.Id}"))"
-                  T="Detection" RowClass="cursor-pointer">
+                  T="Detection" RowClassFunc="RuleRowClass">
             <HeaderContent>
-                <MudTh>Slug</MudTh>
-                <MudTh>Title</MudTh>
+                <MudTh>Name</MudTh>
                 <MudTh>Status</MudTh>
-                <MudTh>Updated</MudTh>
+                <MudTh>Version</MudTh>
+                <MudTh>Open drafts</MudTh>
+                <MudTh>Last modified</MudTh>
                 <MudTh>Actions</MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd DataLabel="Slug"><code>@context.Slug</code></MudTd>
-                <MudTd DataLabel="Title">@context.Title</MudTd>
-                <MudTd DataLabel="Status"><StatusChip Lifecycle="context.Lifecycle" /></MudTd>
-                <MudTd DataLabel="Updated">
-                    <MudText Typo="Typo.caption" Class="text-muted">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                <MudTd DataLabel="Name">
+                    <div class="dz-rule-name">
+                        <strong>@context.Title</strong>
+                        <code>@context.Slug</code>
+                        @if (!string.IsNullOrWhiteSpace(context.Summary))
+                        {
+                            <span>@context.Summary</span>
+                        }
+                    </div>
                 </MudTd>
+                <MudTd DataLabel="Status"><StatusChip Lifecycle="context.Lifecycle" /></MudTd>
+                <MudTd DataLabel="Version">@VersionLabel(context)</MudTd>
+                <MudTd DataLabel="Open drafts"><span class="dz-rule-count">@ActiveDraftCount(context)</span></MudTd>
+                <MudTd DataLabel="Last modified"><MudText Typo="Typo.caption" Class="text-muted">@context.UpdatedAt.ToString("MMM d, yyyy")</MudText></MudTd>
                 <MudTd DataLabel="Actions" @onclick:stopPropagation="true">
                     <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
-                               StartIcon="@Icons.Material.Outlined.Add"
+                               StartIcon="@Icons.Material.Outlined.Edit"
                                OnClick="@(() => OpenChangeForDetection(context.Id))">
                         Edit
                     </MudButton>
@@ -96,10 +107,16 @@ else
 }
 
 @code {
+    private const string FilterAll = "all";
+    private const string FilterDraft = nameof(DetectionLifecycle.Draft);
+    private const string FilterAccepted = nameof(DetectionLifecycle.Accepted);
+    private const string FilterDeprecated = nameof(DetectionLifecycle.Deprecated);
+
     private List<Detection> _detections = [];
     private List<Detection> _filteredDetections = [];
+    private Dictionary<DetectionId, int> _activeDraftCounts = [];
     private string _searchText = "";
-    private string _lifecycleFilter = "all";
+    private string _lifecycleFilter = FilterAll;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
@@ -107,9 +124,21 @@ else
     private async Task LoadAsync()
     {
         _loading = true;
-        _detections = (await DetectionService.ListAsync()).ToList();
-        ApplyFilter();
-        _loading = false;
+
+        try
+        {
+            _detections = (await DetectionService.ListAsync()).ToList();
+            var changes = await ChangeService.ListAsync();
+            _activeDraftCounts = changes
+                .Where(IsActiveChange)
+                .GroupBy(c => c.DetectionId)
+                .ToDictionary(g => g.Key, g => g.Count());
+            ApplyFilter();
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private void OnSearchChanged(string text)
@@ -120,7 +149,7 @@ else
 
     private void OnLifecycleFilterChanged(string filter)
     {
-        _lifecycleFilter = filter ?? "all";
+        _lifecycleFilter = filter ?? FilterAll;
         ApplyFilter();
     }
 
@@ -128,16 +157,22 @@ else
     {
         var query = _searchText?.Trim() ?? "";
         _filteredDetections = _detections
-            .Where(d => _lifecycleFilter == "all" || d.Lifecycle.ToString() == _lifecycleFilter)
+            .Where(d => _lifecycleFilter == FilterAll || d.Lifecycle.ToString() == _lifecycleFilter)
             .Where(d => string.IsNullOrEmpty(query)
                 || d.Slug.Contains(query, StringComparison.OrdinalIgnoreCase)
-                || d.Title.Contains(query, StringComparison.OrdinalIgnoreCase))
+                || d.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || d.Summary.Contains(query, StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
+
+    private string RuleRowClass(Detection detection, int rowNumber) => "cursor-pointer dz-rule-row";
+    private static string VersionLabel(Detection detection) => detection.CurrentVersionId is null ? "Draft" : "Accepted";
+    private int ActiveDraftCount(Detection detection) => _activeDraftCounts.GetValueOrDefault(detection.Id);
+    private static bool IsActiveChange(ChangeRequest change)
+        => change.Status is not ChangeStatus.Merged and not ChangeStatus.Closed and not ChangeStatus.Published;
 
     private void OpenNewDetectionPage() => Nav.NavigateTo("/governance/detections/new");
 
     private void OpenChangeForDetection(DetectionId detectionId)
         => Nav.NavigateTo($"/governance/detections/new?detectionId={detectionId.Value}");
-
 }

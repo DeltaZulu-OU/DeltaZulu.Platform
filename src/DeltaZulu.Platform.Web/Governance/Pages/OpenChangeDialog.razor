@@ -11,9 +11,15 @@
 @inject PocUserContext UserContext
 @inject ISnackbar Snackbar
 
-<MudDialog>
+<MudDialog Class="dz-rule-dialog">
     <TitleContent>
-        <MudText Typo="Typo.h6" Class="dz-dialog-title">Edit</MudText>
+        <div class="dz-rule-dialog__title">
+            <MudIcon Icon="@Icons.Material.Outlined.EditNote" />
+            <div>
+                <MudText Typo="Typo.overline">Rule change</MudText>
+                <MudText Typo="Typo.h6">Open draft</MudText>
+            </div>
+        </div>
     </TitleContent>
     <DialogContent>
         @if (_loading)
@@ -24,7 +30,7 @@
         {
             @if (DetectionId is null)
             {
-                <MudSelect @bind-Value="_selectedDetectionId" Label="Detection" T="Guid?" Required="true" Class="mb-3">
+                <MudSelect @bind-Value="_selectedDetectionId" Label="Detection rule" T="Guid?" Required="true" Class="mb-3">
                     @foreach (var detection in _detections)
                     {
                         <MudSelectItem T="Guid?" Value="@((Guid?)detection.Id.Value)">
@@ -35,14 +41,14 @@
             }
 
             <MudTextField @bind-Value="_key"
-                          Label="Draft key"
+                          Label="Rule draft key"
                           HelperText="Short tracking key, for example DRAFT-001."
                           Required="true"
                           Immediate="true"
                           Class="mb-3 dz-mono-input" />
 
             <MudTextField @bind-Value="_title"
-                          Label="Title"
+                          Label="Rule draft title"
                           Required="true"
                           Immediate="true"
                           Class="mb-3" />
@@ -71,7 +77,7 @@
             {
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
             }
-            Edit
+            Open in editor
         </MudButton>
     </DialogActions>
 </MudDialog>

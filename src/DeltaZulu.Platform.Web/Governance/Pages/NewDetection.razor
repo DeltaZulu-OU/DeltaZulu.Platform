@@ -37,7 +37,7 @@
 
     <main class="threat-hunting-workbench">
         <DzPageHeader Eyebrow="Detection content" Title="@PageTitleText"
-                      Description="Create realtime or scheduled detection content on a dedicated page with the same schema, query history, and helper workflow as the Analytics dashboard.">
+                      Description="Create realtime or scheduled detection rules with schema, query history, and helper workflows in one authoring workspace.">
             <Actions>
                 <KqlHelperDrawer InsertRequested="InsertHelperQueryAsync" AppendRequested="AppendHelperQueryAsync" />
             </Actions>
@@ -49,13 +49,13 @@
         }
         else
         {
-            <DzPanel Title="Detection details" Outlined="true">
+            <DzPanel Title="Rule details" Class="dz-rule-author-panel" Outlined="true">
                 @if (IsExistingDetectionDraft)
                 {
-                    <MudTextField Value="@ExistingDetectionLabel" Label="Detection" ReadOnly="true" Variant="Variant.Outlined" Class="mb-3" />
+                    <MudTextField Value="@ExistingDetectionLabel" Label="Detection rule" ReadOnly="true" Variant="Variant.Outlined" Class="mb-3" />
                     <MudTextField @bind-Value="_draftKey" Label="Draft key" HelperText="Short tracking key, for example DRAFT-001."
                                   Required="true" Immediate="true" Variant="Variant.Outlined" Class="mb-3 dz-mono-input" />
-                    <MudTextField @bind-Value="_draftTitle" Label="Draft title" Required="true" Immediate="true" Variant="Variant.Outlined" Class="mb-3" />
+                    <MudTextField @bind-Value="_draftTitle" Label="Rule draft title" Required="true" Immediate="true" Variant="Variant.Outlined" Class="mb-3" />
                     <MudSelect @bind-Value="_workflowProfileId" Label="Workflow profile" T="WorkflowProfileId" Variant="Variant.Outlined" Class="mb-3">
                         <MudSelectItem Value="WorkflowProfileId.QuickLab">Quick lab</MudSelectItem>
                         <MudSelectItem Value="WorkflowProfileId.ControlledReview">Controlled review</MudSelectItem>
@@ -63,7 +63,7 @@
                 }
                 else
                 {
-                    <MudTextField @bind-Value="_slug" Label="Slug" HelperText="Lowercase, hyphens, 3–64 characters."
+                    <MudTextField @bind-Value="_slug" Label="Rule slug" HelperText="Lowercase, hyphens, 3–64 characters."
                                   Required="true" Immediate="true" Class="mb-3 dz-mono-input" />
                 }
 
@@ -76,7 +76,7 @@
                     <MudButton Variant="Variant.Text" OnClick="Cancel">Cancel</MudButton>
                     <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SubmitAsync" Disabled="@(_submitting || !CanSubmit)">
                         @if (_submitting) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                        @(IsExistingDetectionDraft ? "Start edit" : "Create detection draft")
+                        @(IsExistingDetectionDraft ? "Start edit" : "Create rule draft")
                     </MudButton>
                 </div>
             </DzPanel>
@@ -100,7 +100,7 @@
     private bool _submitting;
 
     private bool IsExistingDetectionDraft => _existingDetection is not null;
-    private string PageTitleText => IsExistingDetectionDraft ? "Edit detection" : "New detection";
+    private string PageTitleText => IsExistingDetectionDraft ? "Edit detection rule" : "New detection rule";
     private string ExistingDetectionLabel => _existingDetection is null ? string.Empty : $"{_existingDetection.Slug} — {_existingDetection.Title}";
     private string DetectionIdFromSlug => string.IsNullOrWhiteSpace(_slug) ? string.Empty : $"dz-{_slug.Trim()}";
     private string DetectionFormSlug => _existingDetection?.Slug ?? DetectionIdFromSlug;
