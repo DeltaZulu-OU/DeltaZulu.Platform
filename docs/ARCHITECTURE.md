@@ -15,12 +15,14 @@ The platform exposes three user-facing modules inside one platform shell:
 | Analytics | `/analytics` | KQL-based querying, schema exploration, query history, curated analytics, visualizations, dashboards, evidence capture, and threat-hunting workflows. | `src/DeltaZulu.Platform.Web/Analytics`, `src/DeltaZulu.Platform.Application/Analytics`, `src/DeltaZulu.Platform.Domain/Analytics`, `src/DeltaZulu.Platform.Data` |
 | Detection Content Governance | `/governance` | Detection packages, governed proposals, semantic detection content, validation checks, review, acceptance, restore, and version history. | `src/DeltaZulu.Platform.Web/Governance`, `src/DeltaZulu.Platform.Application/Governance`, `src/DeltaZulu.Platform.Domain/Governance`, `src/DeltaZulu.Platform.Data` |
 | Operations | `/operations` | Executable detections, scheduled detection runs, alerts, alert entities, enrichment, suppression, incident candidates, triage state, and recovery. | Target module; code home will follow the same Domain/Application/Data/Web pattern. |
+| Agent Management | `/agents` | Agent enrollment, fleet/group inventory, resource profiles, daemon configuration, policy assignment, enrollment tokens, and the agent control-plane pull protocol (enroll/heartbeat/pull/ack). | `src/DeltaZulu.Platform.Web/AgentManagement`, `src/DeltaZulu.Platform.Application/AgentManagement`, `src/DeltaZulu.Platform.Domain/AgentManagement`, `src/DeltaZulu.Platform.Data.SQLite` |
 
 The modules remain separate by responsibility:
 
 - **Analytics** asks questions and preserves analytical artifacts.
 - **Governance** controls detection-content proposals and acceptance.
 - **Operations** executes accepted detections and manages produced operational state.
+- **Agent Management** owns fleet inventory, agent identity/enrollment, and the daemon configuration/policy distribution surface. It is registered today (`AgentManagementModule`, route prefix `/agents`) and is developed on its own roadmap ([`AGENT_MANAGEMENT_ROADMAP.md`](AGENT_MANAGEMENT_ROADMAP.md)) that is explicitly independent of the Analytics/Governance/Operations phase sequence above; see [`docs/architecture/agent-control-plane.md`](architecture/agent-control-plane.md), [ADR 0012](adr/0012-agent-control-plane-pull-protocol-and-auth.md), and [ADR 0013](adr/0013-constrained-agent-command-queue.md). It follows the same Domain/Application/Data/Web layering as the other modules and should be treated as an equal source of reusable persistence/validation patterns (unit-of-work, Dapper session, strongly-typed IDs, validation-check pipelines) when building or reviewing the other three — do not re-derive these patterns independently per module.
 
 The target modules integrate through explicit handoff boundaries: curated analytics can be promoted
 into detection drafts; accepted detection versions project executable definitions; detection runs create
@@ -76,7 +78,6 @@ DeltaZulu.Platform.Application
   -> DeltaZulu.Platform.Domain
 
 DeltaZulu.Platform.Data
-  -> DeltaZulu.Platform.Application
   -> DeltaZulu.Platform.Domain
 
 DeltaZulu.Platform.Data.SQLite
@@ -111,6 +112,27 @@ The intended architectural rule is dependency inversion around domain/applicatio
 models and contracts define the core language; application services coordinate use cases; data
 implements persistence/runtime adapters; web composes and renders the platform.
 
+**Known dependency-direction gaps (tracked for future cleanup, not yet resolved):**
+
+- `Data.SQLite → Data.DuckDb` exists solely because `Data.SQLite/Seeding/` contains DuckDB Bronze
+  seed code (`MockDataSeeder`, `SeedFixtureBatchRecorder`/`Applier`, `SeedSqlRawLogNdjsonConverter`)
+  that constructs `DuckDbConnectionFactory`/`SchemaApplier` directly. Moving those files into
+  `Data.DuckDb` would remove this edge entirely and restore the isolation this document already
+  claims DuckDB-vs-SQLite separation provides.
+- `Data.DuckDb`'s `QueryRuntime`/`QueryRuntime.DataOnly` depend on concrete Application orchestration
+  types (`IRelationalPlanner`/`RelationalPlanner`/`PlannerRunner` from
+  `Application.Analytics.Planning`, `KustoQueryCompiler`/`KustoToRelational` from
+  `Application.Analytics.Translation`) to run the full "KQL string → parse → policy → translate →
+  emit → execute → results" pipeline. This is a real instance of the "Shared analytics execution"
+  gap described below — that orchestration belongs in an Application-owned execution service, not in
+  the DuckDB infrastructure project — it is just further downstream than the Web-layer gap this
+  document previously called out.
+- `Data`'s `ProjectReference` on `Application` was audited and found unused by any file in
+  `DeltaZulu.Platform.Data` — it has been removed. `Data.SQLite`'s reference to `Application` is used
+  in exactly one place (`SampleSavedQuerySeeder` consuming the static `SampleQueryCatalog` fixture
+  data) and is low-risk, but `SampleQueryCatalog` is arguably better homed in `Domain` or directly in
+  `Data.SQLite/Seeding` than in `Application`, since it carries no orchestration behavior.
+
 ## Layer responsibilities
 
 ### Domain
@@ -126,6 +148,11 @@ implements persistence/runtime adapters; web composes and renders the platform.
   entities, incident candidates, and candidate evidence are scaffolded, currently still under the
   Analytics namespace. Target work should create explicit `Operations/` domain boundaries before the
   operations model grows further.
+- Agent Management aggregates, identifiers, repository contracts, unit-of-work contract, and
+  validation-check contracts under `AgentManagement/`. These mirror the shape of the Governance
+  aggregates below (typed-ID `Entity<TId>` aggregates, `Add`/`Save` repositories, an `ICheck`-style
+  validation pipeline) and should reuse Governance's base types rather than re-declaring
+  structurally identical contracts under a different name.
 
 The domain layer does not know about Blazor, DuckDB connections, SQLite connections, Git repositories,
 MudBlazor, Elsa workflow internals, or platform hosting.
@@ -145,6 +172,9 @@ MudBlazor, Elsa workflow internals, or platform hosting.
 - Target Operations services including executable detection projection, scheduled execution
   coordination, alert materialization, entity extraction, enrichment, suppression, candidate
   correlation, and triage coordination.
+- Agent Management use cases: enrollment/heartbeat/pull/ack coordination, daemon config and resource
+  profile validation pipelines, policy assignment and version pinning, and observation-sink
+  coordination for fleet health/telemetry-utilization reporting.
 
 Application code may depend on domain contracts and external libraries needed for application behavior,
 but it should not contain UI state or direct host composition. Elsa workflows orchestrate order,
@@ -154,9 +184,9 @@ incident-candidate validity.
 
 ### Agent evidence boundary
 
-DeltaZulu is evaluating an RPC correlation evidence boundary for the first high-value Windows RPC correlation use cases: the agent emits enriched facts and the platform emits detections. `DeltaZulu.Agent` is responsible for raw endpoint evidence, volatile process/user/network/service context, bounded local resolution of object IDs/pointers into human-readable correlation values, and deterministic RPC UUID/opnum semantic hints. It must preserve raw RPC/EventLog data and must not emit detection verdicts such as `RemoteServiceCreation`, `DCSync`, or `LateralMovement`.
+DeltaZulu has adopted an RPC correlation evidence boundary for the first high-value Windows RPC correlation use cases: the agent emits enriched facts and the platform emits detections. `DeltaZulu.Agent` is responsible for raw endpoint evidence, volatile process/user/network/service context, bounded local resolution of object IDs/pointers into human-readable correlation values, and deterministic RPC UUID/opnum semantic hints. It must preserve raw RPC/EventLog data and must not emit detection verdicts such as `RemoteServiceCreation`, `DCSync`, or `LateralMovement`.
 
-`DeltaZulu.Platform` owns Bronze/Silver/Golden modeling, CMDB and identity joins, suppression, scoring, deduplication, evidence bundles, and alert generation. The initial RPC scope is MS-SCMR / `svcctl` remote service creation and MS-DRSR / DRSUAPI DCSync evidence, with resolver packs versioned separately from detection content so Bronze UUID/opnum data can be replayed when mappings improve. This evidence boundary intentionally overlaps with [ADR 0009](adr/0009-collection-coverage-evaluation-boundaries.md) and needs final alignment before it is accepted; see [ADR 0011](adr/0011-rpc-correlation-evidence-architecture.md).
+`DeltaZulu.Platform` owns Bronze/Silver/Golden modeling, CMDB and identity joins, suppression, scoring, deduplication, evidence bundles, and alert generation. The initial RPC scope is MS-SCMR / `svcctl` remote service creation and MS-DRSR / DRSUAPI DCSync evidence, with resolver packs versioned separately from detection content so Bronze UUID/opnum data can be replayed when mappings improve. This evidence boundary previously overlapped, unresolved, with [ADR 0009](adr/0009-collection-coverage-evaluation-boundaries.md); both ADRs are now aligned (see [ADR 0011](adr/0011-rpc-correlation-evidence-architecture.md)) on the principle that ADR 0009's central-resolution rule governs deterministic, static lookups, while the agent may resolve genuinely volatile, perishable endpoint context under distinctly namespaced (non-`_resolved`) fields, with Platform Silver remaining the authoritative source for RPC UUID/opnum semantics.
 
 ### Ingestion
 
@@ -201,12 +231,21 @@ historical analytics:
 The storage/runtime layer is split by backend:
 
 - `DeltaZulu.Platform.Data` contains shared data abstractions. It should stay small and avoid becoming a catch-all infrastructure project.
-- `DeltaZulu.Platform.Data.SQLite` owns SQLite repositories, schema initialization, application persistence, and development/demo seed data.
+- `DeltaZulu.Platform.Data.SQLite` owns SQLite repositories, schema initialization, application persistence, and development/demo seed data, for Analytics, Governance, and Agent Management alike. `Seeding/` currently also holds DuckDB Bronze-table seed code that targets `Data.DuckDb` types directly; that content should move to `Data.DuckDb` (see the dependency-direction note below).
 - `DeltaZulu.Platform.Data.Git` owns the Git accepted-content store for accepted governance content history.
 - `DeltaZulu.Platform.Data.Proton` owns Proton/ClickHouse SQL emission and detection DDL builders for streaming detection targets.
 - Target Operations persistence should move conceptually under a clean operations namespace/database boundary and publish approved DuckDB-facing read models for KQL.
 
 Data code implements storage and runtime adapters. It should not leak storage details into user-facing routes or UI components.
+
+### Repository idioms
+
+Two repository idioms coexist in the codebase today, and this is an intentional, documented split rather than inconsistency to unify away:
+
+- **Aggregate + unit-of-work** (Governance, Agent Management): entities derive from `Entity<TId>` with a hand-written strongly-typed `readonly record struct XId(Guid Value)` identifier, repositories expose `GetByIdAsync`/`ListAsync`/`Add`/`Save` (no generic `Delete`), and mutations are wrapped in an explicit `IUnitOfWork`/`DapperSession` transaction. Use this idiom when the entity has a lifecycle, invariants enforced across related records, or approval/state-machine semantics — detections, changes, reviews, agents, enrollment tokens, and daemon configs all qualify.
+- **String-ID CRUD record** (Analytics): repositories such as `ISavedQueryRepository`, `ICuratedAnalyticRepository`, `IVisualizationRepository`, and `IIncidentCandidateRepository` use plain `string` IDs and flat `GetAsync`/`SaveAsync`/`DeleteAsync`/`ListAsync` semantics with no unit-of-work wrapper. This fits Analytics artifacts that behave like user-owned documents or settings (saved queries, dashboards, visualizations) rather than DDD aggregates with cross-entity invariants.
+
+New modules should pick the idiom that matches the data's actual shape rather than inventing a third: **Operations** records have an explicit status lifecycle (incident candidates: Pending → Active → Closed/Dismissed) and should follow the Governance/Agent Management aggregate + unit-of-work idiom, reusing `Entity<TId>` and the existing `IUnitOfWork`/`DapperSession` implementation rather than declaring a parallel one (see the Agent Management note above — this has already happened once and should not happen again).
 
 ### Blazor.Interop
 
@@ -245,9 +284,10 @@ reintroduced under separate module projects.
 ## Platform host composition
 
 `DeltaZulu.Platform.Web/Program.cs` is the single host composition root. Current module registration
-includes Analytics and Governance; Operations is the target next module to add:
+includes Analytics, Governance, and Agent Management; Operations is the target next module to add:
 
-- `AnalyticsModule` and `GovernanceModule` implement the platform module contract today.
+- `AnalyticsModule`, `GovernanceModule`, and `AgentManagementModule` implement the platform module
+  contract today.
 - The target `OperationsModule` should implement the same platform module contract when the first
   Operations slice lands, with placeholder routes early enough to exercise alert queues, detection runs,
   incident candidates, operations health, and investigation/triage flows in the shell.
@@ -709,6 +749,7 @@ strictly a hunting and analytical-investigation concern.
 | Workflow orchestration state | Data | Elsa workflow store (SQLite or configured provider). |
 | Approved operations read models | Operations/Data | Target DuckDB approved views projected from operations SQLite state. |
 | NRT detection rules, compiled DDL, and rule metadata | Analytics/Application/Data | SQLite `nrt_rules` table; compiled Proton DDL stored as text alongside rule metadata. |
+| Agent inventory, groups, enrollment tokens/credentials, daemon configs, resource profiles, policy assignments, and command queue | Agent Management/Data | SQLite agent-management database (`Data.SQLite` repositories), fronted by the `/api/agent/v1` control-plane API. |
 | UI component/design-system assets | Web | `DeltaZulu.Platform.Web` static assets and components. |
 
 ## Safety invariants

@@ -1,4 +1,5 @@
 using DeltaZulu.Platform.Data.Sqlite.Governance.Repositories;
+using DeltaZulu.Platform.Domain.Common;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 

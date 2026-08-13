@@ -4,53 +4,13 @@ using DeltaZulu.Platform.Domain.Analytics.Observability;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Ingestion;
 
-public sealed class DuckDbSourceObservationWriter : IDisposable
+public sealed class DuckDbSourceObservationWriter(SchemaApplier applier)
+    : DuckDbAppendOnlyWriterBase<SourceObservationSnapshot>(applier)
 {
     private const string TableName = "internal.SourceObservations";
     private const string ColumnList = "ObservedAt, WindowStart, WindowEnd, TenantId, AgentId, HostId, SourceInstanceId, SourceType, ResourceFamily, Provider, Channel, ProfileId, ProfileVersionId, IsEnabled, CanRead, LastReadAt, ReadErrorCount, LastError, ReadCount, KeptAfterFilterCount, DiscardedCount, ForwardedCount, ForwardFailedCount";
 
-    private readonly SchemaApplier _applier;
-    private readonly SemaphoreSlim _writeGate = new(1, 1);
-
-    public DuckDbSourceObservationWriter(SchemaApplier applier)
-    {
-        ArgumentNullException.ThrowIfNull(applier);
-        _applier = applier;
-    }
-
-    public async Task AppendAsync(SourceObservationSnapshot snapshot, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(snapshot);
-        await _writeGate.WaitAsync(cancellationToken);
-        try
-        {
-            _applier.ExecuteRaw(BuildInsertSql(snapshot));
-        }
-        finally
-        {
-            _writeGate.Release();
-        }
-    }
-
-    public async Task AppendBatchAsync(IReadOnlyList<SourceObservationSnapshot> snapshots, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(snapshots);
-        if (snapshots.Count == 0) return;
-
-        await _writeGate.WaitAsync(cancellationToken);
-        try
-        {
-            _applier.ExecuteRaw(BuildBatchInsertSql(snapshots));
-        }
-        finally
-        {
-            _writeGate.Release();
-        }
-    }
-
-    public void Dispose() => _writeGate.Dispose();
-
-    private static string BuildInsertSql(SourceObservationSnapshot s)
+    protected override string BuildInsertSql(SourceObservationSnapshot s)
     {
         var sb = new StringBuilder(768);
         sb.Append($"INSERT INTO {TableName} ({ColumnList}) VALUES (");
@@ -59,7 +19,7 @@ public sealed class DuckDbSourceObservationWriter : IDisposable
         return sb.ToString();
     }
 
-    private static string BuildBatchInsertSql(IReadOnlyList<SourceObservationSnapshot> snapshots)
+    protected override string BuildBatchInsertSql(IReadOnlyList<SourceObservationSnapshot> snapshots)
     {
         var sb = new StringBuilder(256 + snapshots.Count * 384);
         sb.AppendLine($"INSERT INTO {TableName} ({ColumnList}) VALUES");
@@ -124,46 +84,4 @@ public sealed class DuckDbSourceObservationWriter : IDisposable
         sb.Append(", ");
         sb.Append(s.ForwardFailedCount.ToString(CultureInfo.InvariantCulture));
     }
-
-    private static void AppendTimestamp(StringBuilder sb, DateTime utc)
-    {
-        sb.Append("TIMESTAMP '");
-        sb.Append(FormatTimestamp(utc));
-        sb.Append('\'');
-    }
-
-    private static void AppendNullableTimestamp(StringBuilder sb, DateTime? utc)
-    {
-        if (utc is null)
-        {
-            sb.Append("NULL");
-            return;
-        }
-
-        AppendTimestamp(sb, utc.Value);
-    }
-
-    private static void AppendString(StringBuilder sb, string value)
-    {
-        sb.Append('\'');
-        sb.Append(EscapeSql(value));
-        sb.Append('\'');
-    }
-
-    private static void AppendNullableString(StringBuilder sb, string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            sb.Append("NULL");
-            return;
-        }
-
-        AppendString(sb, value);
-    }
-
-    private static string FormatTimestamp(DateTime utc) =>
-        utc.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
-
-    private static string EscapeSql(string value) =>
-        value.Replace("'", "''", StringComparison.Ordinal);
 }

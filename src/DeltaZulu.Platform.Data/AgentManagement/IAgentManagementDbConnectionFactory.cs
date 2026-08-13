@@ -1,23 +1,10 @@
-using System.Data.Common;
+using DeltaZulu.Platform.Data.Analytics;
 
 namespace DeltaZulu.Platform.Data.AgentManagement;
 
-public interface IAgentManagementDbConnectionFactory
-{
-    DbConnection CreateConnection();
-
-    async ValueTask<DbConnection> OpenConnectionAsync(CancellationToken cancellationToken = default)
-    {
-        var connection = CreateConnection();
-        try
-        {
-            await connection.OpenAsync(cancellationToken);
-            return connection;
-        }
-        catch
-        {
-            await connection.DisposeAsync();
-            throw;
-        }
-    }
-}
+/// <summary>
+/// Distinct marker type so Agent Management's connection factory can be registered and resolved
+/// independently of Analytics' <see cref="IAppDbConnectionFactory"/> in the shared Web host DI
+/// container; the member shape is defined once, in <see cref="IAppDbConnectionFactory"/>.
+/// </summary>
+public interface IAgentManagementDbConnectionFactory : IAppDbConnectionFactory;

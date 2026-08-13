@@ -2,7 +2,9 @@ namespace DeltaZulu.Agent.Simulator;
 
 /// <summary>
 /// Random-walk health signals so the fleet UI shows realistic buffer pressure,
-/// queue depth, and occasional drops/forward failures.
+/// queue depth, and occasional drops/forward failures. Unrelated to Importing.Core's
+/// DemoSeedImportCatalog or Data.SQLite's GovernanceSampleDataSeeder - this generates live
+/// heartbeat telemetry for the simulator, not fixture files or dev-database rows.
 /// </summary>
 public sealed class SyntheticHealth
 {
