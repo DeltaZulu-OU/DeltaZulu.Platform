@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Dapper;
+using DeltaZulu.Platform.Data.Analytics;
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using static DeltaZulu.Platform.Data.Sqlite.Analytics.SqliteDateTimeHelpers;
 

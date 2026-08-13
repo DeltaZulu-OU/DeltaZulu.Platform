@@ -13,6 +13,8 @@
     <ProjectReference Include="..\..\src\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Platform.Application\DeltaZulu.Platform.Application.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Platform.Data\DeltaZulu.Platform.Data.csproj" />
+    <ProjectReference Include="..\..\src\DeltaZulu.Platform.Data.Git\DeltaZulu.Platform.Data.Git.csproj" />
+    <ProjectReference Include="..\..\src\DeltaZulu.Platform.Data.SQLite\DeltaZulu.Platform.Data.SQLite.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Platform.Data.DuckDb\DeltaZulu.Platform.Data.DuckDb.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Platform.Data.Proton\DeltaZulu.Platform.Data.Proton.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Platform.Web\DeltaZulu.Platform.Web.csproj" />

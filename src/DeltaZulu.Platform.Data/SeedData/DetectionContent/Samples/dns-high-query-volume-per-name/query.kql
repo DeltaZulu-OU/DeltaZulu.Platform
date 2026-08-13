@@ -1,5 +1,0 @@
-Dns
-| where Timestamp > ago(1h)
-| summarize QueryCount=count() by DeviceName, QueryName
-| where QueryCount > 50
-| sort by QueryCount desc

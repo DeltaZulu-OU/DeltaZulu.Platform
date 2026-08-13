@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Data.Sqlite.Analytics;
+namespace DeltaZulu.Platform.Data.Analytics;
 
 public interface IApplicationPersistenceRepository
 {
