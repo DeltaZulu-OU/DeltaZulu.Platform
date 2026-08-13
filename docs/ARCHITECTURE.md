@@ -151,6 +151,12 @@ timing, branching, retries, timers, and human-in-the-loop steps at this layer, b
 detection logic, alert semantics, evidence integrity, entity meaning, suppression rules, or
 incident-candidate validity.
 
+### Agent evidence boundary
+
+DeltaZulu is evaluating an RPC correlation evidence boundary for the first high-value Windows RPC correlation use cases: the agent emits enriched facts and the platform emits detections. `DeltaZulu.Agent` is responsible for raw endpoint evidence, volatile process/user/network/service context, bounded local resolution of object IDs/pointers into human-readable correlation values, and deterministic RPC UUID/opnum semantic hints. It must preserve raw RPC/EventLog data and must not emit detection verdicts such as `RemoteServiceCreation`, `DCSync`, or `LateralMovement`.
+
+`DeltaZulu.Platform` owns Bronze/Silver/Golden modeling, CMDB and identity joins, suppression, scoring, deduplication, evidence bundles, and alert generation. The initial RPC scope is MS-SCMR / `svcctl` remote service creation and MS-DRSR / DRSUAPI DCSync evidence, with resolver packs versioned separately from detection content so Bronze UUID/opnum data can be replayed when mappings improve. This evidence boundary intentionally overlaps with [ADR 0009](adr/0009-collection-coverage-evaluation-boundaries.md) and needs final alignment before it is accepted; see [ADR 0011](adr/0011-rpc-correlation-evidence-architecture.md).
+
 ### Ingestion
 
 `DeltaZulu.Platform.Ingestion` owns the raw-log pub-sub boundary:

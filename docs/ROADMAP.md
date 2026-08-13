@@ -87,7 +87,7 @@ The target is a full-cycle security analytics platform that keeps Clean Architec
 
 ## Agent management
 
-Agent management lifecycle is a separate capability area with its own priority scheme. It is tracked in [`AGENT_MANAGEMENT_ROADMAP.md`](AGENT_MANAGEMENT_ROADMAP.md) and does not block or depend on the platform core phases below.
+Agent management lifecycle is a separate capability area with its own priority scheme. It is tracked in [`AGENT_MANAGEMENT_ROADMAP.md`](AGENT_MANAGEMENT_ROADMAP.md) and does not block or depend on the platform core phases below. The RPC correlation evidence work adds a coordinated agent/platform evidence-capability track: the agent first delivers raw RPC capture, SCMR/DRSR resolver packs, inbound remote RPC facts, process keys, object ID/pointer-to-name enrichment, network tuple enrichment, structured Security `4624`/`4662`/`5156` normalization, service evidence, and replay metadata; the platform then delivers Silver RPC/network/process/service/authentication/directory tables, CMDB and identity joins, remote service creation and DCSync correlation outputs, evidence bundles, and benign/malicious regression fixtures. This track has an open responsibility-boundary alignment item with ADR 0009 before it can be accepted as final architecture. See [ADR 0011](adr/0011-rpc-correlation-evidence-architecture.md).
 
 ## Implementation phases
 
@@ -167,6 +167,17 @@ Active phases decomposed into concrete, verifiable tasks.
 6. Upgrade `DzQueryResultTable` toward evidence-grade metadata: freshness, source, query purpose, row limit, truncation, degraded/partial state, column overflow, and CSV export.
 7. Create Operations module placeholder navigation (routes and empty pages) for design-system validation.
 8. Add design-system audit test/script that fails on forbidden radius values, orange misuse, Newsreader leakage, raw Mud divergence, unsupported color literals, and legacy classes/variables.
+
+#### RPC evidence foundation tasks
+
+These tasks implement the proposed [ADR 0011](adr/0011-rpc-correlation-evidence-architecture.md) and should be tracked with the agent/profile work rather than treated as platform detection logic. Final acceptance requires resolving the overlap with [ADR 0009](adr/0009-collection-coverage-evaluation-boundaries.md) on where deterministic lookup and `_resolved` enrichment live.
+
+1. Keep the production P0 RPC profile selective: retain SCMR/DRSR UUIDs or known P0 endpoints, but do not retain every RPC event whose normalized interface UUID is empty.
+2. Make the RPC-correlation Security `5156` filter alias-safe for application path and destination-port field variants before relying on it for service-control or DCSync tuple enrichment.
+3. Verify profile ID/file migrations for `windows.etw.rpc` to `windows.etw.rpc.p0` across manifests, seeders, tests, packaging, default agent configuration, and docs; add compatibility aliases where needed.
+4. Gate RPC enrichment to known RPC sources or explicit RPC interface UUID fields so non-RPC events with `OpNum`-like fields are not enriched accidentally.
+5. Preserve agent-emitted `enrichment.Rpc` in Bronze and add Silver `RpcEvent` projection tests that expose canonical query fields for detection authors.
+6. Add fixture-driven profile tests for braced/uppercase UUIDs, missing-interface non-P0 RPC noise, and `5156` field aliases.
 
 #### Phase 3B tasks (alert storage migration)
 
