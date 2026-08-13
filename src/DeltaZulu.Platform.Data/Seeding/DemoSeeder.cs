@@ -480,7 +480,6 @@ internal static class DemoYaml
           | where ProcessCommandLine has_any ("/create", "/change")
           | where ProcessCommandLine !has "/delete"
           | project Timestamp, DeviceName, AccountName, ProcessCommandLine
-          | where
         techniques:
           - T1053.005
         entity_mappings:

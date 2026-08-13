@@ -190,10 +190,12 @@ body:has(.hunt-app) {
     color: var(--text-dim);
 }
 
-schema-col-type {
+.schema-col-type {
     flex: 0 0 auto;
     font-family: var(--font-mono);
     font-size: 10.5px;
+    font-weight: 500;
+    color: var(--dz-product-text-muted);
 }
 
 .schema-saved-query-description {
@@ -1240,12 +1242,6 @@ samp,
 
 .schema-col-name {
     color: var(--dz-product-text);
-}
-
-.schema-col-type {
-    color: var(--dz-product-text-muted);
-    font-size: 10.5px;
-    font-weight: 500;
 }
 
 .schema-browser .mud-nav-link {
