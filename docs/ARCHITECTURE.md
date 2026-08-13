@@ -4,7 +4,7 @@ DeltaZulu Platform is a local, schema-governed, full-cycle security analytics pl
 interactive analytics, detection content governance, scheduled detection execution, alerting,
 enrichment, incident-candidate correlation, triage, and feedback into detection improvement. The
 repository has completed its host merge and Clean Architecture consolidation: one Blazor web app,
-ten source projects, and one consolidated test project.
+nine source projects, and one consolidated test project.
 
 ## Product model
 
@@ -53,7 +53,6 @@ src/
   DeltaZulu.Platform.Data.SQLite/  # SQLite repositories and seed data
   DeltaZulu.Platform.Data.Git/     # Git accepted-content store
   DeltaZulu.Platform.Data.Proton/  # Proton SQL/DDL backend
-  DeltaZulu.Blazor.Interop/        # Typed Blazor JS interop wrappers
   DeltaZulu.Platform.Web/          # Blazor host, platform shell, UI, components
 
 tests/
@@ -64,7 +63,6 @@ tests/
 
 ```text
 DeltaZulu.Platform.Web
-  -> DeltaZulu.Blazor.Interop
   -> DeltaZulu.Platform.Application
   -> DeltaZulu.Platform.Data
   -> DeltaZulu.Platform.Data.DuckDb
@@ -99,9 +97,6 @@ DeltaZulu.Platform.Data.DuckDb
   -> DeltaZulu.Platform.Ingestion
 
 DeltaZulu.Platform.Ingestion
-  -> no project references
-
-DeltaZulu.Blazor.Interop
   -> no project references
 
 DeltaZulu.Platform.Domain
@@ -248,16 +243,18 @@ Two repository idioms coexist in the codebase today, and this is an intentional,
 
 New modules should pick the idiom that matches the data's actual shape rather than inventing a third: **Operations** records have an explicit status lifecycle (incident candidates: Pending → Active → Closed/Dismissed) and should follow the Governance/Agent Management aggregate + unit-of-work idiom, reusing `Entity<TId>` and the existing `IUnitOfWork`/`DapperSession` implementation rather than declaring a parallel one (see the Agent Management note above — this has already happened once and should not happen again).
 
-### Blazor.Interop
+### Blazor interop
 
-`DeltaZulu.Blazor.Interop` is a standalone Razor class library providing typed wrappers for Blazor
-JS interop:
+`DeltaZulu.Platform.Web/Interop/` provides typed wrappers for Blazor JS interop. It was a standalone
+Razor class library (`DeltaZulu.Blazor.Interop`) until it was folded into Web, its only consumer:
 
 - `ClipboardService`, `FileOperationsService`, `JsLifecycleGuard`, `ElementReferenceExtensions`, and
   `BoundingClientRect` replace raw `IJSRuntime` calls in Razor components with typed, mockable
   services.
-- A consolidated `interop.js` module bundles all platform interop functions.
-- Has no project references — it is a pure Blazor/JS boundary library.
+- A consolidated `wwwroot/js/interop.js` module bundles all platform interop functions, loaded as
+  `./js/interop.js` rather than the former `_content/DeltaZulu.Blazor.Interop/interop.js`
+  class-library path.
+- The `DeltaZulu.Blazor.Interop` namespace is retained so the fold stayed mechanical.
 - Registered via `AddBlazorInterop()` in `Program.cs`.
 
 ### Web

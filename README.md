@@ -15,7 +15,7 @@ remain the source of truth for current architecture and target state.
 longer have standalone `Program.cs`, `App.razor`, host layouts, launch settings, host appsettings, or
 separate Razor Class Library projects.
 
-The solution has completed its Clean Architecture consolidation and now uses ten source projects plus
+The solution has completed its Clean Architecture consolidation and now uses nine source projects plus
 one consolidated test project. DuckDB, SQLite, Git, Proton, ingestion, and Blazor interop concerns are
 split into explicit projects. `DeltaZulu.Platform.Data.Proton` now carries the Proton execution runtime
 scaffold: Proton SQL emission, typed DDL builders, schema application, deployment adapters, stream
@@ -51,7 +51,6 @@ durability and integration work lands. Current status is:
 | Data.SQLite | `src/DeltaZulu.Platform.Data.SQLite` | SQLite repositories, schema initialization, application persistence, and development/demo seed data. |
 | Data.Git | `src/DeltaZulu.Platform.Data.Git` | Git-backed accepted-content storage. |
 | Data.Proton | `src/DeltaZulu.Platform.Data.Proton` | Timeplus Proton detection runtime scaffold: Proton/ClickHouse dialect compilation, detection DDL builders, schema applier, detection deployer, typed Bronze publishers, and alert-dispatch stream subscriber. Durable cursoring, replay, deployment reconciliation, and live integration validation remain target work. |
-| Blazor.Interop | `src/DeltaZulu.Blazor.Interop` | Typed Blazor JS interop wrappers: `ClipboardService`, `FileOperationsService`, `JsLifecycleGuard`, `ElementReferenceExtensions`. Standalone Razor class library — no project references. |
 | Web | `src/DeltaZulu.Platform.Web` | Unified Blazor host, shared components/design tokens, platform shell, analytics UI, governance UI, module registry, and static assets. Operations UI is target work. |
 | Tests | `tests/DeltaZulu.Platform.Tests` | Consolidated domain, application, data, web, component, analytics, and governance tests. |
 

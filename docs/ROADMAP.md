@@ -7,11 +7,11 @@ This roadmap describes the current target after repository consolidation. Comple
 Repository consolidation is complete and the solution has been expanded for multi-backend support:
 
 - One runnable Blazor host: `src/DeltaZulu.Platform.Web`.
-- Ten source projects: Domain, Application, Ingestion, Data, Data.DuckDb, Data.SQLite, Data.Git, Data.Proton, Blazor.Interop, Web.
+- Nine source projects: Domain, Application, Ingestion, Data, Data.DuckDb, Data.SQLite, Data.Git, Data.Proton, Web.
 - One test project: `tests/DeltaZulu.Platform.Tests`.
 - Analytics and Governance are platform modules, not separately deployed applications.
 - Shared components, design tokens, detection contracts, platform module abstractions, analytics code, governance code, persistence, and tests have been absorbed into the platform projects.
-- DuckDB infrastructure is in `DeltaZulu.Platform.Data.DuckDb`; SQLite repositories and seeders are in `DeltaZulu.Platform.Data.SQLite`; Git accepted-content storage is in `DeltaZulu.Platform.Data.Git`; Proton DDL/backend code is in `DeltaZulu.Platform.Data.Proton`; raw-log pub-sub is in `DeltaZulu.Platform.Ingestion`; typed Blazor JS interop is in `DeltaZulu.Blazor.Interop`.
+- DuckDB infrastructure is in `DeltaZulu.Platform.Data.DuckDb`; SQLite repositories and seeders are in `DeltaZulu.Platform.Data.SQLite`; Git accepted-content storage is in `DeltaZulu.Platform.Data.Git`; Proton DDL/backend code is in `DeltaZulu.Platform.Data.Proton`; raw-log pub-sub is in `DeltaZulu.Platform.Ingestion`; typed Blazor JS interop is in `DeltaZulu.Platform.Web/Interop`.
 - Design-system adoption is partial: the shell, tokens, and shared components exist, but product identity, radius rules, typography scope, legacy Hunting aliases, dashboard primitives, and evidence-table semantics still need enforcement work.
 - NRT detection foundation is complete and now includes Proton runtime scaffold infrastructure: KQL-to-Proton compilation pipeline (`NrtRuleCompiler`, `ProtonSqlQueryEmitter`), Proton DDL builder library (`MaterializedViewDdl`, `ScheduledTaskDdl`, `AlertDdl`, `ProtonInterval`), `ProtonDetectionDeployer`, Proton HTTP execution, Proton schema application, typed Bronze stream publishers, alert-dispatch stream subscription, NRT rule authoring UI at `/analytics/nrt`, and SQLite-backed `DapperNrtRuleRepository` for rule metadata.
 - Detection engine separation is settled: Timeplus Proton owns all detection execution (NRT materialized views + Proton scheduled tasks); DuckDB is threat hunting, historical analytics, and the append-only alert lake; SQLite owns mutable operations state. Current Proton adapters are an integration path, not a validated runtime.
@@ -24,7 +24,7 @@ The platform is past repository consolidation and is now in the **pre-Operations
 
 Evidence from the current documentation and tree:
 
-- Consolidation is closed: the active shape is one web host, ten source projects, and the single consolidated test project.
+- Consolidation is closed: the active shape is one web host, nine source projects, and the single consolidated test project.
 - The central architecture is authoritative for module ownership, backend ownership, routing, and storage boundaries.
 - Analytics has a working KQL-to-DuckDB contract, render/dashboard design, Golden-view query boundary, diagnostics-first unsupported behavior, and a construct-level checklist showing 226 MVP-ready or metadata-supported items out of 320 in-scope items, with 91 deferred and 3 deliberately blocked for semantic safety.
 - Governance has the core detection-content workflow shape in place: issues, detections, database-owned changes, checks, reviews, Git-backed accepted content, versions, compare/restore, and merge reconciliation.
@@ -38,7 +38,7 @@ The repository is aligned with the revised target at the documentation and conso
 
 | Target area | Current repository state | Gap | Priority |
 |---|---|---|---|
-| Repository consolidation | One runnable Blazor host, ten source projects, one test project, and Analytics/Governance as platform modules. DuckDB, SQLite, Git, Proton, ingestion, and Blazor interop responsibilities are split into explicit projects. | No major consolidation gap. | Closed |
+| Repository consolidation | One runnable Blazor host, nine source projects, one test project, and Analytics/Governance as platform modules. DuckDB, SQLite, Git, Proton, and ingestion responsibilities are split into explicit projects; Blazor JS interop lives in Web. | No major consolidation gap. | Closed |
 | Product framing| Module separation | Analytics and Governance are separate responsibility areas inside one host. Operations is registered as the third module with placeholder `/operations` routes for design-system validation. | Placeholder routes exist, but operational dashboards, investigation drawers, and real alert/run/candidate workflows are still deferred to the Operations UI phase. | Medium |
 | Schema medallion and type fidelity | Bronze/Silver/Golden concepts exist, but current schemas predate ADR 0007 and the ingestion path still treats NDJSON as the type-bearing exchange. | Add `RawEventEnvelope`/`RawEvent`, grouped Windows Security and Sysmon Silver records, Golden activity schemas with required lineage, and a producer-agnostic registry that generates DuckDB, Proton, KQL metadata, and translator type policy for HTTP adapters. | Critical |
 | Analytics module | `/analytics` exposes the consolidated analytics workbench, library, dashboards, schema, and visual surfaces. | Threat-hunting workflow, evidence workflow, curated analytics, and alert/candidate analytical pivots are still target surfaces. | Medium |

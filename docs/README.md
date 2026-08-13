@@ -17,6 +17,7 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for project ownership, dependency direc
 | [`TARGET_USER_STORIES.md`](TARGET_USER_STORIES.md) | Target product-level user stories for the full-cycle security analytics platform. |
 | [`reviews/PRODUCTION_V1_GAP_ANALYSIS.md`](reviews/PRODUCTION_V1_GAP_ANALYSIS.md) | Production-v1 readiness review, blocker list, and milestone checklist. |
 | [`reviews/DOCUMENTATION_CODE_GAP_ANALYSIS_2026-07-19.md`](reviews/DOCUMENTATION_CODE_GAP_ANALYSIS_2026-07-19.md) | Current documentation/code gap analysis for ingestion, medallion schema, alerts, Operations, and Proton runtime. |
+| [`reviews/BRANCH_CONFLICT_ANALYSIS_2026-08-12.md`](reviews/BRANCH_CONFLICT_ANALYSIS_2026-08-12.md) | Review of the open unmerged branches against the ADRs and roadmap, with merge dispositions and open items. |
 | [`design/PRODUCT_IDENTITY.md`](design/PRODUCT_IDENTITY.md) | Product identity and binding UI language/design rules for Phase 1A. |
 | [`adr/README.md`](adr/README.md) | Current centralized ADR set converted from still-relevant historical decisions. |
 
