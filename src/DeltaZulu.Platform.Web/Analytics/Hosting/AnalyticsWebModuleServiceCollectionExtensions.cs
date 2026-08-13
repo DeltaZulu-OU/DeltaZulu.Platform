@@ -1,4 +1,6 @@
+using DeltaZulu.Platform.Application.Analytics.Mediation;
 using DeltaZulu.Platform.Application.Analytics.Nrt;
+using DeltaZulu.Platform.Application.Analytics.Scheduled;
 using DeltaZulu.Platform.Data.Proton;
 using DeltaZulu.Platform.Application.Analytics.Validation;
 using DeltaZulu.Platform.Data.DuckDb.Execution;
@@ -137,8 +139,12 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         services.AddScoped<MitreAttackCatalogService>();
 
         services.AddProtonDetectionBackend();
+        services.AddProtonStreaming();
         services.AddSingleton<NrtRuleCompiler>();
         services.AddScoped<NrtRuleService>();
+        services.AddScoped<ScheduledDetectionService>();
+        services.AddOptions<MediationOptions>();
+        services.AddHostedService<AlertMediationService>();
 
         return services;
     }
