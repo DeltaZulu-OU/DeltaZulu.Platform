@@ -3,7 +3,6 @@
 @rendermode InteractiveServer
 @using MudBlazor
 @using DeltaZulu.Platform.Application.AgentManagement.Services
-@using DeltaZulu.Platform.Domain.AgentManagement.Agents
 @using DeltaZulu.Platform.Domain.AgentManagement.Enums
 @using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
 @using DeltaZulu.Platform.Domain.AgentManagement.Policy
@@ -47,7 +46,7 @@ else
                     <DzDetailItem Label="Health">
                         @if (_row.HasObservabilityData)
                         {
-                            <DzStatusChip Label="@_row.HealthStatus!" Tone="@AgentInventoryRow.HealthTone(_row.HealthStatus!)" />
+                            <DzStatusChip Label="@(_row.HealthStatus!)" Tone="@AgentInventoryRow.HealthTone(_row.HealthStatus!)" />
                         }
                         else
                         {
