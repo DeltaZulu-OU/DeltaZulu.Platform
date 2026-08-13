@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\src\DeltaZulu.Platform.Web\DeltaZulu.Platform.Web.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="AngleSharp" />
     <PackageReference Include="bunit" />
     <PackageReference Include="DuckDB.NET.Data.Full" />
     <PackageReference Include="Microsoft.Data.Sqlite" />
