@@ -57,7 +57,7 @@ public static class AgentApiEndpoints
         {
             var result = await enrollmentService.EnrollAsync(
                 request.BootstrapToken, request.Hostname, platform,
-                request.AgentVersion, request.Tags, ct);
+                request.AgentVersion, request.Tags, request.PreviousAgentSecret, ct);
 
             return Results.Ok(new EnrollResponse(
                 result.Agent.Id.Value.ToString("D"),
@@ -200,6 +200,7 @@ public static class AgentApiEndpoints
         var statusCode = ex.Code switch
         {
             "agent.not_found" or "bundle.none" => StatusCodes.Status404NotFound,
+            "agent.hostname_taken" => StatusCodes.Status409Conflict,
             _ when ex.Code.StartsWith("enrollmenttoken.", StringComparison.Ordinal)
                 => StatusCodes.Status403Forbidden,
             _ => StatusCodes.Status400BadRequest,

@@ -28,4 +28,37 @@ public sealed class AgentCredentialTests
         Assert.AreEqual("hash-2", credential.SecretHash);
         Assert.AreEqual(Now.AddMinutes(5), credential.RotatedAt);
     }
+
+    [TestMethod]
+    public void VerifySecretHash_MatchingHash_ReturnsTrue()
+    {
+        var credential = AgentCredential.Issue(AgentId.New(), "hash-1", Now);
+
+        Assert.IsTrue(credential.VerifySecretHash("hash-1"));
+    }
+
+    [TestMethod]
+    public void VerifySecretHash_MismatchedHash_ReturnsFalse()
+    {
+        var credential = AgentCredential.Issue(AgentId.New(), "hash-1", Now);
+
+        Assert.IsFalse(credential.VerifySecretHash("hash-2"));
+    }
+
+    [TestMethod]
+    public void VerifySecretHash_DifferentLengthHash_ReturnsFalse()
+    {
+        var credential = AgentCredential.Issue(AgentId.New(), "hash-1", Now);
+
+        Assert.IsFalse(credential.VerifySecretHash("hash-1-but-longer"));
+    }
+
+    [TestMethod]
+    public void VerifySecretHash_NullOrEmptyPresented_ReturnsFalse()
+    {
+        var credential = AgentCredential.Issue(AgentId.New(), "hash-1", Now);
+
+        Assert.IsFalse(credential.VerifySecretHash(null!));
+        Assert.IsFalse(credential.VerifySecretHash(""));
+    }
 }

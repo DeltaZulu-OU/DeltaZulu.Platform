@@ -34,7 +34,7 @@ public sealed class AgentEnrollmentServiceTests
         var token = IssueToken();
 
         var result = await CreateService().EnrollAsync(
-            token, "server-01", ResourcePlatform.Linux, "1.2.3", ["web"], TestContext.CancellationToken);
+            token, "server-01", ResourcePlatform.Linux, "1.2.3", ["web"], ct: TestContext.CancellationToken);
 
         Assert.AreEqual("server-01", result.Agent.Hostname);
         Assert.StartsWith(AgentSecrets.AgentSecretPrefix, result.AgentSecret);
@@ -88,13 +88,15 @@ public sealed class AgentEnrollmentServiceTests
     }
 
     [TestMethod]
-    public async Task Enroll_SameHostname_ReusesAgentAndRotatesSecret()
+    public async Task Enroll_SameHostname_WithCurrentSecret_ReusesAgentAndRotatesSecret()
     {
         var token = IssueToken();
         var service = CreateService();
 
         var first = await service.EnrollAsync(token, "server-01", ResourcePlatform.Linux, ct: TestContext.CancellationToken);
-        var second = await service.EnrollAsync(token, "server-01", ResourcePlatform.Linux, ct: TestContext.CancellationToken);
+        var second = await service.EnrollAsync(
+            token, "server-01", ResourcePlatform.Linux, previousAgentSecret: first.AgentSecret,
+            ct: TestContext.CancellationToken);
 
         Assert.AreEqual(first.Agent.Id, second.Agent.Id);
         Assert.AreNotEqual(first.AgentSecret, second.AgentSecret);
@@ -102,6 +104,38 @@ public sealed class AgentEnrollmentServiceTests
         Assert.HasCount(1, _credentials.Credentials);
         Assert.IsNotNull(_credentials.Credentials[first.Agent.Id].RotatedAt);
         Assert.AreEqual(AgentSecrets.Hash(second.AgentSecret),
+            _credentials.Credentials[first.Agent.Id].SecretHash);
+    }
+
+    [TestMethod]
+    public async Task Enroll_SameHostname_WithoutPreviousSecret_ThrowsAndDoesNotRotate()
+    {
+        var token = IssueToken();
+        var service = CreateService();
+        var first = await service.EnrollAsync(token, "server-01", ResourcePlatform.Linux, ct: TestContext.CancellationToken);
+
+        var ex = await Assert.ThrowsExactlyAsync<DomainException>(() =>
+            service.EnrollAsync(token, "server-01", ResourcePlatform.Linux, ct: TestContext.CancellationToken));
+
+        Assert.AreEqual("agent.hostname_taken", ex.Code);
+        Assert.AreEqual(AgentSecrets.Hash(first.AgentSecret),
+            _credentials.Credentials[first.Agent.Id].SecretHash);
+    }
+
+    [TestMethod]
+    public async Task Enroll_SameHostname_WithWrongPreviousSecret_ThrowsAndDoesNotRotate()
+    {
+        var token = IssueToken();
+        var service = CreateService();
+        var first = await service.EnrollAsync(token, "server-01", ResourcePlatform.Linux, ct: TestContext.CancellationToken);
+
+        var ex = await Assert.ThrowsExactlyAsync<DomainException>(() =>
+            service.EnrollAsync(
+                token, "server-01", ResourcePlatform.Linux, previousAgentSecret: "dz-as-not-the-real-secret",
+                ct: TestContext.CancellationToken));
+
+        Assert.AreEqual("agent.hostname_taken", ex.Code);
+        Assert.AreEqual(AgentSecrets.Hash(first.AgentSecret),
             _credentials.Credentials[first.Agent.Id].SecretHash);
     }
 

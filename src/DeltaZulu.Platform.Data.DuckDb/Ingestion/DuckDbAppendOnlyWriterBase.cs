@@ -1,13 +1,13 @@
-using System.Globalization;
 using System.Text;
-using DeltaZulu.Platform.Domain.Common;
+using Dapper;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Ingestion;
 
 /// <summary>
 /// Shared append/batch-append plumbing for the internal DuckDB observation writers: a single
-/// writer gate, and the row-building primitives (timestamp/string escaping and NULL handling)
-/// that every append-only writer needs regardless of its own column shape.
+/// writer gate, and a parameterized row-building primitive that every append-only writer needs
+/// regardless of its own column shape. Values are always bound as query parameters, never
+/// interpolated into SQL text, since these rows carry agent-reported (untrusted) content.
 /// </summary>
 public abstract class DuckDbAppendOnlyWriterBase<TSnapshot> : IDisposable
 {
@@ -26,7 +26,8 @@ public abstract class DuckDbAppendOnlyWriterBase<TSnapshot> : IDisposable
         await _writeGate.WaitAsync(cancellationToken);
         try
         {
-            _applier.ExecuteRaw(BuildInsertSql(snapshot));
+            var (sql, parameters) = BuildInsert(snapshot);
+            _applier.ExecuteParameterized(sql, parameters);
         }
         finally
         {
@@ -42,7 +43,8 @@ public abstract class DuckDbAppendOnlyWriterBase<TSnapshot> : IDisposable
         await _writeGate.WaitAsync(cancellationToken);
         try
         {
-            _applier.ExecuteRaw(BuildBatchInsertSql(snapshots));
+            var (sql, parameters) = BuildBatchInsert(snapshots);
+            _applier.ExecuteParameterized(sql, parameters);
         }
         finally
         {
@@ -52,46 +54,32 @@ public abstract class DuckDbAppendOnlyWriterBase<TSnapshot> : IDisposable
 
     public void Dispose() => _writeGate.Dispose();
 
-    protected abstract string BuildInsertSql(TSnapshot snapshot);
+    protected abstract (string Sql, DynamicParameters Parameters) BuildInsert(TSnapshot snapshot);
 
-    protected abstract string BuildBatchInsertSql(IReadOnlyList<TSnapshot> snapshots);
+    protected abstract (string Sql, DynamicParameters Parameters) BuildBatchInsert(IReadOnlyList<TSnapshot> snapshots);
 
-    protected static void AppendTimestamp(StringBuilder sb, DateTime utc)
+    /// <summary>
+    /// Appends one row's "($pN, $pN+1, ...)" placeholder group to the VALUES clause
+    /// and binds each value into <paramref name="parameters"/> under that name.
+    /// DuckDB's parameter marker is "$name", not "@name" - "@" is its unary abs()
+    /// operator, so an "@name" placeholder parses as an expression instead of a
+    /// bind parameter. <paramref name="nextParamIndex"/> is shared across every row
+    /// in a batch so placeholder names stay unique across the whole statement.
+    /// </summary>
+    protected static void AppendRowPlaceholders(
+        StringBuilder sql, DynamicParameters parameters, ref int nextParamIndex, params object?[] values)
     {
-        sb.Append("TIMESTAMP '");
-        sb.Append(FormatTimestamp(utc));
-        sb.Append('\'');
-    }
-
-    protected static void AppendNullableTimestamp(StringBuilder sb, DateTime? utc)
-    {
-        if (utc is null)
+        sql.Append('(');
+        for (var i = 0; i < values.Length; i++)
         {
-            sb.Append("NULL");
-            return;
+            if (i > 0) sql.Append(", ");
+            var name = "p" + nextParamIndex++;
+            sql.Append('$').Append(name);
+            parameters.Add(name, values[i]);
         }
-
-        AppendTimestamp(sb, utc.Value);
+        sql.Append(')');
     }
 
-    protected static void AppendString(StringBuilder sb, string value)
-    {
-        sb.Append('\'');
-        sb.Append(SqlLiteralEscaping.EscapeSingleQuotes(value));
-        sb.Append('\'');
-    }
-
-    protected static void AppendNullableString(StringBuilder sb, string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            sb.Append("NULL");
-            return;
-        }
-
-        AppendString(sb, value);
-    }
-
-    protected static string FormatTimestamp(DateTime utc) =>
-        utc.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+    /// <summary>Empty-string source fields mean "not reported"; store as NULL, matching prior behavior.</summary>
+    protected static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
 }

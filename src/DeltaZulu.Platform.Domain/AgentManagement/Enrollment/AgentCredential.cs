@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using DeltaZulu.Platform.Domain.AgentManagement.Identifiers;
 using DeltaZulu.Platform.Domain.Common;
 
@@ -48,5 +50,20 @@ public sealed class AgentCredential : Entity<AgentId>
 
         SecretHash = newSecretHash;
         RotatedAt = now;
+    }
+
+    /// <summary>
+    /// Constant-time comparison of a presented secret hash against the stored one.
+    /// Used to require proof of possession of the current secret before a
+    /// credential-recovery re-enrollment is allowed to rotate it.
+    /// </summary>
+    public bool VerifySecretHash(string presentedHash)
+    {
+        if (string.IsNullOrWhiteSpace(presentedHash))
+            return false;
+
+        var stored = Encoding.UTF8.GetBytes(SecretHash);
+        var presented = Encoding.UTF8.GetBytes(presentedHash);
+        return stored.Length == presented.Length && CryptographicOperations.FixedTimeEquals(stored, presented);
     }
 }

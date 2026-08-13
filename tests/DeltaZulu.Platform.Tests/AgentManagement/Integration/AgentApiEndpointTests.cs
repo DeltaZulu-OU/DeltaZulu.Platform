@@ -376,6 +376,83 @@ public sealed class AgentApiEndpointTests: IDisposable
     }
 
     [TestMethod]
+    public async Task Enroll_SameHostnameWithoutProofOfPossession_Returns409AndDoesNotRotateSecret()
+    {
+        var token = await CreateEnrollmentTokenAsync();
+        var (agentId, originalSecret) = await EnrollAsync(token, "already-enrolled-host");
+
+        using var response = await _client.PostAsJsonAsync("/api/agent/v1/enroll",
+            new { bootstrapToken = token, hostname = "already-enrolled-host", platform = "Linux" }, Json, TestContext.CancellationToken);
+
+        Assert.AreEqual(HttpStatusCode.Conflict, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>(Json, TestContext.CancellationToken);
+        Assert.AreEqual("agent.hostname_taken", problem.GetProperty("code").GetString());
+
+        // The original credential must still work - the takeover attempt did not rotate it.
+        using var request = AuthenticatedRequest(HttpMethod.Post, "/api/agent/v1/heartbeat", originalSecret,
+            new { bufferPressure = 0.1, queueDepth = 0L, droppedCount = 0L, forwardFailedCount = 0L });
+        using var heartbeatResponse = await _client.SendAsync(request, TestContext.CancellationToken);
+        Assert.AreEqual(HttpStatusCode.OK, heartbeatResponse.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task Enroll_SameHostnameWithCurrentSecret_RotatesAndInvalidatesOldSecret()
+    {
+        var token = await CreateEnrollmentTokenAsync();
+        var (agentId, originalSecret) = await EnrollAsync(token, "recoverable-host");
+
+        using var response = await _client.PostAsJsonAsync("/api/agent/v1/enroll",
+            new { bootstrapToken = token, hostname = "recoverable-host", platform = "Linux", previousAgentSecret = originalSecret },
+            Json, TestContext.CancellationToken);
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(Json, TestContext.CancellationToken);
+        Assert.AreEqual(agentId, body.GetProperty("agentId").GetString());
+        var newSecret = body.GetProperty("agentSecret").GetString()!;
+        Assert.AreNotEqual(originalSecret, newSecret);
+
+        using var oldRequest = AuthenticatedRequest(HttpMethod.Post, "/api/agent/v1/heartbeat", originalSecret,
+            new { bufferPressure = 0.1, queueDepth = 0L, droppedCount = 0L, forwardFailedCount = 0L });
+        using var oldResponse = await _client.SendAsync(oldRequest, TestContext.CancellationToken);
+        Assert.AreEqual(HttpStatusCode.Unauthorized, oldResponse.StatusCode);
+
+        using var newRequest = AuthenticatedRequest(HttpMethod.Post, "/api/agent/v1/heartbeat", newSecret,
+            new { bufferPressure = 0.1, queueDepth = 0L, droppedCount = 0L, forwardFailedCount = 0L });
+        using var newResponse = await _client.SendAsync(newRequest, TestContext.CancellationToken);
+        Assert.AreEqual(HttpStatusCode.OK, newResponse.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task Heartbeat_WithTooManySources_Returns400()
+    {
+        var token = await CreateEnrollmentTokenAsync();
+        var (_, secret) = await EnrollAsync(token);
+
+        var sources = Enumerable.Range(0, 1001).Select(i => new
+        {
+            sourceType = "File",
+            channel = $"chan-{i}",
+            isEnabled = true,
+            canRead = true,
+            readErrorCount = 0L,
+            readCount = 0L,
+            keptAfterFilterCount = 0L,
+            discardedCount = 0L,
+            forwardedCount = 0L,
+            forwardFailedCount = 0L,
+        }).ToArray();
+
+        using var request = AuthenticatedRequest(HttpMethod.Post, "/api/agent/v1/heartbeat", secret,
+            new { bufferPressure = 0.1, queueDepth = 0L, droppedCount = 0L, forwardFailedCount = 0L, sources });
+        using var response = await _client.SendAsync(request, TestContext.CancellationToken);
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>(Json, TestContext.CancellationToken);
+        Assert.AreEqual("heartbeat.sources_too_many", problem.GetProperty("code").GetString());
+        Assert.HasCount(0, _sourceSink.Snapshots);
+    }
+
+    [TestMethod]
     public async Task GetBundle_WithoutAssignments_Returns404()
     {
         var token = await CreateEnrollmentTokenAsync();

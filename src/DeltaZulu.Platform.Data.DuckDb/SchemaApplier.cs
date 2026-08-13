@@ -57,6 +57,20 @@ public sealed class SchemaApplier
     public void ExecuteRaw(string sql) => ExecuteDevelopmentSql(sql);
 
     /// <summary>
+    /// Execute a parameterized INSERT/UPDATE/DELETE statement. Production writers
+    /// that embed caller-controlled string content (e.g. agent-reported heartbeat
+    /// fields) must use this instead of ExecuteRaw/ExecuteDevelopmentSql, so that
+    /// content is always bound as a parameter and never interpolated into SQL text.
+    /// </summary>
+    public void ExecuteParameterized(string sql, object? param)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sql);
+
+        var conn = _connectionFactory.GetConnection();
+        conn.Execute(sql, param);
+    }
+
+    /// <summary>
     /// Query a single integer value for development/bootstrap verification.
     /// Production application features should not call this method directly.
     /// </summary>

@@ -36,9 +36,21 @@ public sealed class AgentCheckInService(
     /// </summary>
     private const string LakeTenantKey = "default";
 
+    /// <summary>
+    /// A real agent's monitored sources is bounded by its resource profiles, not by
+    /// caller input; this caps the batch size a single heartbeat can drive into the
+    /// shared, singleton lake writer so one agent can't stall observation writes for
+    /// every other tenant with an oversized payload.
+    /// </summary>
+    private const int MaxSourcesPerHeartbeat = 1000;
+
     public async Task<HeartbeatResult> HandleHeartbeatAsync(
         AgentId agentId, HeartbeatReport report, CancellationToken ct = default)
     {
+        if (report.Sources is { Count: > MaxSourcesPerHeartbeat })
+            throw new DomainException("heartbeat.sources_too_many",
+                $"Heartbeat reported {report.Sources.Count} sources, exceeding the limit of {MaxSourcesPerHeartbeat}.");
+
         var agent = await agentRepo.GetByIdAsync(agentId, ct)
             ?? throw new DomainException("agent.not_found", $"Agent {agentId} not found.");
 

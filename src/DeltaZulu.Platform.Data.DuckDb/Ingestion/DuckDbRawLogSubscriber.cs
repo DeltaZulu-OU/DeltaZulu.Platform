@@ -1,6 +1,5 @@
-using System.Globalization;
 using System.Text;
-using DeltaZulu.Platform.Domain.Common;
+using Dapper;
 using DeltaZulu.Platform.Ingestion.PubSub;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Ingestion;
@@ -59,7 +58,8 @@ public sealed class DuckDbRawLogSubscriber : IRawLogSubscriber, IDisposable
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var count = Math.Min(_maxRowsPerInsert, batch.Events.Count - offset);
-                _applier.ExecuteRaw(BuildInsertSql(tableName, batch.Events, offset, count));
+                var (sql, parameters) = BuildInsert(tableName, batch.Events, offset, count);
+                _applier.ExecuteParameterized(sql, parameters);
             }
         }
         finally
@@ -70,13 +70,21 @@ public sealed class DuckDbRawLogSubscriber : IRawLogSubscriber, IDisposable
 
     public void Dispose() => _writeGate.Dispose();
 
-    private static string BuildInsertSql(
+    /// <summary>
+    /// Builds a parameterized multi-row INSERT. Raw log content is untrusted
+    /// (agent- and ultimately source-controlled), so every value is bound as a
+    /// query parameter rather than interpolated into SQL text.
+    /// </summary>
+    private static (string Sql, DynamicParameters Parameters) BuildInsert(
         string tableName,
         IReadOnlyList<RawLogEnvelope> events,
         int offset,
         int count)
     {
-        var builder = new StringBuilder(capacity: Math.Min(1_048_576, 256 + (count * 512)));
+        var builder = new StringBuilder(capacity: Math.Min(1_048_576, 256 + (count * 128)));
+        var parameters = new DynamicParameters();
+        var paramIndex = 0;
+
         builder.Append("INSERT INTO ");
         builder.Append(tableName);
         builder.AppendLine(" (ingest_time, source_name, provider, host, raw_log, raw_text) VALUES");
@@ -89,23 +97,32 @@ public sealed class DuckDbRawLogSubscriber : IRawLogSubscriber, IDisposable
                 builder.AppendLine(",");
             }
 
-            builder.Append("(TIMESTAMP '");
-            builder.Append(item.IngestTimeUtc.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-            builder.Append("', '");
-            builder.Append(SqlLiteralEscaping.EscapeSingleQuotes(item.SourceName));
-            builder.Append("', '");
-            builder.Append(SqlLiteralEscaping.EscapeSingleQuotes(item.Provider));
-            builder.Append("', '");
-            builder.Append(SqlLiteralEscaping.EscapeSingleQuotes(item.Host));
-            builder.Append("', CAST('");
-            builder.Append(SqlLiteralEscaping.EscapeSingleQuotes(item.RawLog));
-            builder.Append("' AS JSON), '");
-            builder.Append(SqlLiteralEscaping.EscapeSingleQuotes(item.RawText));
-            builder.Append("')");
+            var ingestTimeParam = "p" + paramIndex++;
+            var sourceNameParam = "p" + paramIndex++;
+            var providerParam = "p" + paramIndex++;
+            var hostParam = "p" + paramIndex++;
+            var rawLogParam = "p" + paramIndex++;
+            var rawTextParam = "p" + paramIndex++;
+
+            // DuckDB's parameter marker is "$name", not "@name" - "@" is its unary
+            // abs() operator, so an "@name" placeholder parses as an expression
+            // instead of a bind parameter.
+            builder.Append('(')
+                .Append('$').Append(ingestTimeParam).Append(", $").Append(sourceNameParam)
+                .Append(", $").Append(providerParam).Append(", $").Append(hostParam)
+                .Append(", CAST($").Append(rawLogParam).Append(" AS JSON), $").Append(rawTextParam)
+                .Append(')');
+
+            parameters.Add(ingestTimeParam, item.IngestTimeUtc.UtcDateTime);
+            parameters.Add(sourceNameParam, item.SourceName);
+            parameters.Add(providerParam, item.Provider);
+            parameters.Add(hostParam, item.Host);
+            parameters.Add(rawLogParam, item.RawLog);
+            parameters.Add(rawTextParam, item.RawText);
         }
 
         builder.Append(';');
-        return builder.ToString();
+        return (builder.ToString(), parameters);
     }
 
     private static void ValidateQualifiedTableName(string tableName)
