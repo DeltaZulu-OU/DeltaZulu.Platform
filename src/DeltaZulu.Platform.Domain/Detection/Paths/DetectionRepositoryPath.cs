@@ -40,6 +40,14 @@ public sealed class DetectionRepositoryPath : IEquatable<DetectionRepositoryPath
         }
 
         var afterRoot = raw[(DetectionContentPathResolver.DetectionsRoot.Length + 1)..];
+        foreach (var segment in afterRoot.Split('/'))
+        {
+            if (segment is "." or "..")
+            {
+                throw new DetectionContentException("path.traversal", "Path traversal segments '.' and '..' are not allowed.");
+            }
+        }
+
         if (!afterRoot.EndsWith(".yaml", StringComparison.Ordinal) || afterRoot.Contains('/', StringComparison.Ordinal))
         {
             throw new DetectionContentException("repository_path.shape", "Detection repository paths must use detections/<slug>.yaml.");
