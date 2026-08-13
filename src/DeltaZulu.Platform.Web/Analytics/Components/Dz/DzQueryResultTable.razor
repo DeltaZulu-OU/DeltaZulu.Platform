@@ -1,6 +1,8 @@
 @namespace DeltaZulu.Platform.Web.Analytics.Components.Dz
 @using DeltaZulu.Platform.Domain.Analytics.Execution
 @using System.Globalization
+@using DeltaZulu.Platform.Web.Analytics.Exports
+@inject FileOperationsService FileOperations
 
 <div class="dz-query-result-table">
     @if (Result is null)
@@ -27,20 +29,30 @@
                 }
             </div>
 
-            @if (ShowQuickFilter)
-            {
-                <MudTextField T="string"
-                              Value="_quickFilter"
-                              ValueChanged="OnQuickFilterChangedAsync"
-                              Placeholder="Filter results"
-                              Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Search"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Immediate="true"
-                              Clearable="true"
-                              Class="dz-query-result-table__filter" />
-            }
+            <div class="dz-query-result-table__actions">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Download"
+                           OnClick="ExportCsvAsync">
+                    Export CSV
+                </MudButton>
+
+                @if (ShowQuickFilter)
+                {
+                    <MudTextField T="string"
+                                  Value="_quickFilter"
+                                  ValueChanged="OnQuickFilterChangedAsync"
+                                  Placeholder="Filter results"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Immediate="true"
+                                  Clearable="true"
+                                  Class="dz-query-result-table__filter" />
+                }
+            </div>
         </div>
 
         <MudTable T="int"
@@ -113,6 +125,9 @@
     [Parameter]
     public bool ShowQuickFilter { get; set; } = true;
 
+    [Parameter]
+    public string ExportFileName { get; set; } = "query-results.csv";
+
     private IEnumerable<int> VisibleColumns
     {
         get
@@ -149,6 +164,19 @@
                 FormatCell(Result.GetValue(rowIndex, columnIndex))
                     .Contains(filter, StringComparison.OrdinalIgnoreCase)));
         }
+    }
+
+    private async Task ExportCsvAsync()
+    {
+        if (Result is null || Result.RowCount == 0 || Result.ColumnCount == 0)
+        {
+            return;
+        }
+
+        await FileOperations.DownloadAsync(
+            QueryResultCsvExporter.NormalizeCsvFileName(ExportFileName),
+            QueryResultCsvExporter.BuildCsv(Result, VisibleColumns.ToArray()),
+            QueryResultCsvExporter.MimeType);
     }
 
     private Task OnQuickFilterChangedAsync(string? value)

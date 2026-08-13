@@ -56,7 +56,7 @@ The repository is aligned with the revised target at the documentation and conso
 | Audit identity | Demo actor context exists for Governance. | Separate demo actor switching from production-like audit identity across Governance and Operations actions. | Medium |
 | Design-system rule enforcement | Canonical tokens and shared components are present, but medium radii, global `h1` display typography, orange-as-primary defaults, and legacy aliases can still leak into product UI. | Enforce binary radius, scope Newsreader to marketing/company surfaces, restrict orange to action semantics, and add an audit for forbidden patterns. | High |
 | Legacy Analytics CSS | Analytics CSS still carries Hunting-era naming and compatibility variables such as `--hunt-*`, `--bg-*`, and `--text-*`. | Remove or quarantine compatibility aliases so DeltaZulu design tokens become authoritative rather than advisory. | High |
-| Dashboard primitives and states | `DzPanel`, `DzEmptyState`, `DzLoadingState`, `DzTableShell`, shell components, and `DzQueryResultTable` exist. | Add canonical `DzDataTable`, `DzStateBlock`, `DzStatusBadge`, `DzFilterBar`, `DzToolbar`, `DzDrawer`, and `DzEvidencePanel`; cover loading, empty, degraded, error, disabled, selected, hover, focus, overflow, truncation, freshness, and partial-result states. | High |
+| Dashboard primitives and states | `DzPanel`, `DzEmptyState`, `DzLoadingState`, `DzTableShell`, shell components, and `DzQueryResultTable` exist. Query result tables can export the visible tabular result as CSV. | Add canonical `DzDataTable`, `DzStateBlock`, `DzStatusBadge`, `DzFilterBar`, `DzToolbar`, `DzDrawer`, and `DzEvidencePanel`; cover loading, empty, degraded, error, disabled, selected, hover, focus, overflow, truncation, freshness, and partial-result states. Roadmap rendered visualization export formats after the table CSV foundation: PDF for report handoff and PNG for image-based sharing. | High |
 
 ## Design-system remediation track
 
@@ -69,7 +69,7 @@ The platform is directionally aligned with the DeltaZulu design system at the sh
 | 3 | Scope Newsreader to marketing/company surfaces only; product UI headings stay IBM Plex Sans. | Product pages cannot accidentally inherit marketing/display typography through plain `h1` usage. |
 | 4 | Remove or quarantine `--hunt-*`, `--bg-*`, and `--text-*` compatibility aliases. | Legacy visual decisions stop surviving behind old aliases. |
 | 5 | Build canonical dashboard primitives: `DzDataTable`, `DzStateBlock`, `DzStatusBadge`, `DzFilterBar`, `DzToolbar`, `DzDrawer`, and `DzEvidencePanel`. | Analytics, Governance, and Operations screens share state handling instead of inventing it per page. |
-| 6 | Upgrade `DzQueryResultTable` into an evidence-grade result component. | Freshness, source, query purpose, row limit, truncation, degraded/partial state, column overflow, and copy/export affordances are first-class UI. |
+| 6 | Upgrade `DzQueryResultTable` into an evidence-grade result component. | Freshness, source, query purpose, row limit, truncation, degraded/partial state, column overflow, CSV table export, and future PDF/PNG rendered-visualization export affordances are first-class UI. |
 | 7 | Add Operations navigation and placeholder screens before implementing alerting deeply. | Design-system validation can exercise alert queues, detection runs, incident candidates, triage, monitoring, and investigation-drawer flows. |
 | 8 | Add a design-system audit script/test. | CI or local checks catch medium radius, orange misuse, Newsreader leakage, raw Mud table/paper divergence, unsupported color literals, and legacy classes/variables. |
 
@@ -150,7 +150,7 @@ Completed phases (1, 2, 3, 3A) are omitted from this table. See the phase status
 1. ~~Decide and document product identity across DZNS, DeltaZulu Platform, and internal DeltaZulu platform language.~~ Done in `docs/design/PRODUCT_IDENTITY.md`.
 2. ~~Replace medium structural radius tokens/Mud defaults with the binary radius model and scope Newsreader away from product UI headings.~~ Structural tokens, Mud defaults, and global product `h1` typography are enforced.
 3. Continue quarantining or removing legacy `--hunt-*`, `--bg-*`, and `--text-*` aliases; review orange usage so it remains action-only.
-4. Define canonical dashboard/table/state primitives and upgrade `DzQueryResultTable` toward evidence-grade metadata and degraded/overflow states.
+4. Define canonical dashboard/table/state primitives and upgrade `DzQueryResultTable` toward evidence-grade metadata, degraded/overflow states, and export affordances; CSV table export is the first implementation, with PDF and PNG rendered-visualization export tracked for a later visualization phase.
 5. Expand design-system audit coverage for color literals, `Color.Primary`, raw Mud component divergence, and remaining legacy classes/variables.
 6. ~~Add an `ExecutionPurpose` model and shared `IAnalyticsQueryExecutor` service interface in the application layer.~~ Done with application-layer execution request/result contracts.
 7. ~~Refactor interactive Analytics and dashboard execution onto that executor while preserving UI-safe result limits and query-history behavior in the Web adapter.~~ Done for `QueryService` and dashboard data-only execution.
