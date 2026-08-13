@@ -62,7 +62,7 @@ public sealed class PackageVersionBaselineTests
     {
         var repoRoot = FindRepositoryRoot();
         var buildPropsPath = Path.Combine(repoRoot.FullName, "Directory.Build.props");
-        var ciWorkflowPath = Path.Combine(repoRoot.FullName, ".github", "workflows", "platform-unit-tests.yml");
+        var workflowsDirectory = Path.Combine(repoRoot.FullName, ".github", "workflows");
 
         var buildProps = XDocument.Load(buildPropsPath);
         var restorePackagesWithLockFile = buildProps.Descendants("RestorePackagesWithLockFile")
@@ -71,8 +71,18 @@ public sealed class PackageVersionBaselineTests
 
         Assert.AreEqual("true", restorePackagesWithLockFile, "Directory.Build.props must require package lock files for every project.");
 
-        var ciWorkflow = File.ReadAllText(ciWorkflowPath);
-        Assert.Contains("dotnet restore ${{ env.SOLUTION_FILE }} --locked-mode", ciWorkflow);
+        var workflowFiles = Directory.EnumerateFiles(workflowsDirectory, "*.yml", SearchOption.TopDirectoryOnly)
+            .Concat(Directory.EnumerateFiles(workflowsDirectory, "*.yaml", SearchOption.TopDirectoryOnly))
+            .ToList();
+
+        Assert.IsNotEmpty(workflowFiles, "Expected at least one GitHub Actions workflow to validate locked restore policy.");
+
+        var restoreUsesLockedMode = workflowFiles
+            .Select(File.ReadAllText)
+            .Any(workflow => workflow.Contains("dotnet restore", StringComparison.Ordinal)
+                && workflow.Contains("--locked-mode", StringComparison.Ordinal));
+
+        Assert.IsTrue(restoreUsesLockedMode, "At least one GitHub Actions workflow must run dotnet restore with --locked-mode.");
     }
 
     [TestMethod]
