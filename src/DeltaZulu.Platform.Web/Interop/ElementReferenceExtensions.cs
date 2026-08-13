@@ -5,7 +5,7 @@ namespace DeltaZulu.Blazor.Interop;
 
 public static class ElementReferenceExtensions
 {
-    private const string ModulePath = "./_content/DeltaZulu.Blazor.Interop/interop.js";
+    private const string ModulePath = "./js/interop.js";
 
     public static async ValueTask<BoundingClientRect> GetBoundingClientRectAsync(
         this ElementReference element,

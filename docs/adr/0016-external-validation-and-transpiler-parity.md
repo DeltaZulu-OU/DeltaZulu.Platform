@@ -29,6 +29,19 @@ scaffold. The useful output of that review is a validation *ordering*, not a dep
   non-blocking. Promotion to blocking requires recording current findings across the accepted
   corpus and failing only on findings beyond that baseline, plus moving the time-window and
   cross-cluster rules off regex-over-AST-text onto real node inspection.
+
+  Measured baseline over the ten seed detections in
+  `Data.Git/SeedData/DetectionContent/Samples`, as of this ADR:
+
+  | Rule | Seed detections affected |
+  |---|---:|
+  | KQL005 (`sort` with no downstream row bound) | 10 / 10 |
+  | KQL001, KQL002, KQL003, KQL004, KQL006, KQL007 | 0 / 10 |
+
+  Every seed detection carries a time filter, so the time-window rules are clean. The entire
+  baseline is KQL005: the house style ends detections with a `sort` and no `take`. Deciding
+  whether that style should change is a content question, and it should be answered before the
+  rule gates acceptance rather than by the rule gating acceptance.
 - **Proton may not join cross-backend result parity until its runtime is validated.** Durable
   ETL, cursor state, DLQ/replay, deterministic alert materialization, deployment
   reconciliation, monitoring, and live integration tests come first. Until then a Proton leg

@@ -4,7 +4,7 @@ namespace DeltaZulu.Blazor.Interop;
 
 public sealed class FileOperationsService : IAsyncDisposable
 {
-    private const string ModulePath = "./_content/DeltaZulu.Blazor.Interop/interop.js";
+    private const string ModulePath = "./js/interop.js";
 
     private readonly IJSRuntime _js;
     private IJSObjectReference? _module;
