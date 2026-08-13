@@ -1,0 +1,228 @@
+@namespace DeltaZulu.Platform.Web.AgentManagement.Pages
+@page "/agents/{Id}"
+@rendermode InteractiveServer
+@using MudBlazor
+@using DeltaZulu.Platform.Application.AgentManagement.Services
+@using DeltaZulu.Platform.Domain.AgentManagement.Agents
+@using DeltaZulu.Platform.Domain.AgentManagement.Enums
+@using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@using DeltaZulu.Platform.Domain.AgentManagement.Policy
+@using DeltaZulu.Platform.Domain.Analytics.Observability
+@using DeltaZulu.Platform.Web.AgentManagement.Shared
+@using DeltaZulu.Platform.Web.AgentManagement.ViewModels
+@inject AgentService AgentService
+@inject PolicyAssignmentService AssignmentService
+@inject IOperationalMetricsReader MetricsReader
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Agent — @(_row?.Hostname ?? "Loading")</PageTitle>
+
+@if (_row is null)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else
+{
+    <MudBreadcrumbs Items="_breadcrumbs" Class="mb-2" />
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="8">
+            <DzPageHeader Eyebrow="Agent"
+                          Title="@_row.Hostname"
+                          Description="@($"Enrolled {_row.CreatedAt:yyyy-MM-dd}")">
+                <Metadata>
+                    <DzMetaChip Kind="platform">@_row.Platform</DzMetaChip>
+                    @if (_row.AgentVersion is not null)
+                    {
+                        <DzMetaChip Kind="version">@_row.AgentVersion</DzMetaChip>
+                    }
+                    <AgentStatusChip Status="_row.Status" />
+                </Metadata>
+            </DzPageHeader>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <DzPanel Eyebrow="Details" Class="dz-panel--full-height">
+                <DzDetailList>
+                    <DzDetailItem Label="Status">
+                        <AgentStatusChip Status="_row.Status" />
+                    </DzDetailItem>
+                    <DzDetailItem Label="Health">
+                        @if (_row.HasObservabilityData)
+                        {
+                            <DzStatusChip Label="@_row.HealthStatus!" Tone="@HealthTone(_row.HealthStatus!)" />
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">No telemetry</MudText>
+                        }
+                    </DzDetailItem>
+                    <DzDetailItem Label="Last seen">
+                        <MudText Typo="Typo.body2" Class="dz-config-value dz-config-value--mono">
+                            @(_row.LastSeenAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "Never")
+                        </MudText>
+                    </DzDetailItem>
+                    <DzDetailItem Label="Version" Value="@(_row.AgentVersion ?? "—")" />
+                    <DzDetailItem Label="Current bundle">
+                        <MudText Typo="Typo.body2" Class="dz-config-value dz-config-value--mono">
+                            @(_row.CurrentBundleId?.Value.ToString("D")[..8] ?? "None")
+                        </MudText>
+                    </DzDetailItem>
+                    <DzDetailItem Label="Desired bundle">
+                        <MudText Typo="Typo.body2" Class="dz-config-value dz-config-value--mono">
+                            @(_row.DesiredBundleId?.Value.ToString("D")[..8] ?? "None")
+                        </MudText>
+                    </DzDetailItem>
+                    <DzDetailItem Label="Config drift">
+                        @if (_row.HasConfigDrift || _row.ConfigDrift)
+                        {
+                            <DzStatusChip Label="Drift" Tone="warning" />
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">OK</MudText>
+                        }
+                    </DzDetailItem>
+                    <DzDetailItem Label="Tags">
+                        @if (_row.Tags.Count > 0)
+                        {
+                            <div class="d-flex gap-1 flex-wrap">
+                                @foreach (var tag in _row.Tags)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@tag</MudChip>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">None</MudText>
+                        }
+                    </DzDetailItem>
+                </DzDetailList>
+            </DzPanel>
+        </MudItem>
+    </MudGrid>
+
+    <MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true" Class="mt-4">
+        <MudTabPanel Text="Health">
+            <DzTabBody>
+                @if (!_row.HasObservabilityData)
+                {
+                    <DzEmptyState Title="No observability data"
+                                  Description="Health telemetry will appear once the agent starts reporting."
+                                  Icon="@Icons.Material.Outlined.MonitorHeart" />
+                }
+                else
+                {
+                    <MudGrid Spacing="3">
+                        <MudItem xs="12" sm="6" md="3">
+                            <DzMetricTile Eyebrow="Buffer Pressure"
+                                          Value="@_row.BufferPressure.ToString("P0")"
+                                          Icon="@Icons.Material.Outlined.Speed"
+                                          Label="Current pressure"
+                                          Tone="@(_row.BufferPressure >= 0.85 ? "error" : _row.BufferPressure >= 0.5 ? "warning" : "success")" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <DzMetricTile Eyebrow="Queue Depth"
+                                          Value="@_row.QueueDepth.ToString("N0")"
+                                          Icon="@Icons.Material.Outlined.Queue"
+                                          Label="Items queued" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <DzMetricTile Eyebrow="Dropped"
+                                          Value="@_row.DroppedCount.ToString("N0")"
+                                          Icon="@Icons.Material.Outlined.RemoveCircleOutline"
+                                          Label="Events dropped"
+                                          Tone="@(_row.DroppedCount > 0 ? "error" : "neutral")" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <DzMetricTile Eyebrow="Forward Failed"
+                                          Value="@_row.ForwardFailedCount.ToString("N0")"
+                                          Icon="@Icons.Material.Outlined.ErrorOutline"
+                                          Label="Forward failures"
+                                          Tone="@(_row.ForwardFailedCount > 0 ? "error" : "neutral")" />
+                        </MudItem>
+                    </MudGrid>
+                }
+            </DzTabBody>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Policy" BadgeData="@_assignments.Count" BadgeColor="Color.Secondary">
+            <DzTabBody>
+                @if (_assignments.Count == 0)
+                {
+                    <DzEmptyState Title="No policy assignments"
+                                  Description="This agent has no direct policy assignments."
+                                  Icon="@Icons.Material.Outlined.Policy" />
+                }
+                else
+                {
+                    <DzTableShell>
+                        <MudTable Items="_assignments" Dense="true" T="PolicyAssignment" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Scope</MudTh>
+                                <MudTh>Profiles</MudTh>
+                                <MudTh>Config Policy</MudTh>
+                                <MudTh>Precedence</MudTh>
+                                <MudTh>Created</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Scope">
+                                    <DzMetaChip Kind="scope">@context.ScopeType — @context.ScopeId</DzMetaChip>
+                                </MudTd>
+                                <MudTd DataLabel="Profiles">@context.ProfileIds.Count profile(s)</MudTd>
+                                <MudTd DataLabel="Config Policy">
+                                    @(context.ConfigPolicyId?.Value.ToString("D")[..8] ?? "—")
+                                </MudTd>
+                                <MudTd DataLabel="Precedence">@context.Precedence</MudTd>
+                                <MudTd DataLabel="Created">
+                                    <MudText Typo="Typo.caption">@context.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </DzTableShell>
+                }
+            </DzTabBody>
+        </MudTabPanel>
+    </MudTabs>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = null!;
+
+    private AgentInventoryRow? _row;
+    private List<PolicyAssignment> _assignments = [];
+    private List<BreadcrumbItem> _breadcrumbs = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!Guid.TryParse(Id, out var guid)) return;
+        var agentId = new AgentId(guid);
+
+        var agent = await AgentService.GetByIdAsync(agentId);
+        if (agent is null) return;
+
+        var telemetry = await Task.Run(() => MetricsReader.ReadLatestAgents());
+        var merged = AgentInventoryRow.Merge([agent], telemetry);
+        _row = merged.FirstOrDefault();
+
+        _breadcrumbs =
+        [
+            new("Agents", "/agents"),
+            new(_row?.Hostname ?? "Agent", null, disabled: true),
+        ];
+
+        _assignments = (await AssignmentService.ListByScopeAsync(
+            TenantId.Default, AssignmentScopeType.Agent, agentId.Value.ToString("D")))
+            .ToList();
+    }
+
+    private static string HealthTone(string status) => status switch
+    {
+        "Healthy" or "Online" => "success",
+        "Degraded" => "error",
+        "Stale" or "Inactive" => "warning",
+        "Disabled" or "Offline" => "muted",
+        _ => "neutral"
+    };
+}

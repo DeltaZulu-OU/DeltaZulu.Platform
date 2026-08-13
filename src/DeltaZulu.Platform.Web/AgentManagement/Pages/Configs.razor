@@ -1,0 +1,76 @@
+@namespace DeltaZulu.Platform.Web.AgentManagement.Pages
+@page "/agents/configs"
+@rendermode InteractiveServer
+@using MudBlazor
+@using DeltaZulu.Platform.Application.AgentManagement.Services
+@using DeltaZulu.Platform.Domain.AgentManagement.Configs
+@using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@inject DaemonConfigService ConfigService
+@inject NavigationManager Nav
+
+<PageTitle>Daemon Configs</PageTitle>
+
+<DzPageHeader Eyebrow="Management"
+              Title="Daemon Config Policies"
+              Description="View and manage daemon configuration policies and their versions.">
+    <Actions>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.Refresh" OnClick="LoadAsync">
+            Refresh
+        </MudButton>
+    </Actions>
+</DzPageHeader>
+
+@if (_loading)
+{
+    <DzLoadingState Text="Loading config policies..." />
+}
+else if (_policies.Count == 0)
+{
+    <DzEmptyState Title="No daemon config policies"
+                  Description="Config policies define daemon runtime settings such as pipeline, buffer, RELP, and TLS."
+                  Icon="@Icons.Material.Outlined.Settings" />
+}
+else
+{
+    <DzTableShell>
+        <MudTable Items="_policies" Dense="true" Hover="true" T="DaemonConfigPolicy" Elevation="0"
+                  OnRowClick="@(args => Nav.NavigateTo($"/agents/configs/{args.Item!.Id.Value}"))"
+                  RowClass="cursor-pointer">
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Created</MudTh>
+                <MudTh>Updated</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Name"><strong>@context.Name</strong></MudTd>
+                <MudTd DataLabel="Created">
+                    <MudText Typo="Typo.caption">@context.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Updated">
+                    <MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </DzTableShell>
+}
+
+@code {
+    private bool _loading = true;
+    private IReadOnlyList<DaemonConfigPolicy> _policies = [];
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _policies = await ConfigService.ListPoliciesAsync(TenantId.Default);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

@@ -1,0 +1,40 @@
+/* Agent Management module styles */
+
+.dz-agent-row {
+    cursor: pointer;
+}
+
+.dz-agent-hostname {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dz-agent-hostname strong {
+    font-size: 0.875rem;
+}
+
+.dz-agent-hostname code {
+    font-size: 0.75rem;
+    color: var(--dz-text-secondary);
+}
+
+.dz-agent-os-icon {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dz-buffer-pressure {
+    font-variant-numeric: tabular-nums;
+}
+
+.dz-buffer-pressure--high {
+    color: var(--mud-palette-error);
+    font-weight: 600;
+}
+
+.dz-profile-versions-actions {
+    display: flex;
+    gap: 4px;
+}

@@ -1,0 +1,147 @@
+@namespace DeltaZulu.Platform.Web.AgentManagement.Pages
+@page "/agents/groups"
+@rendermode InteractiveServer
+@using MudBlazor
+@using DeltaZulu.Platform.Application.AgentManagement.Services
+@using DeltaZulu.Platform.Domain.AgentManagement.Agents
+@using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@using DeltaZulu.Platform.Domain.Common
+@using DeltaZulu.Platform.Web.AgentManagement.Shared
+@inject AgentGroupService GroupService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Agent Groups</PageTitle>
+
+<DzPageHeader Eyebrow="Management"
+              Title="Agent Groups"
+              Description="Organize agents into logical groups for scoped policy assignment.">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.Add" OnClick="OpenCreateDialog">
+            Create Group
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.Refresh" OnClick="LoadAsync">
+            Refresh
+        </MudButton>
+    </Actions>
+</DzPageHeader>
+
+@if (_loading)
+{
+    <DzLoadingState Text="Loading agent groups..." />
+}
+else if (_groups.Count == 0)
+{
+    <DzEmptyState Title="No agent groups"
+                  Description="Create a group to organize agents and assign policies by scope."
+                  Icon="@Icons.Material.Outlined.Workspaces" />
+}
+else
+{
+    <DzTableShell>
+        <MudTable Items="_groups" Dense="true" Hover="true" T="AgentGroup" Elevation="0">
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Created</MudTh>
+                <MudTh>Updated</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Name">
+                    @if (_editingGroupId == context.Id)
+                    {
+                        <MudTextField @bind-Value="_editName" Immediate="true" Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" T="string"
+                                      OnKeyDown="@(async (e) => { if (e.Key == "Enter") await SaveRename(context.Id); })" />
+                    }
+                    else
+                    {
+                        <strong>@context.Name</strong>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Created">
+                    <MudText Typo="Typo.caption">@context.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Updated">
+                    <MudText Typo="Typo.caption">@context.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    @if (_editingGroupId == context.Id)
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                                   OnClick="@(() => SaveRename(context.Id))">Save</MudButton>
+                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="CancelRename">Cancel</MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                   StartIcon="@Icons.Material.Outlined.Edit"
+                                   OnClick="@(() => StartRename(context))">Rename</MudButton>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </DzTableShell>
+}
+
+@code {
+    private bool _loading = true;
+    private IReadOnlyList<AgentGroup> _groups = [];
+    private AgentGroupId? _editingGroupId;
+    private string _editName = "";
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _groups = await GroupService.ListByTenantAsync(TenantId.Default);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var dialog = await DialogService.ShowAsync<CreateGroupDialog>("Create agent group",
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+            await LoadAsync();
+    }
+
+    private void StartRename(AgentGroup group)
+    {
+        _editingGroupId = group.Id;
+        _editName = group.Name;
+    }
+
+    private void CancelRename()
+    {
+        _editingGroupId = null;
+        _editName = "";
+    }
+
+    private async Task SaveRename(AgentGroupId groupId)
+    {
+        if (string.IsNullOrWhiteSpace(_editName)) return;
+
+        try
+        {
+            await GroupService.RenameAsync(groupId, _editName.Trim());
+            Snackbar.Add("Group renamed.", Severity.Success);
+            _editingGroupId = null;
+            await LoadAsync();
+        }
+        catch (DomainException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+}

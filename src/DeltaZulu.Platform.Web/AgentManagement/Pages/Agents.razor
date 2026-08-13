@@ -1,0 +1,259 @@
+@namespace DeltaZulu.Platform.Web.AgentManagement.Pages
+@page "/agents"
+@rendermode InteractiveServer
+@using MudBlazor
+@using DeltaZulu.Platform.Application.AgentManagement.Services
+@using DeltaZulu.Platform.Domain.AgentManagement.Enums
+@using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@using DeltaZulu.Platform.Domain.Analytics.Observability
+@using DeltaZulu.Platform.Web.AgentManagement.Shared
+@using DeltaZulu.Platform.Web.AgentManagement.ViewModels
+@inject AgentService AgentService
+@inject IOperationalMetricsReader MetricsReader
+@inject NavigationManager Nav
+
+<PageTitle>Agent Management</PageTitle>
+
+<DzPageHeader Eyebrow="Management"
+              Title="Agent Management"
+              Description="View and manage enrolled agents, health telemetry, and policy status.">
+    <Actions>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.Refresh" OnClick="LoadAsync">
+            Refresh
+        </MudButton>
+    </Actions>
+</DzPageHeader>
+
+@if (_loading)
+{
+    <DzLoadingState Text="Loading agent inventory..." />
+}
+else
+{
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Total Agents"
+                          Value="@_summary.AgentCount.ToString()"
+                          Icon="@Icons.Material.Outlined.Memory"
+                          Label="@($"{_summary.OnlineCount} online")" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Online"
+                          Value="@_summary.OnlineCount.ToString()"
+                          Icon="@Icons.Material.Outlined.CheckCircleOutline"
+                          Label="@OnlinePercentLabel()"
+                          Tone="success" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Degraded / Stale"
+                          Value="@((_summary.DegradedCount + _summary.StaleCount).ToString())"
+                          Icon="@Icons.Material.Outlined.Warning"
+                          Label="@($"{_summary.DegradedCount} degraded, {_summary.StaleCount} stale")"
+                          Tone="@(_summary.DegradedCount + _summary.StaleCount > 0 ? "error" : "neutral")" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Config Drift"
+                          Value="@_summary.ConfigDriftCount.ToString()"
+                          Icon="@Icons.Material.Outlined.Rule"
+                          Label="Desired and applied differ"
+                          Tone="@(_summary.ConfigDriftCount > 0 ? "warning" : "neutral")" />
+        </MudItem>
+    </MudGrid>
+
+    <DzToolbar>
+        <MudTextField Value="_searchText" ValueChanged="OnSearchChanged" Placeholder="Search hostname, version, or tags..."
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                      Immediate="true" DebounceInterval="200" Class="dz-search-field"
+                      T="string" />
+        <DzFilterRow>
+            <DzFilterChip Value="all" Selected="@(_statusFilter == "all")" OnClick="@(() => OnStatusFilterChanged("all"))">
+                All (@_allRows.Count)
+            </DzFilterChip>
+            <DzFilterChip Value="online" Selected="@(_statusFilter == "online")" OnClick="@(() => OnStatusFilterChanged("online"))">
+                Online (@_allRows.Count(r => r.Status == AgentStatus.Online))
+            </DzFilterChip>
+            <DzFilterChip Value="degraded" Selected="@(_statusFilter == "degraded")" OnClick="@(() => OnStatusFilterChanged("degraded"))">
+                Degraded (@_allRows.Count(r => r.Status == AgentStatus.Degraded))
+            </DzFilterChip>
+            <DzFilterChip Value="stale" Selected="@(_statusFilter == "stale")" OnClick="@(() => OnStatusFilterChanged("stale"))">
+                Stale (@_allRows.Count(r => r.Status == AgentStatus.Stale))
+            </DzFilterChip>
+            <DzFilterChip Value="offline" Selected="@(_statusFilter == "offline")" OnClick="@(() => OnStatusFilterChanged("offline"))">
+                Offline (@_allRows.Count(r => r.Status == AgentStatus.Offline))
+            </DzFilterChip>
+        </DzFilterRow>
+    </DzToolbar>
+
+    @if (_filteredRows.Count == 0)
+    {
+        <DzEmptyState Title="No agents match the current filter"
+                      Description="Enroll a DeltaZulu agent or adjust the search and status filters."
+                      Icon="@Icons.Material.Outlined.SearchOff" />
+    }
+    else
+    {
+        <DzTableShell>
+            <MudTable Items="_filteredRows" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" T="AgentInventoryRow" Elevation="0"
+                      OnRowClick="@(args => Nav.NavigateTo($"/agents/{args.Item!.AgentId}"))"
+                      RowClassFunc="@((_, _) => "dz-agent-row")">
+                <HeaderContent>
+                    <MudTh>Hostname</MudTh>
+                    <MudTh>OS</MudTh>
+                    <MudTh>Version</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Health</MudTh>
+                    <MudTh Style="text-align:right">Buffer</MudTh>
+                    <MudTh>Config</MudTh>
+                    <MudTh>Last Seen</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Hostname">
+                        <div class="dz-agent-hostname">
+                            <strong>@context.Hostname</strong>
+                            <code>@context.AgentId.Value.ToString("D")[..8]</code>
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="OS">
+                        <div class="dz-agent-os-icon">
+                            <MudIcon Icon="@PlatformIcon(context.Platform)" Size="Size.Small" />
+                            <MudText Typo="Typo.body2">@context.Platform</MudText>
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Version">
+                        <MudText Typo="Typo.body2">@(context.AgentVersion ?? "—")</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        <AgentStatusChip Status="context.Status" />
+                    </MudTd>
+                    <MudTd DataLabel="Health">
+                        @if (context.HasObservabilityData)
+                        {
+                            <DzStatusChip Label="@context.HealthStatus!" Tone="@HealthTone(context.HealthStatus!)" />
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">No data</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Buffer" Style="text-align:right">
+                        @if (context.HasObservabilityData)
+                        {
+                            <span class="dz-buffer-pressure @(context.BufferPressure >= 0.85 ? "dz-buffer-pressure--high" : "")">
+                                @context.BufferPressure.ToString("P0")
+                            </span>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Config">
+                        @if (context.HasConfigDrift || context.ConfigDrift)
+                        {
+                            <DzStatusChip Label="Drift" Tone="warning" />
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">OK</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Last Seen">
+                        <MudText Typo="Typo.caption">@FormatTimestamp(context.LastSeenAt)</MudText>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </DzTableShell>
+    }
+}
+
+@code {
+    private bool _loading = true;
+    private AgentHealthSummary _summary = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    private IReadOnlyList<AgentInventoryRow> _allRows = [];
+    private IReadOnlyList<AgentInventoryRow> _filteredRows = [];
+    private string _searchText = "";
+    private string _statusFilter = "all";
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+
+        try
+        {
+            var agentsTask = AgentService.ListByTenantAsync(TenantId.Default);
+            var summaryTask = Task.Run(() => MetricsReader.ReadAgentHealthSummary());
+            var telemetryTask = Task.Run(() => MetricsReader.ReadLatestAgents());
+
+            var agents = await agentsTask;
+            _summary = await summaryTask;
+            var telemetry = await telemetryTask;
+
+            _allRows = AgentInventoryRow.Merge(agents, telemetry);
+            ApplyFilter();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OnSearchChanged(string text)
+    {
+        _searchText = text ?? "";
+        ApplyFilter();
+    }
+
+    private void OnStatusFilterChanged(string filter)
+    {
+        _statusFilter = filter ?? "all";
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        var query = _searchText?.Trim() ?? "";
+        _filteredRows = _allRows
+            .Where(r => _statusFilter == "all" || r.Status.ToString().Equals(_statusFilter, StringComparison.OrdinalIgnoreCase))
+            .Where(r => string.IsNullOrEmpty(query)
+                || r.Hostname.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || (r.AgentVersion?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+                || r.Tags.Any(t => t.Contains(query, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+    }
+
+    private string OnlinePercentLabel()
+    {
+        if (_summary.AgentCount == 0) return "0%";
+        var pct = (double)_summary.OnlineCount / _summary.AgentCount;
+        return pct.ToString("P0");
+    }
+
+    private static string PlatformIcon(ResourcePlatform platform) => platform switch
+    {
+        ResourcePlatform.Windows => Icons.Material.Outlined.DesktopWindows,
+        ResourcePlatform.Linux => Icons.Material.Outlined.Terminal,
+        _ => Icons.Material.Outlined.Devices,
+    };
+
+    private static string HealthTone(string status) => status switch
+    {
+        "Healthy" or "Online" => "success",
+        "Degraded" => "error",
+        "Stale" or "Inactive" => "warning",
+        "Disabled" or "Offline" => "muted",
+        _ => "neutral"
+    };
+
+    private static string FormatTimestamp(DateTimeOffset? ts)
+    {
+        if (ts is null) return "Never";
+        var age = DateTimeOffset.UtcNow - ts.Value;
+        if (age.TotalMinutes < 1) return "just now";
+        if (age.TotalMinutes < 60) return $"{(int)age.TotalMinutes}m ago";
+        if (age.TotalHours < 24) return $"{(int)age.TotalHours}h ago";
+        return ts.Value.ToString("yyyy-MM-dd HH:mm");
+    }
+}
