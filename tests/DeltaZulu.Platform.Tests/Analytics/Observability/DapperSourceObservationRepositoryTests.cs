@@ -1,45 +1,31 @@
+using System.Data.Common;
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Observability;
 using DeltaZulu.Platform.Domain.Analytics.Observability;
-using Microsoft.Data.Sqlite;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Observability;
 
 [TestClass]
-public sealed class DapperSourceObservationRepositoryTests : IDisposable
+public sealed class DapperSourceObservationRepositoryTests
 {
+    private DbConnection _keepAliveConnection = null!;
     private DapperSourceObservationRepository _repository = null!;
-    private string _dbPath = string.Empty;
-    private bool _cleanedUp;
 
     [TestInitialize]
     public void Setup()
     {
-        _cleanedUp = false;
-        _dbPath = Path.Combine(
-            Path.GetTempPath(),
-            $"deltazulu-source-observations-{Guid.NewGuid():N}.db");
-        var factory = new SqliteAppDbConnectionFactory($"Data Source={_dbPath};Pooling=False");
+        var databaseName = $"SourceObsTest_{Guid.NewGuid():N}";
+        var factory = new SqliteAppDbConnectionFactory($"Data Source={databaseName};Mode=Memory;Cache=Shared");
+        _keepAliveConnection = factory.CreateConnection();
+        _keepAliveConnection.Open();
         _repository = new DapperSourceObservationRepository(factory);
     }
 
     [TestCleanup]
     public void Cleanup()
     {
-        if (_cleanedUp)
-        {
-            return;
-        }
-
-        _cleanedUp = true;
         _repository.Dispose();
-        DeleteDatabaseFiles(_dbPath);
-    }
-
-    public void Dispose()
-    {
-        Cleanup();
-        GC.SuppressFinalize(this);
+        _keepAliveConnection.Dispose();
     }
 
     [TestMethod]
@@ -137,20 +123,4 @@ public sealed class DapperSourceObservationRepositoryTests : IDisposable
             ReadErrorCount: 0, LastError: null,
             ReadCount: readCount, KeptAfterFilterCount: readCount, DiscardedCount: 0,
             ForwardedCount: readCount, ForwardFailedCount: 0, ObservedAtUtc: DateTime.UtcNow);
-
-    private static void DeleteDatabaseFiles(string path)
-    {
-        SqliteConnection.ClearAllPools();
-        DeleteIfExists(path);
-        DeleteIfExists($"{path}-wal");
-        DeleteIfExists($"{path}-shm");
-    }
-
-    private static void DeleteIfExists(string path)
-    {
-        if (File.Exists(path))
-        {
-            File.Delete(path);
-        }
-    }
 }
