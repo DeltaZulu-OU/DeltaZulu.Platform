@@ -388,16 +388,15 @@ after the lake record is written. This keeps the lake append-only and avoids mut
 
 ### Existing code debt
 
-The current `DapperAlertRepository` has `UpdateStatusAsync` and an upsert `ON CONFLICT DO UPDATE
-SET status = ...`. This contradicts the append-only model and must be removed when alerts migrate
-to the lake. The repository will be replaced by a direct DuckDB lake writer with no status column.
+The former SQLite alert repository and its mutable status/upsert path have been removed. Alert
+evidence is now appended through DuckDB lake writers with no status column.
 
 `alerts`, `alert_entities`, `incident_candidates`, `candidate_alert_links`, and
-`candidate_evidence` are currently listed in `AppStateTables` (the SQLite app state attachment).
-This is wrong: `alerts` and `alert_entities` belong in the lake; the incident tables belong in a
-separate operations SQLite database, not the app state database.
+`candidate_evidence` are no longer listed in `AppStateTables` (the SQLite app-state attachment).
+Alerts and alert entities belong in the lake; incident tables still need their dedicated operations
+SQLite startup and migration path.
 
-The `ApprovedViewCatalog` needs `AlertEvent` and `AlertEntity` canonical views so analysts can
+The `ApprovedViewCatalog` includes `AlertEvent` and `AlertEntity` canonical views so analysts can
 write KQL against lake alerts the same way they query `ProcessEvent`, `Dns`, and `NetworkSession`.
 
 ### Engine responsibilities

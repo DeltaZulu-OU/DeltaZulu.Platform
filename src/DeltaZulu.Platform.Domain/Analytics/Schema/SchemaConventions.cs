@@ -16,13 +16,23 @@ public static class SchemaConventions
 
     public static IReadOnlyList<RawTableDef> RawTables => MedallionSchemaCatalog.RawTables;
 
-    public static IReadOnlyList<InternalTableDef> InternalTables => InternalSchemaCatalog.InternalTables;
+    public static IReadOnlyList<InternalTableDef> InternalTables =>
+    [
+        .. InternalSchemaCatalog.InternalTables,
+        OperationsSchemaContracts.AlertEventsTable,
+        OperationsSchemaContracts.AlertEntitiesTable
+    ];
 
     public static IReadOnlyList<InternalViewDef> InternalViews => InternalSchemaCatalog.InternalViews;
 
     public static IReadOnlyList<ParserViewDef> ParserViews => MedallionSchemaCatalog.ParserViews;
 
-    public static IReadOnlyList<CanonicalViewDef> CanonicalViews => MedallionSchemaCatalog.CanonicalViews;
+    public static IReadOnlyList<CanonicalViewDef> CanonicalViews =>
+    [
+        .. MedallionSchemaCatalog.CanonicalViews,
+        OperationsSchemaContracts.AlertEvent,
+        OperationsSchemaContracts.AlertEntity
+    ];
 
     /// <summary>
     /// UI-agnostic editor metadata projected from the same Golden contracts used

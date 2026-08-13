@@ -28,7 +28,7 @@ public sealed class SchemaPipelineTests
 
         var ddl = _emitter.EmitAll(
             rawTables: SchemaConventions.RawTables,
-            internalTables: [],
+            internalTables: SchemaConventions.InternalTables,
             parserViews: SchemaConventions.ParserViews,
             canonicalViews: SchemaConventions.CanonicalViews);
 
@@ -41,7 +41,7 @@ public sealed class SchemaPipelineTests
     {
         var ddl = _emitter.EmitAll(
             rawTables: SchemaConventions.RawTables,
-            internalTables: [],
+            internalTables: SchemaConventions.InternalTables,
             parserViews: SchemaConventions.ParserViews,
             canonicalViews: SchemaConventions.CanonicalViews);
 

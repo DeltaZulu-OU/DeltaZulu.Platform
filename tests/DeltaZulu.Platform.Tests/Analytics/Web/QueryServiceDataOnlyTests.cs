@@ -29,7 +29,7 @@ public sealed class QueryServiceDataOnlyTests
         var applier = new SchemaApplier(_factory);
         var ddl = emitter.EmitAll(
             rawTables: SchemaConventions.RawTables,
-            internalTables: [],
+            internalTables: SchemaConventions.InternalTables,
             parserViews: SchemaConventions.ParserViews,
             canonicalViews: SchemaConventions.CanonicalViews);
 

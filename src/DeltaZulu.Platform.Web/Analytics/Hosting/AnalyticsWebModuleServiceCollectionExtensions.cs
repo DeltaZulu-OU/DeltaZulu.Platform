@@ -4,6 +4,9 @@ using DeltaZulu.Platform.Application.Analytics.Validation;
 using DeltaZulu.Platform.Data.DuckDb.Execution;
 using DeltaZulu.Platform.Data.DuckDb.Analytics;
 using DeltaZulu.Platform.Data.DuckDb.Ingestion;
+using DeltaZulu.Platform.Data.DuckDb.Analytics.Alerts;
+using DeltaZulu.Platform.Domain.Analytics.Alerts;
+using DeltaZulu.Platform.Domain.Analytics.AlertEntities;
 using DeltaZulu.Platform.Data.DuckDb;
 using DeltaZulu.Platform.Domain.Analytics.Observability;
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
@@ -31,11 +34,6 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         "visualizations",
         "detections",
         "detection_runs",
-        "alerts",
-        "alert_entities",
-        "incident_candidates",
-        "candidate_alert_links",
-        "candidate_evidence",
         "source_observations"];
 
     /// <summary>
@@ -57,7 +55,7 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
 
         services.AddSingleton<IQuerySyntaxValidator, KqlQuerySyntaxValidator>();
         services.AddSingleton(_ => new DuckDbConnectionFactory(
-            $"DataSource={options.DuckDbPath}",
+            $"DataSource={options.LakeDbPath}",
             attachedDatabases: [new DuckDbAttachedDatabase(
                 options.AppDatabaseAlias,
                 options.AppDbPath,
@@ -73,6 +71,8 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
             plannerMaxIterations: options.PlannerMaxIterations));
         services.AddSingleton<IAnalyticsQueryExecutor, AnalyticsQueryExecutor>();
         services.AddSingleton<DuckDbSourceObservationWriter>();
+        services.AddSingleton<IAlertLakeWriter, DuckDbAlertLakeWriter>();
+        services.AddSingleton<IAlertEntityLakeWriter, DuckDbAlertEntityLakeWriter>();
         services.AddSingleton<DuckDbAgentObservationWriter>();
         services.AddSingleton<IOperationalMetricsReader, DuckDbOperationalMetricsReader>();
         services.AddSingleton<ISourceMetricsReader, DuckDbSourceMetricsReader>();

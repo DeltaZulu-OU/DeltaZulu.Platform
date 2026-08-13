@@ -1,7 +1,4 @@
 using DeltaZulu.Platform.Data.Seeding;
-using DeltaZulu.Platform.Data.Sqlite.Analytics.AlertEntities;
-using DeltaZulu.Platform.Data.Sqlite.Analytics.Alerts;
-using DeltaZulu.Platform.Data.Sqlite.Analytics.Candidates;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.CuratedAnalytics;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.DetectionRuns;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Detections;
@@ -12,9 +9,6 @@ using DeltaZulu.Platform.Data.Sqlite.Analytics.QueryHistory;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.SavedQueries;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Settings;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Visualizations;
-using DeltaZulu.Platform.Domain.Analytics.AlertEntities;
-using DeltaZulu.Platform.Domain.Analytics.Alerts;
-using DeltaZulu.Platform.Domain.Analytics.Candidates;
 using DeltaZulu.Platform.Domain.Analytics.CuratedAnalytics;
 using DeltaZulu.Platform.Domain.Analytics.DetectionRuns;
 using DeltaZulu.Platform.Domain.Analytics.Detections;
@@ -54,10 +48,6 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         AddApplicationRepository<IVisualizationRepository, DapperVisualizationRepository>(services);
         AddApplicationRepository<IDetectionRecordRepository, DapperDetectionRepository>(services);
         AddApplicationRepository<IDetectionRunRepository, DapperDetectionRunRepository>(services);
-        AddApplicationRepository<IAlertRepository, DapperAlertRepository>(services);
-        AddApplicationRepository<IAlertEntityRepository, DapperAlertEntityRepository>(services);
-        AddApplicationRepository<IIncidentCandidateRepository, DapperIncidentCandidateRepository>(services);
-        AddApplicationRepository<ICandidateEvidenceRepository, DapperCandidateEvidenceRepository>(services);
         AddApplicationRepository<IInvestigationRepository, DapperInvestigationRepository>(services);
         AddApplicationRepository<INrtRuleRepository, DapperNrtRuleRepository>(services);
         AddApplicationRepository<ISourceObservationRepository, DapperSourceObservationRepository>(services);
