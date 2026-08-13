@@ -18,23 +18,31 @@ namespace DeltaZulu.Platform.Tests.Governance.Integration;
 /// </summary>
 internal sealed class TestServiceProvider : IDisposable
 {
-    private readonly SqliteConnection _sentinel;
+    private readonly SqliteConnection _governanceSentinel;
+    private readonly SqliteConnection _applicationSentinel;
     private readonly ServiceProvider _provider;
     public InMemoryContentStore ContentStore { get; }
 
     public TestServiceProvider()
     {
         // In-memory SQLite with Cache=Shared: the DB survives as long as at least one
-        // connection is open. This sentinel connection keeps it alive for the test lifetime.
-        var connStr = $"Data Source=test-{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
-        _sentinel = new SqliteConnection(connStr);
-        _sentinel.Open();
+        // connection is open. These sentinel connections keep each database alive for the
+        // test lifetime. Governance and Application/Analytics use distinct connection
+        // strings, mirroring production's separate governance.db/settings.db files — sharing
+        // one in-memory database here would collide table names (both layers have their own
+        // unrelated "detections" table).
+        var governanceConnStr = $"Data Source=test-governance-{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
+        var applicationConnStr = $"Data Source=test-application-{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
+        _governanceSentinel = new SqliteConnection(governanceConnStr);
+        _governanceSentinel.Open();
+        _applicationSentinel = new SqliteConnection(applicationConnStr);
+        _applicationSentinel.Open();
 
         ContentStore = new InMemoryContentStore();
 
         var services = new ServiceCollection();
-        services.AddGovernancePersistence(connStr);
-        services.AddApplicationPersistence(connStr);
+        services.AddGovernancePersistence(governanceConnStr);
+        services.AddApplicationPersistence(applicationConnStr);
         services.AddGovernanceApplication();
         services.AddGovernanceValidation();
         services.AddScoped<IWorkflowOrchestrator, DomainDrivenOrchestrator>();
@@ -54,7 +62,8 @@ internal sealed class TestServiceProvider : IDisposable
     public void Dispose()
     {
         _provider.Dispose();
-        _sentinel.Dispose();
+        _governanceSentinel.Dispose();
+        _applicationSentinel.Dispose();
     }
 }
 

@@ -56,11 +56,13 @@
                     </ChildContent>
                     <Actions><button class="hunt-btn dashboard-primary-action" @onclick="SavePivotAsync">Save pivot</button></Actions>
                 </DzPanel>
-                <MudTable T="InvestigationPivotRecord" Items="@_summary.Pivots" Dense="true" Hover="true" Elevation="0">
-                    <HeaderContent><MudTh>Name</MudTh><MudTh>Query</MudTh><MudTh>Updated</MudTh></HeaderContent>
-                    <RowTemplate><MudTd>@context.Name</MudTd><MudTd><code>@context.QueryText</code></MudTd><MudTd>@context.UpdatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd></RowTemplate>
-                    <NoRecordsContent><DzEmptyState Title="No pivots" Description="Save a pivot query to document investigative paths." Elevation="0" /></NoRecordsContent>
-                </MudTable>
+                <DzTableShell>
+                    <MudTable T="InvestigationPivotRecord" Items="@_summary.Pivots" Dense="true" Hover="true" Elevation="0">
+                        <HeaderContent><MudTh>Name</MudTh><MudTh>Query</MudTh><MudTh>Updated</MudTh></HeaderContent>
+                        <RowTemplate><MudTd>@context.Name</MudTd><MudTd><code>@context.QueryText</code></MudTd><MudTd>@context.UpdatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd></RowTemplate>
+                        <NoRecordsContent><DzEmptyState Title="No pivots" Description="Save a pivot query to document investigative paths." Elevation="0" /></NoRecordsContent>
+                    </MudTable>
+                </DzTableShell>
             </MudTabPanel>
 
             <MudTabPanel Text="Evidence">
@@ -75,17 +77,19 @@
                     </ChildContent>
                     <Actions><button class="hunt-btn dashboard-primary-action" @onclick="SaveEvidenceAsync">Add evidence</button></Actions>
                 </DzPanel>
-                <MudTable T="EvidenceRecord" Items="@_summary.Evidence" Dense="true" Hover="true" Elevation="0">
-                    <HeaderContent><MudTh>Summary</MudTh><MudTh>Tags</MudTh><MudTh>Entities</MudTh><MudTh>Created</MudTh><MudTh>Actions</MudTh></HeaderContent>
-                    <RowTemplate>
-                        <MudTd><strong>@(context.Summary ?? "Evidence promoted")</strong><br /><small>@context.SourceTable</small></MudTd>
-                        <MudTd>@string.Join(", ", _summary.Tags.Where(t => t.EvidenceId == context.Id).Select(t => t.Tag))</MudTd>
-                        <MudTd>@string.Join(", ", _summary.EntityLinks.Where(l => l.EvidenceId == context.Id).Select(l => $"{l.EntityKind}:{l.EntityDisplay ?? l.EntityKey}"))</MudTd>
-                        <MudTd>@context.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
-                        <MudTd><button class="hunt-btn" @onclick="() => SelectEvidence(context.Id)">Annotate</button></MudTd>
-                    </RowTemplate>
-                    <NoRecordsContent><DzEmptyState Title="No evidence" Description="Add or promote rows to preserve investigation evidence." Elevation="0" /></NoRecordsContent>
-                </MudTable>
+                <DzTableShell>
+                    <MudTable T="EvidenceRecord" Items="@_summary.Evidence" Dense="true" Hover="true" Elevation="0">
+                        <HeaderContent><MudTh>Summary</MudTh><MudTh>Tags</MudTh><MudTh>Entities</MudTh><MudTh>Created</MudTh><MudTh>Actions</MudTh></HeaderContent>
+                        <RowTemplate>
+                            <MudTd><strong>@(context.Summary ?? "Evidence promoted")</strong><br /><small>@context.SourceTable</small></MudTd>
+                            <MudTd>@string.Join(", ", _summary.Tags.Where(t => t.EvidenceId == context.Id).Select(t => t.Tag))</MudTd>
+                            <MudTd>@string.Join(", ", _summary.EntityLinks.Where(l => l.EvidenceId == context.Id).Select(l => $"{l.EntityKind}:{l.EntityDisplay ?? l.EntityKey}"))</MudTd>
+                            <MudTd>@context.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
+                            <MudTd><button class="hunt-btn" @onclick="() => SelectEvidence(context.Id)">Annotate</button></MudTd>
+                        </RowTemplate>
+                        <NoRecordsContent><DzEmptyState Title="No evidence" Description="Add or promote rows to preserve investigation evidence." Elevation="0" /></NoRecordsContent>
+                    </MudTable>
+                </DzTableShell>
             </MudTabPanel>
 
             <MudTabPanel Text="Annotate">
@@ -107,10 +111,12 @@
                         <button class="hunt-btn dashboard-primary-action" @onclick="AddEntityLinkAsync">Link entity</button>
                     </Actions>
                 </DzPanel>
-                <MudTable T="EvidenceCommentRecord" Items="@_summary.Comments" Dense="true" Hover="true" Elevation="0">
-                    <HeaderContent><MudTh>Evidence</MudTh><MudTh>Comment</MudTh><MudTh>By</MudTh><MudTh>Created</MudTh></HeaderContent>
-                    <RowTemplate><MudTd>@context.EvidenceId</MudTd><MudTd>@context.Body</MudTd><MudTd>@context.CreatedBy</MudTd><MudTd>@context.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd></RowTemplate>
-                </MudTable>
+                <DzTableShell>
+                    <MudTable T="EvidenceCommentRecord" Items="@_summary.Comments" Dense="true" Hover="true" Elevation="0">
+                        <HeaderContent><MudTh>Evidence</MudTh><MudTh>Comment</MudTh><MudTh>By</MudTh><MudTh>Created</MudTh></HeaderContent>
+                        <RowTemplate><MudTd>@context.EvidenceId</MudTd><MudTd>@context.Body</MudTd><MudTd>@context.CreatedBy</MudTd><MudTd>@context.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd></RowTemplate>
+                    </MudTable>
+                </DzTableShell>
             </MudTabPanel>
 
             <MudTabPanel Text="Timeline">
@@ -237,6 +243,6 @@
     private bool EnsureTitle(string? value, string message) { if (!string.IsNullOrWhiteSpace(value)) return true; Snackbar.Add(message, Severity.Warning); return false; }
     private bool JsonIsValid(string value) { try { JsonDocument.Parse(value); return true; } catch (JsonException ex) { Snackbar.Add($"Invalid JSON: {ex.Message}", Severity.Warning); return false; } }
     private static string? NullIfWhiteSpace(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    private static Color TimelineColor(string kind) => kind switch { "evidence" => Color.Success, "comment" => Color.Info, "tag" => Color.Secondary, "entity-link" => Color.Warning, "query-run" => Color.Primary, _ => Color.Default };
+    private static Color TimelineColor(string kind) => kind switch { "evidence" => Color.Success, "comment" => Color.Info, "tag" => Color.Secondary, "entity-link" => Color.Warning, "query-run" => Color.Tertiary, _ => Color.Default };
     private void BackToList() => Navigation.NavigateTo("/analytics/investigations");
 }

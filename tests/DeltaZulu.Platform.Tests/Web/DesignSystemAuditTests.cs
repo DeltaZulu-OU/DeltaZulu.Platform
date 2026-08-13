@@ -62,12 +62,26 @@ public sealed partial class DesignSystemAuditTests
     public void SharedStylesheets_DoNotReintroduceLegacyHuntingAliasTokens()
     {
         var repositoryRoot = FindRepositoryRoot();
+
+        // analytics-app.css and its companion drawer stylesheet are the deliberately
+        // quarantined carriers of the legacy --hunt-*/--bg-*/--text-* alias layer (see the
+        // header comment in analytics-app.css). Every other stylesheet under wwwroot/css is
+        // shared/product chrome and must use --dz-product-*/--color-*/--brand-* tokens
+        // directly instead of reintroducing these aliases.
+        var quarantinedStylesheets = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+            "analytics-app.css",
+            "kql-helper-drawer.css",
+        };
+
         var sharedStylesheets = Directory.EnumerateFiles(
-                Path.Combine(repositoryRoot, "src", "DeltaZulu.Platform.Web", "wwwroot"),
+                Path.Combine(repositoryRoot, "src", "DeltaZulu.Platform.Web", "wwwroot", "css"),
                 "*.css",
                 SearchOption.TopDirectoryOnly)
+            .Where(path => !quarantinedStylesheets.Contains(Path.GetFileName(path)))
             .Select(path => (Path: path, Text: File.ReadAllText(path)))
             .ToList();
+
+        Assert.IsNotEmpty(sharedStylesheets, "Expected shared stylesheets under wwwroot/css to scan.");
 
         foreach (var stylesheet in sharedStylesheets)
         {
@@ -75,6 +89,68 @@ public sealed partial class DesignSystemAuditTests
             AssertNoLegacyAlias(stylesheet.Path, stylesheet.Text, "--bg-");
             AssertNoLegacyAlias(stylesheet.Path, stylesheet.Text, "--text-");
         }
+    }
+
+    [TestMethod]
+    public void RazorComponents_DoNotApplyActionColorToNonActionInputControls()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var webRoot = Path.Combine(repositoryRoot, "src", "DeltaZulu.Platform.Web");
+
+        var offenders = Directory.EnumerateFiles(webRoot, "*.razor", SearchOption.AllDirectories)
+            .Select(path => (Relative: Path.GetRelativePath(webRoot, path), Text: File.ReadAllText(path)))
+            .Where(file => PrimaryColoredInputControlRegex().IsMatch(file.Text))
+            .Select(file => file.Relative)
+            .ToList();
+
+        Assert.HasCount(0, offenders,
+            $"Orange action color (Color.Primary) applied to a non-action input control in: {string.Join(", ", offenders)}. " +
+            "Per docs/design/PRODUCT_IDENTITY.md, orange is reserved for actions/CTAs; use Color.Secondary or a status color for form inputs.");
+    }
+
+    [TestMethod]
+    public void RazorComponents_WrapMudTableInDzTableShell()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var webRoot = Path.Combine(repositoryRoot, "src", "DeltaZulu.Platform.Web");
+
+        // DzQueryResultTable is itself the canonical evidence-grade table primitive.
+        // Library.razor's "dashboard-list-panel" container predates DzTableShell and already
+        // supplies its own bordered/rounded chrome; nesting DzTableShell there would double
+        // the border and is tracked as follow-up design-system work rather than papered over.
+        var exemptRelativePaths = new HashSet<string>(StringComparer.Ordinal) {
+            Path.Combine("Analytics", "Components", "Dz", "DzQueryResultTable.razor"),
+            Path.Combine("Analytics", "Pages", "Library.razor"),
+        };
+
+        var offenders = Directory.EnumerateFiles(webRoot, "*.razor", SearchOption.AllDirectories)
+            .Select(path => (Relative: Path.GetRelativePath(webRoot, path), Text: File.ReadAllText(path)))
+            .Where(file => file.Text.Contains("<MudTable", StringComparison.Ordinal)
+                && !file.Text.Contains("DzTableShell", StringComparison.Ordinal)
+                && !exemptRelativePaths.Contains(file.Relative))
+            .Select(file => file.Relative)
+            .ToList();
+
+        Assert.HasCount(0, offenders,
+            $"Raw <MudTable> without a DzTableShell wrapper (or an explicit, documented exemption) in: {string.Join(", ", offenders)}");
+    }
+
+    [TestMethod]
+    public void RazorComponents_DoNotUseRawMudPaperOutsideDzPanel()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var webRoot = Path.Combine(repositoryRoot, "src", "DeltaZulu.Platform.Web");
+        var exemptRelativePath = Path.Combine("Components", "DzPanel.razor");
+
+        var offenders = Directory.EnumerateFiles(webRoot, "*.razor", SearchOption.AllDirectories)
+            .Select(path => (Relative: Path.GetRelativePath(webRoot, path), Text: File.ReadAllText(path)))
+            .Where(file => file.Text.Contains("<MudPaper", StringComparison.Ordinal)
+                && !string.Equals(file.Relative, exemptRelativePath, StringComparison.Ordinal))
+            .Select(file => file.Relative)
+            .ToList();
+
+        Assert.HasCount(0, offenders,
+            $"Raw <MudPaper> outside the canonical DzPanel wrapper in: {string.Join(", ", offenders)}");
     }
 
     private static void AssertCssRuleContains(string css, string selector, string expected)
@@ -130,4 +206,7 @@ public sealed partial class DesignSystemAuditTests
 
     [GeneratedRegex(@"^[^\S\r\n]*--radius-(?:xs|sm|md|lg|xl|2xl):(?![^\S\r\n]*var\(--radius-structure\);)[^\r\n;]+;", RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.CultureInvariant)]
     private static partial Regex MediumRadiusLiteralRegex();
+
+    [GeneratedRegex(@"<(MudRadio|MudCheckBox|MudSwitch|MudRadioGroup)\b[^>]*?Color\s*=\s*""[^""]*Color\.Primary[^""]*""", RegexOptions.Compiled | RegexOptions.CultureInvariant)]
+    private static partial Regex PrimaryColoredInputControlRegex();
 }

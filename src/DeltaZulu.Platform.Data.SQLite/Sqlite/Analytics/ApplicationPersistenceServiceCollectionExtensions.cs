@@ -70,6 +70,7 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         AddApplicationRepository<IQueryHistoryRepository, DapperQueryHistoryRepository>(services);
         AddApplicationRepository<IVisualizationRepository, DapperVisualizationRepository>(services);
         AddApplicationRepository<IDetectionRecordRepository, DapperDetectionRepository>(services);
+        AddApplicationRepository<IDetectionProjectionDiagnosticRepository, DapperDetectionProjectionDiagnosticRepository>(services);
         AddApplicationRepository<IDetectionRunRepository, DapperDetectionRunRepository>(services);
         AddApplicationRepository<IInvestigationRepository, DapperInvestigationRepository>(services);
         AddApplicationRepository<INrtRuleRepository, DapperNrtRuleRepository>(services);

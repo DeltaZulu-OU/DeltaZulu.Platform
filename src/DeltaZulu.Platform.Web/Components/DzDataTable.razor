@@ -1,0 +1,61 @@
+@typeparam TItem
+
+@* Canonical evidence-grade data table: wraps MudTable in DzTableShell and standardizes
+   loading/error/empty states so Analytics, Governance, and Operations screens share state
+   handling instead of hand-rolling MudTable + manual @@if branches per page. *@
+<DzTableShell Class="@Class" @attributes="AdditionalAttributes">
+    @if (Loading)
+    {
+        <DzLoadingState Text="@LoadingText" />
+    }
+    else if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="dz-data-table__error">@ErrorMessage</MudAlert>
+    }
+    else
+    {
+        <MudTable T="TItem"
+                  Items="@Items"
+                  Dense="@Dense"
+                  Hover="@Hover"
+                  Elevation="0"
+                  Filter="@Filter"
+                  RowsPerPage="@RowsPerPage">
+            <HeaderContent>
+                @HeaderContent
+            </HeaderContent>
+            <RowTemplate>
+                @RowTemplate(context)
+            </RowTemplate>
+            <NoRecordsContent>
+                <DzEmptyState Title="@EmptyTitle" Description="@EmptyDescription" Icon="@EmptyIcon" Elevation="0" />
+            </NoRecordsContent>
+            <PagerContent>
+                @PagerContent
+            </PagerContent>
+        </MudTable>
+    }
+</DzTableShell>
+
+@code {
+    [Parameter] public IEnumerable<TItem>? Items { get; set; }
+    [Parameter, EditorRequired] public RenderFragment HeaderContent { get; set; } = default!;
+    [Parameter, EditorRequired] public RenderFragment<TItem> RowTemplate { get; set; } = default!;
+    [Parameter] public RenderFragment? PagerContent { get; set; }
+    [Parameter] public Func<TItem, bool>? Filter { get; set; }
+
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public string? LoadingText { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+
+    [Parameter] public string EmptyTitle { get; set; } = "No records";
+    [Parameter] public string? EmptyDescription { get; set; }
+    [Parameter] public string? EmptyIcon { get; set; }
+
+    [Parameter] public bool Dense { get; set; } = true;
+    [Parameter] public bool Hover { get; set; } = true;
+    [Parameter] public int RowsPerPage { get; set; } = 25;
+
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+}

@@ -33,7 +33,7 @@
                 <MudTextField @bind-Value="_parserTarget" Label="Parser target" HelperText="Maps imported rows to the parser or source family used later in normalization." Required="true" Variant="Variant.Outlined" />
                 <MudTextField @bind-Value="_preprocessorVersion" Label="Preprocessor version" Required="true" Variant="Variant.Outlined" />
                 <MudNumericField T="int" @bind-Value="_maxChunkBytes" Label="Maximum chunk size (bytes)" Min="1" Variant="Variant.Outlined" />
-                <MudCheckBox T="bool" @bind-Value="_scheduleSilver" Label="Schedule Silver normalization after import" Color="Color.Primary" />
+                <MudCheckBox T="bool" @bind-Value="_scheduleSilver" Label="Schedule Silver normalization after import" Color="Color.Secondary" />
                 <MudStack Row="true" Spacing="2">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.PlayArrow" Disabled="@IsRunDisabled" OnClick="RunImport">@(_running ? "Importing…" : "Run import preview")</MudButton>
                     <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="ResetForm">Reset</MudButton>
@@ -65,16 +65,16 @@
                         <MudItem xs="6" md="3"><DzMetricTile Value="@_result.Manifest.Summary.BronzeRowCount.ToString(CultureInfo.InvariantCulture)" Label="Bronze rows" Icon="@Icons.Material.Outlined.TableRows" /></MudItem>
                         <MudItem xs="6" md="3"><DzMetricTile Value="@_result.Manifest.Summary.MalformedRecordCount.ToString(CultureInfo.InvariantCulture)" Label="Malformed" Icon="@Icons.Material.Outlined.ReportProblem" Tone="@(_result.Manifest.Summary.MalformedRecordCount > 0 ? "error" : "success")" /></MudItem>
                     </MudGrid>
-                    <MudTable Items="@_result.Manifest.SourceObjects" Dense="true" Hover="true" Elevation="0">
+                    <DzDataTable TItem="ImportSourceObject" Items="@_result.Manifest.SourceObjects" EmptyTitle="No source files">
                         <HeaderContent><MudTh>Source</MudTh><MudTh>Format</MudTh><MudTh>Status</MudTh><MudTh>Rows</MudTh><MudTh>SHA256</MudTh></HeaderContent>
-                        <RowTemplate>
+                        <RowTemplate Context="context">
                             <MudTd DataLabel="Source">@context.RelativePath</MudTd>
                             <MudTd DataLabel="Format">@context.Format</MudTd>
                             <MudTd DataLabel="Status">@context.Status</MudTd>
                             <MudTd DataLabel="Rows">@RowsForSource(context.SourceObjectId)</MudTd>
                             <MudTd DataLabel="SHA256"><code>@context.Sha256[..12]</code></MudTd>
                         </RowTemplate>
-                    </MudTable>
+                    </DzDataTable>
                     @if (_result.Manifest.Diagnostics.Any(item => item.Severity != ImportDiagnosticSeverity.Information))
                     {
                         <MudExpansionPanels Elevation="0"><MudExpansionPanel Text="Diagnostics">

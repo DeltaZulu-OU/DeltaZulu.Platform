@@ -1,0 +1,64 @@
+@* Canonical list/table filter toolbar: an optional title block, an optional quick-search
+   field, and a row of filter chips/controls, laid out consistently instead of pages hand
+   rolling DzToolbar + search + filter-chip markup each time. *@
+<DzToolbar Class="@Class" @attributes="AdditionalAttributes">
+    <ChildContent>
+        @if (ChildContent is not null)
+        {
+            @ChildContent
+        }
+        else if (!string.IsNullOrWhiteSpace(Title))
+        {
+            <div class="dz-filter-bar__title">
+                <h2>@Title</h2>
+                @if (!string.IsNullOrWhiteSpace(Description))
+                {
+                    <p>@Description</p>
+                }
+            </div>
+        }
+
+        @if (ShowSearch)
+        {
+            <MudTextField T="string"
+                          Value="@SearchText"
+                          ValueChanged="OnSearchTextChanged"
+                          Placeholder="@SearchPlaceholder"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true"
+                          Margin="Margin.Dense"
+                          Variant="Variant.Outlined"
+                          Class="dz-filter-bar__search" />
+        }
+    </ChildContent>
+    <Actions>
+        @if (Filters is not null)
+        {
+            <DzFilterRow Class="dz-filter-bar__filters">
+                @Filters
+            </DzFilterRow>
+        }
+        @Actions
+    </Actions>
+</DzToolbar>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool ShowSearch { get; set; } = true;
+    [Parameter] public string SearchText { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> SearchTextChanged { get; set; }
+    [Parameter] public string SearchPlaceholder { get; set; } = "Search";
+    [Parameter] public RenderFragment? Filters { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private Task OnSearchTextChanged(string value)
+    {
+        SearchText = value;
+        return SearchTextChanged.InvokeAsync(value);
+    }
+}
