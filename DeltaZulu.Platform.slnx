@@ -7,9 +7,7 @@
   <Project Path="src/DeltaZulu.Blazor.Interop/DeltaZulu.Blazor.Interop.csproj" />
   <Project Path="src/DeltaZulu.Platform.Application/DeltaZulu.Platform.Application.csproj" />
   <Project Path="src/DeltaZulu.Platform.Data.DuckDb/DeltaZulu.Platform.Data.DuckDb.csproj" />
-  <Project Path="src/DeltaZulu.Platform.Data.Proton/DeltaZulu.Platform.Data.Proton.csproj">
-    <Build Solution="Debug|*" Project="false" />
-  </Project>
+  <Project Path="src/DeltaZulu.Platform.Data.Proton/DeltaZulu.Platform.Data.Proton.csproj" />
   <Project Path="src/DeltaZulu.Platform.Data/DeltaZulu.Platform.Data.csproj" />
   <Project Path="src/DeltaZulu.Platform.Domain/DeltaZulu.Platform.Domain.csproj" />
   <Project Path="src/DeltaZulu.Platform.Ingestion/DeltaZulu.Platform.Ingestion.csproj" />
