@@ -17,7 +17,6 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for project ownership, dependency direc
 | [`TARGET_USER_STORIES.md`](TARGET_USER_STORIES.md) | Target product-level user stories for the full-cycle security analytics platform. |
 | [`reviews/PRODUCTION_V1_GAP_ANALYSIS.md`](reviews/PRODUCTION_V1_GAP_ANALYSIS.md) | Production-v1 readiness review, blocker list, and milestone checklist. |
 | [`reviews/DOCUMENTATION_CODE_GAP_ANALYSIS_2026-07-19.md`](reviews/DOCUMENTATION_CODE_GAP_ANALYSIS_2026-07-19.md) | Current documentation/code gap analysis for ingestion, medallion schema, alerts, Operations, and Proton runtime. |
-| [`reviews/EXTERNAL_TOOL_ROADMAP_2026-07-26.md`](reviews/EXTERNAL_TOOL_ROADMAP_2026-07-26.md) | Binding lessons and sequencing for rule validation, cross-backend execution, and transpiler parity. |
 | [`design/PRODUCT_IDENTITY.md`](design/PRODUCT_IDENTITY.md) | Product identity and binding UI language/design rules for Phase 1A. |
 | [`adr/README.md`](adr/README.md) | Current centralized ADR set converted from still-relevant historical decisions. |
 
@@ -28,7 +27,7 @@ These documents are still useful for detailed domain rules. They are subordinate
 | Area | Document | Status |
 |---|---|---|
 | Analytics | [`analytics/KQL-to-DuckDB-translation-spec.md`](analytics/KQL-to-DuckDB-translation-spec.md) | Active translation semantics reference. |
-| Analytics | [`../src/DeltaZulu.Platform.Data.DuckDb/docs/COMPARISON.md`](../src/DeltaZulu.Platform.Data.DuckDb/docs/COMPARISON.md) | Human-reviewed KQL-to-DuckDB semantic edge-case register. |
+| Analytics | [`analytics/kql-duckdb-comparison-register.md`](analytics/kql-duckdb-comparison-register.md) | Human-reviewed KQL-to-DuckDB semantic edge-case register. |
 | Analytics | [`analytics/kql-syntax-coverage-checklist.md`](analytics/kql-syntax-coverage-checklist.md) | Active supported-KQL coverage tracker. |
 | Analytics | [`analytics/README.md`](analytics/README.md) | Index for active Analytics references. |
 | ADRs | [`adr/README.md`](adr/README.md) | Current centralized decision records. |

@@ -61,7 +61,7 @@ public sealed partial class CheckPipelineRunner(
             }
 
             run.Complete(outcome.Status, outcome.Summary, outcome.DetailsJson, outcome.LogsExcerpt, now);
-            results.Add(new PipelineCheckResult(check.Name, outcome));
+            results.Add(new PipelineCheckResult(check.Name, outcome, check.IsBlocking));
         }
 
         change.AfterCheckPipelineCompleted(now);
@@ -81,4 +81,8 @@ public sealed partial class CheckPipelineRunner(
     private static partial void LogCheckUnhandledException(ILogger logger, Exception ex, string checkName);
 }
 
-public sealed record PipelineCheckResult(string CheckName, CheckOutcome Outcome);
+/// <summary>
+/// Result of one check in a pipeline run. <paramref name="IsBlocking" /> distinguishes checks
+/// that gate acceptance from advisory checks whose findings are reported but do not block.
+/// </summary>
+public sealed record PipelineCheckResult(string CheckName, CheckOutcome Outcome, bool IsBlocking);

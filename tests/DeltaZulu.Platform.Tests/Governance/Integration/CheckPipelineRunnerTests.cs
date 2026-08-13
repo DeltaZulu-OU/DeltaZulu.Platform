@@ -35,7 +35,7 @@ public sealed class CheckPipelineRunnerTests : IDisposable
             await svc.UpsertDraftFileAsync(changeId, "detection.yaml", DraftContentType.DetectionMetadata,
                 "id: check-det\ntitle: Check Test\ndescription: Tests checks\nseverity: high\n", Author, TestContext.CancellationToken);
             await svc.UpsertDraftFileAsync(changeId, "rule.kql", DraftContentType.AnalyticsQuery,
-                "SigninLogs | where TimeGenerated > ago(1h) and ResultType != 0", Author, TestContext.CancellationToken);
+                "SigninLogs | where ResultType != 0", Author, TestContext.CancellationToken);
         }
 
         // Run pipeline.
@@ -48,8 +48,8 @@ public sealed class CheckPipelineRunnerTests : IDisposable
             Assert.IsGreaterThanOrEqualTo(2, results.Count,
                 $"Expected at least 2 checks to run, got {results.Count}: {string.Join(", ", results.Select(r => r.CheckName))}");
 
-            Assert.IsTrue(results.All(r => r.Outcome.Status == CheckStatus.Passed),
-                $"All checks should pass, but: {string.Join(", ", results.Where(r => r.Outcome.Status != CheckStatus.Passed).Select(r => $"{r.CheckName}={r.Outcome.Status}"))}");
+            Assert.IsTrue(results.Where(r => r.IsBlocking).All(r => r.Outcome.Status == CheckStatus.Passed),
+                $"All blocking checks should pass, but: {string.Join(", ", results.Where(r => r.IsBlocking && r.Outcome.Status != CheckStatus.Passed).Select(r => $"{r.CheckName}={r.Outcome.Status}"))}");
         }
 
         // Change should have advanced.
@@ -61,7 +61,7 @@ public sealed class CheckPipelineRunnerTests : IDisposable
             Assert.AreEqual(ChangeStatus.ReviewRequired, loaded.Status,
                 "After passing checks on ControlledReview, status should be ReviewRequired.");
             Assert.IsGreaterThanOrEqualTo(2, loaded.Checks.Count);
-            Assert.IsTrue(loaded.Checks.All(c => c.Status == CheckStatus.Passed));
+            Assert.IsTrue(loaded.Checks.Where(c => c.IsBlocking).All(c => c.Status == CheckStatus.Passed));
         }
     }
 
@@ -294,7 +294,7 @@ public sealed class CheckPipelineRunnerTests : IDisposable
             await svc.UpsertDraftFileAsync(changeId, "detection.yaml", DraftContentType.DetectionMetadata,
                 "id: rerun-det\ntitle: Fixed\ndescription: Now complete\nseverity: low\n", Author, TestContext.CancellationToken);
             await svc.UpsertDraftFileAsync(changeId, "rule.kql", DraftContentType.AnalyticsQuery,
-                "SigninLogs | where TimeGenerated > ago(1h) | take 1", Author, TestContext.CancellationToken);
+                "SigninLogs | take 1", Author, TestContext.CancellationToken);
         }
 
         // Second run: should pass — old failed check must not block.
@@ -302,8 +302,8 @@ public sealed class CheckPipelineRunnerTests : IDisposable
         {
             var runner = _host.Resolve<CheckPipelineRunner>(scope);
             var results = await runner.RunAsync(changeId, TestContext.CancellationToken);
-            Assert.IsTrue(results.All(r => r.Outcome.Status == CheckStatus.Passed),
-                "After fixing content and re-running, all checks should pass.");
+            Assert.IsTrue(results.Where(r => r.IsBlocking).All(r => r.Outcome.Status == CheckStatus.Passed),
+                "After fixing content and re-running, all blocking checks should pass.");
         }
 
         // Verify: only the second run's checks exist on the change.
@@ -312,7 +312,7 @@ public sealed class CheckPipelineRunnerTests : IDisposable
             var svc = _host.Resolve<ChangeService>(scope);
             var loaded = await svc.GetByIdAsync(changeId, TestContext.CancellationToken);
             Assert.IsNotNull(loaded);
-            Assert.IsTrue(loaded.Checks.All(c => c.Status == CheckStatus.Passed),
+            Assert.IsTrue(loaded.Checks.Where(c => c.IsBlocking).All(c => c.Status == CheckStatus.Passed),
                 "No stale failed checks from the first run should remain.");
             Assert.AreEqual(ChangeStatus.ReviewRequired, loaded.Status,
                 "After passing checks on ControlledReview, status should be ReviewRequired.");

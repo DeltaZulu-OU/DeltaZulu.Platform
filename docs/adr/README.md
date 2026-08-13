@@ -19,6 +19,7 @@ This directory contains the current centralized ADR set for DeltaZulu Platform. 
 | [`0013-constrained-agent-command-queue.md`](0013-constrained-agent-command-queue.md) | Accepted | Allowlisted one-shot agent commands delivered through the pull loop with an audited lifecycle and timeout expiry. |
 | [`0014-http-ingestion-type-fidelity-registry.md`](0014-http-ingestion-type-fidelity-registry.md) | Accepted | HTTP ingestion for DuckDB/DuckLake and Proton, temporary DuckDB.NET lake access followed by Quack, and registry-governed type fidelity without Arrow, Avro, or a custom transport. |
 | [`0015-tuf-agent-content-signing.md`](0015-tuf-agent-content-signing.md) | Accepted | TUF role mapping (targets/timestamp/snapshot/root) onto the agent policy pull protocol, replacing the unverified `ContentHash` fields with real signed content hashes. Production-readiness gate; not required for POC/MVP. |
+| [`0016-external-validation-and-transpiler-parity.md`](0016-external-validation-and-transpiler-parity.md) | Proposed | Cheapest-first validation tiers, advisory-until-baselined cost-shape linting, Proton excluded from result parity until its runtime is validated, and the KQL/DuckDB comparison register. Two unresolved conflicts: a live Kusto oracle and a separate benchmark project. |
 
 ## Conversion policy
 

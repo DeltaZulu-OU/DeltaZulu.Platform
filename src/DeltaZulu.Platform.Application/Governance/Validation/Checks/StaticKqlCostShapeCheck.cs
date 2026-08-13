@@ -11,12 +11,29 @@ namespace DeltaZulu.Platform.Application.Governance.Validation.Checks;
 /// Performs credential-free AST linting for query shapes that commonly cause unbounded work.
 /// This check intentionally runs before any execution-backed validation.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Advisory, not blocking. Every one of the ten seed detections in
+/// <c>Data.Git/SeedData/DetectionContent/Samples</c> sorts without a downstream <c>take</c>,
+/// so KQL005 fires across the entire existing corpus. Shipping this blocking would fail the
+/// house query style on day one.
+/// </para>
+/// <para>
+/// Promoting it to blocking requires the baseline-and-ratchet step first: record current
+/// findings over the accepted corpus, then fail only on findings beyond that baseline. Two
+/// rules should also move off regex-over-AST-text before they gate acceptance — KQL001's
+/// time-window detection matches against <c>node.ToString()</c>, so it false-positives on a
+/// string literal containing <c>ago(</c> and false-negatives on a bound introduced through a
+/// <c>let</c>. ADR 0002 rules out silent approximation in the execution path; a blocking gate
+/// deserves the same standard.
+/// </para>
+/// </remarks>
 public sealed partial class StaticKqlCostShapeCheck : ICheck
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public string Name => "query-static-cost-shape";
-    public bool IsBlocking => true;
+    public bool IsBlocking => false;
 
     public IReadOnlySet<DraftContentType> ApplicableContentTypes { get; } =
         new HashSet<DraftContentType> { DraftContentType.AnalyticsQuery }.AsReadOnly();
