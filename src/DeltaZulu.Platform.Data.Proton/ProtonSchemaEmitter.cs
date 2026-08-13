@@ -147,7 +147,7 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
                 && columnTypes.TryGetValue(proj.TargetColumn, out var colDef))
             {
                 // Emit a typed NULL so Proton does not infer an incorrect column type
-                var nullType = $"nullable({colDef.DuckDbType.ToProtonSql()})";
+                var nullType = $"nullable({colDef.KustoType.ToProtonSql()})";
                 sb.Append($"CAST(NULL, '{SqlLiteralEscaping.EscapeSingleQuotes(nullType)}')");
             }
             else
