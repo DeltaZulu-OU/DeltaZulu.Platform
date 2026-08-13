@@ -61,8 +61,10 @@
                                        Variant="Variant.Filled"
                                        Color="Color.Primary"
                                        Size="Size.Small"
-                                       OnClick="Controller.SaveEditModeAsync">
-                                Save
+                                       OnClick="Controller.SaveEditModeAsync"
+                                       title="Save dashboard"
+                                       aria-label="Save dashboard">
+                                <MudIcon Icon="@Icons.Material.Filled.Save" Size="Size.Small" />
                             </MudButton>
                         }
                         else
@@ -71,8 +73,10 @@
                                        Variant="Variant.Filled"
                                        Color="Color.Primary"
                                        Size="Size.Small"
-                                       OnClick="Controller.StartEditMode">
-                                Edit
+                                       OnClick="Controller.StartEditMode"
+                                       title="Edit dashboard"
+                                       aria-label="Edit dashboard">
+                                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
                             </MudButton>
                         }
                     </div>
