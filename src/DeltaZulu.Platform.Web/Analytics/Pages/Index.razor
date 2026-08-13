@@ -994,18 +994,10 @@
             return;
         }
 
-        if (_editorInitialized)
-        {
-            var inserted = await LanguageService.InsertTextAtCursorAsync(queryText);
-            if (inserted)
-            {
-                _cachedEditorText = await GetCurrentEditorTextAsync();
-                _kql = _cachedEditorText;
-                return;
-            }
-        }
-
-        await AppendHelperQueryAsync(queryText);
+        var updated = queryText.Trim();
+        _kql = updated;
+        _cachedEditorText = updated;
+        await LanguageService.SetEditorValueAsync(updated);
     }
 
     private async Task AppendHelperQueryAsync(string queryText)
