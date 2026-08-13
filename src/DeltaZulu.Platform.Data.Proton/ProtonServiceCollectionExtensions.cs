@@ -1,5 +1,6 @@
 using DeltaZulu.Platform.Data.Proton.Streaming;
 using DeltaZulu.Platform.Domain.Analytics.Detection;
+using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 using DeltaZulu.Platform.Domain.Analytics.Streaming;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,7 @@ public static class ProtonServiceCollectionExtensions
             sp.GetRequiredService<IOptions<ProtonHttpClientOptions>>().Value);
 
         services.AddSingleton<ProtonHttpExecutor>();
+        services.TryAddSingleton<IProtonExecutionReadiness, ProtonExecutionReadiness>();
         services.AddSingleton<IDetectionCompilationBackend, ProtonDetectionCompilationBackend>();
         services.AddSingleton<IDetectionDeployer, ProtonDetectionDeployer>();
         services.AddSingleton<ProtonSchemaEmitter>();
