@@ -49,7 +49,7 @@ public sealed class InvestigationRepositoryTests
             Assert.HasCount(1, summary.Comments);
             Assert.HasCount(1, summary.EvidenceLinks);
             Assert.HasCount(1, summary.EntityLinks);
-            StringAssert.Contains(summary.Evidence[0].RowSnapshotJson, "powershell -enc AAA");
+            Assert.Contains("powershell -enc AAA", summary.Evidence[0].RowSnapshotJson);
             Assert.IsTrue(summary.Timeline.Any(item => item.ItemKind == "evidence"));
             Assert.IsTrue(summary.Timeline.Any(item => item.ItemKind == "comment"));
         }

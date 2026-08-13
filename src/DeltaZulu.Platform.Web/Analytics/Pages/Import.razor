@@ -1,0 +1,160 @@
+@page "/analytics/import"
+@namespace DeltaZulu.Platform.Web.Analytics.Pages
+@using System.Globalization
+@using DeltaZulu.Importing.Core
+
+<PageTitle>Bulk Import - DeltaZulu</PageTitle>
+
+<DzPageHeader Title="Bulk import logs"
+              Eyebrow="Analytics onboarding"
+              Description="Stage external log resources into Bronze rows, verify provenance, and schedule downstream Silver normalization from the browser.">
+    <Metadata>
+        <span>Local fileset preview</span>
+    </Metadata>
+    <Actions>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Outlined.Dataset" OnClick="UseDemoSeed">
+            Use demo seed
+        </MudButton>
+    </Actions>
+</DzPageHeader>
+
+<MudGrid Class="mt-4" Spacing="3">
+    <MudItem xs="12" lg="5">
+        <DzPanel Title="Import source" Eyebrow="Step 1" Class="import-panel">
+            <MudStack Spacing="3">
+                <MudAlert Severity="Severity.Info" Dense="true">Enter a server-accessible file or directory path. The importer recursively enumerates files and preserves row-level provenance.</MudAlert>
+                <MudTextField @bind-Value="_sourcePath" Label="Source file or directory" HelperText=@("Example: /mnt/imports/firewall or C:\\imports\\sysmon.jsonl") Required="true" Variant="Variant.Outlined" />
+                <MudTextField @bind-Value="_jobId" Label="Job id" Required="true" Variant="Variant.Outlined" />
+                <MudSelect T="ImportMode" @bind-Value="_mode" Label="Import mode" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@ImportMode.Migration">Migration</MudSelectItem>
+                    <MudSelectItem Value="@ImportMode.Onboarding">Onboarding</MudSelectItem>
+                    <MudSelectItem Value="@ImportMode.DemoSeed">Demo seed</MudSelectItem>
+                </MudSelect>
+                <MudTextField @bind-Value="_parserTarget" Label="Parser target" HelperText="Maps imported rows to the parser or source family used later in normalization." Required="true" Variant="Variant.Outlined" />
+                <MudTextField @bind-Value="_preprocessorVersion" Label="Preprocessor version" Required="true" Variant="Variant.Outlined" />
+                <MudNumericField T="int" @bind-Value="_maxChunkBytes" Label="Maximum chunk size (bytes)" Min="1" Variant="Variant.Outlined" />
+                <MudCheckBox T="bool" @bind-Value="_scheduleSilver" Label="Schedule Silver normalization after import" Color="Color.Primary" />
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.PlayArrow" Disabled="@IsRunDisabled" OnClick="RunImport">@(_running ? "Importing…" : "Run import preview")</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="ResetForm">Reset</MudButton>
+                </MudStack>
+            </MudStack>
+        </DzPanel>
+    </MudItem>
+
+    <MudItem xs="12" lg="7">
+        <DzPanel Title="Import outcome" Eyebrow="Step 2" Class="import-panel">
+            @if (_result is null && string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <DzEmptyState Title="No import preview yet" Description="Run an import to review source files, chunks, row counts, and diagnostics before wiring this flow to durable storage." Icon="@Icons.Material.Outlined.UploadFile" />
+            }
+            else if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Filled">@_errorMessage</MudAlert>
+            }
+            else if (_result is not null)
+            {
+                <MudStack Spacing="3">
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <DzStatusChip Label="@_result.Manifest.Status.ToString()" Tone="@StatusTone" />
+                        <MudText Typo="Typo.body2">Job <strong>@_result.Manifest.JobId</strong> completed with @_result.Manifest.Diagnostics.Count diagnostics.</MudText>
+                    </MudStack>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="6" md="3"><DzMetricTile Value="@_result.Manifest.Summary.SourceFileCount.ToString(CultureInfo.InvariantCulture)" Label="Sources" Icon="@Icons.Material.Outlined.Folder" /></MudItem>
+                        <MudItem xs="6" md="3"><DzMetricTile Value="@_result.Manifest.Summary.ChunkCount.ToString(CultureInfo.InvariantCulture)" Label="Chunks" Icon="@Icons.Material.Outlined.Inventory2" /></MudItem>
+                        <MudItem xs="6" md="3"><DzMetricTile Value="@_result.Manifest.Summary.BronzeRowCount.ToString(CultureInfo.InvariantCulture)" Label="Bronze rows" Icon="@Icons.Material.Outlined.TableRows" /></MudItem>
+                        <MudItem xs="6" md="3"><DzMetricTile Value="@_result.Manifest.Summary.MalformedRecordCount.ToString(CultureInfo.InvariantCulture)" Label="Malformed" Icon="@Icons.Material.Outlined.ReportProblem" Tone="@(_result.Manifest.Summary.MalformedRecordCount > 0 ? "error" : "success")" /></MudItem>
+                    </MudGrid>
+                    <MudTable Items="@_result.Manifest.SourceObjects" Dense="true" Hover="true" Elevation="0">
+                        <HeaderContent><MudTh>Source</MudTh><MudTh>Format</MudTh><MudTh>Status</MudTh><MudTh>Rows</MudTh><MudTh>SHA256</MudTh></HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Source">@context.RelativePath</MudTd>
+                            <MudTd DataLabel="Format">@context.Format</MudTd>
+                            <MudTd DataLabel="Status">@context.Status</MudTd>
+                            <MudTd DataLabel="Rows">@RowsForSource(context.SourceObjectId)</MudTd>
+                            <MudTd DataLabel="SHA256"><code>@context.Sha256[..12]</code></MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                    @if (_result.Manifest.Diagnostics.Any(item => item.Severity != ImportDiagnosticSeverity.Information))
+                    {
+                        <MudExpansionPanels Elevation="0"><MudExpansionPanel Text="Diagnostics">
+                            @foreach (var diagnostic in _result.Manifest.Diagnostics.Where(item => item.Severity != ImportDiagnosticSeverity.Information))
+                            {
+                                <MudAlert Severity="@ToMudSeverity(diagnostic.Severity)" Dense="true" Class="mb-2"><strong>@diagnostic.Code</strong> @diagnostic.Message Record: @(diagnostic.RecordNumber?.ToString(CultureInfo.InvariantCulture) ?? "n/a")</MudAlert>
+                            }
+                        </MudExpansionPanel></MudExpansionPanels>
+                    }
+                </MudStack>
+            }
+        </DzPanel>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private string _sourcePath = string.Empty;
+    private string _jobId = $"import-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}";
+    private ImportMode _mode = ImportMode.Onboarding;
+    private string _parserTarget = "generic";
+    private string _preprocessorVersion = "pre-v1";
+    private int _maxChunkBytes = 1024 * 1024;
+    private bool _scheduleSilver = true;
+    private bool _running;
+    private string? _errorMessage;
+    private ImportResult? _result;
+
+    private bool IsRunDisabled => _running || string.IsNullOrWhiteSpace(_sourcePath) || string.IsNullOrWhiteSpace(_jobId) || string.IsNullOrWhiteSpace(_parserTarget) || string.IsNullOrWhiteSpace(_preprocessorVersion) || _maxChunkBytes <= 0;
+    private string StatusTone => _result?.Manifest.Status == ImportJobStatus.Completed ? "success" : "warning";
+
+    private void UseDemoSeed()
+    {
+        _sourcePath = DemoSeedImportCatalog.MaterializeBaseline(Path.Combine(Path.GetTempPath(), "deltazulu-demo-seed-ui"));
+        _jobId = "demo-seed-preview";
+        _mode = ImportMode.DemoSeed;
+        _parserTarget = "demo";
+        _preprocessorVersion = "pre-v1";
+        _errorMessage = null;
+        _result = null;
+    }
+
+    private void ResetForm()
+    {
+        _sourcePath = string.Empty;
+        _jobId = $"import-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}";
+        _mode = ImportMode.Onboarding;
+        _parserTarget = "generic";
+        _preprocessorVersion = "pre-v1";
+        _maxChunkBytes = 1024 * 1024;
+        _scheduleSilver = true;
+        _errorMessage = null;
+        _result = null;
+    }
+
+    private void RunImport()
+    {
+        _running = true;
+        _errorMessage = null;
+        try
+        {
+            var request = new ImportJobRequest(_jobId, _mode, _sourcePath, _parserTarget, _preprocessorVersion, _maxChunkBytes, _scheduleSilver);
+            _result = new LocalFilesetImporter().Import(request);
+        }
+        catch (Exception ex) when (ex is ArgumentException or DirectoryNotFoundException or IOException or UnauthorizedAccessException)
+        {
+            _result = null;
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _running = false;
+        }
+    }
+
+    private int RowsForSource(string sourceObjectId) => _result?.BronzeRows.Count(row => row.SourceObjectId == sourceObjectId) ?? 0;
+
+    private static Severity ToMudSeverity(ImportDiagnosticSeverity severity) => severity switch
+    {
+        ImportDiagnosticSeverity.Error => Severity.Error,
+        ImportDiagnosticSeverity.Warning => Severity.Warning,
+        _ => Severity.Info
+    };
+}

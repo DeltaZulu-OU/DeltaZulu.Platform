@@ -5,6 +5,7 @@
     <File Path="Directory.Packages.props" />
   </Folder>
   <Project Path="src/DeltaZulu.Blazor.Interop/DeltaZulu.Blazor.Interop.csproj" />
+  <Project Path="src/DeltaZulu.Importing.Cli/DeltaZulu.Importing.Cli.csproj" />
   <Project Path="src/DeltaZulu.Importing.Core/DeltaZulu.Importing.Core.csproj" />
   <Project Path="src/DeltaZulu.Platform.Application/DeltaZulu.Platform.Application.csproj" />
   <Project Path="src/DeltaZulu.Platform.Data.DuckDb/DeltaZulu.Platform.Data.DuckDb.csproj" />

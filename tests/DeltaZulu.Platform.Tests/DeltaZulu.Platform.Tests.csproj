@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\DeltaZulu.Importing.Cli\DeltaZulu.Importing.Cli.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Importing.Core\DeltaZulu.Importing.Core.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Platform.Ingestion\DeltaZulu.Platform.Ingestion.csproj" />
     <ProjectReference Include="..\..\src\DeltaZulu.Platform.Domain\DeltaZulu.Platform.Domain.csproj" />
