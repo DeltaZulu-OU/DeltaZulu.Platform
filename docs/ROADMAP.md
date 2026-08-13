@@ -13,9 +13,9 @@ Repository consolidation is complete and the solution has been expanded for mult
 - Shared components, design tokens, detection contracts, platform module abstractions, analytics code, governance code, persistence, and tests have been absorbed into the platform projects.
 - DuckDB infrastructure is in `DeltaZulu.Platform.Data.DuckDb`; SQLite repositories and seeders are in `DeltaZulu.Platform.Data.SQLite`; Git accepted-content storage is in `DeltaZulu.Platform.Data.Git`; Proton DDL/backend code is in `DeltaZulu.Platform.Data.Proton`; raw-log pub-sub is in `DeltaZulu.Platform.Ingestion`; typed Blazor JS interop is in `DeltaZulu.Blazor.Interop`.
 - Design-system adoption is partial: the shell, tokens, and shared components exist, but product identity, radius rules, typography scope, legacy Hunting aliases, dashboard primitives, and evidence-table semantics still need enforcement work.
-- NRT detection foundation is complete: KQL-to-Proton compilation pipeline (`NrtRuleCompiler`, `ProtonSqlQueryEmitter`), Proton DDL builder library (`MaterializedViewDdl`, `ScheduledTaskDdl`, `AlertDdl`, `ProtonInterval`), NRT rule authoring UI at `/analytics/nrt`, and SQLite-backed `DapperNrtRuleRepository` for rule metadata.
-- Detection engine separation is settled: Timeplus Proton owns all detection execution (NRT materialized views + Proton scheduled tasks); DuckDB is threat hunting and historical analytics only. The only runtime connection is the analyst-initiated pivot from a saved hunting query to a detection content proposal.
-- Data model is settled: DuckDB is the append-only data lake (Bronze/Silver/Gold events, Alerts, AlertEntities); a separate operations SQLite stores mutable incident-candidate lifecycle state. Current code has alerts scaffolded in the SQLite app-state database — migration to the DuckDB lake is the next cleanup phase before building the mediation daemon.
+- NRT detection foundation is complete and now includes Proton runtime scaffold infrastructure: KQL-to-Proton compilation pipeline (`NrtRuleCompiler`, `ProtonSqlQueryEmitter`), Proton DDL builder library (`MaterializedViewDdl`, `ScheduledTaskDdl`, `AlertDdl`, `ProtonInterval`), `ProtonDetectionDeployer`, Proton HTTP execution, Proton schema application, typed Bronze stream publishers, alert-dispatch stream subscription, NRT rule authoring UI at `/analytics/nrt`, and SQLite-backed `DapperNrtRuleRepository` for rule metadata.
+- Detection engine separation is settled: Timeplus Proton owns all detection execution (NRT materialized views + Proton scheduled tasks); DuckDB is threat hunting, historical analytics, and the append-only alert lake; SQLite owns mutable operations state. Current Proton adapters are an integration path, not a validated runtime.
+- Data model is settled: DuckDB is the append-only data lake (Bronze/Silver/Gold events, Alerts, AlertEntities); a separate operations SQLite stores mutable incident-candidate lifecycle state. Phase 3B migrated alert storage to the DuckDB alert lake; deterministic materialization, durable cursoring, and DLQ/replay are still required before claiming durable alert delivery.
 - Schema medallion alignment is now governed by ADR 0007: Bronze converges on `RawEventEnvelope`/`RawEvent`, Silver converges on grouped source-family records, Golden converges on activity schemas with lineage, and Proton consumes generated Golden-compatible streams/views rather than reproducing the full lake.
 
 ## Roadmap position assessment
@@ -28,7 +28,7 @@ Evidence from the current documentation and tree:
 - The central architecture is authoritative for module ownership, backend ownership, routing, and storage boundaries.
 - Analytics has a working KQL-to-DuckDB contract, render/dashboard design, Golden-view query boundary, diagnostics-first unsupported behavior, and a construct-level checklist showing 226 MVP-ready or metadata-supported items out of 320 in-scope items, with 91 deferred and 3 deliberately blocked for semantic safety.
 - Governance has the core detection-content workflow shape in place: issues, detections, database-owned changes, checks, reviews, Git-backed accepted content, versions, compare/restore, and merge reconciliation.
-- The shared analytics execution contract (Phase 2) is complete. Curated analytics persistence and promotion (Phase 3) are complete. NRT detection foundation (Phase 3A) is complete. Phase 3B alert-storage migration is complete. The next meaningful progress is **Phase 4** (executable detection projection), which is now underway.
+- The shared analytics execution contract (Phase 2) is complete. Curated analytics persistence and promotion (Phase 3) are complete. NRT detection foundation (Phase 3A) is complete, and Phase 3A+ is a **runtime scaffold**. Phase 3B alert-storage migration is complete. The next meaningful progress is **Phase 4** (executable detection projection), now underway, in parallel with hardening the Proton runtime scaffold into the target streaming ETL by adding durable cursoring/DLQ/replay and validating it against a live Proton instance.
 - A design-system gap analysis now adds a prerequisite UI-governance track: resolve whether this app is DZNS-branded, DeltaZulu Platform-branded, or an internal DeltaZulu platform; remove rule conflicts before expanding dashboard and Operations surfaces.
 
 
@@ -45,9 +45,9 @@ The repository is aligned with the revised target at the documentation and conso
 | Shared analytics execution | Application-layer `IAnalyticsQueryExecutor` and `ExecutionPurpose` policies exist; interactive, dashboard, and governance validation dry-run execution all route through the shared DuckDB executor. Query-history recording stays in the Web adapter. Boundary tests prove no governance check creates parallel execution paths. | Scheduled-detection and recovery callers deferred to Phase 6. | Closed (Phase 2) |
 | Query history vs curated analytics | `CuratedAnalyticRecord` exists with purpose, required views/fields, expected result shape, entity mappings, severity/confidence/risk hints, known false positives, notes, and promotion-to-detection tracking. `CuratedAnalyticService` supports saved-query promotion. SQLite persistence registered. | List/detail UI and promote-to-proposal handoff deferred to UI phase. | Closed (Phase 3) |
 | Executable detection projection | Detection records are scaffolded with useful metadata fields. | Add accepted-version identity, lookback policy, alert materialization mode, explicit entity mapping contract, projection pipeline, and operational overrides. | Critical |
-| NRT detection foundation | KQL→RelNode→ProtonSQL compilation, `MaterializedViewDdl`/`ScheduledTaskDdl`/`AlertDdl`/`ProtonInterval` DDL builders, `NrtRuleCompiler`, `NrtRuleService`, `/analytics/nrt` UI, `DapperNrtRuleRepository`. | .NET mediation daemon, Proton connectivity, alert threshold evaluation, and actual MV deployment to a Proton instance are not yet implemented. | Closed (Phase 3A) |
+| NRT detection foundation | KQL→RelNode→ProtonSQL compilation, DDL builders, `NrtRuleCompiler`, `NrtRuleService`, `/analytics/nrt` UI, `DapperNrtRuleRepository`, and Proton execution runtime scaffold components (`ProtonDetectionDeployer`, Proton HTTP executor, Proton schema applier/emitter, typed Bronze publishers, stream subscriber, and mediation service). | Live Proton integration tests, durable alert-dispatch offsets, DLQ/replay, deterministic alert materialization, deployment reconciliation, and full threshold/run recording remain. | Complete + scaffolded (Phase 3A+) |
 | Alert storage migration | Alerts and alert entities are currently scaffolded in SQLite app state (`AppStateTables`). `DapperAlertRepository` has `UpdateStatusAsync` and upsert logic, both of which contradict the append-only model. | Remove `alerts`/`alert_entities` from `AppStateTables`. Delete or gut `DapperAlertRepository`. Create an append-only DuckDB lake writer. Add `AlertEvent`/`AlertEntity` canonical views to `ApprovedViewCatalog`. | Critical |
-| Scheduled detection execution | `ScheduledTaskDdl` builder exists. | Proton scheduled task deployment, execution monitoring, and alert dispatch stream consumption by the .NET daemon are not implemented. No Elsa integration, no runner, no execution window calculator. | Critical |
+| Scheduled detection execution | `ScheduledTaskDdl` builder and `ScheduledDetectionService` scaffold deploy/retract through the Proton deployer; the alert-dispatch stream subscriber is registered for mediation. | Schedule/lookback/timeout cleanup, execution monitoring, run persistence, durable cursoring, Elsa integration, and execution-window calculation remain. | Critical |
 | Operations SQLite separation | `incident_candidates`, `candidate_alert_links`, `candidate_evidence` are registered in `AppStateTables` (the app state SQLite). | These belong in a dedicated operations SQLite database, not the analytics app state database. Requires a new `OperationsDbPath` option and separate startup/migration path. | High |
 | Detection run model | Run records are scaffolded. | Add lookback window, alert count, execution mode, retry/recovery context, diagnostics JSON, stale/no-data warnings, and workflow correlation. Decide: runs are append-only lake records (single write at completion) or mutable operational state (status updated mid-run). | High |
 | Alert model and entities | Alert and alert-entity records are scaffolded in SQLite. | Migrate to DuckDB lake (append-only, no status column, no upsert). Add evidence hash, materialization key/mode, query/rule hash, extracted entity values, audit fields. | High |
@@ -121,12 +121,12 @@ Last assessed: 2026-07-17.
 | 1A | **In progress** | Product identity is documented as DeltaZulu Platform; structural radius aliases and Mud defaults now use the sharp binary radius model; global product `h1` typography uses IBM Plex Sans; shared stylesheet audit coverage prevents legacy alias leakage outside the quarantined Analytics CSS. Remaining gaps: orange usage review, Analytics alias removal/quarantine cleanup, canonical dashboard/evidence primitives, Operations placeholders, and broader audit rules. |
 | 2 | **Complete** | Application-layer `ExecutionPurpose`, `AnalyticsQueryRequest`, `AnalyticsQueryResult`, and `IAnalyticsQueryExecutor` exist. DuckDB execution and single-connection serialization live behind `AnalyticsQueryExecutor`; interactive Analytics, dashboard data-only execution, and governance validation dry-runs all call through the shared contract with purpose-specific policies. `QueryExecutionDryRunCheck` runs draft queries with `ValidationDryRun` purpose during the governance check pipeline. Boundary tests prove no governance check creates parallel execution paths. Scheduled-detection and recovery callers are deferred to Phase 6. |
 | 3 | **Complete** | `CuratedAnalyticRecord` with purpose, required views/fields, expected result shape, entity mappings JSON, known false positives, severity/confidence/risk hints, notes, and promotion tracking. `ICuratedAnalyticRepository` with SQLite Dapper implementation. `CuratedAnalyticService` with saved-query-to-curated-analytic promotion. Persistence registered and initialized in platform startup. |
-| 3A | **Complete** | `NrtRule` domain record, `INrtRuleRepository`, `NrtCompilationResult`. `NrtRuleCompiler` (Application, KQL→RelNode→ProtonSQL→MV DDL via `IDetectionCompilationBackend`), `ProtonDetectionCompilationBackend` and `ProtonSqlQueryEmitter` (Data.Proton), `NrtRuleService` (Application orchestration). `MaterializedViewDdl`, `ScheduledTaskDdl`, `AlertDdl`, `ProtonInterval` DDL builder library (Data.Proton). `DapperNrtRuleRepository` (SQLite). `/analytics/nrt` rule authoring UI. Architecture documented in `ARCHITECTURE.md`. |
+| 3A | **Complete + runtime scaffolded** | `NrtRule` domain record, `INrtRuleRepository`, `NrtCompilationResult`. `NrtRuleCompiler` (Application, KQL→RelNode→ProtonSQL→MV DDL via `IDetectionCompilationBackend`), `ProtonDetectionCompilationBackend` and `ProtonSqlQueryEmitter` (Data.Proton), `NrtRuleService` (Application orchestration). `MaterializedViewDdl`, `ScheduledTaskDdl`, `AlertDdl`, `ProtonInterval` DDL builder library (Data.Proton). `ProtonDetectionDeployer`, `ProtonHttpExecutor`, `ProtonSchemaApplier`/`ProtonSchemaEmitter`, typed Bronze publishers, `ProtonStreamSubscriber`, `AlertMediationService`, `ScheduledDetectionService`, `DapperNrtRuleRepository` and `DapperScheduledDetectionRuleRepository` (SQLite). `/analytics/nrt` rule authoring UI. Architecture documented in `ARCHITECTURE.md`. |
 | 3B | **Complete** | Alert and alert-entity SQLite repositories and app-state attachments were removed. DuckDB lake writers append immutable alert evidence and entities without a status column, `AlertEvent`/`AlertEntity` are approved KQL views, and mutable incident-candidate repositories are initialized against their dedicated operations SQLite database. |
 | 4 | **In progress** | Governance merge synchronously projects accepted executable `detection.yaml` metadata into an executable `DetectionRecord`; non-executable or invalid packages remain accepted and await Phase 4 diagnostics. The projection has deterministic accepted-version identity, SHA-256 rule hashing, schedule, lookback, entity mappings, suppression policy, and materialization mode. Remaining work: stale/invalid diagnostics and a backfill command. |
 | 5 | **Scaffolded** | Domain records and SQLite Dapper repositories exist under `Analytics/` namespace. Alert records must migrate to DuckDB lake (append-only) rather than SQLite (mutable). Missing key fields on `AlertRecord` (evidence hash, materialization key, rule hash, suppression) and `DetectionRunRecord` (alert count, lookback window). `IIncidentRepository` and `ICandidateDecisionRepository` have no SQLite implementations. |
-| 6 | **Not started** | `ScheduledTaskDdl` builder exists. No Proton connectivity, no scheduled task deployment, no mediation daemon, no alert dispatch stream consumer. |
-| 7 | **Not started** | No .NET mediation daemon, no NRT threshold evaluation, no DuckDB lake writer for alerts. |
+| 6 | **Scaffolded** | Proton connectivity, scheduled task deploy/retract, and alert-dispatch subscription exist. Missing schedule/lookback/timeout cleanup, production mediation orchestration, durable stream cursoring, execution monitoring, and detection-run persistence. |
+| 7 | **Scaffolded** | `AlertMediationService` consumes Proton alert-dispatch payloads and appends through `IAlertLakeWriter`; missing NRT MV polling/threshold evaluation, cursor commits, durable retry/dead-letter/replay behavior, and deterministic deduplication. |
 | 8 | **Not started** | No approved KQL views for operations state. |
 | 9 | **Not started** | No `OperationsModule`, no `/operations` routes, no operations pages. |
 | 10 | **Not started** | `SuppressionPolicyJson` field only; no enrichment or suppression processing pipeline. |
@@ -135,14 +135,13 @@ Last assessed: 2026-07-17.
 
 ## Phase dependency sequence
 
-Phases 1, 2, 3, and 3A are **complete**. The current roadmap position makes **Phase 1A and Phase 3B the immediate next phases**. Phase 1A prevents the expanding product UI from hardening ambiguous identity and design-system rule conflicts. Phase 3B (alert storage migration to DuckDB lake) is the next dependency-ordered cleanup; it unblocks Phases 5 and 6 by establishing the append-only lake and separate operations SQLite. Phase 4 (executable detection projection) can proceed in parallel with Phase 3B since it depends on Phase 3 promotion metadata, which is already complete.
+Phases 1, 2, 3, 3A, and 3B are **complete**. The current roadmap position makes **Phase 1A and Phase 4 the immediate next phases**. Phase 1A prevents the expanding product UI from hardening ambiguous identity and design-system rule conflicts. Phase 4 (executable detection projection) is underway and depends on Phase 3 promotion metadata, which is already complete. In parallel, the Proton runtime scaffold (Phase 3A+) is hardened toward Phases 6 and 7 via the `improve-proton-support` branch plan below.
 
-Completed phases (1, 2, 3, 3A) are omitted from this table. See the phase status table above for their exit criteria and completion notes.
+Completed phases (1, 2, 3, 3A, 3B) are omitted from this table. See the phase status table above for their exit criteria and completion notes.
 
 | Phase | Phase definition | Entry condition | Exit criteria |
 |---:|---|---|---|
 | 1A | Resolve product identity and enforce core design-system rules before broad dashboard/Operations UI expansion. Apply binary radius, product typography scoping, orange action semantics, legacy CSS quarantine, dashboard primitive contracts, evidence-table metadata, and audit coverage. | Consolidation and Phase 1 complete. Design tokens and shared components exist in Web. | Product identity is documented; product UI headings use IBM Plex Sans; structural radii are sharp; actions use pill treatment; legacy aliases are removed or isolated; canonical dashboard/table/state primitives exist; a local audit catches forbidden patterns. |
-| 3B | Migrate alert storage from SQLite app state to the DuckDB data lake and separate operations state. Remove `alerts`/`alert_entities` from `AppStateTables`. Delete `DapperAlertRepository.UpdateStatusAsync` and any upsert logic. Create an append-only DuckDB lake writer. Move `incident_candidates`, `candidate_alert_links`, `candidate_evidence` to a dedicated operations SQLite database. Add `AlertEvent`/`AlertEntity` canonical views to `ApprovedViewCatalog`. | Phase 3A complete; architecture decision documented (alerts = append-only lake, incidents = mutable ops SQLite). | `AppStateTables` has no alert or incident entries; a DuckDB lake writer appends alert records with no status column; incident tables live in an operations SQLite with its own `OperationsDbPath` option; `AlertEvent` and `AlertEntity` are queryable through KQL. |
 | 4 | Complete executable detection projection from accepted governance content. The projection should turn accepted detection versions into operations-ready detection definitions with schedule, lookback, entity mapping, materialization mode, suppression policy, and accepted-version traceability. | Phase 3 promotion metadata is complete; projection contract written to accept it without schema churn. | Governance acceptance writes or refreshes executable detection definitions; each definition records accepted version, rule hash, schedule, lookback, entity mapping, materialization mode, and suppression policy; stale or invalid projections surface diagnostics. |
 | 5 | Harden the Operations persistence model before building the mediation daemon. Finish detection-run, alert-entity, enrichment, suppression, incident-candidate, candidate-evidence, and triage persistence contracts with audit and evidence-integrity fields. Alert records are DuckDB lake (append-only, no status). Incident candidates and evidence are operations SQLite (mutable). Detection runs are append-only lake records written once at completion. | Phase 3B migration complete; Phase 4 projection contract defines the executable detection input shape. | DuckDB lake schema covers append-only alert and alert-entity records with materialization key, evidence hash, and rule hash; operations SQLite covers incident lifecycle and triage; detection-run records have alert counts and lookback windows; incident/candidate decision repositories have concrete implementations and tests. |
 | 6 | Build Proton scheduled detection and the .NET mediation daemon. Generate `CREATE OR REPLACE TASK` DDL via `ScheduledTaskDdl`, deploy to Proton, and implement the daemon that polls NRT MVs against thresholds and consumes the scheduled-task alert dispatch stream. Detection runs recorded with full execution metadata. | Phase 5 persistence complete; Proton connectivity established. | A `ScheduledTaskDdl`-generated task runs in Proton on a configured interval; the mediation daemon reads Proton alert output and writes append-only rows to the DuckDB lake; `DetectionRun` records inputs, window, status, diagnostics, counts, duration, and failure state. |
@@ -234,6 +233,74 @@ These tasks implement the proposed [ADR 0011](adr/0011-rpc-correlation-evidence-
 3. Add `Authentication` and `ProcessActivity` Golden schemas with required lineage fields.
 4. Add DuckDB/Proton/KQL generation or snapshot checks for schema drift.
 
+### `improve-proton-support` branch next-step plan
+
+This branch is the near-real-time detection capability branch. Its purpose is to turn the Proton
+foundation from compile/deploy scaffolding into a validated detection runtime path where NRT rules are
+continuous materialized views and built-in scheduled detections are Timeplus scheduled tasks. Based on
+the architecture constraints above, do **not** add a DuckDB or Quartz detection runner on this branch;
+DuckDB remains the hunting/lake engine, while Proton owns all detection execution.
+
+> **Status note.** This plan was drafted before master completed Phase 3B and started Phase 4.
+> Work packages 3 (operations SQLite split) and the storage half of 2 (alert lake writer,
+> `AlertEvent`/`AlertEntity` views) are **superseded** — master's `IAlertLakeWriter`/`DuckDbAlertLakeWriter`
+> and dedicated operations SQLite are authoritative and this branch now builds on them. Work
+> package 4 largely overlaps master's in-progress Phase 4 governance projection; only the
+> built-in/NRT-specific projection gaps remain here. The branch's remaining scope is packages
+> 1, the durability half of 2 (cursor persistence, DLQ/replay, deterministic materialization keys),
+> and 5–9.
+
+#### Branch goals
+
+1. **Validate live Proton runtime behavior.** Prove schema creation, Bronze publishing, Silver MV
+   transformation, Golden stream reads, NRT MV deployment, scheduled-task deployment, and
+   `alert_dispatch` subscription against a real Proton instance.
+2. **Land the alert lake prerequisite.** Finish Phase 3B first enough that Proton outputs can be
+   written append-only to DuckDB without touching the mutable app-state SQLite alert scaffold.
+3. **Project accepted built-in content into executable rules.** Convert accepted/built-in detection
+   YAML into executable NRT or scheduled definitions with accepted-version traceability, schedule,
+   lookback, entity mapping, alert materialization mode, and suppression defaults.
+4. **Use Proton scheduled tasks for built-in scheduled detections.** Built-in scheduled detections
+   should compile through the same KQL → RelNode → Proton SQL path and deploy as
+   `ScheduledTaskDdl` artifacts that write to the shared alert-dispatch stream.
+5. **Introduce the mediation daemon behind application contracts.** The daemon should consume
+   scheduled-task output, evaluate NRT MV thresholds, append alert/entity records to the DuckDB
+   lake, and record detection-run metadata without UI or Web code reaching into Proton or storage.
+
+#### Dependency-ordered work packages
+
+| Order | Work package | Scope | Exit criteria |
+|---:|---|---|---|
+| 1 | Proton integration harness | Add opt-in integration-test configuration, container/local connection settings, schema apply smoke, typed Bronze publisher smoke, and alert-dispatch subscriber smoke. | Tests are skipped by default unless Proton settings are present; when enabled, they create medallion streams/MVs, publish/read at least one fixture event, and prove teardown. |
+| 2 | Alert durability and alert lake writer slice | Replace lossy mediation with cursor persistence, deterministic materialization keys, idempotent append-only DuckDB alert lake writes, and DLQ/replay; remove alert writes from app-state SQLite for the detection path; add `AlertEvent`/`AlertEntity` canonical view metadata. | Proton mediation cannot silently lose alerts, duplicate delivery is idempotent, failed payloads are recoverable or queryable in DLQ, and KQL can address alert views through `ApprovedViewCatalog`. |
+| 3 | Operations SQLite split | Move incident-candidate mutable tables out of app-state SQLite into a dedicated operations SQLite connection/options path. | App-state tables no longer include alerts, alert entities, or incident candidates; operations tables migrate independently. |
+| 4 | Executable detection projection | Add projection contract/service from accepted or built-in detection content to executable definitions. Include trigger type, schedule cron, lookback, threshold, entity mappings, materialization mode, suppression defaults, rule hash, and accepted-version/source identity. | Built-in scheduled YAML and NRT definitions produce persisted executable records and diagnostics without deploying directly from UI forms. |
+| 5 | Scheduled built-in deployment | Wire built-in scheduled detections through `ScheduledDetectionService`, `ScheduledTaskDdl`, and `ProtonDetectionDeployer`. | A built-in scheduled detection can be compiled, deployed, retracted, and inspected as Proton task DDL; task output targets `alert_dispatch`. |
+| 6 | NRT threshold materialization | Add daemon loop that enumerates enabled NRT rules, polls their MVs, applies threshold/window policy, fetches deterministic evidence rows, and writes append-only alert records. | Empty, below-threshold, threshold-met, retry, and duplicate-materialization cases have deterministic tests. |
+| 7 | Detection run persistence | Decide append-only lake vs mutable operations state for run lifecycle, then implement run records with execution mode, lookback/window, counts, diagnostics, retry/recovery context, and correlation IDs. | Scheduled and NRT executions create traceable run records linked to alert materialization keys. |
+| 8 | Built-in detection seed/promotion path | Ensure seed/demo detections marked `trigger_type: scheduled` become executable scheduled tasks only after governance acceptance or explicit built-in enablement. | Built-ins do not bypass governance semantics accidentally; deployment state is auditable and reversible. |
+| 9 | Operations read surfaces | Add initial approved KQL read models and minimal `/operations` placeholders for detection runs and alert queue diagnostics. | Operators can verify runs and alerts without direct database access from UI components. |
+
+#### Immediate engineering sequence
+
+- Start with work packages 1 and 2 together: the branch needs live Proton proof, but alert output should
+  not deepen the current SQLite alert debt.
+- Implement work package 4 before broadening scheduled deployment so built-in tasks are generated from
+  accepted executable definitions, not ad-hoc page or seed logic.
+- Treat work packages 5 through 7 as the core NRT capability milestone: scheduled tasks, NRT MV
+  thresholding, alert lake writes, and detection-run records must land as one coherent runtime path.
+- Defer enrichment, suppression execution, candidate correlation, and rich Operations UI until the
+  scheduled/NRT alert loop is stable and queryable.
+
+#### Non-goals for this branch
+
+- Do not reintroduce Quartz or another .NET scheduled query runner for detections.
+- Do not execute detections against DuckDB; DuckDB is the alert lake and historical/hunting engine.
+- Do not store mutable alert status in the DuckDB lake or keep alert upserts in app-state SQLite.
+- Do not let Web/UI components deploy Proton artifacts or write directly to DuckDB/SQLite.
+- Do not implement candidate correlation, triage feedback, or enrichment before deterministic alert
+  materialization and run persistence are in place.
+
 ### Module readiness
 
 | Module | Readiness | Summary |
@@ -251,7 +318,7 @@ Consolidation (done)
        └─ Phase 2: Deduplicate execution (done)
             ├─ Phase 3: Define curated analytics (done)
             │    ├─ Phase 3A: NRT detection foundation (done)
-            │    │    └─ Phase 3B: Alert storage migration to DuckDB lake ← NEXT
+            │    │    └─ Phase 3B: Alert storage migration to DuckDB lake (done)
             │    └─ (feeds Phase 4 promotion readiness)
             └─ Phase 4: Complete executable detection projection
                  └─ Phase 5: Harden operations schema (alerts→lake, incidents→ops SQLite)
