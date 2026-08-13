@@ -89,13 +89,13 @@ internal static class KustoManagementCommandGuard
     public static bool ContainsExecutableCommand(SyntaxNode root) => root.GetDescendants<SyntaxNode>()
         .Any(IsManagementCommandNode);
 
-    private static bool IsManagementCommandNode(SyntaxNode node)
-    {
-        var typeName = node.GetType().Name;
-        return typeName.Equals("CommandBlock", StringComparison.Ordinal)
-            || typeName.Equals("Command", StringComparison.Ordinal)
-            || typeName.Equals("CommandStatement", StringComparison.Ordinal)
-            || typeName.Contains("CommandBlock", StringComparison.Ordinal)
-            || typeName.Contains("CommandStatement", StringComparison.Ordinal);
-    }
+    // Every management-command AST node type in Kusto.Language (Command, CustomCommand,
+    // UnknownCommand, PartialCommand, BadCommand, CommandBlock, CommandWithClause,
+    // CommandWithValueClause, CommandWithPropertyListClause, CommandAndSkippedTokens —
+    // verified against the pinned Kusto.Language package version) contains "Command" in its
+    // type name; no non-command syntax node does. The previous check matched exact/substring
+    // names ("CommandBlock", "Command", "CommandStatement") that no longer correspond to any
+    // real type the parser produces, so this check never actually fired.
+    private static bool IsManagementCommandNode(SyntaxNode node) =>
+        node.GetType().Name.Contains("Command", StringComparison.Ordinal);
 }

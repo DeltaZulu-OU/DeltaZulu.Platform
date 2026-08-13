@@ -799,7 +799,7 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
     }
 
     [TestMethod]
-    [Description("RIGHT SEMI JOIN emitted for RightSemi")]
+    [Description("RightSemi swaps FROM/JOIN sides and uses bare SEMI JOIN — DuckDB has no RIGHT SEMI JOIN syntax")]
     public void Join_RightSemiJoin()
     {
         var node = new JoinNode(
@@ -809,11 +809,12 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
             new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
 
         var sql = _emitter.Emit(node);
-        AssertSqlContains(sql, "RIGHT SEMI JOIN");
+        Assert.DoesNotContain("RIGHT SEMI", sql);
+        AssertSqlContains(sql, "FROM golden.ProcessEvent AS __join_right SEMI JOIN golden.ProcessEvent AS __join_left");
     }
 
     [TestMethod]
-    [Description("RIGHT ANTI JOIN emitted for RightAnti")]
+    [Description("RightAnti swaps FROM/JOIN sides and uses bare ANTI JOIN — DuckDB has no RIGHT ANTI JOIN syntax")]
     public void Join_RightAntiJoin()
     {
         var node = new JoinNode(
@@ -823,7 +824,8 @@ public sealed partial class DuckDbQueryEmitterEdgeCaseTests
             new BinaryScalar(new ColumnRef("DeviceName"), ScalarBinaryOp.Eq, new ColumnRef("DeviceName")));
 
         var sql = _emitter.Emit(node);
-        AssertSqlContains(sql, "RIGHT ANTI JOIN");
+        Assert.DoesNotContain("RIGHT ANTI", sql);
+        AssertSqlContains(sql, "FROM golden.ProcessEvent AS __join_right ANTI JOIN golden.ProcessEvent AS __join_left");
     }
 
     [TestMethod]

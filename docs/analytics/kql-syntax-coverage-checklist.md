@@ -183,10 +183,10 @@ Editor metadata projection is structural only: the same Golden C# contracts used
 - [x] `!~` — case-insensitive inequality → `lower(a) != lower(b)`
 - [x] `between(low .. high)` — `x >= low AND x <= high`
 - [x] `!between(low .. high)` — `NOT(x >= low AND x <= high)`
-- [x] `in (list)` — list RHS is represented as `ListScalar` and emitted as SQL `IN (...)`
-- [x] `!in (list)` — list RHS is represented as `ListScalar` and emitted as SQL `NOT IN (...)`
-- [ ] `in~ (list)` — case-insensitive set membership — *frequency*
-- [ ] `!in~ (list)` — case-insensitive set exclusion — *frequency*
+- [x] `in (list)` — list RHS is represented as `ListScalar` and emitted as SQL `IN (...)`, case-sensitive
+- [x] `!in (list)` — list RHS is represented as `ListScalar` and emitted as SQL `NOT IN (...)`, case-sensitive
+- [x] `in~ (list)` — case-insensitive set membership; both sides wrapped in `tolower()`
+- [x] `!in~ (list)` — case-insensitive set exclusion; both sides wrapped in `tolower()`
 - [ ] `has_any (list)` — *complexity: OR chain of regex word-boundary matches*
 - [ ] `has_all (list)` — *complexity: AND chain of regex word-boundary matches*
 
@@ -414,25 +414,25 @@ Editor metadata projection is structural only: the same Golden C# contracts used
 
 | Status | Count | Meaning |
 |--------|------:|---------|
-| `[x]` MVP | 223 | Direct translation to DuckDB SQL |
+| `[x]` MVP | 225 | Direct translation to DuckDB SQL |
 | `[m]` Metadata | 3 | Side-channel/runtime/UI metadata |
 | `[B]` Blocked | 3 | Deliberately rejected to prevent silent semantic change |
-| `[ ]` Deferred | 91 | Post-MVP, reason annotated |
+| `[ ]` Deferred | 89 | Post-MVP, reason annotated |
 | **In scope** | **320** | |
 | N/A (out of scope) | N/A | Listed in Section 10 and not tracked as checklist rows |
 
-MVP-ready = `[x]` + `[m]` = **226 / 320 (70.6%)**
+MVP-ready = `[x]` + `[m]` = **228 / 320 (71.3%)**
 
 ### Deferred by reason
 
 | Reason | Count | Meaning |
 |--------|------:|---------|
-| *frequency* | 19 | Valid translation exists but rare in hunting queries |
+| *frequency* | 17 | Valid translation exists but rare in hunting queries |
 | *complexity* | 49 | Significant implementation effort or no DuckDB equivalent |
 | *dependency* | 8 | Depends on another deferred capability |
 | *format* | 4 | Requires format/specifier translation tables |
 | *uncategorized* | 11 | Deferred without an explicit reason tag |
-| **Total deferred** | **91** | |
+| **Total deferred** | **89** | |
 
 ### Blocked items (3 total)
 
@@ -447,6 +447,8 @@ All three are semantic safety blocks:
 Scalar `let` was promoted because the translator now emits `LetBindingNode` for scalar bindings and the emitter substitutes scalar references through `_scalarBindings`. Multiple scalar `let` chains are promoted because nested let emission allows earlier scalar bindings to be referenced by later scalar bindings.
 
 `in` and `!in` were promoted because the query model now contains `ListScalar`, the translator builds it from parenthesized expression lists, and the emitter renders SQL `IN (...)` / `NOT IN (...)`.
+
+`in~` and `!in~` were promoted because the translator now reads the Kusto.Language `InExpression` node's `Kind` to distinguish all four of `in`/`!in`/`in~`/`!in~` (they share one AST node type) and wraps both sides in `tolower()` for the case-insensitive `~` variants.
 
 `url_encode`, `url_decode`, `array_concat`, and `array_slice` were promoted because explicit emitter mappings exist in the current code.
 

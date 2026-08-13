@@ -49,6 +49,13 @@ internal sealed partial class DuckDbJoinEmitter
             _context.JoinRightAlias = null;
         }
 
+        // DuckDB has no directional RIGHT SEMI/ANTI JOIN syntax (only bare SEMI/ANTI JOIN,
+        // which keeps rows from whichever table is on the FROM side). KQL's rightsemi/rightanti
+        // keep matching rows from the right input, so those two kinds swap which physical
+        // source sits in the FROM position instead of using a (nonexistent) RIGHT-qualified
+        // keyword. The join-side aliases stay bound to their conceptual join.Left/join.Right
+        // regardless of physical FROM/JOIN position, so the predicate emitted above is
+        // unaffected by the swap.
         var joinKind = join.Kind switch {
             JoinKind.Inner => "INNER JOIN",
             JoinKind.LeftOuter => "LEFT JOIN",
@@ -56,10 +63,15 @@ internal sealed partial class DuckDbJoinEmitter
             JoinKind.FullOuter => "FULL OUTER JOIN",
             JoinKind.LeftSemi => "SEMI JOIN",
             JoinKind.LeftAnti => "ANTI JOIN",
-            JoinKind.RightSemi => "RIGHT SEMI JOIN",
-            JoinKind.RightAnti => "RIGHT ANTI JOIN",
+            JoinKind.RightSemi => "SEMI JOIN",
+            JoinKind.RightAnti => "ANTI JOIN",
             _ => throw new NotSupportedException($"Unsupported join kind: {join.Kind}")
         };
+
+        var swapSides = join.Kind is JoinKind.RightSemi or JoinKind.RightAnti;
+        var (fromSource, fromAlias, joinSource, joinAlias) = swapSides
+            ? (rightSource, rightAlias, leftSource, leftAlias)
+            : (leftSource, leftAlias, rightSource, rightAlias);
 
         var selectList = "*";
         if (join is { Flavor: JoinFlavor.Lookup, Kind: JoinKind.LeftOuter }
@@ -73,7 +85,7 @@ internal sealed partial class DuckDbJoinEmitter
         }
 
         var stage = _context.Stages.NextStage();
-        _context.Stages.AddStage(stage, $"SELECT {selectList} FROM {leftSource} AS {leftAlias} {joinKind} {rightSource} AS {rightAlias} ON {pred}");
+        _context.Stages.AddStage(stage, $"SELECT {selectList} FROM {fromSource} AS {fromAlias} {joinKind} {joinSource} AS {joinAlias} ON {pred}");
         return (stage, null);
     }
 

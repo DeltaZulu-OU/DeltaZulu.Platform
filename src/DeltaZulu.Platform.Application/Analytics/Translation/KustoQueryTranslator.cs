@@ -637,9 +637,8 @@ internal sealed class KustoQueryTranslator
             SyntaxKind.NotStartsWithCsExpression => ScalarBinaryOp.NotStartsWithCs,
             SyntaxKind.EndsWithCsExpression => ScalarBinaryOp.EndsWithCs,
             SyntaxKind.NotEndsWithCsExpression => ScalarBinaryOp.NotEndsWithCs,
-            // In
-            SyntaxKind.InExpression => ScalarBinaryOp.In,
-            SyntaxKind.NotInExpression => ScalarBinaryOp.NotIn,
+            // In/!in/in~/!in~ are represented by the Kusto.Language InExpression node type,
+            // not BinaryExpression, so they never reach this switch — see TranslateInExpression.
             // Has — word-boundary match (approximated via regex \b in DuckDB)
             SyntaxKind.HasExpression => ScalarBinaryOp.Has,
             SyntaxKind.NotHasExpression => ScalarBinaryOp.NotHas,
@@ -666,16 +665,6 @@ internal sealed class KustoQueryTranslator
         {
             left = new FunctionCall("tolower", [left]);
             right = new FunctionCall("tolower", [right]);
-        }
-
-        if (op == ScalarBinaryOp.In || op == ScalarBinaryOp.NotIn)
-        {
-            // Expect right to be a ListScalar
-            if (right is ListScalar list)
-            {
-                return new BinaryScalar(left, op, list);
-            }
-            // Fallback: use right as-is (may be a subquery or other expression)
         }
 
         return new BinaryScalar(left, op, right);
@@ -774,7 +763,22 @@ internal sealed class KustoQueryTranslator
             .Select(TranslateScalarExpr)
             .ToList();
 
-        return new BinaryScalar(left, ScalarBinaryOp.In, new ListScalar(items));
+        // Kusto.Language represents in/in~/!in/!in~ as this same InExpression node type,
+        // distinguished only by Kind — it does not surface as separate BinaryExpression
+        // kinds. `in`/`!in` are case-sensitive (KQL default); `in~`/`!in~` are
+        // case-insensitive — the reverse of the contains/has convention, where the bare
+        // form is case-insensitive and the _cs suffix is case-sensitive.
+        var op = expr.Kind is SyntaxKind.NotInExpression or SyntaxKind.NotInCsExpression
+            ? ScalarBinaryOp.NotIn
+            : ScalarBinaryOp.In;
+
+        if (expr.Kind is SyntaxKind.InCsExpression or SyntaxKind.NotInCsExpression)
+        {
+            left = new FunctionCall("tolower", [left]);
+            items = items.Select(item => (ScalarExpr)new FunctionCall("tolower", [item])).ToList();
+        }
+
+        return new BinaryScalar(left, op, new ListScalar(items));
     }
 
     private ScalarExpr TranslateScalar(SyntaxElement? elem)

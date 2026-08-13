@@ -140,6 +140,21 @@ public sealed class ProtonSqlQueryEmitterTests
     }
 
     [TestMethod]
+    public void Emit_SplitWithRequestedIndex_SelectsSingleElement()
+    {
+        var node = new ProjectNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("Part", new FunctionCall("split", [
+                new ColumnRef("FileName"),
+                new LiteralScalar(".", LiteralKind.String),
+                new LiteralScalar(1L, LiteralKind.Long)]))]);
+
+        var sql = _emitter.Emit(node).Sql;
+
+        AssertSqlContains(sql, "splitByString('.', FileName)[(1) + 1] AS Part");
+    }
+
+    [TestMethod]
     public void Emit_HasWithDynamicRightHandSide_UsesValidThreeArgRegexReplace()
     {
         var node = new ProjectNode(

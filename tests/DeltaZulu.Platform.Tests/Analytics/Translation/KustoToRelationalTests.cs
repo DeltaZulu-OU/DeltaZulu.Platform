@@ -86,6 +86,62 @@ public sealed class KustoToRelationalTests
     }
 
     [TestMethod]
+    [Description("in (list) → BinaryScalar with ScalarBinaryOp.In, case-sensitive (no tolower wrap)")]
+    public void Filter_In_IsCaseSensitive()
+    {
+        var (result, diag) = Translate(
+            """ProcessEvent | where FileName in ("a.exe", "b.exe") """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var filter = AssertIs<FilterNode>(result);
+        var binary = AssertIs<BinaryScalar>(filter.Predicate);
+        Assert.AreEqual(ScalarBinaryOp.In, binary.Op);
+        AssertIs<ColumnRef>(binary.Left);
+    }
+
+    [TestMethod]
+    [Description("!in (list) → BinaryScalar with ScalarBinaryOp.NotIn, not In")]
+    public void Filter_NotIn_ProducesNotIn()
+    {
+        var (result, diag) = Translate(
+            """ProcessEvent | where FileName !in ("a.exe", "b.exe") """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var filter = AssertIs<FilterNode>(result);
+        var binary = AssertIs<BinaryScalar>(filter.Predicate);
+        Assert.AreEqual(ScalarBinaryOp.NotIn, binary.Op);
+    }
+
+    [TestMethod]
+    [Description("in~ (list) → case-insensitive In, both sides wrapped in tolower()")]
+    public void Filter_InCs_IsCaseInsensitive()
+    {
+        var (result, diag) = Translate(
+            """ProcessEvent | where FileName in~ ("A.EXE", "B.EXE") """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var filter = AssertIs<FilterNode>(result);
+        var binary = AssertIs<BinaryScalar>(filter.Predicate);
+        Assert.AreEqual(ScalarBinaryOp.In, binary.Op);
+        var left = AssertIs<FunctionCall>(binary.Left);
+        Assert.AreEqual("tolower", left.Name);
+        var list = AssertIs<ListScalar>(binary.Right);
+        var firstItem = AssertIs<FunctionCall>(list.Items[0]);
+        Assert.AreEqual("tolower", firstItem.Name);
+    }
+
+    [TestMethod]
+    [Description("!in~ (list) → case-insensitive NotIn")]
+    public void Filter_NotInCs_IsCaseInsensitiveNotIn()
+    {
+        var (result, diag) = Translate(
+            """ProcessEvent | where FileName !in~ ("A.EXE", "B.EXE") """);
+        Assert.IsFalse(diag.HasErrors, string.Join("\n", diag.All));
+        var filter = AssertIs<FilterNode>(result);
+        var binary = AssertIs<BinaryScalar>(filter.Predicate);
+        Assert.AreEqual(ScalarBinaryOp.NotIn, binary.Op);
+        var left = AssertIs<FunctionCall>(binary.Left);
+        Assert.AreEqual("tolower", left.Name);
+    }
+
+    [TestMethod]
     [Description("where with ago() time comparison")]
     public void Filter_AgoComparison()
     {

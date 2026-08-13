@@ -204,7 +204,117 @@ public sealed partial class DuckDbQueryEmitterTests
 
         var sql = _emitter.Emit(node);
         AssertSqlContains(sql, "(json_extract(AdditionalFields, concat('$.', 'User')) IS NOT NULL) AS hask");
-        AssertSqlContains(sql, "list_slice(Tags, (0) + 1, (2) - (0)) AS slice");
+        AssertSqlContains(sql, "list_slice(Tags, (CASE WHEN (0) >= 0 THEN (0) + 1 ELSE (0) END), (CASE WHEN (2) >= 0 THEN (2) + 1 ELSE (2) END)) AS slice");
+    }
+
+    [TestMethod]
+    [Description("arg_max/arg_min swap KQL (maximize, return) order into DuckDB's (return, maximize) order")]
+    public void Emit_Aggregate_ArgMaxArgMin_SwapsArgumentOrder()
+    {
+        var node = new AggregateNode(
+            new ScanNode("ProcessEvent"),
+            Aggregates: [
+                new ProjectionExpr("latest", new FunctionCall("arg_max", [new ColumnRef("Timestamp"), new ColumnRef("FileName")])),
+                new ProjectionExpr("earliest", new FunctionCall("arg_min", [new ColumnRef("Timestamp"), new ColumnRef("FileName")])),
+            ],
+            GroupBy: [new ColumnRef("DeviceName")]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "arg_max(FileName, Timestamp) AS latest");
+        AssertSqlContains(sql, "arg_min(FileName, Timestamp) AS earliest");
+    }
+
+    [TestMethod]
+    [Description("substring(source, start) 2-arg form emits DuckDB's 2-arg substring instead of indexing a missing 3rd argument")]
+    public void Emit_Func_Substring_TwoArgForm()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("tail", new FunctionCall("substring", [new ColumnRef("FileName"), new LiteralScalar(2, LiteralKind.Int)]))]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "substring(FileName, (2) + 1) AS tail");
+    }
+
+    [TestMethod]
+    [Description("split(source, delim, index) selects a single element instead of ignoring the index")]
+    public void Emit_Func_Split_WithRequestedIndex()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("part", new FunctionCall("split",
+                [new ColumnRef("FileName"), new LiteralScalar(".", LiteralKind.String), new LiteralScalar(1, LiteralKind.Int)]))]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "list_extract(string_split(FileName, '.'), (1) + 1) AS part");
+    }
+
+    [TestMethod]
+    [Description("indexof(source, match, start) honors the start offset instead of always searching from 0")]
+    public void Emit_Func_IndexOf_WithStart()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("idx", new FunctionCall("indexof",
+                [new ColumnRef("FileName"), new LiteralScalar("a", LiteralKind.String), new LiteralScalar(3, LiteralKind.Int)]))]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql,
+            "(CASE WHEN strpos(substring(FileName, (3) + 1), 'a') = 0 THEN -1 ELSE (strpos(substring(FileName, (3) + 1), 'a') - 1 + (3)) END) AS idx");
+    }
+
+    [TestMethod]
+    [Description("indexof() with length/occurrence arguments is rejected rather than silently ignored")]
+    public void Emit_Func_IndexOf_WithLength_Throws()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("idx", new FunctionCall("indexof",
+                [new ColumnRef("FileName"), new LiteralScalar("a", LiteralKind.String),
+                 new LiteralScalar(0, LiteralKind.Int), new LiteralScalar(5, LiteralKind.Int)]))]);
+
+        Assert.ThrowsExactly<NotSupportedException>(() => _emitter.Emit(node));
+    }
+
+    [TestMethod]
+    [Description("countof(source, search, \"regex\") counts regex matches instead of treating the pattern as a literal")]
+    public void Emit_Func_CountOf_RegexKind()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("c", new FunctionCall("countof",
+                [new ColumnRef("FileName"), new LiteralScalar("[0-9]", LiteralKind.String), new LiteralScalar("regex", LiteralKind.String)]))]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "length(regexp_extract_all(FileName, '[0-9]')) AS c");
+    }
+
+    [TestMethod]
+    [Description("extract(regex, group, source, typeof(long)) casts the result instead of always returning VARCHAR")]
+    public void Emit_Func_Extract_WithTypeLiteral()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("pid", new FunctionCall("extract",
+                [new LiteralScalar(@"pid=(\d+)", LiteralKind.String), new LiteralScalar(1, LiteralKind.Int),
+                 new ColumnRef("CommandLine"), new LiteralScalar("typeof(long)", LiteralKind.String)]))]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "TRY_CAST(NULLIF(regexp_extract(CommandLine,");
+        AssertSqlContains(sql, "AS BIGINT) AS pid");
+    }
+
+    [TestMethod]
+    [Description("array_concat with 3+ arrays folds all of them instead of dropping everything past the first two")]
+    public void Emit_Func_ArrayConcat_Variadic()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("combined", new FunctionCall("array_concat",
+                [new ColumnRef("A"), new ColumnRef("B"), new ColumnRef("C")]))]);
+
+        var sql = _emitter.Emit(node);
+        AssertSqlContains(sql, "list_concat(list_concat(A, B), C) AS combined");
     }
 
     [TestMethod]
@@ -293,7 +403,7 @@ public sealed partial class DuckDbQueryEmitterTests
         AssertSqlContains(sql, "json_merge_patch(A, B) AS bm");
         AssertSqlContains(sql, "CASE WHEN json_valid(CAST(Tags AS VARCHAR)) THEN json_array_length(Tags) ELSE length(Tags) END AS alen");
         AssertSqlContains(sql, "list_concat(Tags, MoreTags) AS acon");
-        AssertSqlContains(sql, "list_slice(Tags, (1) + 1, (3) - (1)) AS aslice");
+        AssertSqlContains(sql, "list_slice(Tags, (CASE WHEN (1) >= 0 THEN (1) + 1 ELSE (1) END), (CASE WHEN (3) >= 0 THEN (3) + 1 ELSE (3) END)) AS aslice");
         AssertSqlContains(sql, "power(2, 3) AS e2");
         AssertSqlContains(sql, "power(10, 2) AS e10");
     }

@@ -741,6 +741,7 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
                 "substring" => $"substring({args[0]}, ({args[1]}) + 1, {args[2]})",
                 "replace_string" => $"replace({args[0]}, {args[1]}, {args[2]})",
                 "replace_regex" => $"replaceRegexpAll({args[0]}, {args[1]}, {args[2]})",
+                "split" when args.Count >= 3 => $"splitByString({args[1]}, {args[0]})[({args[2]}) + 1]",
                 "split" => $"splitByString({args[1]}, {args[0]})",
                 "indexof" => $"(position({args[0]}, {args[1]}) - 1)",
                 "reverse" => $"reverse({args[0]})",

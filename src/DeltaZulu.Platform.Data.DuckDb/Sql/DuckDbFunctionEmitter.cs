@@ -28,15 +28,21 @@ internal sealed class DuckDbFunctionEmitter
             "strcat" => $"concat({string.Join(", ", args)})",
             "strcat_array" => $"array_to_string({args[0]}, {args[1]})",
             "strcat_delim" => $"concat_ws({string.Join(", ", args)})",
+            "substring" when args.Count == 2 => $"substring({args[0]}, ({args[1]}) + 1)",
             "substring" => $"substring({args[0]}, ({args[1]}) + 1, {args[2]})",
             "replace_string" => $"replace({args[0]}, {args[1]}, {args[2]})",
             "replace_regex" => $"regexp_replace({args[0]}, {args[1]}, {args[2]}, 'g')",
+            "split" when args.Count >= 3 => $"list_extract(string_split({args[0]}, {args[1]}), ({args[2]}) + 1)",
             "split" => $"string_split({args[0]}, {args[1]})",
+            "indexof" when args.Count >= 4 => throw new NotSupportedException(
+                "indexof() with length/occurrence arguments is not supported."),
+            "indexof" when args.Count == 3 => EmitIndexOfWithStart(args),
             "indexof" => $"(strpos({args[0]}, {args[1]}) - 1)",
             "reverse" => $"reverse({args[0]})",
             "trim" => $"regexp_replace(regexp_replace({args[1]}, concat('^(', {args[0]}, ')'), ''), concat('(', {args[0]}, ')$'), '')",
             "trim_start" => $"regexp_replace({args[1]}, concat('^(', {args[0]}, ')'), '')",
             "trim_end" => $"regexp_replace({args[1]}, concat('(', {args[0]}, ')$'), '')",
+            "extract" when args.Count == 4 => EmitExtractWithType(fn.Args, args),
             "extract" => $"COALESCE(regexp_extract({args[2]}, {args[0]}, CAST({args[1]} AS INTEGER)), '')",
             "parse_path" => $"""
 to_json(
@@ -90,6 +96,7 @@ to_json(
             "decimal" => $"CAST({args[0]} AS DECIMAL)",
             "toguid" => $"CAST({args[0]} AS VARCHAR)",
             "guid" => $"TRY_CAST({args[0]} AS UUID)",
+            "countof" when args.Count >= 3 => EmitCountOf(fn.Args, args),
             "countof" => $"((length({args[0]}) - length(replace({args[0]}, {args[1]}, ''))) / nullif(length({args[1]}), 0))",
             "parse_ipv4" => $"CASE WHEN regexp_full_match({args[0]}, '^((25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])\\.){{3}}(25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])$') THEN (CAST(split_part({args[0]}, '.', 1) AS BIGINT) * 16777216 + CAST(split_part({args[0]}, '.', 2) AS BIGINT) * 65536 + CAST(split_part({args[0]}, '.', 3) AS BIGINT) * 256 + CAST(split_part({args[0]}, '.', 4) AS BIGINT)) ELSE NULL END",
             "base64_encode_tostring" => $"to_base64(CAST({args[0]} AS BLOB))",
@@ -120,8 +127,8 @@ to_json(
             "bag_has_key" => $"(json_extract({args[0]}, concat('$.', {args[1]})) IS NOT NULL)",
             "bag_merge" => $"json_merge_patch({args[0]}, {args[1]})",
             "array_length" => $"CASE WHEN json_valid(CAST({args[0]} AS VARCHAR)) THEN json_array_length({args[0]}) ELSE length({args[0]}) END",
-            "array_concat" => $"list_concat({args[0]}, {args[1]})",
-            "array_slice" => $"list_slice({args[0]}, ({args[1]}) + 1, ({args[2]}) - ({args[1]}))",
+            "array_concat" when args.Count >= 1 => args.Aggregate((a, b) => $"list_concat({a}, {b})"),
+            "array_slice" => EmitArraySlice(args),
 
             // Math
             "abs" => $"abs({args[0]})",
@@ -159,8 +166,12 @@ to_json(
             "max" => $"max({args[0]})",
             "dcount" => $"count(DISTINCT {args[0]})",
             "dcountif" => $"count(DISTINCT {args[0]}) FILTER (WHERE {args[1]})",
-            "arg_min" => $"arg_min({string.Join(", ", args)})",
-            "arg_max" => $"arg_max({string.Join(", ", args)})",
+            // KQL arg_min(ExprToMinimize, ExprToReturn) / arg_max(ExprToMaximize, ExprToReturn):
+            // the first argument is the expression to optimize, the second is the expression
+            // to return. DuckDB's arg_min/arg_max(val, arg) is the other way round — it returns
+            // val from the row where arg is extreme — so the two arguments must be swapped.
+            "arg_min" when args.Count == 2 => $"arg_min({args[1]}, {args[0]})",
+            "arg_max" when args.Count == 2 => $"arg_max({args[1]}, {args[0]})",
             "make_set" when args.Count == 1 => $"list(DISTINCT {args[0]})",
             "make_set" => $"list_slice(list(DISTINCT {args[0]}), 1, {args[1]})",
             "make_list" when args.Count == 1 => $"list({args[0]})",
@@ -264,6 +275,77 @@ to_json(
         {
             throw new NotSupportedException($"{functionName}() expects exactly {expected} argument(s).");
         }
+    }
+
+    /// <summary>
+    /// KQL indexof(source, lookup, start) searches starting at the given 0-based position.
+    /// strpos() has no start-offset parameter, so search within the substring from that
+    /// position and shift the result back into source-relative coordinates. strpos() returns
+    /// 0 when there is no match, which must map to KQL's -1 sentinel rather than (0 - 1 + start).
+    /// </summary>
+    private static string EmitIndexOfWithStart(List<string> args)
+    {
+        var searchFrom = $"substring({args[0]}, ({args[2]}) + 1)";
+        var pos = $"strpos({searchFrom}, {args[1]})";
+        return $"(CASE WHEN {pos} = 0 THEN -1 ELSE ({pos} - 1 + ({args[2]})) END)";
+    }
+
+    /// <summary>
+    /// KQL countof(source, search, kind) — kind is "normal" (literal substring count, the
+    /// default) or "regex" (non-overlapping regex match count). Only a literal kind argument
+    /// can select the regex path since it changes which DuckDB function is emitted.
+    /// </summary>
+    private static string EmitCountOf(IReadOnlyList<ScalarExpr> rawArgs, List<string> args)
+    {
+        if (rawArgs[2] is LiteralScalar { Kind: LiteralKind.String, Value: string kind }
+            && kind.Equals("regex", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"length(regexp_extract_all({args[0]}, {args[1]}))";
+        }
+
+        return $"((length({args[0]}) - length(replace({args[0]}, {args[1]}, ''))) / nullif(length({args[1]}), 0))";
+    }
+
+    /// <summary>
+    /// KQL extract(regex, captureGroup, source, typeLiteral) casts the extracted string to the
+    /// requested type. Only literal typeof(...) arguments can select a cast target; anything
+    /// else falls back to the untyped string result rather than guessing.
+    /// </summary>
+    private static string EmitExtractWithType(IReadOnlyList<ScalarExpr> rawArgs, List<string> args)
+    {
+        var extracted = $"regexp_extract({args[2]}, {args[0]}, CAST({args[1]} AS INTEGER))";
+        if (rawArgs[3] is not LiteralScalar { Kind: LiteralKind.String, Value: string typeText })
+        {
+            return $"COALESCE({extracted}, '')";
+        }
+
+        var castType = typeText.ToLowerInvariant() switch {
+            var t when t.Contains("bool") => "BOOLEAN",
+            var t when t.Contains("long") || t.Contains("int") => "BIGINT",
+            var t when t.Contains("real") || t.Contains("double") => "DOUBLE",
+            var t when t.Contains("datetime") => "TIMESTAMP",
+            var t when t.Contains("guid") => "UUID",
+            _ => null
+        };
+
+        // NULLIF avoids trying to cast an empty (no-match) string to a non-string type.
+        return castType is null
+            ? $"COALESCE({extracted}, '')"
+            : $"TRY_CAST(NULLIF({extracted}, '') AS {castType})";
+    }
+
+    /// <summary>
+    /// KQL array_slice(array, start, end) is 0-based with inclusive bounds on both ends;
+    /// negative indices count from the end (-1 = last element). DuckDB's list_slice(list,
+    /// begin, end) is 1-based inclusive for non-negative indices but already treats negative
+    /// indices as "from the end" the same way KQL does, so only non-negative bounds need the
+    /// +1 shift.
+    /// </summary>
+    private static string EmitArraySlice(List<string> args)
+    {
+        var start = $"(CASE WHEN ({args[1]}) >= 0 THEN ({args[1]}) + 1 ELSE ({args[1]}) END)";
+        var end = $"(CASE WHEN ({args[2]}) >= 0 THEN ({args[2]}) + 1 ELSE ({args[2]}) END)";
+        return $"list_slice({args[0]}, {start}, {end})";
     }
 
     /// <summary>
