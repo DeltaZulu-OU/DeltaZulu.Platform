@@ -358,8 +358,10 @@
     private readonly Queue<string> _snackbarKeys = new();
     private int _chartRenderKey;
     private ElementReference _chartHost;
-    private string _chartWidth = "320px";
-    private string _chartHeight = "320px";
+    private const int MinimumChartWidthPx = 320;
+    private const int MinimumChartHeightPx = 480;
+    private string _chartWidth = $"{MinimumChartWidthPx}px";
+    private string _chartHeight = $"{MinimumChartHeightPx}px";
     private int _lastMeasuredChartWidthPx;
     private int _lastMeasuredChartHeightPx;
     private bool _editorInitialized;
@@ -980,8 +982,8 @@
         var rect = await _chartHost.GetBoundingClientRectAsync(JS);
         var width = rect.Width;
         var height = rect.Height;
-        var widthPx = Math.Max(320, (int)Math.Round(width, MidpointRounding.AwayFromZero));
-        var heightPx = Math.Max(320, (int)Math.Round(height, MidpointRounding.AwayFromZero));
+        var widthPx = Math.Max(MinimumChartWidthPx, (int)Math.Round(width, MidpointRounding.AwayFromZero));
+        var heightPx = Math.Max(MinimumChartHeightPx, (int)Math.Round(height, MidpointRounding.AwayFromZero));
         if (widthPx == _lastMeasuredChartWidthPx && heightPx == _lastMeasuredChartHeightPx)
         {
             return;

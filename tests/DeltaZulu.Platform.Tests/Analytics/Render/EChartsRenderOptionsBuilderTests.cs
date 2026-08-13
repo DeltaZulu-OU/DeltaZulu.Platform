@@ -28,6 +28,16 @@ public sealed class EChartsRenderOptionsBuilderTests
     }
 
     [TestMethod]
+    public void Build_Piechart_HidesInternalLegendToAvoidCanvasOverlap()
+    {
+        var builder = new EChartsRenderOptionsBuilder();
+        var options = builder.Build(CreateChart(legend: null, kind: RenderKind.Piechart));
+
+        Assert.IsNotNull(options.Legend);
+        Assert.IsFalse(options.Legend.Show);
+    }
+
+    [TestMethod]
     public void Build_FallbackChart_ReturnsEmptyOptions()
     {
         var builder = new EChartsRenderOptionsBuilder();
@@ -48,7 +58,7 @@ public sealed class EChartsRenderOptionsBuilderTests
         Assert.IsNotNull(options);
     }
 
-    private static RenderChartModel CreateChart(string? legend)
+    private static RenderChartModel CreateChart(string? legend, RenderKind kind = RenderKind.Barchart)
         => new(
             true,
             string.Empty,
@@ -61,5 +71,5 @@ public sealed class EChartsRenderOptionsBuilderTests
             3,
             legend,
             false,
-            RenderKind.Barchart);
+            kind);
 }

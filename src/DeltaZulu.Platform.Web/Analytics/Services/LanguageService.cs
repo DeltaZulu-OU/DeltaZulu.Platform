@@ -1,3 +1,4 @@
+using DeltaZulu.Platform.Application.Analytics.Rendering.Directives;
 using DeltaZulu.Platform.Application.Analytics.Translation;
 using DeltaZulu.Platform.Domain.Analytics.Catalog;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
@@ -11,17 +12,20 @@ public sealed partial class LanguageService : IAsyncDisposable
     private readonly IJSRuntime _jsRuntime;
     private readonly ILogger<LanguageService> _logger;
     private readonly ApprovedViewCatalog _catalog;
+    private readonly IRenderDirectiveParser _renderDirectiveParser;
     private DotNetObjectReference<EditorCallbackBridge>? _callbackRef;
     private string? _containerId;
 
     public LanguageService(
         IJSRuntime jsRuntime,
         ILogger<LanguageService> logger,
-        ApprovedViewCatalog catalog)
+        ApprovedViewCatalog catalog,
+        IRenderDirectiveParser renderDirectiveParser)
     {
         _jsRuntime = jsRuntime;
         _logger = logger;
         _catalog = catalog;
+        _renderDirectiveParser = renderDirectiveParser ?? throw new ArgumentNullException(nameof(renderDirectiveParser));
     }
 
     public async Task InitializeKqlEditorAsync(
@@ -95,9 +99,17 @@ public sealed partial class LanguageService : IAsyncDisposable
             return [];
         }
 
+        var parsed = _renderDirectiveParser.Parse(queryText);
+        var queryTextToValidate = parsed.QueryTextWithoutRender;
+
+        if (string.IsNullOrWhiteSpace(queryTextToValidate))
+        {
+            return [];
+        }
+
         var diagnostics = new DiagnosticBag();
         var translator = new KustoToRelational(_catalog, diagnostics);
-        _ = translator.Translate(queryText);
+        _ = translator.Translate(queryTextToValidate);
 
         return diagnostics.All
             .Where(diagnostic => diagnostic.IsError)
