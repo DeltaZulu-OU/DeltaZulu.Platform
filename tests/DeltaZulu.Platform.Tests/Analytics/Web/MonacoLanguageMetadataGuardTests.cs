@@ -30,6 +30,31 @@ public sealed class MonacoLanguageMetadataGuardTests
     }
 
     [TestMethod]
+    public void MonacoEditor_WiresDebouncedServerSideValidationMarkers()
+    {
+        var source = ReadRepositorySource("src", "DeltaZulu.Platform.Web", "wwwroot", "js", "monaco.js");
+
+        Assert.Contains("const scheduleValidation = (editor, dotNetRef) =>", source);
+        Assert.Contains("setTimeout(async () =>", source);
+        Assert.Contains("dotNetRef.invokeMethodAsync('ValidateFromEditor', queryText)", source);
+        Assert.Contains("diagnostics.map((diagnostic) => diagnosticToMarker(model, diagnostic))", source);
+        Assert.Contains("monaco.editor.setModelMarkers(model, 'kql-validation', markers)", source);
+        Assert.Contains("scheduleValidation(editor, dotNetRef);", source);
+    }
+
+    [TestMethod]
+    public void LanguageService_ExposesValidationCallbackToExistingEditorBridge()
+    {
+        var source = ReadRepositorySource("src", "DeltaZulu.Platform.Web", "Analytics", "Services", "LanguageService.cs");
+
+        Assert.Contains("DotNetObjectReference.Create(new EditorCallbackBridge(runCommand, ValidateEditorQuery))", source);
+        Assert.Contains("public IReadOnlyList<EditorDiagnosticMarker> ValidateEditorQuery(string queryText)", source);
+        Assert.Contains("[JSInvokable]", source);
+        Assert.Contains("public IReadOnlyList<EditorDiagnosticMarker> ValidateFromEditor(string queryText)", source);
+        Assert.Contains("var translator = new KustoToRelational(_catalog, diagnostics);", source);
+    }
+
+    [TestMethod]
     public void MonacoThemeLoader_UsesPlatformStaticAssetPathForThemeFallback()
     {
         var source = ReadRepositorySource("src", "DeltaZulu.Platform.Web", "wwwroot", "js", "monaco-theme-loader.js");

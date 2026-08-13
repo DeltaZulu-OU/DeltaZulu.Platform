@@ -1,3 +1,6 @@
+using DeltaZulu.Platform.Application.Analytics.Translation;
+using DeltaZulu.Platform.Domain.Analytics.Catalog;
+using DeltaZulu.Platform.Domain.Analytics.Policy;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 using Microsoft.JSInterop;
 
@@ -7,13 +10,18 @@ public sealed partial class LanguageService : IAsyncDisposable
 {
     private readonly IJSRuntime _jsRuntime;
     private readonly ILogger<LanguageService> _logger;
+    private readonly ApprovedViewCatalog _catalog;
     private DotNetObjectReference<EditorCallbackBridge>? _callbackRef;
     private string? _containerId;
 
-    public LanguageService(IJSRuntime jsRuntime, ILogger<LanguageService> logger)
+    public LanguageService(
+        IJSRuntime jsRuntime,
+        ILogger<LanguageService> logger,
+        ApprovedViewCatalog catalog)
     {
         _jsRuntime = jsRuntime;
         _logger = logger;
+        _catalog = catalog;
     }
 
     public async Task InitializeKqlEditorAsync(
@@ -77,7 +85,24 @@ public sealed partial class LanguageService : IAsyncDisposable
     private void ResetCallback(Func<Task> runCommand)
     {
         _callbackRef?.Dispose();
-        _callbackRef = DotNetObjectReference.Create(new EditorCallbackBridge(runCommand));
+        _callbackRef = DotNetObjectReference.Create(new EditorCallbackBridge(runCommand, ValidateEditorQuery));
+    }
+
+    public IReadOnlyList<EditorDiagnosticMarker> ValidateEditorQuery(string queryText)
+    {
+        if (string.IsNullOrWhiteSpace(queryText))
+        {
+            return [];
+        }
+
+        var diagnostics = new DiagnosticBag();
+        var translator = new KustoToRelational(_catalog, diagnostics);
+        _ = translator.Translate(queryText);
+
+        return diagnostics.All
+            .Where(diagnostic => diagnostic.IsError)
+            .Select(EditorDiagnosticMarker.FromDiagnostic)
+            .ToArray();
     }
 
     private async ValueTask TryInvokeVoidAsync(string identifier, string operation, params object?[]? args)
@@ -104,13 +129,33 @@ public sealed partial class LanguageService : IAsyncDisposable
     private sealed class EditorCallbackBridge
     {
         private readonly Func<Task> _runCommand;
+        private readonly Func<string, IReadOnlyList<EditorDiagnosticMarker>> _validateCommand;
 
-        public EditorCallbackBridge(Func<Task> runCommand)
+        public EditorCallbackBridge(
+            Func<Task> runCommand,
+            Func<string, IReadOnlyList<EditorDiagnosticMarker>> validateCommand)
         {
             _runCommand = runCommand;
+            _validateCommand = validateCommand;
         }
 
         [JSInvokable]
         public Task RunFromEditor() => _runCommand();
+
+        [JSInvokable]
+        public IReadOnlyList<EditorDiagnosticMarker> ValidateFromEditor(string queryText) => _validateCommand(queryText);
+    }
+
+    public sealed record EditorDiagnosticMarker(
+        string Message,
+        string Severity,
+        int? TextStart,
+        int? TextLength)
+    {
+        public static EditorDiagnosticMarker FromDiagnostic(QueryDiagnostic diagnostic) => new(
+            diagnostic.Message,
+            diagnostic.Severity.ToString(),
+            diagnostic.TextStart,
+            diagnostic.TextLength);
     }
 }
