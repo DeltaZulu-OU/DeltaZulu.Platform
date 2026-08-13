@@ -30,6 +30,14 @@ public sealed class MonacoLanguageMetadataGuardTests
     }
 
     [TestMethod]
+    public void MonacoThemeLoader_UsesPlatformStaticAssetPathForThemeFallback()
+    {
+        var source = ReadRepositorySource("src", "DeltaZulu.Platform.Web", "wwwroot", "js", "monaco-theme-loader.js");
+        Assert.Contains("_content/DeltaZulu.Platform.Web/js/monaco-themes/atom-one-light.json", source);
+        Assert.DoesNotContain("_content/DeltaZulu.Hunting.Web/js/monaco-themes/atom-one-light.json", source);
+    }
+
+    [TestMethod]
     public void HelperDrawerInsert_ReplacesEditorContentsInsteadOfCursorInsertion()
     {
         var source = ReadRepositorySource("src", "DeltaZulu.Platform.Web", "Analytics", "Pages", "Index.razor");
