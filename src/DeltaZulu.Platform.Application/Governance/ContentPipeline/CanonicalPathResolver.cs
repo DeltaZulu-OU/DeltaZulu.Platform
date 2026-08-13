@@ -82,6 +82,22 @@ public static class CanonicalPathResolver
     }
 
     /// <summary>
+    /// Converts a repository-relative accepted-content path to its logical package path,
+    /// extracting the detection slug from the given <paramref name="detectionPrefix"/>
+    /// (e.g. <c>detections/anomalous-sign-in</c>). Returns <c>null</c> when the path belongs
+    /// to another detection.
+    /// </summary>
+    public static string? TryGetLogicalPathFromPrefix(string detectionPrefix, string repositoryPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(detectionPrefix);
+        const string detectionsRoot = "detections/";
+        var detectionSlug = detectionPrefix.StartsWith(detectionsRoot, StringComparison.Ordinal)
+            ? detectionPrefix[detectionsRoot.Length..]
+            : detectionPrefix;
+        return TryGetLogicalPath(detectionSlug, repositoryPath);
+    }
+
+    /// <summary>
     /// Given a repository-relative path, extracts the detection slug if it lives under
     /// <c>detections/</c>. Returns <c>null</c> for paths outside that tree.
     /// </summary>
