@@ -8,6 +8,7 @@ public sealed class QueryStreamResult
     public IReadOnlyList<string> DebugTrace { get; init; } = [];
     public DiagnosticBag Diagnostics { get; init; } = new();
     public string? GeneratedSql { get; init; }
+    public string? PlannerMermaid { get; init; }
     public string? PlannerStatsJson { get; init; }
     public int RowCount { get; init; }
     public string? SqlShapeStatsJson { get; init; }
@@ -20,12 +21,14 @@ public sealed class QueryStreamResult
         string? plannerStatsJson,
         string? sqlShapeStatsJson,
         List<string>? debugTrace,
-        DiagnosticBag diagnostics) => new() {
+        DiagnosticBag diagnostics,
+        string? plannerMermaid = null) => new() {
             Success = true,
             Columns = columns,
             RowCount = rowCount,
             GeneratedSql = sql,
             PlannerStatsJson = plannerStatsJson,
+            PlannerMermaid = plannerMermaid,
             SqlShapeStatsJson = sqlShapeStatsJson,
             DebugTrace = debugTrace ?? [],
             Diagnostics = diagnostics
@@ -36,12 +39,14 @@ public sealed class QueryStreamResult
         List<string>? debugTrace = null,
         string? generatedSql = null,
         string? plannerStatsJson = null,
+        string? plannerMermaid = null,
         string? sqlShapeStatsJson = null) => new() {
             Success = false,
             DebugTrace = debugTrace ?? [],
             Diagnostics = diagnostics,
             GeneratedSql = generatedSql,
             PlannerStatsJson = plannerStatsJson,
+            PlannerMermaid = plannerMermaid,
             SqlShapeStatsJson = sqlShapeStatsJson
         };
 }

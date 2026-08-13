@@ -22,6 +22,7 @@
 
   <ItemGroup>
 	<PackageReference Include="Markdig" />
+	<PackageReference Include="Blazorade.Mermaid" />
 	<PackageReference Include="MudBlazor" />
 	<PackageReference Include="Vizor.ECharts" />
   </ItemGroup>

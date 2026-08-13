@@ -208,23 +208,29 @@ public sealed partial class QueryRuntime
             cmd.CommandText = sql;
             cmd.CommandTimeout = _timeoutSeconds;
 
-            using var reader = cmd.ExecuteReader(System.Data.CommandBehavior.SequentialAccess);
-
-            var columns = new List<ResultColumn>(reader.FieldCount);
-            for (var i = 0; i < reader.FieldCount; i++)
-            {
-                columns.Add(new ResultColumn(reader.GetName(i), reader.GetDataTypeName(i)));
-            }
-
+            List<ResultColumn> columns;
             var rowCount = 0;
-            while (reader.Read())
+            using (var reader = cmd.ExecuteReader(System.Data.CommandBehavior.SequentialAccess))
             {
-                rowCount++;
-                if (!onRow(reader))
+                columns = new List<ResultColumn>(reader.FieldCount);
+                for (var i = 0; i < reader.FieldCount; i++)
                 {
-                    break;
+                    columns.Add(new ResultColumn(reader.GetName(i), reader.GetDataTypeName(i)));
+                }
+
+                while (reader.Read())
+                {
+                    rowCount++;
+                    if (!onRow(reader))
+                    {
+                        break;
+                    }
                 }
             }
+
+            var plannerMermaid = _developerMode
+                ? TryExecuteExplainAnalyzeMermaid(sql, debugTrace)
+                : null;
 
             return QueryStreamResult.FromData(
                 columns,
@@ -233,7 +239,8 @@ public sealed partial class QueryRuntime
                 plannerStats,
                 sqlShapeStats,
                 debugTrace,
-                diagnostics);
+                diagnostics,
+                plannerMermaid);
         }
         catch (DuckDBException ex)
         {
@@ -265,5 +272,83 @@ public sealed partial class QueryRuntime
                 plannerStatsJson: plannerStats,
                 sqlShapeStatsJson: sqlShapeStats);
         }
+    }
+
+    private string? TryExecuteExplainAnalyzeMermaid(string sql, List<string>? debugTrace)
+    {
+        try
+        {
+            var explainSql = $"EXPLAIN (ANALYZE, FORMAT MERMAID)\n{EnsureTerminatedSql(sql)}";
+            var conn = _connectionFactory.GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = explainSql;
+            cmd.CommandTimeout = _timeoutSeconds;
+
+            using var reader = cmd.ExecuteReader(System.Data.CommandBehavior.Default);
+            var mermaidDefinitions = new List<string>();
+            while (reader.Read())
+            {
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    if (reader.IsDBNull(i))
+                    {
+                        continue;
+                    }
+
+                    var text = reader.GetValue(i)?.ToString();
+                    if (IsMermaidDefinition(text))
+                    {
+                        mermaidDefinitions.Add(text.Trim());
+                    }
+                }
+            }
+
+            var mermaid = string.Join(Environment.NewLine, mermaidDefinitions).Trim();
+            debugTrace?.Add(string.IsNullOrWhiteSpace(mermaid)
+                ? "DuckDB EXPLAIN ANALYZE MERMAID returned no diagram."
+                : $"DuckDB EXPLAIN ANALYZE MERMAID complete: length={mermaid.Length}");
+
+            return string.IsNullOrWhiteSpace(mermaid) ? null : mermaid;
+        }
+        catch (DuckDBException ex)
+        {
+            debugTrace?.Add($"DuckDB EXPLAIN ANALYZE MERMAID failed: {NormalizeDuckDbError(ex.Message)}");
+            return null;
+        }
+    }
+
+    private static bool IsMermaidDefinition(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var trimmed = text.TrimStart();
+        return trimmed.StartsWith("flowchart ", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("graph ", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("sequenceDiagram", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("classDiagram", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("stateDiagram", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("erDiagram", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("journey", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("gantt", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("pie ", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("mindmap", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("timeline", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("quadrantChart", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("requirementDiagram", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("gitGraph", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("C4Context", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("sankey-beta", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("xychart-beta", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("block-beta", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("packet-beta", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string EnsureTerminatedSql(string sql)
+    {
+        var trimmed = sql.Trim();
+        return trimmed.EndsWith(';') ? trimmed : trimmed + ";";
     }
 }

@@ -13,6 +13,7 @@ public sealed class QueryResult
     public IReadOnlyList<string> DebugTrace { get; init; } = [];
     public DiagnosticBag Diagnostics { get; init; } = new();
     public string? GeneratedSql { get; init; }
+    public string? PlannerMermaid { get; init; }
     public string? PlannerStatsJson { get; init; }
     public int RowCount => ColumnData.Count == 0 ? 0 : ColumnData[0].Count;
     public string? SqlShapeStatsJson { get; init; }
@@ -25,7 +26,8 @@ public sealed class QueryResult
         string? plannerStatsJson,
         string? sqlShapeStatsJson,
         List<string>? debugTrace,
-        DiagnosticBag diagnostics)
+        DiagnosticBag diagnostics,
+        string? plannerMermaid = null)
     {
         var readonlyColumnData = new IReadOnlyList<object?>[columnData.Length];
         for (var i = 0; i < columnData.Length; i++)
@@ -39,6 +41,7 @@ public sealed class QueryResult
             ColumnData = readonlyColumnData,
             GeneratedSql = sql,
             PlannerStatsJson = plannerStatsJson,
+            PlannerMermaid = plannerMermaid,
             SqlShapeStatsJson = sqlShapeStatsJson,
             DebugTrace = debugTrace ?? [],
             Diagnostics = diagnostics

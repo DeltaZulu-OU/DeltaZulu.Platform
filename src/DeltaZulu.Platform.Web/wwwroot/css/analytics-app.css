@@ -1739,6 +1739,76 @@ body.hunt-splitter-active {
     font-style: italic;
 }
 
+.dz-code-drawer-extra {
+    border-top: 1px solid var(--dz-product-divider, rgba(19, 31, 42, 0.08));
+    background: var(--dz-product-surface, #FFFFFF);
+}
+
+.dz-code-drawer-diagram {
+    display: grid;
+    gap: var(--space-3, 12px);
+    padding: var(--space-4, 16px);
+}
+
+.dz-code-drawer-diagram h3 {
+    margin: 0;
+    color: var(--dz-product-text, #131F2A);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.dz-mermaid-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 18rem;
+    overflow: auto;
+    border: 1px solid var(--dz-product-border, rgba(19, 31, 42, 0.10));
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(19, 31, 42, 0.03), rgba(19, 31, 42, 0.01));
+    padding: var(--space-4, 16px);
+}
+
+.dz-mermaid-diagram > * {
+    width: 100%;
+}
+
+.dz-mermaid-diagram svg {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+}
+
+.hunt-sql-format-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3, 12px);
+    margin: 0;
+}
+
+.hunt-sql-format-list div {
+    border: 1px solid var(--dz-product-border, rgba(19, 31, 42, 0.10));
+    border-radius: 10px;
+    padding: var(--space-3, 12px);
+}
+
+.hunt-sql-format-list dt {
+    font-weight: 700;
+}
+
+.hunt-sql-format-list dd {
+    margin: var(--space-1, 4px) 0 0;
+    color: var(--dz-product-text-muted, rgba(19, 31, 42, 0.64));
+}
+
+@media (max-width: 720px) {
+    .hunt-sql-format-list {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* ──────────────────────────────────────────────────────────────────────────
    11. Settings/product forms
    ────────────────────────────────────────────────────────────────────────── */

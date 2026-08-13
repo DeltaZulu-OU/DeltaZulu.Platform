@@ -10,6 +10,7 @@ public sealed class AnalyticsQueryResult
     public IReadOnlyList<string> DebugTrace { get; init; } = [];
     public DiagnosticBag Diagnostics { get; init; } = new();
     public string? GeneratedSql { get; init; }
+    public string? PlannerMermaid { get; init; }
     public string? PlannerStatsJson { get; init; }
     public int RowCount => ColumnData.Count == 0 ? 0 : ColumnData[0].Count;
     public string? SqlShapeStatsJson { get; init; }

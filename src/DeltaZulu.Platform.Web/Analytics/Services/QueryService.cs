@@ -41,7 +41,8 @@ public sealed partial class QueryService(
             result.PlannerStatsJson,
             result.SqlShapeStatsJson,
             result.DebugTrace.Count > 0 ? [.. result.DebugTrace] : null,
-            result.Diagnostics);
+            result.Diagnostics,
+            result.PlannerMermaid);
     }
 
     private async Task<QueryResult> ExecuteCoreAsync(
