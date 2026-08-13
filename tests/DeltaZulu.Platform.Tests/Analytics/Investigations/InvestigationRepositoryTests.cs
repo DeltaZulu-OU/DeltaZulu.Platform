@@ -55,6 +55,7 @@ public sealed class InvestigationRepositoryTests
         }
         finally
         {
+            repository.Dispose();
             DeleteDatabaseFiles(dbPath);
         }
     }
@@ -67,12 +68,14 @@ public sealed class InvestigationRepositoryTests
 
     private static string BuildConnectionString(string dbPath)
     {
-        var builder = new SqliteConnectionStringBuilder { DataSource = dbPath };
+        var builder = new SqliteConnectionStringBuilder { DataSource = dbPath, Pooling = false };
         return builder.ToString();
     }
 
     private static void DeleteDatabaseFiles(string dbPath)
     {
+        SqliteConnection.ClearAllPools();
+
         foreach (var path in new[] { dbPath, dbPath + "-wal", dbPath + "-shm" })
         {
             if (File.Exists(path))
