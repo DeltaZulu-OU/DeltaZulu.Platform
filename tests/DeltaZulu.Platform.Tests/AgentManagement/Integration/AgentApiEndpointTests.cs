@@ -50,11 +50,13 @@ public sealed class AgentApiEndpointTests
         builder.Services.AddSingleton<IAgentObservationSink>(_sink);
         builder.Services.AddSingleton<ISourceObservationSink>(_sourceSink);
         builder.Services.Configure<AgentControlPlaneOptions>(_ => { });
+        builder.Services.AddAgentControlPlaneRateLimiting();
         builder.Services.AddAgentManagementSqlitePersistence(connectionString);
         builder.Services.AddAgentManagementApplication();
         builder.Services.AddAgentManagementValidation();
 
         _app = builder.Build();
+        _app.UseRateLimiter();
         _app.MapAgentApiV1();
         await _app.StartAsync();
 
@@ -115,6 +117,21 @@ public sealed class AgentApiEndpointTests
         if (body is not null)
             request.Content = JsonContent.Create(body, options: Json);
         return request;
+    }
+
+    [TestMethod]
+    public async Task Enrollment_RejectsRequestsBeyondPerAddressLimit()
+    {
+        for (var attempt = 0; attempt < 10; attempt++)
+        {
+            using var permittedResponse = await _client.PostAsJsonAsync("/api/agent/v1/enroll",
+                new { bootstrapToken = "not-a-real-token", hostname = $"rate-limit-{attempt}", platform = "Linux" }, Json);
+            Assert.AreEqual(HttpStatusCode.Forbidden, permittedResponse.StatusCode);
+        }
+
+        using var rejectedResponse = await _client.PostAsJsonAsync("/api/agent/v1/enroll",
+            new { bootstrapToken = "not-a-real-token", hostname = "rate-limit-rejected", platform = "Linux" }, Json);
+        Assert.AreEqual(HttpStatusCode.TooManyRequests, rejectedResponse.StatusCode);
     }
 
     [TestMethod]

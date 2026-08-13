@@ -9,7 +9,7 @@ Accepted.
 The agent management roadmap (P1 Operations/Safety) requires centrally initiated remediation —
 reload configuration, test output, flush buffers, collect diagnostics, restart the service —
 without turning the agent into a general-purpose remote execution platform. The pull-based check-in
-protocol (ADR 0009) already gives every agent a periodic, authenticated exchange with the platform.
+protocol (ADR 0012) already gives every agent a periodic, authenticated exchange with the platform.
 
 ## Decision
 

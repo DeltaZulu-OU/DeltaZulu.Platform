@@ -6,6 +6,7 @@ using DeltaZulu.Platform.Domain.AgentManagement.Identifiers;
 using DeltaZulu.Platform.Domain.Common;
 using DeltaZulu.Platform.Web.AgentManagement.Hosting;
 using DeltaZulu.Platform.Web.Api.AgentManagement.Contracts;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 
 namespace DeltaZulu.Platform.Web.Api.AgentManagement;
@@ -22,7 +23,8 @@ public static class AgentApiEndpoints
     {
         var api = app.MapGroup("/api/agent/v1");
 
-        api.MapPost("/enroll", EnrollAsync);
+        api.MapPost("/enroll", EnrollAsync)
+            .RequireRateLimiting(AgentControlPlaneRateLimitingExtensions.EnrollmentPolicyName);
 
         var authenticated = api.MapGroup("")
             .AddEndpointFilter<AgentAuthenticationEndpointFilter>();
