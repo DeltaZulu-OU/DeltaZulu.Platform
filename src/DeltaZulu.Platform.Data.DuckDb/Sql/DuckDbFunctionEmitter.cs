@@ -124,8 +124,18 @@ to_json(
             // JSON
             "parse_json" => $"CAST({args[0]} AS JSON)",
             "bag_keys" => $"json_keys({args[0]})",
-            "bag_has_key" => $"(json_extract({args[0]}, concat('$.', {args[1]})) IS NOT NULL)",
-            "bag_merge" => $"json_merge_patch({args[0]}, {args[1]})",
+            // list_contains(json_keys(...), key) checks the key as an opaque string value
+            // rather than splicing it into a JSONPath, so a key containing '.' or other
+            // JSONPath-special characters (e.g. "process.pid") is matched literally instead
+            // of being misinterpreted as nested-path traversal.
+            "bag_has_key" => $"list_contains(json_keys({args[0]}), {args[1]})",
+            // Kusto's bag_merge(bag1, bag2, ...) keeps the leftmost argument's value on a
+            // key collision. DuckDB's json_merge_patch(target, patch) is the opposite: the
+            // patch (2nd) argument wins. Folding the reversed argument list applies each
+            // bag as a patch in increasing precedence, so the original leftmost argument is
+            // applied last and wins, matching Kusto semantics for any number of arguments.
+            "bag_merge" when args.Count >= 1 =>
+                args.AsEnumerable().Reverse().Aggregate((acc, next) => $"json_merge_patch({acc}, {next})"),
             "array_length" => $"CASE WHEN json_valid(CAST({args[0]} AS VARCHAR)) THEN json_array_length({args[0]}) ELSE length({args[0]}) END",
             "array_concat" when args.Count >= 1 => args.Aggregate((a, b) => $"list_concat({a}, {b})"),
             "array_slice" => EmitArraySlice(args),

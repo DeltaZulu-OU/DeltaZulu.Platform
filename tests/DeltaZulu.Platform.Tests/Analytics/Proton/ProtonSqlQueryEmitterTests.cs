@@ -140,6 +140,43 @@ public sealed class ProtonSqlQueryEmitterTests
     }
 
     [TestMethod]
+    public void Emit_UnixtimeMillisecondsToDatetime_UsesValidToInt64FunctionName()
+    {
+        var node = new ProjectNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("Ts", new FunctionCall("unixtime_milliseconds_todatetime", [new ColumnRef("EpochMs")]))]);
+
+        var sql = _emitter.Emit(node).Sql;
+
+        Assert.DoesNotContain("to_int64", sql);
+        AssertSqlContains(sql, "fromUnixTimestamp64Milli(toInt64(EpochMs)) AS Ts");
+    }
+
+    [TestMethod]
+    public void Emit_UnixtimeMicrosecondsToDatetime_UsesValidToInt64FunctionName()
+    {
+        var node = new ProjectNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("Ts", new FunctionCall("unixtime_microseconds_todatetime", [new ColumnRef("EpochUs")]))]);
+
+        var sql = _emitter.Emit(node).Sql;
+
+        Assert.DoesNotContain("to_int64", sql);
+        AssertSqlContains(sql, "fromUnixTimestamp64Micro(toInt64(EpochUs)) AS Ts");
+    }
+
+    [TestMethod]
+    public void Emit_DatetimeAdd_WithNonLiteralPeriod_ThrowsInsteadOfEmittingInvalidSql()
+    {
+        var node = new ProjectNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("Later", new FunctionCall("datetime_add",
+                [new ColumnRef("PeriodColumn"), new LiteralScalar(3L, LiteralKind.Long), new ColumnRef("Timestamp")]))]);
+
+        Assert.ThrowsExactly<NotSupportedException>(() => _emitter.Emit(node));
+    }
+
+    [TestMethod]
     public void Emit_SplitWithRequestedIndex_SelectsSingleElement()
     {
         var node = new ProjectNode(

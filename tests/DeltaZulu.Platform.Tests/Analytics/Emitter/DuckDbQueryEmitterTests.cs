@@ -203,7 +203,7 @@ public sealed partial class DuckDbQueryEmitterTests
             ]);
 
         var sql = _emitter.Emit(node);
-        AssertSqlContains(sql, "(json_extract(AdditionalFields, concat('$.', 'User')) IS NOT NULL) AS hask");
+        AssertSqlContains(sql, "list_contains(json_keys(AdditionalFields), 'User') AS hask");
         AssertSqlContains(sql, "list_slice(Tags, (CASE WHEN (0) >= 0 THEN (0) + 1 ELSE (0) END), (CASE WHEN (2) >= 0 THEN (2) + 1 ELSE (2) END)) AS slice");
     }
 
@@ -399,13 +399,56 @@ public sealed partial class DuckDbQueryEmitterTests
         AssertSqlContains(sql, "url_encode(FileName) AS ue");
         AssertSqlContains(sql, "url_decode(FileName) AS ud");
         AssertSqlContains(sql, "json_keys(AdditionalFields) AS bk");
-        AssertSqlContains(sql, "(json_extract(AdditionalFields, concat('$.', 'k')) IS NOT NULL) AS bhk");
-        AssertSqlContains(sql, "json_merge_patch(A, B) AS bm");
+        AssertSqlContains(sql, "list_contains(json_keys(AdditionalFields), 'k') AS bhk");
+        AssertSqlContains(sql, "json_merge_patch(B, A) AS bm");
         AssertSqlContains(sql, "CASE WHEN json_valid(CAST(Tags AS VARCHAR)) THEN json_array_length(Tags) ELSE length(Tags) END AS alen");
         AssertSqlContains(sql, "list_concat(Tags, MoreTags) AS acon");
         AssertSqlContains(sql, "list_slice(Tags, (CASE WHEN (1) >= 0 THEN (1) + 1 ELSE (1) END), (CASE WHEN (3) >= 0 THEN (3) + 1 ELSE (3) END)) AS aslice");
         AssertSqlContains(sql, "power(2, 3) AS e2");
         AssertSqlContains(sql, "power(10, 2) AS e10");
+    }
+
+    [TestMethod]
+    [Description("bag_merge() with 3+ bags folds all of them, leftmost argument wins on key collision")]
+    public void Emit_Func_BagMerge_Variadic_LeftmostWins()
+    {
+        var node = new ExtendNode(
+            new ScanNode("ProcessEvent"),
+            [new ProjectionExpr("merged", new FunctionCall("bag_merge",
+                [new ColumnRef("A"), new ColumnRef("B"), new ColumnRef("C")]))]);
+
+        var sql = _emitter.Emit(node);
+
+        // Reversed-fold: json_merge_patch(json_merge_patch(C, B), A) — A (leftmost) is
+        // applied last as the final patch, so it wins on any key collision.
+        AssertSqlContains(sql, "json_merge_patch(json_merge_patch(C, B), A) AS merged");
+    }
+
+    [TestMethod]
+    [Description("Numeric literal emission is culture-invariant regardless of the running thread's culture")]
+    public void Emit_NumericLiteral_IsCultureInvariant()
+    {
+        var originalCulture = System.Threading.Thread.CurrentThread.CurrentCulture;
+        try
+        {
+            System.Threading.Thread.CurrentThread.CurrentCulture = new CultureInfo("de-DE");
+
+            var node = new ExtendNode(
+                new ScanNode("ProcessEvent"),
+                [new ProjectionExpr("scored", new BinaryScalar(
+                    new ColumnRef("Score"),
+                    ScalarBinaryOp.Gt,
+                    new LiteralScalar(3.14, LiteralKind.Real)))]);
+
+            var sql = _emitter.Emit(node);
+
+            AssertSqlContains(sql, "(Score > 3.14)");
+            Assert.DoesNotContain("3,14", sql);
+        }
+        finally
+        {
+            System.Threading.Thread.CurrentThread.CurrentCulture = originalCulture;
+        }
     }
 
     // ─── Aggregate ──────────────────────────────────────────────────
@@ -566,6 +609,29 @@ public sealed partial class DuckDbQueryEmitterTests
         Assert.DoesNotMatchRegex(@"__kql_stage_\d+", norm);
         Assert.DoesNotContain("USING SAMPLE", norm, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("sample_distinct_value", norm, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [TestMethod]
+    [Description(
+        "Folding a single-use aggregate filter into GROUP BY/HAVING must not corrupt a string " +
+        "literal that happens to match the aggregate alias name")]
+    public void Emit_AggregateAliasFold_DoesNotCorruptMatchingStringLiteral()
+    {
+        var catalog = new ApprovedViewCatalog();
+        catalog.RegisterAll(SchemaConventions.CanonicalViews);
+        var diagnostics = new DiagnosticBag();
+        var translator = new KustoToRelational(catalog, diagnostics);
+
+        var plan = translator.Translate(
+            """ProcessEvent | summarize Total = count() by ActionType | where Total > 5 and ActionType == "Total" | sort by Total desc""");
+
+        Assert.IsFalse(diagnostics.HasErrors, string.Join(Environment.NewLine, diagnostics.All));
+        Assert.IsNotNull(plan);
+
+        var sql = _emitter.Emit(plan);
+
+        AssertSqlContains(sql, "HAVING ((count(*) > 5) AND (ActionType = 'Total'))");
+        Assert.DoesNotContain("'count(*)'", NormSql(sql));
     }
 
     [TestMethod]
@@ -1185,6 +1251,56 @@ public sealed partial class DuckDbQueryEmitterTests
             "SELECT *",
             NormSql(sql),
             "Clean projected lookup aggregate rendering must not emit SELECT * wrappers.");
+    }
+
+    [TestMethod]
+    [Description(
+        "The projected-lookup-join collapse optimization must prefer the left side on a " +
+        "left/right column-name collision, matching Kusto's lookup semantics")]
+    public void Lookup_ProjectedJoinCollapse_ColumnCollision_PrefersLeftSide()
+    {
+        // A trailing extend (rather than sort+take) forces the SQL-shape collapse
+        // optimization (TryCollapseProjectedLookupJoin) instead of the schema-aware
+        // TryRenderProjectedLookupSortTake fast path — both must agree on left-wins.
+        var left = new ProjectNode(
+            new ScanNode("ProcessEvent"),
+            [
+                new ProjectionExpr("DeviceName", new ColumnRef("DeviceName")),
+                new ProjectionExpr("AccountName", new ColumnRef("AccountName")),
+            ]);
+
+        var right = new ProjectNode(
+            new ScanNode("ProcessEvent"),
+            [
+                new ProjectionExpr("DeviceName", new ColumnRef("DeviceName")),
+                new ProjectionExpr("AccountName", new ColumnRef("AccountName")),
+            ]);
+
+        var join = new JoinNode(
+            left,
+            right,
+            JoinKind.LeftOuter,
+            new BinaryScalar(
+                new ColumnRef("DeviceName", JoinSide.Left),
+                ScalarBinaryOp.Eq,
+                new ColumnRef("DeviceName", JoinSide.Right)),
+            JoinFlavor.Lookup);
+
+        var project = new ProjectNode(
+            join,
+            [
+                new ProjectionExpr("DeviceName", new ColumnRef("DeviceName")),
+                new ProjectionExpr("AccountName", new ColumnRef("AccountName")),
+            ]);
+
+        var node = new ExtendNode(
+            project,
+            [new ProjectionExpr("Note", new LiteralScalar("x", LiteralKind.String))]);
+
+        var sql = _emitter.Emit(node);
+
+        AssertSqlContains(sql, "left_agg.AccountName AS AccountName");
+        Assert.DoesNotContain("right_agg.AccountName", NormSql(sql));
     }
 
     [TestMethod]

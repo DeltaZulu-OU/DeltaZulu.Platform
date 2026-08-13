@@ -53,8 +53,12 @@ internal sealed class DuckDbScalarEmitter
             LiteralKind.String => $"'{DuckDbSqlText.EscapeString(lit.Value.ToString()!)}'",
             LiteralKind.Bool => Convert.ToBoolean(lit.Value, CultureInfo.InvariantCulture) ? "TRUE" : "FALSE",
             LiteralKind.Timespan => EmitTimespan(lit.Value),
-            LiteralKind.DateTime => $"TIMESTAMP '{lit.Value}'",
-            _ => lit.Value.ToString()!
+            // Numeric literals (Real/Long/Int) and this DateTime fallback (the common case
+            // goes through the dedicated EmitTimestampLiteral pattern above) must format with
+            // the invariant culture — otherwise a non-invariant server/thread culture (e.g.
+            // "de-DE") formats a decimal literal like 3.14 as "3,14", corrupting the SQL.
+            LiteralKind.DateTime => $"TIMESTAMP '{Convert.ToString(lit.Value, CultureInfo.InvariantCulture)}'",
+            _ => Convert.ToString(lit.Value, CultureInfo.InvariantCulture)!
         };
     }
 

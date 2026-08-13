@@ -72,7 +72,7 @@ internal sealed partial class DuckDbRelNodeEmitter
             // reference it in final FROM (dangling __kql_stage_N).
             terminalLimit = terminalLimit with { Source = finalSource };
         }
-        _joinEmitter.TryCollapseProjectedLookupJoin(ref finalSource, ref columns, ref terminalTopK, ref terminalOrder, ref terminalLimit);
+        _joinEmitter.TryCollapseProjectedLookupJoin(node, ref finalSource, ref columns, ref terminalTopK, ref terminalOrder, ref terminalLimit);
         if (terminalTopK is null && terminalOrder is null)
         {
             shapeRewriter.TryInlineSingleComputedScope(ref finalSource, ref terminalLimit);

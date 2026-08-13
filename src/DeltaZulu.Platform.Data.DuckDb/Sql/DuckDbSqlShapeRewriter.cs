@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Sql;
@@ -59,6 +60,10 @@ internal sealed partial class DuckDbSqlShapeRewriter
 
     [GeneratedRegex(@"^(?<expr>.+)\s+AS\s+(?<alias>[A-Za-z_][A-Za-z0-9_]*)$", RegexOptions.IgnoreCase, "en-150")]
     private static partial Regex DecodedPattern();
+
+    // Matches a single-quoted SQL string literal, including '' as an escaped embedded quote.
+    [GeneratedRegex(@"'(?:[^']|'')*'")]
+    private static partial Regex SqlStringLiteralRegex();
 
     internal void TryInlineSingleComputedScope(
         ref string finalSource,
@@ -711,14 +716,36 @@ internal sealed partial class DuckDbSqlShapeRewriter
         var rewritten = predicate;
         foreach (var (alias, expr) in map)
         {
-            rewritten = Regex.Replace(
-                rewritten,
-                $@"\b{Regex.Escape(alias)}\b",
-                expr,
-                RegexOptions.IgnoreCase);
+            rewritten = ReplaceIdentifierOutsideStringLiterals(rewritten, alias, expr);
         }
 
         return rewritten;
+    }
+
+    /// <summary>
+    /// Replaces whole-word occurrences of <paramref name="identifier"/> with
+    /// <paramref name="replacement"/>, skipping any text inside single-quoted SQL string
+    /// literals. Without this, an aggregate alias that also matches a literal string value
+    /// compared elsewhere in the predicate (e.g. <c>ActionType == "Total"</c> when the
+    /// aggregate alias is also named <c>Total</c>) would have that literal corrupted into
+    /// the alias's underlying expression instead of being left alone.
+    /// </summary>
+    private static string ReplaceIdentifierOutsideStringLiterals(string text, string identifier, string replacement)
+    {
+        var pattern = $@"\b{Regex.Escape(identifier)}\b";
+        var sb = new StringBuilder();
+        var lastEnd = 0;
+
+        foreach (var literal in SqlStringLiteralRegex().EnumerateMatches(text))
+        {
+            var before = text.AsSpan(lastEnd, literal.Index - lastEnd).ToString();
+            sb.Append(Regex.Replace(before, pattern, replacement, RegexOptions.IgnoreCase));
+            sb.Append(text.AsSpan(literal.Index, literal.Length));
+            lastEnd = literal.Index + literal.Length;
+        }
+
+        sb.Append(Regex.Replace(text[lastEnd..], pattern, replacement, RegexOptions.IgnoreCase));
+        return sb.ToString();
     }
 
     private static IReadOnlyList<(string Alias, string Expression)> ParseAliasedProjectionItems(string projection)

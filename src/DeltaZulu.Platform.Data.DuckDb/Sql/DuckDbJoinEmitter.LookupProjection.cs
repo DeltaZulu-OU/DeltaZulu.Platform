@@ -253,6 +253,7 @@ internal sealed partial class DuckDbJoinEmitter
     private static partial Regex LeftLookupProjectedJoinStageRegex();
 
     internal void TryCollapseProjectedLookupJoin(
+        RelNode node,
         ref string finalSource,
         ref string? columns,
         ref DuckDbSqlShapeRewriter.TerminalTopK? terminalTopK,
@@ -334,8 +335,24 @@ internal sealed partial class DuckDbJoinEmitter
         }
 
         var rightOwned = ParseRightPayloadColumns(lookupMatch.Groups["payload"].Value);
-        if (rightOwned is null
-            || !TryQualifyLookupProjection(projectionMatch.Groups["projection"].Value, rightOwned, out var qualifiedProjection))
+        if (rightOwned is null)
+        {
+            return;
+        }
+
+        // Prefer the left side on a left/right column-name collision — matching Kusto's
+        // documented lookup semantics and the schema-aware ResolveLookupFinalColumn path.
+        // If the lookup join's left input schema can't be determined here (e.g. it's a bare
+        // table scan, which TryGetOutputColumns does not resolve), bail out of this
+        // optimization entirely rather than risk silently picking the wrong side.
+        var lookupJoin = FindLookupJoin(node);
+        var leftOwned = lookupJoin is not null ? TryGetOutputColumns(lookupJoin.Left) : null;
+        if (leftOwned is null
+            || !TryQualifyLookupProjection(
+                projectionMatch.Groups["projection"].Value,
+                leftOwned.ToHashSet(StringComparer.OrdinalIgnoreCase),
+                rightOwned,
+                out var qualifiedProjection))
         {
             return;
         }
@@ -521,10 +538,13 @@ internal sealed partial class DuckDbJoinEmitter
     /// side that owns it (<c>left_agg</c> or <c>right_agg</c>) and aliased to its
     /// output name. Returns false unless every projection item is a simple column
     /// reference (optionally <c>col AS alias</c>); a computed projection is left
-    /// for the unoptimized path rather than risk mis-qualifying it.
+    /// for the unoptimized path rather than risk mis-qualifying it. On a name
+    /// collision between the two sides, the left side wins — matching Kusto's
+    /// documented lookup semantics and ResolveLookupFinalColumn's precedence.
     /// </summary>
     private static bool TryQualifyLookupProjection(
         string projection,
+        HashSet<string> leftOwned,
         HashSet<string> rightOwned,
         out string qualified)
     {
@@ -552,7 +572,9 @@ internal sealed partial class DuckDbJoinEmitter
                 return false;
             }
 
-            var side = rightOwned.Contains(col) ? "right_agg" : "left_agg";
+            var side = leftOwned.Contains(col) ? "left_agg"
+                : rightOwned.Contains(col) ? "right_agg"
+                : "left_agg";
             rendered.Add($"{side}.{col} AS {alias}");
         }
 
@@ -598,6 +620,28 @@ internal sealed partial class DuckDbJoinEmitter
         rightPayloadColumns = payload;
         return true;
     }
+
+    /// <summary>
+    /// Locates the first lookup join (<c>JoinNode</c> with <see cref="JoinFlavor.Lookup"/>)
+    /// reachable by walking a RelNode tree's single-input/left-right chain. Used to recover
+    /// the join's left input for schema-aware column-collision resolution when a later
+    /// SQL-text-based optimization pass needs to know the same thing the original RelNode
+    /// walk already knew.
+    /// </summary>
+    private static JoinNode? FindLookupJoin(RelNode node) => node switch {
+        JoinNode { Flavor: JoinFlavor.Lookup } j => j,
+        JoinNode j => FindLookupJoin(j.Left) ?? FindLookupJoin(j.Right),
+        FilterNode f => FindLookupJoin(f.Input),
+        ProjectNode p => FindLookupJoin(p.Input),
+        ExtendNode e => FindLookupJoin(e.Input),
+        AggregateNode a => FindLookupJoin(a.Input),
+        SortNode s => FindLookupJoin(s.Input),
+        LimitNode l => FindLookupJoin(l.Input),
+        SampleNode s => FindLookupJoin(s.Input),
+        DistinctNode d => FindLookupJoin(d.Input),
+        LetBindingNode l => FindLookupJoin(l.Body),
+        _ => null
+    };
 
     private static IReadOnlyList<string>? TryGetOutputColumns(RelNode node)
     {

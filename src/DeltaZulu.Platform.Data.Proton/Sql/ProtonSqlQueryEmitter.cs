@@ -772,8 +772,8 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
                 "getyear" => $"toYear({args[0]})",
                 "hourofday" => $"toHour({args[0]})",
                 "unixtime_seconds_todatetime" => $"fromUnixTimestamp({args[0]})",
-                "unixtime_milliseconds_todatetime" => $"fromUnixTimestamp64Milli(to_int64({args[0]}))",
-                "unixtime_microseconds_todatetime" => $"fromUnixTimestamp64Micro(to_int64({args[0]}))",
+                "unixtime_milliseconds_todatetime" => $"fromUnixTimestamp64Milli(toInt64({args[0]}))",
+                "unixtime_microseconds_todatetime" => $"fromUnixTimestamp64Micro(toInt64({args[0]}))",
                 "todatetime" => $"parseDateTimeBestEffort(toString({args[0]}))",
 
                 "tostring" => $"toString({args[0]})",
@@ -942,7 +942,12 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
                 };
                 return $"({args[2]} + INTERVAL {args[1]} {unit})";
             }
-            return $"date_add({args[0]}, {args[1]}, {args[2]})";
+
+            // Proton/ClickHouse's date_add()/dateAdd() require the unit as a bare, unquoted
+            // keyword token, not a runtime string value — there is no way to pass a
+            // dynamically computed interval unit, so a non-literal period cannot be translated.
+            throw new NotSupportedException(
+                "datetime_add() requires a literal period argument (e.g. \"day\", \"hour\").");
         }
 
         private static string EmitDatetimePart(IReadOnlyList<ScalarExpr> rawArgs, List<string> args)
