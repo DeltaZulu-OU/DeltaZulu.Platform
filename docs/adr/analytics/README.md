@@ -29,3 +29,5 @@ Current platform architecture is documented in [`../../ARCHITECTURE.md`](../../A
 | [`0016-threat-hunting-workflow-boundary.md`](0016-threat-hunting-workflow-boundary.md) | ADR 0016: Model threat hunting as a separate workflow aggregate |
 | [`0017-use-shared-platform-web-module-abstractions.md`](0017-use-shared-platform-web-module-abstractions.md) | ADR 0017: Use Shared Platform Web Module Abstractions |
 | [`0018-proton-core-streaming-detection-engine.md`](0018-proton-core-streaming-detection-engine.md) | ADR 0018: Proton as Core Streaming Detection Engine |
+| [`0019-log-utilization-agent-observation-contract.md`](0019-log-utilization-agent-observation-contract.md) | ADR 0019: Collect Agent Log-Utilization Observations |
+| [`0020-keep-agent-repository-separate.md`](0020-keep-agent-repository-separate.md) | ADR 0020: Keep DeltaZulu.Agent Separate from DeltaZulu.Platform |
