@@ -43,7 +43,7 @@ public sealed class DapperCandidateEvidenceRepository : DapperRepositoryBase, IC
         );
         """;
 
-    public DapperCandidateEvidenceRepository(IAppDbConnectionFactory connectionFactory)
+    public DapperCandidateEvidenceRepository(IOperationsDbConnectionFactory connectionFactory)
         : base(connectionFactory, CreateSchemaSql)
     {
     }

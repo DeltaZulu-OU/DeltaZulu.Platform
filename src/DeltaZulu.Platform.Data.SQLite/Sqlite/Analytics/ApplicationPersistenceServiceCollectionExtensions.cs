@@ -1,5 +1,6 @@
 using DeltaZulu.Platform.Data.Seeding;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.CuratedAnalytics;
+using DeltaZulu.Platform.Data.Sqlite.Analytics.Candidates;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.DetectionRuns;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Detections;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Investigations;
@@ -10,6 +11,7 @@ using DeltaZulu.Platform.Data.Sqlite.Analytics.SavedQueries;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Settings;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Visualizations;
 using DeltaZulu.Platform.Domain.Analytics.CuratedAnalytics;
+using DeltaZulu.Platform.Domain.Analytics.Candidates;
 using DeltaZulu.Platform.Domain.Analytics.DetectionRuns;
 using DeltaZulu.Platform.Domain.Analytics.Detections;
 using DeltaZulu.Platform.Domain.Analytics.Investigations;
@@ -39,6 +41,25 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Registers mutable Operations correlation repositories against their own SQLite
+    /// database.  Analytics application settings and Operations lifecycle state must not
+    /// share a connection factory or startup schema.
+    /// </summary>
+    public static IServiceCollection AddOperationsPersistence(
+        this IServiceCollection services,
+        string sqliteConnectionString)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sqliteConnectionString);
+
+        services.AddSingleton<IOperationsDbConnectionFactory>(
+            _ => new SqliteAppDbConnectionFactory(sqliteConnectionString));
+        AddOperationsRepository<IIncidentCandidateRepository, DapperIncidentCandidateRepository>(services);
+        AddOperationsRepository<ICandidateEvidenceRepository, DapperCandidateEvidenceRepository>(services);
+        return services;
+    }
+
     private static void AddApplicationRepositories(IServiceCollection services)
     {
         AddApplicationRepository<IUserSettingsRepository, DapperUserSettingsRepository>(services);
@@ -51,6 +72,16 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         AddApplicationRepository<IInvestigationRepository, DapperInvestigationRepository>(services);
         AddApplicationRepository<INrtRuleRepository, DapperNrtRuleRepository>(services);
         AddApplicationRepository<ISourceObservationRepository, DapperSourceObservationRepository>(services);
+    }
+
+    private static void AddOperationsRepository<TRepository, TImplementation>(IServiceCollection services)
+        where TRepository : class
+        where TImplementation : class, TRepository, IApplicationPersistenceRepository
+    {
+        services.AddSingleton<TRepository, TImplementation>();
+        services.AddSingleton<IOperationsPersistenceRepository>(sp =>
+            new OperationsPersistenceRepositoryAdapter(
+                (IApplicationPersistenceRepository)sp.GetRequiredService<TRepository>()));
     }
 
     private static void AddApplicationRepository<TRepository, TImplementation>(IServiceCollection services)
@@ -75,5 +106,27 @@ public static class ApplicationPersistenceServiceCollectionExtensions
 
         var savedQueries = services.GetRequiredService<ISavedQueryRepository>();
         await SampleSavedQuerySeeder.SeedMissingAsync(savedQueries, cancellationToken);
+    }
+
+    public static async Task InitializeOperationsPersistenceAsync(
+        this IServiceProvider services,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        foreach (var repository in services.GetServices<IOperationsPersistenceRepository>())
+        {
+            await repository.EnsureInitializedAsync(cancellationToken);
+        }
+    }
+
+    private interface IOperationsPersistenceRepository
+    {
+        Task EnsureInitializedAsync(CancellationToken cancellationToken);
+    }
+
+    private sealed class OperationsPersistenceRepositoryAdapter(IApplicationPersistenceRepository repository)
+        : IOperationsPersistenceRepository
+    {
+        public Task EnsureInitializedAsync(CancellationToken cancellationToken) => repository.EnsureInitializedAsync(cancellationToken);
     }
 }

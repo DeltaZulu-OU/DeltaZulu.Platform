@@ -3,7 +3,7 @@ using Microsoft.Data.Sqlite;
 
 namespace DeltaZulu.Platform.Data.Sqlite.Analytics;
 
-public sealed class SqliteAppDbConnectionFactory : IAppDbConnectionFactory
+public sealed class SqliteAppDbConnectionFactory : IAppDbConnectionFactory, IOperationsDbConnectionFactory
 {
     private readonly string _connectionString;
 
