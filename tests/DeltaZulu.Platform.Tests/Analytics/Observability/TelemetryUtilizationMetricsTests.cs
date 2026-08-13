@@ -31,7 +31,7 @@ public sealed class TelemetryUtilizationMetricsTests
             Source(agentId: "agent-2", channel: "Application", readCount: 50, keptCount: 50,
                 discardedCount: 0, forwardedCount: 50, forwardFailedCount: 0, readErrorCount: 0,
                 profileId: "profile-x"),
-        ]);
+        ], TestContext.CancellationToken);
 
         var reader = new DuckDbOperationalMetricsReader(factory);
         var summary = reader.ReadSourceHealthSummary();
@@ -62,7 +62,7 @@ public sealed class TelemetryUtilizationMetricsTests
             // No waste at all.
             Source(agentId: "agent-3", channel: "Clean", readCount: 500, keptCount: 500,
                 discardedCount: 0, forwardedCount: 500, forwardFailedCount: 0, readErrorCount: 0),
-        ]);
+        ], TestContext.CancellationToken);
 
         var reader = new DuckDbOperationalMetricsReader(factory);
         var top = reader.ReadTopWastefulSources(limit: 2);
@@ -91,7 +91,7 @@ public sealed class TelemetryUtilizationMetricsTests
             Source(agentId: "agent-1", channel: "System", readCount: 10, keptCount: 2,
                 discardedCount: 8, forwardedCount: 1, forwardFailedCount: 1, readErrorCount: 0,
                 profileId: null),
-        ]);
+        ], TestContext.CancellationToken);
 
         var reader = new DuckDbOperationalMetricsReader(factory);
         var rollups = reader.ReadProfileUtilization().ToDictionary(r => r.ProfileId);
@@ -125,12 +125,12 @@ public sealed class TelemetryUtilizationMetricsTests
             TenantId: "default", AgentId: "agent-1", HostId: "host-1", Hostname: "host-1",
             Platform: "Windows", AgentVersion: "1.0.0", ObservedAtUtc: Now, LastSeenAtUtc: Now,
             IsEnabled: true, ReportedStatus: "Running", BufferPressure: 0.5,
-            QueueDepth: 10, DroppedCount: 5, ForwardFailedCount: 0));
+            QueueDepth: 10, DroppedCount: 5, ForwardFailedCount: 0), TestContext.CancellationToken);
         await agentWriter.AppendAsync(new AgentObservationSnapshot(
             TenantId: "default", AgentId: "agent-2", HostId: "host-2", Hostname: "host-2",
             Platform: "Linux", AgentVersion: "1.0.0", ObservedAtUtc: Now, LastSeenAtUtc: Now,
             IsEnabled: true, ReportedStatus: "Running", BufferPressure: 0.1,
-            QueueDepth: 0, DroppedCount: 0, ForwardFailedCount: 0));
+            QueueDepth: 0, DroppedCount: 0, ForwardFailedCount: 0), TestContext.CancellationToken);
 
         await sourceWriter.AppendBatchAsync([
             Source(agentId: "agent-1", channel: "Security", readCount: 100, keptCount: 80,
@@ -139,7 +139,7 @@ public sealed class TelemetryUtilizationMetricsTests
                 discardedCount: 8, forwardedCount: 1, forwardFailedCount: 0, readErrorCount: 0),
             Source(agentId: "agent-2", channel: "Application", readCount: 50, keptCount: 50,
                 discardedCount: 0, forwardedCount: 50, forwardFailedCount: 0, readErrorCount: 0),
-        ]);
+        ], TestContext.CancellationToken);
 
         var reader = new DuckDbOperationalMetricsReader(factory);
         var rows = reader.ReadAgentUtilization().ToDictionary(r => r.AgentId);
@@ -195,4 +195,6 @@ public sealed class TelemetryUtilizationMetricsTests
             ObservedAtUtc: Now,
             TenantId: "default",
             ProfileId: profileId);
+
+    public TestContext TestContext { get; set; }
 }

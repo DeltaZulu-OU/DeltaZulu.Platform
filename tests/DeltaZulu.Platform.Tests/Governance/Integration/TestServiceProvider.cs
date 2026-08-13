@@ -1,6 +1,7 @@
 using DeltaZulu.Platform.Application.Governance;
 using DeltaZulu.Platform.Application.Governance.Services;
 using DeltaZulu.Platform.Application.Governance.Validation;
+using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Data.Sqlite.Governance;
 using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
@@ -33,6 +34,7 @@ internal sealed class TestServiceProvider : IDisposable
 
         var services = new ServiceCollection();
         services.AddGovernancePersistence(connStr);
+        services.AddApplicationPersistence(connStr);
         services.AddGovernanceApplication();
         services.AddGovernanceValidation();
         services.AddScoped<IWorkflowOrchestrator, DomainDrivenOrchestrator>();

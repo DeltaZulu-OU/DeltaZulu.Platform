@@ -49,8 +49,10 @@ CREATE TABLE bronze.test_raw (
                     "test-provider",
                     "test-host",
                     "{\"EventID\":\"2\"}")
-            ]));
+            ]), TestContext.CancellationToken);
 
         Assert.AreEqual(2L, applier.QueryScalar("SELECT count(*) FROM bronze.test_raw"));
     }
+
+    public TestContext TestContext { get; set; }
 }

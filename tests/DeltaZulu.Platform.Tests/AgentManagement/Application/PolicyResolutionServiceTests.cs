@@ -62,7 +62,7 @@ public sealed class PolicyResolutionServiceTests
         AddAssignment(AssignmentScopeType.Tenant, TenantId.Default.Value.ToString("D"), [tenantProfile]);
         AddAssignment(AssignmentScopeType.Group, groupId.Value.ToString("D"), [groupProfile, tenantProfile]);
 
-        var resolution = await CreateService().ResolveAsync(agent);
+        var resolution = await CreateService().ResolveAsync(agent, TestContext.CancellationToken);
 
         Assert.AreEqual(2, resolution.ProfileVersionIds.Count);
         Assert.IsEmpty(resolution.UnresolvedProfileIds);
@@ -84,7 +84,7 @@ public sealed class PolicyResolutionServiceTests
         AddAssignment(AssignmentScopeType.Agent, agent.Id.Value.ToString("D"),
             [], agentConfig);
 
-        var resolution = await CreateService().ResolveAsync(agent);
+        var resolution = await CreateService().ResolveAsync(agent, TestContext.CancellationToken);
 
         Assert.AreEqual(agentVersion.Id, resolution.ConfigVersionId);
     }
@@ -104,7 +104,7 @@ public sealed class PolicyResolutionServiceTests
         AddAssignment(AssignmentScopeType.Tenant, TenantId.Default.Value.ToString("D"),
             [], highConfig, precedence: 10);
 
-        var resolution = await CreateService().ResolveAsync(agent);
+        var resolution = await CreateService().ResolveAsync(agent, TestContext.CancellationToken);
 
         Assert.AreEqual(highVersion.Id, resolution.ConfigVersionId);
     }
@@ -120,7 +120,7 @@ public sealed class PolicyResolutionServiceTests
 
         AddAssignment(AssignmentScopeType.Tenant, TenantId.Default.Value.ToString("D"), [profileId]);
 
-        var resolution = await CreateService().ResolveAsync(agent);
+        var resolution = await CreateService().ResolveAsync(agent, TestContext.CancellationToken);
 
         CollectionAssert.AreEqual(new[] { latest.Id }, resolution.ProfileVersionIds.ToArray());
     }
@@ -133,7 +133,7 @@ public sealed class PolicyResolutionServiceTests
         AddAssignment(AssignmentScopeType.Tenant, TenantId.Default.Value.ToString("D"),
             [unpublishedProfile]);
 
-        var resolution = await CreateService().ResolveAsync(agent);
+        var resolution = await CreateService().ResolveAsync(agent, TestContext.CancellationToken);
 
         Assert.IsEmpty(resolution.ProfileVersionIds);
         CollectionAssert.AreEqual(new[] { unpublishedProfile }, resolution.UnresolvedProfileIds.ToArray());
@@ -148,8 +148,8 @@ public sealed class PolicyResolutionServiceTests
         AddAssignment(AssignmentScopeType.Tenant, TenantId.Default.Value.ToString("D"), [profileId]);
 
         var service = CreateService();
-        var first = await service.ResolveAsync(agent);
-        var second = await service.ResolveAsync(agent);
+        var first = await service.ResolveAsync(agent, TestContext.CancellationToken);
+        var second = await service.ResolveAsync(agent, TestContext.CancellationToken);
 
         Assert.AreEqual(first.ContentHash, second.ContentHash);
     }
@@ -162,8 +162,8 @@ public sealed class PolicyResolutionServiceTests
         AddAssignment(AssignmentScopeType.Tenant, TenantId.Default.Value.ToString("D"), [profileId]);
 
         var service = CreateService();
-        var first = await service.EnsureDesiredBundleAsync(agent);
-        var second = await service.EnsureDesiredBundleAsync(agent);
+        var first = await service.EnsureDesiredBundleAsync(agent, TestContext.CancellationToken);
+        var second = await service.EnsureDesiredBundleAsync(agent, TestContext.CancellationToken);
 
         Assert.IsNotNull(first);
         Assert.IsNotNull(second);
@@ -180,11 +180,11 @@ public sealed class PolicyResolutionServiceTests
         AddAssignment(AssignmentScopeType.Tenant, TenantId.Default.Value.ToString("D"), [profileId]);
 
         var service = CreateService();
-        var first = await service.EnsureDesiredBundleAsync(agent);
+        var first = await service.EnsureDesiredBundleAsync(agent, TestContext.CancellationToken);
 
         var secondProfile = AddPublishedProfile();
         AddAssignment(AssignmentScopeType.Agent, agent.Id.Value.ToString("D"), [secondProfile]);
-        var second = await service.EnsureDesiredBundleAsync(agent);
+        var second = await service.EnsureDesiredBundleAsync(agent, TestContext.CancellationToken);
 
         Assert.IsNotNull(first);
         Assert.IsNotNull(second);
@@ -198,7 +198,7 @@ public sealed class PolicyResolutionServiceTests
     {
         var agent = NewAgent();
 
-        var bundle = await CreateService().EnsureDesiredBundleAsync(agent);
+        var bundle = await CreateService().EnsureDesiredBundleAsync(agent, TestContext.CancellationToken);
 
         Assert.IsNull(bundle);
         Assert.IsNull(agent.DesiredBundleId);
@@ -221,7 +221,7 @@ public sealed class PolicyResolutionServiceTests
             new Dictionary<ResourceProfileId, ProfileVersionId> { [profileId] = v1.Id },
             null, _clock.Now);
 
-        var resolution = await CreateService().ResolveAsync(agent);
+        var resolution = await CreateService().ResolveAsync(agent, TestContext.CancellationToken);
 
         CollectionAssert.AreEqual(new[] { v1.Id }, resolution.ProfileVersionIds.ToArray());
     }
@@ -250,7 +250,7 @@ public sealed class PolicyResolutionServiceTests
             new Dictionary<ResourceProfileId, ProfileVersionId> { [profileId] = v2.Id },
             null, _clock.Now);
 
-        var resolution = await CreateService().ResolveAsync(agent);
+        var resolution = await CreateService().ResolveAsync(agent, TestContext.CancellationToken);
 
         CollectionAssert.AreEqual(new[] { v2.Id }, resolution.ProfileVersionIds.ToArray());
     }
@@ -272,7 +272,7 @@ public sealed class PolicyResolutionServiceTests
             new Dictionary<ResourceProfileId, ProfileVersionId> { [profileId] = v1.Id },
             null, _clock.Now);
 
-        var resolution = await CreateService().ResolveAsync(agent);
+        var resolution = await CreateService().ResolveAsync(agent, TestContext.CancellationToken);
 
         CollectionAssert.AreEqual(new[] { v1.Id }, resolution.ProfileVersionIds.ToArray());
     }
@@ -290,7 +290,7 @@ public sealed class PolicyResolutionServiceTests
             new Dictionary<ResourceProfileId, ProfileVersionId> { [profileId] = ProfileVersionId.New() },
             null, _clock.Now);
 
-        var resolution = await CreateService().ResolveAsync(agent);
+        var resolution = await CreateService().ResolveAsync(agent, TestContext.CancellationToken);
 
         Assert.IsEmpty(resolution.ProfileVersionIds);
         CollectionAssert.AreEqual(new[] { profileId }, resolution.UnresolvedProfileIds.ToArray());
@@ -311,7 +311,7 @@ public sealed class PolicyResolutionServiceTests
         assignment.SetPins(
             new Dictionary<ResourceProfileId, ProfileVersionId>(), v1.Id, _clock.Now);
 
-        var resolution = await CreateService().ResolveAsync(agent);
+        var resolution = await CreateService().ResolveAsync(agent, TestContext.CancellationToken);
 
         Assert.AreEqual(v1.Id, resolution.ConfigVersionId);
     }
@@ -326,7 +326,7 @@ public sealed class PolicyResolutionServiceTests
         AddAssignment(AssignmentScopeType.Tenant, TenantId.Default.Value.ToString("D"),
             [profileId], configPolicyId);
 
-        var resolution = await CreateService().ResolveAsync(agent);
+        var resolution = await CreateService().ResolveAsync(agent, TestContext.CancellationToken);
         var document = PolicyResolutionService.ParseDocument(resolution.DocumentJson);
 
         Assert.IsNotNull(document);
@@ -334,4 +334,6 @@ public sealed class PolicyResolutionServiceTests
         Assert.HasCount(1, document.Profiles);
         Assert.IsNotNull(document.Config);
     }
+
+    public TestContext TestContext { get; set; }
 }

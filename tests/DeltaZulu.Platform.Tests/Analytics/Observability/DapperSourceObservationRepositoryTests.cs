@@ -6,10 +6,11 @@ using DeltaZulu.Platform.Domain.Analytics.Observability;
 namespace DeltaZulu.Platform.Tests.Analytics.Observability;
 
 [TestClass]
-public sealed class DapperSourceObservationRepositoryTests
+public sealed class DapperSourceObservationRepositoryTests : IDisposable
 {
     private DbConnection _keepAliveConnection = null!;
     private DapperSourceObservationRepository _repository = null!;
+    private bool disposedValue;
 
     [TestInitialize]
     public void Setup()
@@ -31,7 +32,7 @@ public sealed class DapperSourceObservationRepositoryTests
     [TestMethod]
     public async Task ListLatest_ReturnsEmpty_WhenNoData()
     {
-        var result = await _repository.ListLatestAsync();
+        var result = await _repository.ListLatestAsync(TestContext.CancellationToken);
         Assert.AreEqual(0, result.Count);
     }
 
@@ -39,9 +40,9 @@ public sealed class DapperSourceObservationRepositoryTests
     public async Task Upsert_ThenList_ReturnsInsertedSnapshot()
     {
         var snapshot = MakeSnapshot("WindowsEventLog", "Security", "agent-01");
-        await _repository.UpsertAsync(snapshot);
+        await _repository.UpsertAsync(snapshot, TestContext.CancellationToken);
 
-        var result = await _repository.ListLatestAsync();
+        var result = await _repository.ListLatestAsync(TestContext.CancellationToken);
         Assert.AreEqual(1, result.Count);
         Assert.AreEqual("WindowsEventLog", result[0].SourceType);
         Assert.AreEqual("Security", result[0].Channel);
@@ -54,12 +55,12 @@ public sealed class DapperSourceObservationRepositoryTests
     public async Task Upsert_UpdatesExistingRow_OnConflict()
     {
         var first = MakeSnapshot("WindowsEventLog", "Security", "agent-01", readCount: 500);
-        await _repository.UpsertAsync(first);
+        await _repository.UpsertAsync(first, TestContext.CancellationToken);
 
         var updated = MakeSnapshot("WindowsEventLog", "Security", "agent-01", readCount: 1500);
-        await _repository.UpsertAsync(updated);
+        await _repository.UpsertAsync(updated, TestContext.CancellationToken);
 
-        var result = await _repository.ListLatestAsync();
+        var result = await _repository.ListLatestAsync(TestContext.CancellationToken);
         Assert.AreEqual(1, result.Count);
         Assert.AreEqual(1500, result[0].ReadCount);
     }
@@ -67,20 +68,20 @@ public sealed class DapperSourceObservationRepositoryTests
     [TestMethod]
     public async Task Upsert_KeepsSeparateRows_ForDifferentAgents()
     {
-        await _repository.UpsertAsync(MakeSnapshot("WindowsEventLog", "Security", "agent-01"));
-        await _repository.UpsertAsync(MakeSnapshot("WindowsEventLog", "Security", "agent-02"));
+        await _repository.UpsertAsync(MakeSnapshot("WindowsEventLog", "Security", "agent-01"), TestContext.CancellationToken);
+        await _repository.UpsertAsync(MakeSnapshot("WindowsEventLog", "Security", "agent-02"), TestContext.CancellationToken);
 
-        var result = await _repository.ListLatestAsync();
+        var result = await _repository.ListLatestAsync(TestContext.CancellationToken);
         Assert.AreEqual(2, result.Count);
     }
 
     [TestMethod]
     public async Task Upsert_KeepsSeparateRows_ForDifferentChannels()
     {
-        await _repository.UpsertAsync(MakeSnapshot("WindowsEventLog", "Security", "agent-01"));
-        await _repository.UpsertAsync(MakeSnapshot("WindowsEventLog", "Sysmon/Operational", "agent-01"));
+        await _repository.UpsertAsync(MakeSnapshot("WindowsEventLog", "Security", "agent-01"), TestContext.CancellationToken);
+        await _repository.UpsertAsync(MakeSnapshot("WindowsEventLog", "Sysmon/Operational", "agent-01"), TestContext.CancellationToken);
 
-        var result = await _repository.ListLatestAsync();
+        var result = await _repository.ListLatestAsync(TestContext.CancellationToken);
         Assert.AreEqual(2, result.Count);
     }
 
@@ -95,8 +96,8 @@ public sealed class DapperSourceObservationRepositoryTests
             ReadCount: 5000, KeptAfterFilterCount: 4500, DiscardedCount: 500,
             ForwardedCount: 4400, ForwardFailedCount: 100, ObservedAtUtc: now);
 
-        await _repository.UpsertAsync(snapshot);
-        var result = (await _repository.ListLatestAsync())[0];
+        await _repository.UpsertAsync(snapshot, TestContext.CancellationToken);
+        var result = (await _repository.ListLatestAsync(TestContext.CancellationToken))[0];
 
         Assert.AreEqual("DNSServer", result.SourceType);
         Assert.AreEqual("Analytical", result.Channel);
@@ -123,4 +124,27 @@ public sealed class DapperSourceObservationRepositoryTests
             ReadErrorCount: 0, LastError: null,
             ReadCount: readCount, KeptAfterFilterCount: readCount, DiscardedCount: 0,
             ForwardedCount: readCount, ForwardFailedCount: 0, ObservedAtUtc: DateTime.UtcNow);
+
+    private void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            if (disposing)
+            {
+                _keepAliveConnection?.Dispose();
+                _repository?.Dispose();
+            }
+
+            disposedValue = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    public TestContext TestContext { get; set; }
 }

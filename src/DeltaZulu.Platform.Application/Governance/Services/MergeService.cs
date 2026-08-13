@@ -1,6 +1,6 @@
 using DeltaZulu.Platform.Application.Governance.ContentPipeline;
-using DeltaZulu.Platform.Domain.Governance.Changes;
 using DeltaZulu.Platform.Domain.Common;
+using DeltaZulu.Platform.Domain.Governance.Changes;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
 using DeltaZulu.Platform.Domain.Governance.Detections;
 using DeltaZulu.Platform.Domain.Governance.Identifiers;
@@ -20,6 +20,7 @@ public sealed class MergeService(
     IMergeIntentRepository mergeIntents,
     IUnitOfWork uow,
     IWorkflowOrchestrator orchestrator,
+    IDetectionProjectionService projections,
     TimeProvider time)
 {
     public async Task<DetectionVersion> MergeAsync(
@@ -117,6 +118,10 @@ public sealed class MergeService(
         }
 
         await uow.SaveChangesAsync(ct);
+
+        // The executable definition is a deterministic projection of the accepted package.
+        // Replaying the same accepted version upserts its stable projection identity.
+        await projections.ProjectAsync(detection, version, ct);
         await orchestrator.OnMergeCompletedAsync(changeId, ct);
 
         return version;

@@ -28,7 +28,7 @@ Evidence from the current documentation and tree:
 - The central architecture is authoritative for module ownership, backend ownership, routing, and storage boundaries.
 - Analytics has a working KQL-to-DuckDB contract, render/dashboard design, Golden-view query boundary, diagnostics-first unsupported behavior, and a construct-level checklist showing 226 MVP-ready or metadata-supported items out of 320 in-scope items, with 91 deferred and 3 deliberately blocked for semantic safety.
 - Governance has the core detection-content workflow shape in place: issues, detections, database-owned changes, checks, reviews, Git-backed accepted content, versions, compare/restore, and merge reconciliation.
-- The shared analytics execution contract (Phase 2) is complete. Curated analytics persistence and promotion (Phase 3) are complete. NRT detection foundation (Phase 3A) is complete. The next meaningful progress is **Phase 3B** (alert storage migration to DuckDB lake) and **Phase 4** (executable detection projection), both of which are unblocked.
+- The shared analytics execution contract (Phase 2) is complete. Curated analytics persistence and promotion (Phase 3) are complete. NRT detection foundation (Phase 3A) is complete. Phase 3B alert-storage migration is complete. The next meaningful progress is **Phase 4** (executable detection projection), which is now underway.
 - A design-system gap analysis now adds a prerequisite UI-governance track: resolve whether this app is DZNS-branded, DeltaZulu Platform-branded, or an internal DeltaZulu platform; remove rule conflicts before expanding dashboard and Operations surfaces.
 
 
@@ -113,7 +113,7 @@ These phases represent the minimum implementation sequence from the target user 
 
 ## Phase status
 
-Last assessed: 2026-06-27.
+Last assessed: 2026-07-17.
 
 | Phase | Status | Notes |
 |---:|---|---|
@@ -122,8 +122,8 @@ Last assessed: 2026-06-27.
 | 2 | **Complete** | Application-layer `ExecutionPurpose`, `AnalyticsQueryRequest`, `AnalyticsQueryResult`, and `IAnalyticsQueryExecutor` exist. DuckDB execution and single-connection serialization live behind `AnalyticsQueryExecutor`; interactive Analytics, dashboard data-only execution, and governance validation dry-runs all call through the shared contract with purpose-specific policies. `QueryExecutionDryRunCheck` runs draft queries with `ValidationDryRun` purpose during the governance check pipeline. Boundary tests prove no governance check creates parallel execution paths. Scheduled-detection and recovery callers are deferred to Phase 6. |
 | 3 | **Complete** | `CuratedAnalyticRecord` with purpose, required views/fields, expected result shape, entity mappings JSON, known false positives, severity/confidence/risk hints, notes, and promotion tracking. `ICuratedAnalyticRepository` with SQLite Dapper implementation. `CuratedAnalyticService` with saved-query-to-curated-analytic promotion. Persistence registered and initialized in platform startup. |
 | 3A | **Complete** | `NrtRule` domain record, `INrtRuleRepository`, `NrtCompilationResult`. `NrtRuleCompiler` (Application, KQL→RelNode→ProtonSQL→MV DDL via `IDetectionCompilationBackend`), `ProtonDetectionCompilationBackend` and `ProtonSqlQueryEmitter` (Data.Proton), `NrtRuleService` (Application orchestration). `MaterializedViewDdl`, `ScheduledTaskDdl`, `AlertDdl`, `ProtonInterval` DDL builder library (Data.Proton). `DapperNrtRuleRepository` (SQLite). `/analytics/nrt` rule authoring UI. Architecture documented in `ARCHITECTURE.md`. |
-| 3B | **In progress** | Alert and alert-entity SQLite repositories and app-state attachments have been removed. DuckDB lake writers append immutable alert evidence and entities without a status column, and `AlertEvent`/`AlertEntity` are approved KQL views. The dedicated operations SQLite registration and migration for incident candidates remain. |
-| 4 | **Scaffolded** | `DetectionRecord` exists but lacks `LookbackPolicy`, `AlertMaterializationMode`, `AcceptedVersionId`. No projection pipeline from governance acceptance. |
+| 3B | **Complete** | Alert and alert-entity SQLite repositories and app-state attachments were removed. DuckDB lake writers append immutable alert evidence and entities without a status column, `AlertEvent`/`AlertEntity` are approved KQL views, and mutable incident-candidate repositories are initialized against their dedicated operations SQLite database. |
+| 4 | **In progress** | Governance merge synchronously projects accepted executable `detection.yaml` metadata into an executable `DetectionRecord`; non-executable or invalid packages remain accepted and await Phase 4 diagnostics. The projection has deterministic accepted-version identity, SHA-256 rule hashing, schedule, lookback, entity mappings, suppression policy, and materialization mode. Remaining work: stale/invalid diagnostics and a backfill command. |
 | 5 | **Scaffolded** | Domain records and SQLite Dapper repositories exist under `Analytics/` namespace. Alert records must migrate to DuckDB lake (append-only) rather than SQLite (mutable). Missing key fields on `AlertRecord` (evidence hash, materialization key, rule hash, suppression) and `DetectionRunRecord` (alert count, lookback window). `IIncidentRepository` and `ICandidateDecisionRepository` have no SQLite implementations. |
 | 6 | **Not started** | `ScheduledTaskDdl` builder exists. No Proton connectivity, no scheduled task deployment, no mediation daemon, no alert dispatch stream consumer. |
 | 7 | **Not started** | No .NET mediation daemon, no NRT threshold evaluation, no DuckDB lake writer for alerts. |

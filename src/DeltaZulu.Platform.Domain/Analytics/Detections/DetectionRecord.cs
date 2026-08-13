@@ -19,4 +19,7 @@ public sealed record DetectionRecord(
     bool IsEnabled,
     string? TestMetadataJson,
     DateTime CreatedAtUtc,
-    DateTime UpdatedAtUtc);
+    DateTime UpdatedAtUtc,
+    string? LookbackPolicy = null,
+    string MaterializationMode = "PerResultRow",
+    string? AcceptedVersionId = null);

@@ -53,7 +53,7 @@ public sealed class ValidationGatingTests
     {
         var version = AddDraftProfileVersion(new InputContract("SecurityEvent", "bronze"));
 
-        await CreateProfileService().MarkValidatedAsync(version.Id);
+        await CreateProfileService().MarkValidatedAsync(version.Id, TestContext.CancellationToken);
 
         Assert.AreEqual(ProfileState.Validated, _profileVersions.Versions[version.Id].State);
     }
@@ -64,7 +64,7 @@ public sealed class ValidationGatingTests
         var version = AddDraftProfileVersion(new InputContract("", ""));
 
         var ex = await Assert.ThrowsExactlyAsync<DomainException>(() =>
-            CreateProfileService().MarkValidatedAsync(version.Id));
+            CreateProfileService().MarkValidatedAsync(version.Id, TestContext.CancellationToken));
 
         Assert.AreEqual("profileversion.validation_failed", ex.Code);
         Assert.Contains("Input table name is required", ex.Message);
@@ -77,7 +77,7 @@ public sealed class ValidationGatingTests
         var version = TestData.DraftConfigVersion(ConfigPolicyId.New(), 1, _clock.Now);
         _configVersions.Add(version);
 
-        await CreateConfigService().MarkValidatedAsync(version.Id);
+        await CreateConfigService().MarkValidatedAsync(version.Id, TestContext.CancellationToken);
 
         Assert.AreEqual(ProfileState.Validated, _configVersions.Versions[version.Id].State);
     }
@@ -91,7 +91,7 @@ public sealed class ValidationGatingTests
         _configVersions.Add(version);
 
         var ex = await Assert.ThrowsExactlyAsync<DomainException>(() =>
-            CreateConfigService().MarkValidatedAsync(version.Id));
+            CreateConfigService().MarkValidatedAsync(version.Id, TestContext.CancellationToken));
 
         Assert.AreEqual("configversion.validation_failed", ex.Code);
         Assert.AreEqual(ProfileState.Draft, _configVersions.Versions[version.Id].State);
@@ -140,4 +140,6 @@ public sealed class ValidationGatingTests
         Assert.IsFalse(DaemonConfigValidator.HasBlockingFailures(findings));
         Assert.IsTrue(findings.Any(f => f.Severity == ValidationSeverity.Warning));
     }
+
+    public TestContext TestContext { get; set; }
 }

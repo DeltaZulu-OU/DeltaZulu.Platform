@@ -20,7 +20,7 @@ public abstract class DapperRepositoryBase : IApplicationPersistenceRepository, 
 
     protected IAppDbConnectionFactory ConnectionFactory { get; }
 
-    public async Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
+    public virtual async Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
     {
         if (_initialized)
         {

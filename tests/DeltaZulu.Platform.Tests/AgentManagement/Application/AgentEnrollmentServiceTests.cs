@@ -34,7 +34,7 @@ public sealed class AgentEnrollmentServiceTests
         var token = IssueToken();
 
         var result = await CreateService().EnrollAsync(
-            token, "server-01", ResourcePlatform.Linux, "1.2.3", ["web"]);
+            token, "server-01", ResourcePlatform.Linux, "1.2.3", ["web"], TestContext.CancellationToken);
 
         Assert.AreEqual("server-01", result.Agent.Hostname);
         Assert.StartsWith(AgentSecrets.AgentSecretPrefix, result.AgentSecret);
@@ -49,7 +49,7 @@ public sealed class AgentEnrollmentServiceTests
     public async Task Enroll_UnknownToken_Throws()
     {
         var ex = await Assert.ThrowsExactlyAsync<DomainException>(() =>
-            CreateService().EnrollAsync("dz-et-bogus", "host", ResourcePlatform.Windows));
+            CreateService().EnrollAsync("dz-et-bogus", "host", ResourcePlatform.Windows, ct: TestContext.CancellationToken));
         Assert.AreEqual("enrollmenttoken.invalid", ex.Code);
     }
 
@@ -60,7 +60,7 @@ public sealed class AgentEnrollmentServiceTests
         _clock.Advance(TimeSpan.FromMinutes(10));
 
         var ex = await Assert.ThrowsExactlyAsync<DomainException>(() =>
-            CreateService().EnrollAsync(token, "host", ResourcePlatform.Windows));
+            CreateService().EnrollAsync(token, "host", ResourcePlatform.Windows, ct: TestContext.CancellationToken));
         Assert.AreEqual("enrollmenttoken.expired", ex.Code);
     }
 
@@ -71,7 +71,7 @@ public sealed class AgentEnrollmentServiceTests
         _tokens.Tokens.Values.Single().Revoke(_clock.Now);
 
         var ex = await Assert.ThrowsExactlyAsync<DomainException>(() =>
-            CreateService().EnrollAsync(token, "host", ResourcePlatform.Windows));
+            CreateService().EnrollAsync(token, "host", ResourcePlatform.Windows, ct: TestContext.CancellationToken));
         Assert.AreEqual("enrollmenttoken.revoked", ex.Code);
     }
 
@@ -80,10 +80,10 @@ public sealed class AgentEnrollmentServiceTests
     {
         var token = IssueToken(maxUses: 1);
         var service = CreateService();
-        await service.EnrollAsync(token, "host-1", ResourcePlatform.Windows);
+        await service.EnrollAsync(token, "host-1", ResourcePlatform.Windows, ct: TestContext.CancellationToken);
 
         var ex = await Assert.ThrowsExactlyAsync<DomainException>(() =>
-            service.EnrollAsync(token, "host-2", ResourcePlatform.Windows));
+            service.EnrollAsync(token, "host-2", ResourcePlatform.Windows, ct: TestContext.CancellationToken));
         Assert.AreEqual("enrollmenttoken.exhausted", ex.Code);
     }
 
@@ -93,8 +93,8 @@ public sealed class AgentEnrollmentServiceTests
         var token = IssueToken();
         var service = CreateService();
 
-        var first = await service.EnrollAsync(token, "server-01", ResourcePlatform.Linux);
-        var second = await service.EnrollAsync(token, "server-01", ResourcePlatform.Linux);
+        var first = await service.EnrollAsync(token, "server-01", ResourcePlatform.Linux, ct: TestContext.CancellationToken);
+        var second = await service.EnrollAsync(token, "server-01", ResourcePlatform.Linux, ct: TestContext.CancellationToken);
 
         Assert.AreEqual(first.Agent.Id, second.Agent.Id);
         Assert.AreNotEqual(first.AgentSecret, second.AgentSecret);
@@ -104,4 +104,6 @@ public sealed class AgentEnrollmentServiceTests
         Assert.AreEqual(AgentSecrets.Hash(second.AgentSecret),
             _credentials.Credentials[first.Agent.Id].SecretHash);
     }
+
+    public TestContext TestContext { get; set; }
 }
