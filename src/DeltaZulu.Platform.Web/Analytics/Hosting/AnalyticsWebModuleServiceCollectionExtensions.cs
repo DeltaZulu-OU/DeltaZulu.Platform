@@ -9,6 +9,7 @@ using DeltaZulu.Platform.Domain.Analytics.Observability;
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
 using DeltaZulu.Platform.Domain.Analytics.Catalog;
 using DeltaZulu.Platform.Domain.Analytics.Execution;
+using DeltaZulu.Platform.Domain.Analytics.Investigations;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 using DeltaZulu.Platform.Domain.Governance.Contracts;
 using DeltaZulu.Platform.Web.Analytics.Dashboards;
@@ -100,6 +101,7 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         services.AddScoped<QueryLibraryService>();
         services.AddScoped<VisualizationLibraryService>();
         services.AddScoped<LibraryService>();
+        services.AddScoped<InvestigationService>();
         services.AddScoped<LibraryPageController>();
         services.AddScoped<DashboardListPageController>();
 
