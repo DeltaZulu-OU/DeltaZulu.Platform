@@ -7,10 +7,8 @@
 @using DeltaZulu.Platform.Domain.AgentManagement.Enums
 @using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
 @using DeltaZulu.Platform.Domain.Common
-@using DeltaZulu.Platform.Web.AgentManagement.Shared
 @inject DaemonConfigService ConfigService
 @inject ISnackbar Snackbar
-@inject NavigationManager Nav
 
 <PageTitle>Config — @(_policy?.Name ?? "Loading")</PageTitle>
 
@@ -87,13 +85,13 @@ else
                                     {
                                         case ProfileState.Draft:
                                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Info"
-                                                       OnClick="@(() => TransitionVersion(context.Id, "validate"))">
+                                                       OnClick="@(() => ValidateVersion(context.Id))">
                                                 Validate
                                             </MudButton>
                                             break;
                                         case ProfileState.Validated:
                                             <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Success"
-                                                       OnClick="@(() => TransitionVersion(context.Id, "publish"))">
+                                                       OnClick="@(() => PublishVersion(context.Id))">
                                                 Publish
                                             </MudButton>
                                             break;
@@ -115,7 +113,9 @@ else
     private List<DaemonConfigVersion> _versions = [];
     private List<BreadcrumbItem> _breadcrumbs = [];
 
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
     {
         if (!Guid.TryParse(Id, out var guid)) return;
         var policyId = new ConfigPolicyId(guid);
@@ -132,22 +132,19 @@ else
         _versions = (await ConfigService.ListVersionsAsync(policyId)).ToList();
     }
 
-    private async Task TransitionVersion(ConfigVersionId versionId, string action)
+    private Task ValidateVersion(ConfigVersionId id) =>
+        ApplyTransition(() => ConfigService.MarkValidatedAsync(id), "validated");
+
+    private Task PublishVersion(ConfigVersionId id) =>
+        ApplyTransition(() => ConfigService.PublishAsync(id), "published");
+
+    private async Task ApplyTransition(Func<Task> action, string pastTense)
     {
         try
         {
-            switch (action)
-            {
-                case "validate":
-                    await ConfigService.MarkValidatedAsync(versionId);
-                    break;
-                case "publish":
-                    await ConfigService.PublishAsync(versionId);
-                    break;
-            }
-
-            Snackbar.Add($"Version {action}d.", Severity.Success);
-            await OnParametersSetAsync();
+            await action();
+            Snackbar.Add($"Version {pastTense}.", Severity.Success);
+            await LoadAsync();
         }
         catch (DomainException ex)
         {

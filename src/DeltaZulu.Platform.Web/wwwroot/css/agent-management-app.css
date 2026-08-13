@@ -1,9 +1,3 @@
-/* Agent Management module styles */
-
-.dz-agent-row {
-    cursor: pointer;
-}
-
 .dz-agent-hostname {
     display: flex;
     flex-direction: column;
@@ -32,9 +26,4 @@
 .dz-buffer-pressure--high {
     color: var(--mud-palette-error);
     font-weight: 600;
-}
-
-.dz-profile-versions-actions {
-    display: flex;
-    gap: 4px;
 }
