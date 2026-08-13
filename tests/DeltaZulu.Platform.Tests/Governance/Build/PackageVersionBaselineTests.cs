@@ -71,14 +71,18 @@ public sealed class PackageVersionBaselineTests
 
         Assert.AreEqual("true", restorePackagesWithLockFile, "Directory.Build.props must require package lock files for every project.");
 
+        Assert.IsTrue(Directory.Exists(workflowsDirectory), "Expected a GitHub Actions workflows directory to validate locked restore policy.");
+
         var workflowFiles = Directory.EnumerateFiles(workflowsDirectory, "*.yml", SearchOption.TopDirectoryOnly)
             .Concat(Directory.EnumerateFiles(workflowsDirectory, "*.yaml", SearchOption.TopDirectoryOnly))
+            .Where(File.Exists)
+            .Order(StringComparer.Ordinal)
             .ToList();
 
         Assert.IsNotEmpty(workflowFiles, "Expected at least one GitHub Actions workflow to validate locked restore policy.");
 
         var restoreUsesLockedMode = workflowFiles
-            .Select(File.ReadAllText)
+            .Select(path => File.ReadAllText(path))
             .Any(workflow => workflow.Contains("dotnet restore", StringComparison.Ordinal)
                 && workflow.Contains("--locked-mode", StringComparison.Ordinal));
 
