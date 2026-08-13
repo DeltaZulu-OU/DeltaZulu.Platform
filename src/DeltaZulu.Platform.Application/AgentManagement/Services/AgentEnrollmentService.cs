@@ -5,6 +5,7 @@ using DeltaZulu.Platform.Domain.AgentManagement.Enrollment;
 using DeltaZulu.Platform.Domain.AgentManagement.Enums;
 using DeltaZulu.Platform.Domain.AgentManagement.Identifiers;
 using DeltaZulu.Platform.Domain.Common;
+using Microsoft.Extensions.Logging;
 
 namespace DeltaZulu.Platform.Application.AgentManagement.Services;
 
@@ -15,14 +16,17 @@ public sealed record EnrollmentResult(Agent Agent, string AgentSecret);
 /// per-agent secret. Re-enrolling an existing hostname with a valid token and that
 /// agent's current secret reuses the agent identity and rotates its secret (the
 /// credential-recovery path); without the current secret, a bootstrap token alone
-/// cannot take over an already-credentialed hostname.
+/// cannot take over an already-credentialed hostname. A revoked credential skips
+/// the proof-of-possession requirement, since an operator revoke is itself the
+/// authorization for the next enrollment to reissue it.
 /// </summary>
 public sealed class AgentEnrollmentService(
     IEnrollmentTokenRepository tokenRepo,
     IAgentRepository agentRepo,
     IAgentCredentialRepository credentialRepo,
     IAgentManagementUnitOfWork unitOfWork,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ILogger<AgentEnrollmentService> logger)
 {
     public async Task<EnrollmentResult> EnrollAsync(
         string bootstrapToken, string hostname, ResourcePlatform platform,
@@ -45,7 +49,7 @@ public sealed class AgentEnrollmentService(
         if (agent is not null)
         {
             existingCredential = await credentialRepo.GetByAgentIdAsync(agent.Id, ct);
-            if (existingCredential is not null
+            if (existingCredential is not null && existingCredential.IsUsable
                 && !existingCredential.VerifySecretHash(HashOrEmpty(previousAgentSecret)))
             {
                 // A bootstrap token proves the caller is allowed to enroll *some*
@@ -53,6 +57,10 @@ public sealed class AgentEnrollmentService(
                 // credentialed hostname. Recovery requires proof of the current
                 // secret; otherwise any token holder could silently rotate an
                 // unrelated agent's credential just by naming its hostname.
+                logger.LogWarning(
+                    "Rejected enrollment for tenant {TenantId}: hostname {Hostname} already has an " +
+                    "active credential and no valid proof of possession was presented.",
+                    token.TenantId, hostname);
                 throw new DomainException("agent.hostname_taken",
                     $"An agent is already enrolled with hostname '{hostname}'. " +
                     "Provide its current agent secret to recover the credential, " +
@@ -85,7 +93,28 @@ public sealed class AgentEnrollmentService(
         }
 
         await unitOfWork.SaveChangesAsync(ct);
+        logger.LogInformation(
+            "Agent {AgentId} ({Hostname}) enrolled for tenant {TenantId}; new={IsNew}, credentialReissued={Reissued}",
+            agent.Id, hostname, token.TenantId, isNewAgent, existingCredential is not null);
         return new EnrollmentResult(agent, secret);
+    }
+
+    /// <summary>
+    /// Immediately invalidates an agent's credential. This is the operator kill
+    /// switch for a leaked or decommissioned secret - afterward, that secret
+    /// authenticates nothing, and the hostname can be freely re-enrolled with a
+    /// valid bootstrap token without needing to prove possession of it.
+    /// </summary>
+    public async Task RevokeCredentialAsync(AgentId agentId, CancellationToken ct = default)
+    {
+        var credential = await credentialRepo.GetByAgentIdAsync(agentId, ct)
+            ?? throw new DomainException("agentcredential.not_found",
+                $"Agent {agentId} has no credential to revoke.");
+
+        credential.Revoke(timeProvider.GetUtcNow());
+        credentialRepo.Save(credential);
+        await unitOfWork.SaveChangesAsync(ct);
+        logger.LogInformation("Agent {AgentId}'s credential was revoked.", agentId);
     }
 
     private static string HashOrEmpty(string? plaintext) =>

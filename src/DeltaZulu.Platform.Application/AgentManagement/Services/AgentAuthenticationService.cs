@@ -19,7 +19,7 @@ public sealed class AgentAuthenticationService(IAgentCredentialRepository creden
 
         var presentedHash = AgentSecrets.Hash(bearerSecret);
         var credential = await credentialRepo.GetBySecretHashAsync(presentedHash, ct);
-        if (credential is null)
+        if (credential is null || !credential.IsUsable)
             return null;
 
         var stored = Encoding.UTF8.GetBytes(credential.SecretHash);

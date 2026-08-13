@@ -61,4 +61,39 @@ public sealed class AgentCredentialTests
         Assert.IsFalse(credential.VerifySecretHash(null!));
         Assert.IsFalse(credential.VerifySecretHash(""));
     }
+
+    [TestMethod]
+    public void Revoke_SetsRevokedAtAndMakesCredentialUnusable()
+    {
+        var credential = AgentCredential.Issue(AgentId.New(), "hash-1", Now);
+        Assert.IsTrue(credential.IsUsable);
+
+        credential.Revoke(Now.AddMinutes(5));
+
+        Assert.AreEqual(Now.AddMinutes(5), credential.RevokedAt);
+        Assert.IsFalse(credential.IsUsable);
+    }
+
+    [TestMethod]
+    public void Revoke_IsIdempotent()
+    {
+        var credential = AgentCredential.Issue(AgentId.New(), "hash-1", Now);
+
+        credential.Revoke(Now.AddMinutes(5));
+        credential.Revoke(Now.AddMinutes(10));
+
+        Assert.AreEqual(Now.AddMinutes(5), credential.RevokedAt);
+    }
+
+    [TestMethod]
+    public void Rotate_AfterRevoke_ClearsRevocation()
+    {
+        var credential = AgentCredential.Issue(AgentId.New(), "hash-1", Now);
+        credential.Revoke(Now.AddMinutes(5));
+
+        credential.Rotate("hash-2", Now.AddMinutes(10));
+
+        Assert.IsNull(credential.RevokedAt);
+        Assert.IsTrue(credential.IsUsable);
+    }
 }

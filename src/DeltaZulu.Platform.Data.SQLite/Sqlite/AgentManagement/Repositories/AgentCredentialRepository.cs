@@ -26,15 +26,15 @@ internal sealed class AgentCredentialRepository(AgentManagementDapperSession ses
     }
 
     public void Add(AgentCredential credential) => session.Connection.Execute("""
-        INSERT INTO agent_credentials (agent_id, secret_hash, certificate_thumbprint, created_at, rotated_at)
-        VALUES (@AgentId, @SecretHash, @CertificateThumbprint, @CreatedAt, @RotatedAt)
+        INSERT INTO agent_credentials (agent_id, secret_hash, certificate_thumbprint, created_at, rotated_at, revoked_at)
+        VALUES (@AgentId, @SecretHash, @CertificateThumbprint, @CreatedAt, @RotatedAt, @RevokedAt)
         """,
         ToParams(credential),
         session.Transaction);
 
     public void Save(AgentCredential credential) => session.Connection.Execute("""
         UPDATE agent_credentials SET secret_hash = @SecretHash,
-            certificate_thumbprint = @CertificateThumbprint, rotated_at = @RotatedAt
+            certificate_thumbprint = @CertificateThumbprint, rotated_at = @RotatedAt, revoked_at = @RevokedAt
         WHERE agent_id = @AgentId
         """,
         ToParams(credential),
@@ -47,6 +47,7 @@ internal sealed class AgentCredentialRepository(AgentManagementDapperSession ses
         c.CertificateThumbprint,
         CreatedAt = c.CreatedAt.ToString("O"),
         RotatedAt = c.RotatedAt?.ToString("O"),
+        RevokedAt = c.RevokedAt?.ToString("O"),
     };
 
     internal sealed class Row
@@ -56,12 +57,14 @@ internal sealed class AgentCredentialRepository(AgentManagementDapperSession ses
         public string? certificate_thumbprint { get; set; }
         public string created_at { get; set; } = "";
         public string? rotated_at { get; set; }
+        public string? revoked_at { get; set; }
 
         public AgentCredential ToDomain() => AgentCredential.Reconstitute(
             new AgentId(Guid.Parse(agent_id)),
             secret_hash,
             certificate_thumbprint,
             DateTimeOffset.Parse(created_at),
-            rotated_at is not null ? DateTimeOffset.Parse(rotated_at) : null);
+            rotated_at is not null ? DateTimeOffset.Parse(rotated_at) : null,
+            revoked_at is not null ? DateTimeOffset.Parse(revoked_at) : null);
     }
 }

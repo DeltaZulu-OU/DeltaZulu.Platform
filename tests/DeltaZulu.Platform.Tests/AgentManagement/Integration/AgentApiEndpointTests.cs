@@ -423,6 +423,41 @@ public sealed class AgentApiEndpointTests: IDisposable
     }
 
     [TestMethod]
+    public async Task GetBundle_WhenUnderlyingDataIsCorrupt_Returns500AsJsonNotHtml()
+    {
+        // Proves the fix for the A10 finding: an unexpected (non-DomainException)
+        // failure must still come back as a JSON problem response the dzagentd
+        // client can parse, not fall through to the app's HTML error page.
+        await SeedTenantAssignmentAsync();
+        var token = await CreateEnrollmentTokenAsync();
+        var (_, secret) = await EnrollAsync(token);
+
+        using var hbRequest = AuthenticatedRequest(HttpMethod.Post, "/api/agent/v1/heartbeat", secret,
+            new { bufferPressure = 0.1, queueDepth = 0L, droppedCount = 0L, forwardFailedCount = 0L });
+        using var hbResponse = await _client.SendAsync(hbRequest, TestContext.CancellationToken);
+        var hb = await hbResponse.Content.ReadFromJsonAsync<JsonElement>(Json, TestContext.CancellationToken);
+        var bundleId = hb.GetProperty("desiredBundleId").GetString();
+        Assert.IsNotNull(bundleId);
+
+        await using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={_databasePath}"))
+        {
+            await connection.OpenAsync(TestContext.CancellationToken);
+            var command = connection.CreateCommand();
+            command.CommandText = "UPDATE policy_bundles SET document_json = 'not valid json' WHERE id = $id";
+            command.Parameters.AddWithValue("$id", bundleId);
+            await command.ExecuteNonQueryAsync(TestContext.CancellationToken);
+        }
+
+        using var request = AuthenticatedRequest(HttpMethod.Get, "/api/agent/v1/policy/bundle", secret);
+        using var response = await _client.SendAsync(request, TestContext.CancellationToken);
+
+        Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.AreEqual("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>(Json, TestContext.CancellationToken);
+        Assert.AreEqual("internal_error", problem.GetProperty("code").GetString());
+    }
+
+    [TestMethod]
     public async Task Heartbeat_WithTooManySources_Returns400()
     {
         var token = await CreateEnrollmentTokenAsync();

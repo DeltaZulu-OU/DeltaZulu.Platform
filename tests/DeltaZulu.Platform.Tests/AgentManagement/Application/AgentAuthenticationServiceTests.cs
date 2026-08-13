@@ -33,5 +33,20 @@ public sealed class AgentAuthenticationServiceTests
         Assert.IsNull(await service.ResolveAgentIdAsync(null, TestContext.CancellationToken));
     }
 
+    [TestMethod]
+    public async Task Resolve_RevokedSecret_ReturnsNull()
+    {
+        var credentials = new FakeAgentCredentialRepository();
+        var agentId = AgentId.New();
+        var secret = AgentSecrets.GenerateAgentSecret();
+        var credential = AgentCredential.Issue(agentId, AgentSecrets.Hash(secret), Now);
+        credential.Revoke(Now.AddMinutes(1));
+        credentials.Add(credential);
+
+        var resolved = await new AgentAuthenticationService(credentials).ResolveAgentIdAsync(secret, TestContext.CancellationToken);
+
+        Assert.IsNull(resolved);
+    }
+
     public TestContext TestContext { get; set; }
 }

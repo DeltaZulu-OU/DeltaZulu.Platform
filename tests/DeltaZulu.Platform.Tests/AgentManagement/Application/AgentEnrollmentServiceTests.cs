@@ -4,6 +4,7 @@ using DeltaZulu.Platform.Domain.AgentManagement.Enrollment;
 using DeltaZulu.Platform.Domain.AgentManagement.Enums;
 using DeltaZulu.Platform.Domain.AgentManagement.Identifiers;
 using DeltaZulu.Platform.Domain.Common;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DeltaZulu.Platform.Tests.AgentManagement.Application;
 
@@ -17,7 +18,7 @@ public sealed class AgentEnrollmentServiceTests
     private readonly FakeUnitOfWork _unitOfWork = new();
 
     private AgentEnrollmentService CreateService() =>
-        new(_tokens, _agents, _credentials, _unitOfWork, _clock);
+        new(_tokens, _agents, _credentials, _unitOfWork, _clock, NullLogger<AgentEnrollmentService>.Instance);
 
     private string IssueToken(int maxUses = 5, TimeSpan? ttl = null)
     {
@@ -137,6 +138,47 @@ public sealed class AgentEnrollmentServiceTests
         Assert.AreEqual("agent.hostname_taken", ex.Code);
         Assert.AreEqual(AgentSecrets.Hash(first.AgentSecret),
             _credentials.Credentials[first.Agent.Id].SecretHash);
+    }
+
+    [TestMethod]
+    public async Task Enroll_SameHostname_WithRevokedCredential_ReissuesWithoutProof()
+    {
+        var token = IssueToken();
+        var service = CreateService();
+        var first = await service.EnrollAsync(token, "server-01", ResourcePlatform.Linux, ct: TestContext.CancellationToken);
+
+        await service.RevokeCredentialAsync(first.Agent.Id, TestContext.CancellationToken);
+        Assert.IsFalse(_credentials.Credentials[first.Agent.Id].IsUsable);
+
+        var second = await service.EnrollAsync(token, "server-01", ResourcePlatform.Linux, ct: TestContext.CancellationToken);
+
+        Assert.AreEqual(first.Agent.Id, second.Agent.Id);
+        Assert.IsTrue(_credentials.Credentials[first.Agent.Id].IsUsable);
+        Assert.AreEqual(AgentSecrets.Hash(second.AgentSecret),
+            _credentials.Credentials[first.Agent.Id].SecretHash);
+    }
+
+    [TestMethod]
+    public async Task RevokeCredentialAsync_MakesCredentialUnusable()
+    {
+        var token = IssueToken();
+        var service = CreateService();
+        var enrolled = await service.EnrollAsync(token, "server-01", ResourcePlatform.Linux, ct: TestContext.CancellationToken);
+
+        await service.RevokeCredentialAsync(enrolled.Agent.Id, TestContext.CancellationToken);
+
+        var credential = _credentials.Credentials[enrolled.Agent.Id];
+        Assert.IsFalse(credential.IsUsable);
+        Assert.IsNotNull(credential.RevokedAt);
+    }
+
+    [TestMethod]
+    public async Task RevokeCredentialAsync_UnknownAgent_Throws()
+    {
+        var ex = await Assert.ThrowsExactlyAsync<DomainException>(() =>
+            CreateService().RevokeCredentialAsync(AgentId.New(), TestContext.CancellationToken));
+
+        Assert.AreEqual("agentcredential.not_found", ex.Code);
     }
 
     public TestContext TestContext { get; set; }

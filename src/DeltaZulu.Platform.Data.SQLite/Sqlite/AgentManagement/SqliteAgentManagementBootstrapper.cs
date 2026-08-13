@@ -135,7 +135,8 @@ public sealed class SqliteAgentManagementBootstrapper(string connectionString)
             secret_hash            TEXT NOT NULL,
             certificate_thumbprint TEXT,
             created_at             TEXT NOT NULL,
-            rotated_at             TEXT
+            rotated_at             TEXT,
+            revoked_at             TEXT
         );
 
         CREATE UNIQUE INDEX IF NOT EXISTS ix_agent_credentials_secret_hash

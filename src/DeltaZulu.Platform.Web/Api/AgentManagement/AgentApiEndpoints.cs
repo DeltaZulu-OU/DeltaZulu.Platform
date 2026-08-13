@@ -19,6 +19,9 @@ namespace DeltaZulu.Platform.Web.Api.AgentManagement;
 /// </summary>
 public static class AgentApiEndpoints
 {
+    /// <summary>ILogger category marker - a static class can't itself be used as ILogger&lt;T&gt;'s argument.</summary>
+    private sealed class LogCategory;
+
     public static IEndpointRouteBuilder MapAgentApiV1(this IEndpointRouteBuilder app)
     {
         var api = app.MapGroup("/api/agent/v1");
@@ -40,6 +43,7 @@ public static class AgentApiEndpoints
         EnrollRequest request,
         AgentEnrollmentService enrollmentService,
         IOptions<AgentControlPlaneOptions> options,
+        ILogger<LogCategory> logger,
         CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.BootstrapToken)
@@ -64,13 +68,14 @@ public static class AgentApiEndpoints
                 result.Agent.TenantId.Value.ToString("D"),
                 result.AgentSecret,
                 options.Value.HeartbeatIntervalSeconds));
-        });
+        }, logger);
     }
 
     private static async Task<IResult> HeartbeatAsync(
         HeartbeatRequest request,
         HttpContext httpContext,
         AgentCheckInService checkInService,
+        ILogger<LogCategory> logger,
         CancellationToken ct)
     {
         var agentId = AgentAuthenticationEndpointFilter.GetAuthenticatedAgentId(httpContext);
@@ -114,7 +119,7 @@ public static class AgentApiEndpoints
                     .Select(c => new CommandEntry(
                         c.Id.Value.ToString("D"), c.Type.ToString(), c.TimeoutSeconds, c.RequestedAt))
                     .ToList()));
-        });
+        }, logger);
     }
 
     private static async Task<IResult> CommandResultAsync(
@@ -122,6 +127,7 @@ public static class AgentApiEndpoints
         CommandResultRequest request,
         HttpContext httpContext,
         AgentCheckInService checkInService,
+        ILogger<LogCategory> logger,
         CancellationToken ct)
     {
         var agentId = AgentAuthenticationEndpointFilter.GetAuthenticatedAgentId(httpContext);
@@ -136,12 +142,13 @@ public static class AgentApiEndpoints
                 agentId, new AgentCommandId(commandGuid), request.Succeeded,
                 request.ResultJson, request.Error, ct);
             return Results.NoContent();
-        });
+        }, logger);
     }
 
     private static async Task<IResult> GetBundleAsync(
         HttpContext httpContext,
         AgentCheckInService checkInService,
+        ILogger<LogCategory> logger,
         CancellationToken ct)
     {
         var agentId = AgentAuthenticationEndpointFilter.GetAuthenticatedAgentId(httpContext);
@@ -156,13 +163,14 @@ public static class AgentApiEndpoints
                 bundle.ContentHash,
                 bundle.CreatedAt,
                 document.RootElement.Clone()));
-        });
+        }, logger);
     }
 
     private static async Task<IResult> AckAsync(
         AckRequest request,
         HttpContext httpContext,
         AgentCheckInService checkInService,
+        ILogger<LogCategory> logger,
         CancellationToken ct)
     {
         var agentId = AgentAuthenticationEndpointFilter.GetAuthenticatedAgentId(httpContext);
@@ -180,10 +188,17 @@ public static class AgentApiEndpoints
             await checkInService.HandleAckAsync(
                 agentId, new PolicyBundleId(bundleGuid), status, request.Error, ct);
             return Results.NoContent();
-        });
+        }, logger);
     }
 
-    private static async Task<IResult> ExecuteAsync(Func<Task<IResult>> action)
+    /// <summary>
+    /// Single choke point for turning a handler's failure into a response. Domain
+    /// failures map to their documented problem-details code; anything else is an
+    /// unexpected fault that must still come back as JSON (not fall through to the
+    /// app-wide HTML error page a JSON API client can't parse) and must be logged,
+    /// since this is the only place that would ever see it.
+    /// </summary>
+    private static async Task<IResult> ExecuteAsync(Func<Task<IResult>> action, ILogger logger)
     {
         try
         {
@@ -191,7 +206,14 @@ public static class AgentApiEndpoints
         }
         catch (DomainException ex)
         {
+            logger.LogWarning("Agent API request rejected: {Code} - {Message}", ex.Code, ex.Message);
             return MapDomainException(ex);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Unhandled exception processing an agent control-plane request.");
+            return Problem(StatusCodes.Status500InternalServerError, "internal_error",
+                "An unexpected error occurred processing the request.");
         }
     }
 

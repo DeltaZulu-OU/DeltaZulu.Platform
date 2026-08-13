@@ -16,6 +16,10 @@ public sealed class AgentCredential : Entity<AgentId>
     public string? CertificateThumbprint { get; private set; }
     public DateTimeOffset CreatedAt { get; }
     public DateTimeOffset? RotatedAt { get; private set; }
+    public DateTimeOffset? RevokedAt { get; private set; }
+
+    /// <summary>A revoked credential authenticates nothing until it is reissued by a fresh enrollment.</summary>
+    public bool IsUsable => RevokedAt is null;
 
     private AgentCredential(AgentId agentId, string secretHash, DateTimeOffset createdAt)
         : base(agentId)
@@ -35,11 +39,12 @@ public sealed class AgentCredential : Entity<AgentId>
 
     public static AgentCredential Reconstitute(
         AgentId agentId, string secretHash, string? certificateThumbprint,
-        DateTimeOffset createdAt, DateTimeOffset? rotatedAt) =>
+        DateTimeOffset createdAt, DateTimeOffset? rotatedAt, DateTimeOffset? revokedAt = null) =>
         new(agentId, secretHash, createdAt)
         {
             CertificateThumbprint = certificateThumbprint,
-            RotatedAt = rotatedAt
+            RotatedAt = rotatedAt,
+            RevokedAt = revokedAt
         };
 
     public void Rotate(string newSecretHash, DateTimeOffset now)
@@ -50,6 +55,24 @@ public sealed class AgentCredential : Entity<AgentId>
 
         SecretHash = newSecretHash;
         RotatedAt = now;
+        // A rotation is a legitimate re-issuance (fresh Issue-and-Rotate on
+        // recovery, or an operator-approved reissue after revocation); it
+        // supersedes any prior revocation rather than staying permanently dead.
+        RevokedAt = null;
+    }
+
+    /// <summary>
+    /// Immediately invalidates this credential for authentication. This is the
+    /// operator kill switch for a leaked or decommissioned agent secret - the
+    /// only other way to invalidate a secret is proof-of-possession recovery,
+    /// which does nothing for a secret the legitimate owner no longer controls.
+    /// </summary>
+    public void Revoke(DateTimeOffset now)
+    {
+        if (RevokedAt is not null)
+            return;
+
+        RevokedAt = now;
     }
 
     /// <summary>
