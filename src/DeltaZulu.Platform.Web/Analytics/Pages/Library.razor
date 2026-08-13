@@ -36,17 +36,14 @@
         <div class="hunt-query-library-message">@State.Message</div>
     }
 
-    <section class="dashboard-list-panel" aria-label="Library panel">
-        <MudTable T="LibraryItem"
-                  Items="@State.Items"
-                  Dense="true"
-                  Hover="true"
-                  Elevation="0"
-                  Loading="@State.Loading"
-                  Filter="State.FilterItem"
-                  RowsPerPage="@LibraryPageState.DefaultRowsPerPage"
-                  Class="library-object-table">
-            <ToolBarContent>
+    <DzDataTable TItem="LibraryItem"
+                 Items="@State.Items"
+                 Loading="@State.Loading"
+                 Filter="State.FilterItem"
+                 RowsPerPage="@LibraryPageState.DefaultRowsPerPage"
+                 Class="library-list-table"
+                 TableClass="library-object-table">
+        <ToolbarContent>
                 <DzToolbar Class="library-table-toolbar">
                     <ChildContent>
                         <div>
@@ -75,9 +72,9 @@
                         </div>
                     </Actions>
                 </DzToolbar>
-            </ToolBarContent>
+        </ToolbarContent>
 
-            <HeaderContent>
+        <HeaderContent>
                 <MudTh Style="width: 48px;"></MudTh>
                 <MudTh>
                     <MudTableSortLabel T="LibraryItem" SortBy="item => LibraryLabels.KindLabel(item.Kind)">
@@ -105,9 +102,9 @@
                     </MudTableSortLabel>
                 </MudTh>
                 <MudTh Style="text-align: right;">Actions</MudTh>
-            </HeaderContent>
+        </HeaderContent>
 
-            <RowTemplate>
+        <RowTemplate>
                 <MudTd DataLabel="">
                     <MudIcon Icon="@GetKindIcon(context.Kind)" Size="Size.Small" />
                 </MudTd>
@@ -146,38 +143,37 @@
                         @Controller.DeleteButtonText(context)
                     </button>
                 </MudTd>
-            </RowTemplate>
+        </RowTemplate>
 
-            <NoRecordsContent>
-                @if (State.Items.Count == 0)
-                {
-                    <DzEmptyState Title="No library items"
-                                  Description="Create a saved query, visualization, or dashboard to populate the library."
-                                  Icon="@Icons.Material.Filled.LibraryBooks"
-                                  Elevation="0">
-                        <Actions>
-                            <button class="hunt-btn hunt-btn-run dashboard-primary-action" @onclick="Controller.CreateSavedQuery">Create saved query</button>
-                        </Actions>
-                    </DzEmptyState>
-                }
-                else
-                {
-                    <DzEmptyState Title="No matching library items"
-                                  Description="Clear the search text or use a different filter."
-                                  Icon="@Icons.Material.Filled.SearchOff"
-                                  Elevation="0">
-                        <Actions>
-                            <button class="hunt-btn" @onclick="Controller.ClearSearch">Clear search</button>
-                        </Actions>
-                    </DzEmptyState>
-                }
-            </NoRecordsContent>
+        <EmptyContent>
+            @if (State.Items.Count == 0)
+            {
+                <DzEmptyState Title="No library items"
+                              Description="Create a saved query, visualization, or dashboard to populate the library."
+                              Icon="@Icons.Material.Filled.LibraryBooks"
+                              Elevation="0">
+                    <Actions>
+                        <button class="hunt-btn hunt-btn-run dashboard-primary-action" @onclick="Controller.CreateSavedQuery">Create saved query</button>
+                    </Actions>
+                </DzEmptyState>
+            }
+            else
+            {
+                <DzEmptyState Title="No matching library items"
+                              Description="Clear the search text or use a different filter."
+                              Icon="@Icons.Material.Filled.SearchOff"
+                              Elevation="0">
+                    <Actions>
+                        <button class="hunt-btn" @onclick="Controller.ClearSearch">Clear search</button>
+                    </Actions>
+                </DzEmptyState>
+            }
+        </EmptyContent>
 
-            <PagerContent>
+        <PagerContent>
                 <MudTablePager PageSizeOptions="@LibraryPageState.PageSizeOptions" />
-            </PagerContent>
-        </MudTable>
-    </section>
+        </PagerContent>
+    </DzDataTable>
 </div>
 
 @code {

@@ -5,7 +5,7 @@
 @using DeltaZulu.Platform.Web.Analytics.Exports
 @inject FileOperationsService FileOperations
 
-<div class="dz-query-result-table">
+<DzTableShell Class="dz-query-result-table">
     @if (Result is null)
     {
         <div class="dashboard-widget-state dashboard-widget-state-muted">
@@ -21,12 +21,41 @@
     else
     {
         <div class="dz-query-result-table__toolbar">
-            <div class="dz-query-result-table__meta">
+            <div class="dz-query-result-table__meta" aria-label="Query result evidence metadata">
                 <span>@Result.RowCount rows</span>
                 <span>@Result.ColumnCount columns</span>
+                <span>@VisibleColumnSummary</span>
+                @if (!string.IsNullOrWhiteSpace(Source))
+                {
+                    <span>Source: @Source</span>
+                }
+                @if (!string.IsNullOrWhiteSpace(QueryPurpose))
+                {
+                    <span>Purpose: @QueryPurpose</span>
+                }
+                @if (FreshnessUtc is not null)
+                {
+                    <span>Freshness: @FreshnessUtc.Value.ToString("u", CultureInfo.InvariantCulture)</span>
+                }
+                @if (RowLimit is not null)
+                {
+                    <span>Row limit: @RowLimit.Value.ToString("N0", CultureInfo.InvariantCulture)</span>
+                }
                 @if (Duration > TimeSpan.Zero)
                 {
                     <span>@Duration.TotalMilliseconds.ToString("F0", CultureInfo.InvariantCulture) ms</span>
+                }
+                @if (IsTruncated)
+                {
+                    <DzStatusBadge Label="Truncated" Tone="warning" />
+                }
+                @if (IsDegraded)
+                {
+                    <DzStatusBadge Label="Degraded" Tone="warning" />
+                }
+                @if (IsPartial)
+                {
+                    <DzStatusBadge Label="Partial" Tone="info" />
                 }
             </div>
 
@@ -100,7 +129,7 @@
             </PagerContent>
         </MudTable>
     }
-</div>
+</DzTableShell>
 
 @code {
     private string? _quickFilter;
@@ -128,6 +157,32 @@
 
     [Parameter]
     public string ExportFileName { get; set; } = "query-results.csv";
+
+    [Parameter]
+    public string? Source { get; set; }
+
+    [Parameter]
+    public string? QueryPurpose { get; set; }
+
+    [Parameter]
+    public DateTimeOffset? FreshnessUtc { get; set; }
+
+    [Parameter]
+    public int? RowLimit { get; set; }
+
+    [Parameter]
+    public bool IsTruncated { get; set; }
+
+    [Parameter]
+    public bool IsDegraded { get; set; }
+
+    [Parameter]
+    public bool IsPartial { get; set; }
+
+    private string VisibleColumnSummary
+        => Result is null || Result.ColumnCount <= MaxColumns
+            ? "All columns visible"
+            : $"Showing {Math.Clamp(MaxColumns, 1, Result.ColumnCount).ToString(CultureInfo.InvariantCulture)} of {Result.ColumnCount.ToString(CultureInfo.InvariantCulture)} columns";
 
     private IEnumerable<int> VisibleColumns
     {
