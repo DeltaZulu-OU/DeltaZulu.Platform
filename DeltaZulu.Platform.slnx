@@ -17,4 +17,5 @@
   <Project Path="src/DeltaZulu.Platform.Ingestion/DeltaZulu.Platform.Ingestion.csproj" />
   <Project Path="src/DeltaZulu.Platform.Web/DeltaZulu.Platform.Web.csproj" />
   <Project Path="tests/DeltaZulu.Platform.Tests/DeltaZulu.Platform.Tests.csproj" />
+  <Project Path="tools/DeltaZulu.Agent.Simulator/DeltaZulu.Agent.Simulator.csproj" />
 </Solution>

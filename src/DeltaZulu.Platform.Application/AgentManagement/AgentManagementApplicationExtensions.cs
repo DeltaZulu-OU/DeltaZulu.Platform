@@ -12,6 +12,13 @@ public static class AgentManagementApplicationExtensions
         services.AddScoped<AgentService>();
         services.AddScoped<AgentGroupService>();
         services.AddScoped<PolicyAssignmentService>();
+        services.AddScoped<EnrollmentTokenService>();
+        services.AddScoped<AgentEnrollmentService>();
+        services.AddScoped<AgentAuthenticationService>();
+        services.AddScoped<PolicyResolutionService>();
+        services.AddScoped<AgentCheckInService>();
+        services.AddScoped<AgentStatusSweepService>();
+        services.AddScoped<AgentCommandService>();
         return services;
     }
 }

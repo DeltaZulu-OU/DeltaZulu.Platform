@@ -9,6 +9,8 @@ public interface IDaemonConfigVersionRepository
 
     Task<IReadOnlyList<DaemonConfigVersion>> ListByConfigIdAsync(ConfigPolicyId configPolicyId, CancellationToken ct = default);
 
+    Task<DaemonConfigVersion?> GetLatestPublishedAsync(ConfigPolicyId configPolicyId, CancellationToken ct = default);
+
     void Add(DaemonConfigVersion version);
 
     void Save(DaemonConfigVersion version);

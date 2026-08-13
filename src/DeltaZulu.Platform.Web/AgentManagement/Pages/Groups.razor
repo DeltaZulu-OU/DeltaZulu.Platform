@@ -7,6 +7,7 @@
 @using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
 @using DeltaZulu.Platform.Domain.Common
 @inject AgentGroupService GroupService
+@inject AgentService AgentService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
@@ -78,9 +79,54 @@ else
                         <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
                                    StartIcon="@Icons.Material.Outlined.Edit"
                                    OnClick="@(() => StartRename(context))">Rename</MudButton>
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                                   StartIcon="@Icons.Material.Outlined.Group"
+                                   OnClick="@(() => ToggleMembersAsync(context.Id))">
+                            @(_expandedGroupId == context.Id ? "Hide Members" : "Members")
+                        </MudButton>
                     }
                 </MudTd>
             </RowTemplate>
+            <ChildRowContent>
+                @if (_expandedGroupId == context.Id)
+                {
+                    <MudTr>
+                        <td colspan="4" class="pa-4">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">Members (@_memberIds.Count)</MudText>
+                            @if (_memberIds.Count == 0)
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">
+                                    No agents in this group yet.
+                                </MudText>
+                            }
+                            else
+                            {
+                                <div class="d-flex gap-1 flex-wrap mb-3">
+                                    @foreach (var memberId in _memberIds)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                                 OnClose="@(() => RemoveMemberAsync(context.Id, memberId))">
+                                            @AgentName(memberId)
+                                        </MudChip>
+                                    }
+                                </div>
+                            }
+                            <div class="d-flex gap-2 align-center">
+                                <MudSelect @bind-Value="_agentToAdd" Label="Add agent" T="string"
+                                           Margin="Margin.Dense" Variant="Variant.Outlined" Style="max-width: 320px">
+                                    @foreach (var agent in NonMembers())
+                                    {
+                                        <MudSelectItem Value="@agent.Id.Value.ToString("D")">@agent.Hostname</MudSelectItem>
+                                    }
+                                </MudSelect>
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary"
+                                           Disabled="@string.IsNullOrEmpty(_agentToAdd)"
+                                           OnClick="@(() => AddMemberAsync(context.Id))">Add</MudButton>
+                            </div>
+                        </td>
+                    </MudTr>
+                }
+            </ChildRowContent>
         </MudTable>
     </DzTableShell>
 }
@@ -90,6 +136,10 @@ else
     private IReadOnlyList<AgentGroup> _groups = [];
     private AgentGroupId? _editingGroupId;
     private string _editName = "";
+    private AgentGroupId? _expandedGroupId;
+    private IReadOnlyList<AgentId> _memberIds = [];
+    private IReadOnlyList<Agent> _agents = [];
+    private string? _agentToAdd;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -99,12 +149,58 @@ else
         try
         {
             _groups = await GroupService.ListByTenantAsync(TenantId.Default);
+            _agents = await AgentService.ListByTenantAsync(TenantId.Default);
         }
         finally
         {
             _loading = false;
         }
     }
+
+    private async Task ToggleMembersAsync(AgentGroupId groupId)
+    {
+        if (_expandedGroupId == groupId)
+        {
+            _expandedGroupId = null;
+            _memberIds = [];
+            return;
+        }
+
+        _expandedGroupId = groupId;
+        _agentToAdd = null;
+        _memberIds = await GroupService.ListMemberAgentIdsAsync(groupId);
+    }
+
+    private async Task AddMemberAsync(AgentGroupId groupId)
+    {
+        if (string.IsNullOrEmpty(_agentToAdd)) return;
+
+        try
+        {
+            await GroupService.AddMemberAsync(groupId, new AgentId(Guid.Parse(_agentToAdd)));
+            _agentToAdd = null;
+            _memberIds = await GroupService.ListMemberAgentIdsAsync(groupId);
+            Snackbar.Add("Agent added to group. Group policy applies at the agent's next check-in.", Severity.Success);
+        }
+        catch (DomainException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private async Task RemoveMemberAsync(AgentGroupId groupId, AgentId agentId)
+    {
+        await GroupService.RemoveMemberAsync(groupId, agentId);
+        _memberIds = await GroupService.ListMemberAgentIdsAsync(groupId);
+        Snackbar.Add("Agent removed from group.", Severity.Success);
+    }
+
+    private string AgentName(AgentId agentId) =>
+        _agents.FirstOrDefault(a => a.Id == agentId)?.Hostname
+        ?? agentId.Value.ToString("D")[..8];
+
+    private IEnumerable<Agent> NonMembers() =>
+        _agents.Where(a => !_memberIds.Contains(a.Id));
 
     private async Task OpenCreateDialog()
     {

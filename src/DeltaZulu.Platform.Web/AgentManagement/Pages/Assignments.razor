@@ -1,0 +1,208 @@
+@namespace DeltaZulu.Platform.Web.AgentManagement.Pages
+@page "/agents/assignments"
+@rendermode InteractiveServer
+@using MudBlazor
+@using DeltaZulu.Platform.Application.AgentManagement.Services
+@using DeltaZulu.Platform.Domain.AgentManagement.Enums
+@using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@using DeltaZulu.Platform.Domain.AgentManagement.Policy
+@using DeltaZulu.Platform.Domain.Common
+@using DeltaZulu.Platform.Web.AgentManagement.Shared
+@inject PolicyAssignmentService AssignmentService
+@inject AgentService AgentService
+@inject AgentGroupService GroupService
+@inject ResourceProfileService ProfileService
+@inject DaemonConfigService ConfigService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Policy Assignments</PageTitle>
+
+<DzPageHeader Eyebrow="Management"
+              Title="Policy Assignments"
+              Description="Assign resource profiles and daemon configs to the tenant, groups, or individual agents. Agents resolve their effective bundle at check-in.">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.Add" OnClick="OpenCreateDialog">
+            Create Assignment
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.Refresh" OnClick="LoadAsync">
+            Refresh
+        </MudButton>
+    </Actions>
+</DzPageHeader>
+
+@if (_loading)
+{
+    <DzLoadingState Text="Loading policy assignments..." />
+}
+else if (_assignments.Count == 0)
+{
+    <DzEmptyState Title="No policy assignments"
+                  Description="Create an assignment to deliver resource profiles and daemon configs to agents."
+                  Icon="@Icons.Material.Outlined.Rule" />
+}
+else
+{
+    <DzTableShell>
+        <MudTable Items="_assignments" Dense="true" Hover="true" T="PolicyAssignment" Elevation="0">
+            <HeaderContent>
+                <MudTh>Scope</MudTh>
+                <MudTh>Target</MudTh>
+                <MudTh>Profiles</MudTh>
+                <MudTh>Config Policy</MudTh>
+                <MudTh Style="text-align:right">Precedence</MudTh>
+                <MudTh>Created</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Scope">
+                    <DzStatusChip Label="@context.ScopeType.ToString()" Tone="@ScopeTone(context.ScopeType)" />
+                </MudTd>
+                <MudTd DataLabel="Target"><strong>@ResolveScopeName(context)</strong></MudTd>
+                <MudTd DataLabel="Profiles">
+                    @if (context.ProfileIds.Count == 0)
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
+                    }
+                    else
+                    {
+                        <div class="d-flex gap-1 flex-wrap">
+                            @foreach (var profileId in context.ProfileIds)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                    @ResolveProfileName(profileId)
+                                </MudChip>
+                            }
+                        </div>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Config Policy">
+                    @if (context.ConfigPolicyId is null)
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">—</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">@ResolveConfigPolicyName(context.ConfigPolicyId.Value)</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Precedence" Style="text-align:right">@context.Precedence</MudTd>
+                <MudTd DataLabel="Created">
+                    <MudText Typo="Typo.caption">@context.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Outlined.PushPin"
+                               OnClick="@(() => OpenPinDialog(context))">
+                        @(HasPins(context) ? "Pins ●" : "Pin")
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error"
+                               StartIcon="@Icons.Material.Outlined.Delete"
+                               OnClick="@(() => RemoveAsync(context.Id))">Delete</MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </DzTableShell>
+}
+
+@code {
+    private bool _loading = true;
+    private IReadOnlyList<PolicyAssignment> _assignments = [];
+    private Dictionary<string, string> _groupNames = [];
+    private Dictionary<string, string> _agentNames = [];
+    private Dictionary<Guid, string> _profileNames = [];
+    private Dictionary<Guid, string> _configPolicyNames = [];
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _assignments = await AssignmentService.ListByTenantAsync(TenantId.Default);
+
+            var groups = await GroupService.ListByTenantAsync(TenantId.Default);
+            _groupNames = groups.ToDictionary(g => g.Id.Value.ToString("D"), g => g.Name);
+
+            var agents = await AgentService.ListByTenantAsync(TenantId.Default);
+            _agentNames = agents.ToDictionary(a => a.Id.Value.ToString("D"), a => a.Hostname);
+
+            var profiles = await ProfileService.ListByTenantAsync(TenantId.Default);
+            _profileNames = profiles.ToDictionary(p => p.Id.Value, p => p.Name);
+
+            var configPolicies = await ConfigService.ListPoliciesAsync(TenantId.Default);
+            _configPolicyNames = configPolicies.ToDictionary(p => p.Id.Value, p => p.Name);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var dialog = await DialogService.ShowAsync<CreateAssignmentDialog>("Create policy assignment",
+            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+            await LoadAsync();
+    }
+
+    private static bool HasPins(PolicyAssignment assignment) =>
+        assignment.ProfileVersionPins.Count > 0 || assignment.PinnedConfigVersionId is not null;
+
+    private async Task OpenPinDialog(PolicyAssignment assignment)
+    {
+        var parameters = new DialogParameters<PinVersionsDialog>
+        {
+            { d => d.Assignment, assignment },
+        };
+        var dialog = await DialogService.ShowAsync<PinVersionsDialog>("Pin versions",
+            parameters, new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            Snackbar.Add("Pins saved. Agents converge at their next check-in.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task RemoveAsync(PolicyAssignmentId id)
+    {
+        try
+        {
+            await AssignmentService.RemoveAsync(id);
+            Snackbar.Add("Assignment deleted. Agents pick up the change at their next check-in.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (DomainException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private string ResolveScopeName(PolicyAssignment assignment) => assignment.ScopeType switch
+    {
+        AssignmentScopeType.Tenant => "All agents",
+        AssignmentScopeType.Group => _groupNames.GetValueOrDefault(assignment.ScopeId, assignment.ScopeId[..8]),
+        AssignmentScopeType.Agent => _agentNames.GetValueOrDefault(assignment.ScopeId, assignment.ScopeId[..8]),
+        _ => assignment.ScopeId,
+    };
+
+    private string ResolveProfileName(ResourceProfileId id) =>
+        _profileNames.GetValueOrDefault(id.Value, id.Value.ToString("D")[..8]);
+
+    private string ResolveConfigPolicyName(ConfigPolicyId id) =>
+        _configPolicyNames.GetValueOrDefault(id.Value, id.Value.ToString("D")[..8]);
+
+    private static string ScopeTone(AssignmentScopeType scopeType) => scopeType switch
+    {
+        AssignmentScopeType.Tenant => "neutral",
+        AssignmentScopeType.Group => "success",
+        AssignmentScopeType.Agent => "warning",
+        _ => "neutral",
+    };
+}

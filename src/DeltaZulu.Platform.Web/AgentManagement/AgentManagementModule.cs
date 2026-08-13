@@ -18,9 +18,13 @@ public sealed class AgentManagementModule : IPlatformModule
     public IReadOnlyList<DzNavItem> NavigationItems { get; } =
     [
         new("Agents", "/agents", Icons.Material.Outlined.Memory, NavLinkMatch.All, DividerBefore: true),
+        new("Fleet Health", "/agents/fleet", Icons.Material.Outlined.MonitorHeart),
+        new("Telemetry Utilization", "/agents/utilization", Icons.Material.Outlined.QueryStats),
         new("Groups", "/agents/groups", Icons.Material.Outlined.Workspaces),
         new("Resource Profiles", "/agents/profiles", Icons.Material.Outlined.Description),
         new("Daemon Configs", "/agents/configs", Icons.Material.Outlined.Settings),
+        new("Assignments", "/agents/assignments", Icons.Material.Outlined.Rule),
+        new("Enrollment Tokens", "/agents/enrollment-tokens", Icons.Material.Outlined.Key),
     ];
 
     public IReadOnlyList<PlatformRouteGroup> RouteGroups { get; } =

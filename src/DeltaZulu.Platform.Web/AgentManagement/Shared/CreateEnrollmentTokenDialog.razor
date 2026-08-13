@@ -1,0 +1,108 @@
+@using MudBlazor
+@using DeltaZulu.Blazor.Interop
+@using DeltaZulu.Platform.Application.AgentManagement.Services
+@using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@inject EnrollmentTokenService TokenService
+@inject ClipboardService Clipboard
+
+<MudDialog>
+    <TitleContent>Create enrollment token</TitleContent>
+    <DialogContent>
+        @if (_issued is null)
+        {
+            <MudTextField @bind-Value="_name"
+                          Label="Token name"
+                          Placeholder="e.g. Q3 server onboarding"
+                          MaxLength="200"
+                          Immediate="true"
+                          Required="true"
+                          RequiredError="Token name is required" />
+            <MudNumericField @bind-Value="_validForHours"
+                             Label="Valid for (hours)"
+                             Min="1" Max="8760"
+                             Class="mt-3" T="int" />
+            <MudNumericField @bind-Value="_maxUses"
+                             Label="Maximum uses"
+                             Min="1" Max="100000"
+                             Class="mt-3" T="int" />
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-3">@_error</MudAlert>
+            }
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Warning" Class="mb-3">
+                Copy this token now. It is shown only once and cannot be recovered.
+            </MudAlert>
+            <MudTextField Value="_issued.Plaintext"
+                          Label="Bootstrap token"
+                          ReadOnly="true"
+                          Variant="Variant.Outlined"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@(_copied ? Icons.Material.Outlined.Check : Icons.Material.Outlined.ContentCopy)"
+                          OnAdornmentClick="CopyToken"
+                          T="string" />
+        }
+    </DialogContent>
+    <DialogActions>
+        @if (_issued is null)
+        {
+            <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+            <MudButton OnClick="Submit" Variant="Variant.Filled" Color="Color.Primary"
+                       Disabled="@(string.IsNullOrWhiteSpace(_name) || _saving)">
+                @(_saving ? "Creating..." : "Create")
+            </MudButton>
+        }
+        else
+        {
+            <MudButton OnClick="Close" Variant="Variant.Filled" Color="Color.Primary">Done</MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private string _name = "";
+    private int _validForHours = 24;
+    private int _maxUses = 10;
+    private string? _error;
+    private bool _saving;
+    private bool _copied;
+    private IssuedEnrollmentToken? _issued;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Close() => MudDialog.Close(DialogResult.Ok(true));
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_name)) return;
+
+        _saving = true;
+        _error = null;
+
+        try
+        {
+            _issued = await TokenService.CreateAsync(
+                TenantId.Default, _name.Trim(), TimeSpan.FromHours(_validForHours), _maxUses,
+                createdBy: null);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task CopyToken()
+    {
+        if (_issued is null) return;
+        await Clipboard.CopyTextAsync(_issued.Plaintext);
+        _copied = true;
+    }
+}

@@ -5,18 +5,22 @@
 @using DeltaZulu.Platform.Application.AgentManagement.Services
 @using DeltaZulu.Platform.Domain.AgentManagement.Enums
 @using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@using DeltaZulu.Platform.Domain.AgentManagement.Commands
 @using DeltaZulu.Platform.Domain.AgentManagement.Policy
 @using DeltaZulu.Platform.Domain.Analytics.Observability
+@using DeltaZulu.Platform.Domain.Common
 @using DeltaZulu.Platform.Web.AgentManagement.ViewModels
 @inject AgentService AgentService
 @inject PolicyAssignmentService AssignmentService
+@inject AgentCommandService CommandService
 @inject IOperationalMetricsReader MetricsReader
+@inject ISnackbar Snackbar
 
 <PageTitle>Agent — @(_row?.Hostname ?? "Loading")</PageTitle>
 
 @if (_row is null)
 {
-    <MudProgressLinear Indeterminate="true" />
+    <DzLoadingState Text="Loading agent..." />
 }
 else
 {
@@ -143,12 +147,130 @@ else
             </DzTabBody>
         </MudTabPanel>
 
+        <MudTabPanel Text="Sources" BadgeData="@_sources.Count" BadgeColor="Color.Secondary">
+            <DzTabBody>
+                @if (_sources.Count == 0)
+                {
+                    <DzEmptyState Title="No source telemetry"
+                                  Description="Per-source collection status will appear once the agent reports source health with its heartbeat."
+                                  Icon="@Icons.Material.Outlined.Input" />
+                }
+                else
+                {
+                    <DzTableShell>
+                        <MudTable Items="_sources" Dense="true" T="SourceLatestRow" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Source</MudTh>
+                                <MudTh>Channel</MudTh>
+                                <MudTh>Health</MudTh>
+                                <MudTh Style="text-align:right">Read</MudTh>
+                                <MudTh Style="text-align:right">Forwarded</MudTh>
+                                <MudTh Style="text-align:right">Errors</MudTh>
+                                <MudTh>Last Read</MudTh>
+                                <MudTh>Last Error</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Source"><strong>@context.SourceType</strong></MudTd>
+                                <MudTd DataLabel="Channel"><code>@context.Channel</code></MudTd>
+                                <MudTd DataLabel="Health">
+                                    <DzStatusChip Label="@context.HealthStatus" Tone="@AgentInventoryRow.HealthTone(context.HealthStatus)" />
+                                </MudTd>
+                                <MudTd DataLabel="Read" Style="text-align:right">@context.ReadCount.ToString("N0")</MudTd>
+                                <MudTd DataLabel="Forwarded" Style="text-align:right">@context.ForwardedCount.ToString("N0")</MudTd>
+                                <MudTd DataLabel="Errors" Style="text-align:right">
+                                    <MudText Typo="Typo.body2" Color="@(context.ReadErrorCount + context.ForwardFailedCount > 0 ? Color.Error : Color.Default)">
+                                        @((context.ReadErrorCount + context.ForwardFailedCount).ToString("N0"))
+                                    </MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Last Read">
+                                    <MudText Typo="Typo.caption">@(context.LastReadAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "—")</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Last Error">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@(context.LastError ?? "—")</MudText>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </DzTableShell>
+                }
+            </DzTabBody>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Commands" BadgeData="@_commands.Count" BadgeColor="Color.Secondary">
+            <DzTabBody>
+                <div class="d-flex gap-2 flex-wrap mb-4">
+                    @foreach (var commandType in Enum.GetValues<AgentCommandType>())
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                                   StartIcon="@CommandIcon(commandType)"
+                                   OnClick="@(() => IssueCommandAsync(commandType))">
+                            @CommandLabel(commandType)
+                        </MudButton>
+                    }
+                </div>
+                @if (_commands.Count == 0)
+                {
+                    <DzEmptyState Title="No commands issued"
+                                  Description="One-shot operational commands are delivered at the agent's next check-in and audited here."
+                                  Icon="@Icons.Material.Outlined.Terminal" />
+                }
+                else
+                {
+                    <DzTableShell>
+                        <MudTable Items="_commands" Dense="true" T="AgentCommand" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Command</MudTh>
+                                <MudTh>Status</MudTh>
+                                <MudTh>Requested</MudTh>
+                                <MudTh>Delivered</MudTh>
+                                <MudTh>Completed</MudTh>
+                                <MudTh>Result</MudTh>
+                                <MudTh>Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Command"><strong>@CommandLabel(context.Type)</strong></MudTd>
+                                <MudTd DataLabel="Status">
+                                    <DzStatusChip Label="@context.Status.ToString()" Tone="@CommandTone(context.Status)" />
+                                </MudTd>
+                                <MudTd DataLabel="Requested">
+                                    <MudText Typo="Typo.caption">@context.RequestedAt.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Delivered">
+                                    <MudText Typo="Typo.caption">@(context.DeliveredAt?.ToString("HH:mm:ss") ?? "—")</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Completed">
+                                    <MudText Typo="Typo.caption">@(context.CompletedAt?.ToString("HH:mm:ss") ?? "—")</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Result">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                        @(context.Error ?? context.ResultJson ?? "—")
+                                    </MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Actions">
+                                    @if (context.Status == AgentCommandStatus.Pending)
+                                    {
+                                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error"
+                                                   OnClick="@(() => CancelCommandAsync(context.Id))">Cancel</MudButton>
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </DzTableShell>
+                }
+            </DzTabBody>
+        </MudTabPanel>
+
         <MudTabPanel Text="Policy" BadgeData="@_assignments.Count" BadgeColor="Color.Secondary">
             <DzTabBody>
+                @if (_agentId is not null)
+                {
+                    <div class="mb-4">
+                        <EffectivePolicyPanel AgentId="_agentId.Value" OnChanged="ReloadAsync" />
+                    </div>
+                }
                 @if (_assignments.Count == 0)
                 {
-                    <DzEmptyState Title="No policy assignments"
-                                  Description="This agent has no direct policy assignments."
+                    <DzEmptyState Title="No direct policy assignments"
+                                  Description="This agent has no direct policy assignments. Tenant and group assignments still apply through the effective policy above."
                                   Icon="@Icons.Material.Outlined.Policy" />
                 }
                 else
@@ -187,13 +309,19 @@ else
     [Parameter] public string Id { get; set; } = null!;
 
     private AgentInventoryRow? _row;
+    private AgentId? _agentId;
     private List<PolicyAssignment> _assignments = [];
+    private List<SourceLatestRow> _sources = [];
+    private List<AgentCommand> _commands = [];
     private List<BreadcrumbItem> _breadcrumbs = [];
 
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnParametersSetAsync() => await ReloadAsync();
+
+    private async Task ReloadAsync()
     {
         if (!Guid.TryParse(Id, out var guid)) return;
         var agentId = new AgentId(guid);
+        _agentId = agentId;
 
         var agent = await AgentService.GetByIdAsync(agentId);
         if (agent is null) return;
@@ -211,5 +339,73 @@ else
         _assignments = (await AssignmentService.ListByScopeAsync(
             TenantId.Default, AssignmentScopeType.Agent, agentId.Value.ToString("D")))
             .ToList();
+
+        var agentKey = agentId.Value.ToString("D");
+        _sources = (await Task.Run(() => MetricsReader.ReadLatestSources()))
+            .Where(s => string.Equals(s.AgentId, agentKey, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        _commands = (await CommandService.ListByAgentAsync(agentId)).ToList();
     }
+
+    private async Task IssueCommandAsync(AgentCommandType type)
+    {
+        if (_agentId is null) return;
+
+        try
+        {
+            await CommandService.IssueAsync(_agentId.Value, type, requestedBy: null);
+            Snackbar.Add($"{CommandLabel(type)} queued; delivered at the agent's next check-in.", Severity.Success);
+            _commands = (await CommandService.ListByAgentAsync(_agentId.Value)).ToList();
+        }
+        catch (DomainException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private async Task CancelCommandAsync(AgentCommandId id)
+    {
+        if (_agentId is null) return;
+
+        try
+        {
+            await CommandService.CancelAsync(id);
+            Snackbar.Add("Command cancelled.", Severity.Success);
+            _commands = (await CommandService.ListByAgentAsync(_agentId.Value)).ToList();
+        }
+        catch (DomainException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private static string CommandLabel(AgentCommandType type) => type switch
+    {
+        AgentCommandType.ReloadConfiguration => "Reload Configuration",
+        AgentCommandType.TestOutput => "Test Output",
+        AgentCommandType.FlushBuffer => "Flush Buffer",
+        AgentCommandType.CollectDiagnostics => "Collect Diagnostics",
+        AgentCommandType.RestartService => "Restart Service",
+        _ => type.ToString(),
+    };
+
+    private static string CommandIcon(AgentCommandType type) => type switch
+    {
+        AgentCommandType.ReloadConfiguration => Icons.Material.Outlined.Refresh,
+        AgentCommandType.TestOutput => Icons.Material.Outlined.NetworkCheck,
+        AgentCommandType.FlushBuffer => Icons.Material.Outlined.CleaningServices,
+        AgentCommandType.CollectDiagnostics => Icons.Material.Outlined.BugReport,
+        AgentCommandType.RestartService => Icons.Material.Outlined.RestartAlt,
+        _ => Icons.Material.Outlined.Terminal,
+    };
+
+    private static string CommandTone(AgentCommandStatus status) => status switch
+    {
+        AgentCommandStatus.Succeeded => "success",
+        AgentCommandStatus.Failed or AgentCommandStatus.Expired => "error",
+        AgentCommandStatus.Cancelled => "muted",
+        AgentCommandStatus.Delivered => "warning",
+        _ => "neutral",
+    };
 }

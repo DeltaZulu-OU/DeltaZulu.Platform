@@ -1,3 +1,4 @@
+using DeltaZulu.Platform.Application.AgentManagement.Validation;
 using DeltaZulu.Platform.Domain.AgentManagement.Contracts;
 using DeltaZulu.Platform.Domain.AgentManagement.Enums;
 using DeltaZulu.Platform.Domain.AgentManagement.Identifiers;
@@ -11,7 +12,9 @@ public sealed class ResourceProfileService(
     IResourceProfileRepository profileRepo,
     IResourceProfileVersionRepository versionRepo,
     IAgentManagementUnitOfWork unitOfWork,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ProfileValidationPipelineRunner validationRunner,
+    IEnumerable<IProfileValidationCheck> validationChecks)
 {
     public async Task<ResourceProfile> CreateProfileAsync(
         TenantId tenantId, string name, ProfileOrigin origin, CancellationToken ct = default)
@@ -65,6 +68,16 @@ public sealed class ResourceProfileService(
     {
         var version = await versionRepo.GetByIdAsync(id, ct)
             ?? throw new DomainException("profileversion.not_found", $"Profile version {id} not found.");
+
+        var outcomes = await validationRunner.RunAllAsync(new ProfileValidationContext(version), ct);
+        if (ProfileValidationPipelineRunner.HasBlockingFailures(outcomes, validationChecks))
+        {
+            var failures = outcomes
+                .SelectMany(o => o.Findings.Where(f => f.IsBlocking).Select(f => $"{o.CheckName}: {f.Message}"))
+                .ToList();
+            throw new DomainException("profileversion.validation_failed",
+                $"Profile version failed validation: {string.Join(" | ", failures)}");
+        }
 
         var now = timeProvider.GetUtcNow();
         version.MarkValidated(now);

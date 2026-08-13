@@ -77,7 +77,7 @@ public sealed class DuckDbOperationalMetricsReader : IOperationalMetricsReader
             new { TenantId = tenantId });
 
         return row is null
-            ? new SourceHealthSummary(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, tenantId)
+            ? new SourceHealthSummary(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, tenantId, 0, 0, 0, 0)
             : new SourceHealthSummary(
                 row.SourceCount,
                 row.AgentCount,
@@ -91,7 +91,95 @@ public sealed class DuckDbOperationalMetricsReader : IOperationalMetricsReader
                 row.TotalRead,
                 row.TotalKept,
                 row.OverallDiscardRatio,
-                row.TenantId);
+                row.TenantId,
+                row.TotalReadErrors,
+                row.ForwardingYield,
+                row.ForwardFailureRate,
+                row.ReadErrorRate);
+    }
+
+    public IReadOnlyList<SourceUtilizationRow> ReadTopWastefulSources(string tenantId = "default", int limit = 10)
+    {
+        var conn = _connectionFactory.GetConnection();
+        var rows = conn.Query<SourceUtilizationSqlRow>(
+            """
+            SELECT * FROM internal.SourceUtilization
+            WHERE TenantId = $TenantId
+            ORDER BY DiscardedCount DESC
+            LIMIT $Limit
+            """,
+            new { TenantId = tenantId, Limit = limit });
+
+        return rows.Select(static r => new SourceUtilizationRow(
+            r.TenantId,
+            r.AgentId,
+            r.HostId,
+            r.SourceIdentity,
+            r.SourceType,
+            r.Channel,
+            r.ProfileId,
+            r.ProfileVersionId,
+            r.ReadCount,
+            r.KeptAfterFilterCount,
+            r.DiscardedCount,
+            r.ForwardedCount,
+            r.ForwardFailedCount,
+            r.ReadErrorCount,
+            r.HealthStatus,
+            r.DiscardRatio,
+            r.ForwardingYield,
+            r.ForwardFailureRate,
+            r.ReadErrorRate,
+            r.ObservedAt,
+            r.LastReadAt))
+            .ToArray();
+    }
+
+    public IReadOnlyList<ProfileUtilizationRow> ReadProfileUtilization(string tenantId = "default")
+    {
+        var conn = _connectionFactory.GetConnection();
+        var rows = conn.Query<ProfileUtilizationSqlRow>(
+            "SELECT * FROM internal.SourceUtilizationByProfile WHERE TenantId = $TenantId ORDER BY TotalDiscarded DESC",
+            new { TenantId = tenantId });
+
+        return rows.Select(static r => new ProfileUtilizationRow(
+            r.TenantId,
+            r.ProfileId,
+            r.SourceCount,
+            r.AgentCount,
+            r.TotalRead,
+            r.TotalKept,
+            r.TotalDiscarded,
+            r.TotalForwarded,
+            r.TotalForwardFailed,
+            r.TotalReadErrors,
+            r.ForwardingYield,
+            r.DiscardRatio,
+            r.ForwardFailureRate,
+            r.ReadErrorRate))
+            .ToArray();
+    }
+
+    public IReadOnlyList<AgentUtilizationRow> ReadAgentUtilization(string tenantId = "default")
+    {
+        var conn = _connectionFactory.GetConnection();
+        var rows = conn.Query<AgentUtilizationSqlRow>(
+            "SELECT * FROM internal.AgentUtilization WHERE TenantId = $TenantId ORDER BY BufferDropRatio DESC, Hostname",
+            new { TenantId = tenantId });
+
+        return rows.Select(static r => new AgentUtilizationRow(
+            r.TenantId,
+            r.AgentId,
+            r.Hostname,
+            r.AgentHealthStatus,
+            r.DroppedCount,
+            r.BufferPressure,
+            r.TotalRead,
+            r.TotalForwarded,
+            r.TotalDiscarded,
+            r.TotalForwardFailed,
+            r.BufferDropRatio))
+            .ToArray();
     }
 
     public IReadOnlyList<SourceLatestRow> ReadLatestSources(string tenantId = "default", string? healthStatusFilter = null)
@@ -248,7 +336,69 @@ public sealed class DuckDbOperationalMetricsReader : IOperationalMetricsReader
         public long TotalForwardFailed { get; init; }
         public long TotalRead { get; init; }
         public long TotalKept { get; init; }
+        public long TotalReadErrors { get; init; }
         public double OverallDiscardRatio { get; init; }
+        public double ForwardingYield { get; init; }
+        public double ForwardFailureRate { get; init; }
+        public double ReadErrorRate { get; init; }
+    }
+
+    private sealed class SourceUtilizationSqlRow
+    {
+        public DateTime ObservedAt { get; init; }
+        public string TenantId { get; init; } = string.Empty;
+        public string AgentId { get; init; } = string.Empty;
+        public string HostId { get; init; } = string.Empty;
+        public string SourceIdentity { get; init; } = string.Empty;
+        public string SourceType { get; init; } = string.Empty;
+        public string Channel { get; init; } = string.Empty;
+        public string? ProfileId { get; init; }
+        public string? ProfileVersionId { get; init; }
+        public DateTime? LastReadAt { get; init; }
+        public long ReadErrorCount { get; init; }
+        public long ReadCount { get; init; }
+        public long KeptAfterFilterCount { get; init; }
+        public long DiscardedCount { get; init; }
+        public long ForwardedCount { get; init; }
+        public long ForwardFailedCount { get; init; }
+        public string HealthStatus { get; init; } = string.Empty;
+        public double DiscardRatio { get; init; }
+        public double ForwardingYield { get; init; }
+        public double ForwardFailureRate { get; init; }
+        public double ReadErrorRate { get; init; }
+    }
+
+    private sealed class ProfileUtilizationSqlRow
+    {
+        public string TenantId { get; init; } = string.Empty;
+        public string ProfileId { get; init; } = string.Empty;
+        public long SourceCount { get; init; }
+        public long AgentCount { get; init; }
+        public long TotalRead { get; init; }
+        public long TotalKept { get; init; }
+        public long TotalDiscarded { get; init; }
+        public long TotalForwarded { get; init; }
+        public long TotalForwardFailed { get; init; }
+        public long TotalReadErrors { get; init; }
+        public double ForwardingYield { get; init; }
+        public double DiscardRatio { get; init; }
+        public double ForwardFailureRate { get; init; }
+        public double ReadErrorRate { get; init; }
+    }
+
+    private sealed class AgentUtilizationSqlRow
+    {
+        public string TenantId { get; init; } = string.Empty;
+        public string AgentId { get; init; } = string.Empty;
+        public string Hostname { get; init; } = string.Empty;
+        public string AgentHealthStatus { get; init; } = string.Empty;
+        public long DroppedCount { get; init; }
+        public double BufferPressure { get; init; }
+        public long TotalRead { get; init; }
+        public long TotalForwarded { get; init; }
+        public long TotalDiscarded { get; init; }
+        public long TotalForwardFailed { get; init; }
+        public double BufferDropRatio { get; init; }
     }
 
     private sealed class SourceLatestSqlRow

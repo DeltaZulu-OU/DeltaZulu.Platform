@@ -1,0 +1,231 @@
+@namespace DeltaZulu.Platform.Web.AgentManagement.Pages
+@page "/agents/utilization"
+@rendermode InteractiveServer
+@using MudBlazor
+@using DeltaZulu.Platform.Application.AgentManagement.Services
+@using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@using DeltaZulu.Platform.Domain.Analytics.Observability
+@inject IOperationalMetricsReader MetricsReader
+@inject ResourceProfileService ProfileService
+
+<PageTitle>Telemetry Utilization</PageTitle>
+
+<DzPageHeader Eyebrow="Data quality"
+              Title="Telemetry Utilization"
+              Description="How much of what agents collect is actually useful. Forwarding yield, wasted volume, and failure rates, ranked so filter and policy tuning targets the biggest waste first.">
+    <Actions>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.Refresh" OnClick="LoadAsync">
+            Refresh
+        </MudButton>
+    </Actions>
+</DzPageHeader>
+
+@if (_loading)
+{
+    <DzLoadingState Text="Loading utilization metrics..." />
+}
+else if (_summary.SourceCount == 0)
+{
+    <DzEmptyState Title="No source telemetry yet"
+                  Description="Utilization metrics appear once agents report per-source collection counts with their heartbeat."
+                  Icon="@Icons.Material.Outlined.QueryStats" />
+}
+else
+{
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Forwarding Yield"
+                          Value="@_summary.ForwardingYield.ToString("P0")"
+                          Icon="@Icons.Material.Outlined.TrendingUp"
+                          Label="Fleet-wide: read events actually forwarded"
+                          Tone="@(_summary.ForwardingYield >= 0.7 ? "success" : _summary.ForwardingYield >= 0.4 ? "warning" : "error")" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Wasted Volume"
+                          Value="@_summary.TotalDiscarded.ToString("N0")"
+                          Icon="@Icons.Material.Outlined.DeleteOutline"
+                          Label="@($"Events read then discarded ({_summary.OverallDiscardRatio:P0} of read)")"
+                          Tone="@(_summary.OverallDiscardRatio >= 0.5 ? "error" : _summary.OverallDiscardRatio >= 0.2 ? "warning" : "neutral")" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Forward Failure Rate"
+                          Value="@_summary.ForwardFailureRate.ToString("P1")"
+                          Icon="@Icons.Material.Outlined.SyncProblem"
+                          Label="Forward attempts that failed"
+                          Tone="@(_summary.ForwardFailureRate > 0 ? "error" : "success")" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Read Error Rate"
+                          Value="@_summary.ReadErrorRate.ToString("P1")"
+                          Icon="@Icons.Material.Outlined.ReportProblem"
+                          Label="Read errors per event read"
+                          Tone="@(_summary.ReadErrorRate > 0 ? "warning" : "success")" />
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="6">
+            <DzPanel Eyebrow="Top wasteful sources" Class="dz-panel--full-height">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-3">
+                    Ranked by discarded event volume, not ratio — a high-volume source with moderate
+                    waste costs more than a low-volume source that discards almost everything.
+                </MudText>
+                @if (_topWasteful.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">No discarded events observed.</MudText>
+                }
+                else
+                {
+                    <DzTableShell>
+                        <MudTable Items="_topWasteful" Dense="true" T="SourceUtilizationRow" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Source</MudTh>
+                                <MudTh>Profile</MudTh>
+                                <MudTh Style="text-align:right">Discarded</MudTh>
+                                <MudTh Style="text-align:right">Yield</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Source">
+                                    <strong>@context.SourceIdentity</strong>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">@context.AgentId[..8]</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Profile">@ResolveProfileName(context.ProfileId)</MudTd>
+                                <MudTd DataLabel="Discarded" Style="text-align:right">@context.DiscardedCount.ToString("N0")</MudTd>
+                                <MudTd DataLabel="Yield" Style="text-align:right">
+                                    <MudText Typo="Typo.body2" Color="@(context.ForwardingYield < 0.4 ? Color.Error : Color.Default)">
+                                        @context.ForwardingYield.ToString("P0")
+                                    </MudText>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </DzTableShell>
+                }
+            </DzPanel>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <DzPanel Eyebrow="Buffer loss by agent" Class="dz-panel--full-height">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-3">
+                    Buffer drops are genuine data loss (queue overflow), distinct from intentional
+                    filter discard — different severity, different fix.
+                </MudText>
+                @if (_agentUtilization.Count(a => a.DroppedCount > 0) == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">No buffer drops observed.</MudText>
+                }
+                else
+                {
+                    <DzTableShell>
+                        <MudTable Items="_agentUtilization.Where(a => a.DroppedCount > 0).ToList()" Dense="true" T="AgentUtilizationRow" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Agent</MudTh>
+                                <MudTh Style="text-align:right">Dropped</MudTh>
+                                <MudTh Style="text-align:right">Drop Ratio</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Agent"><strong>@context.Hostname</strong></MudTd>
+                                <MudTd DataLabel="Dropped" Style="text-align:right">@context.DroppedCount.ToString("N0")</MudTd>
+                                <MudTd DataLabel="Drop Ratio" Style="text-align:right">
+                                    <MudText Typo="Typo.body2" Color="Color.Error">
+                                        @context.BufferDropRatio.ToString("P1")
+                                    </MudText>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </DzTableShell>
+                }
+            </DzPanel>
+        </MudItem>
+
+        <MudItem xs="12">
+            <DzPanel Eyebrow="Utilization by resource profile">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-3">
+                    Rolled up across every agent using each profile — the axis an operator can
+                    actually edit. Sources with no profile linkage are grouped under "(unassigned)".
+                </MudText>
+                @if (_profileUtilization.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">No profile-linked sources observed.</MudText>
+                }
+                else
+                {
+                    <DzTableShell>
+                        <MudTable Items="_profileUtilization" Dense="true" T="ProfileUtilizationRow" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Profile</MudTh>
+                                <MudTh Style="text-align:right">Sources</MudTh>
+                                <MudTh Style="text-align:right">Agents</MudTh>
+                                <MudTh Style="text-align:right">Read</MudTh>
+                                <MudTh Style="text-align:right">Forwarded</MudTh>
+                                <MudTh Style="text-align:right">Discarded</MudTh>
+                                <MudTh Style="text-align:right">Yield</MudTh>
+                                <MudTh Style="text-align:right">Forward Failure</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Profile"><strong>@ResolveProfileName(context.ProfileId)</strong></MudTd>
+                                <MudTd DataLabel="Sources" Style="text-align:right">@context.SourceCount</MudTd>
+                                <MudTd DataLabel="Agents" Style="text-align:right">@context.AgentCount</MudTd>
+                                <MudTd DataLabel="Read" Style="text-align:right">@context.TotalRead.ToString("N0")</MudTd>
+                                <MudTd DataLabel="Forwarded" Style="text-align:right">@context.TotalForwarded.ToString("N0")</MudTd>
+                                <MudTd DataLabel="Discarded" Style="text-align:right">
+                                    <MudText Typo="Typo.body2" Color="@(context.DiscardRatio >= 0.5 ? Color.Error : Color.Default)">
+                                        @context.TotalDiscarded.ToString("N0")
+                                    </MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Yield" Style="text-align:right">@context.ForwardingYield.ToString("P0")</MudTd>
+                                <MudTd DataLabel="Forward Failure" Style="text-align:right">
+                                    <MudText Typo="Typo.body2" Color="@(context.ForwardFailureRate > 0 ? Color.Error : Color.Default)">
+                                        @context.ForwardFailureRate.ToString("P1")
+                                    </MudText>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </DzTableShell>
+                }
+            </DzPanel>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private bool _loading = true;
+    private SourceHealthSummary _summary = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    private IReadOnlyList<SourceUtilizationRow> _topWasteful = [];
+    private IReadOnlyList<ProfileUtilizationRow> _profileUtilization = [];
+    private IReadOnlyList<AgentUtilizationRow> _agentUtilization = [];
+    private Dictionary<string, string> _profileNames = [];
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            // One Task.Run offloading all four reads: DuckDbConnectionFactory hands
+            // out a single shared connection that does not support concurrent query
+            // execution, so these must run sequentially rather than as parallel tasks.
+            (_summary, _topWasteful, _profileUtilization, _agentUtilization) = await Task.Run(() => (
+                MetricsReader.ReadSourceHealthSummary(),
+                MetricsReader.ReadTopWastefulSources(limit: 10),
+                MetricsReader.ReadProfileUtilization(),
+                MetricsReader.ReadAgentUtilization()));
+
+            var profiles = await ProfileService.ListByTenantAsync(TenantId.Default);
+            _profileNames = profiles.ToDictionary(p => p.Id.Value.ToString("D"), p => p.Name);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string ResolveProfileName(string? profileId)
+    {
+        if (string.IsNullOrEmpty(profileId) || profileId == ProfileUtilizationRow.UnassignedProfileId)
+            return "(unassigned)";
+
+        return _profileNames.GetValueOrDefault(profileId, profileId[..Math.Min(8, profileId.Length)]);
+    }
+}

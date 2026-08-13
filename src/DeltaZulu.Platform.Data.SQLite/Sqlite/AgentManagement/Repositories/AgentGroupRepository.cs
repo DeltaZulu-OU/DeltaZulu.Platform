@@ -39,6 +39,46 @@ internal sealed class AgentGroupRepository(AgentManagementDapperSession session)
         ToParams(group),
         session.Transaction);
 
+    public async Task<IReadOnlyList<AgentId>> ListMemberAgentIdsAsync(
+        AgentGroupId groupId, CancellationToken ct = default)
+    {
+        var ids = await session.Connection.QueryAsync<string>(
+            "SELECT agent_id FROM agent_group_members WHERE group_id = @GroupId ORDER BY agent_id",
+            new { GroupId = groupId.Value.ToString() },
+            session.Transaction);
+        return ids.Select(s => new AgentId(Guid.Parse(s))).ToList();
+    }
+
+    public async Task<IReadOnlyList<AgentGroupId>> ListGroupIdsForAgentAsync(
+        AgentId agentId, CancellationToken ct = default)
+    {
+        var ids = await session.Connection.QueryAsync<string>(
+            "SELECT group_id FROM agent_group_members WHERE agent_id = @AgentId ORDER BY group_id",
+            new { AgentId = agentId.Value.ToString() },
+            session.Transaction);
+        return ids.Select(s => new AgentGroupId(Guid.Parse(s))).ToList();
+    }
+
+    public void AddMember(AgentGroupId groupId, AgentId agentId, DateTimeOffset now) =>
+        session.Connection.Execute("""
+            INSERT INTO agent_group_members (group_id, agent_id, added_at)
+            VALUES (@GroupId, @AgentId, @AddedAt)
+            ON CONFLICT (group_id, agent_id) DO NOTHING
+            """,
+            new
+            {
+                GroupId = groupId.Value.ToString(),
+                AgentId = agentId.Value.ToString(),
+                AddedAt = now.ToString("O"),
+            },
+            session.Transaction);
+
+    public void RemoveMember(AgentGroupId groupId, AgentId agentId) =>
+        session.Connection.Execute(
+            "DELETE FROM agent_group_members WHERE group_id = @GroupId AND agent_id = @AgentId",
+            new { GroupId = groupId.Value.ToString(), AgentId = agentId.Value.ToString() },
+            session.Transaction);
+
     private static object ToParams(AgentGroup g) => new
     {
         Id = g.Id.Value.ToString(),

@@ -1,0 +1,162 @@
+@namespace DeltaZulu.Platform.Web.AgentManagement.Pages
+@page "/agents/fleet"
+@rendermode InteractiveServer
+@using MudBlazor
+@using DeltaZulu.Platform.Application.AgentManagement.Services
+@using DeltaZulu.Platform.Domain.AgentManagement.Agents
+@using DeltaZulu.Platform.Domain.AgentManagement.Identifiers
+@using DeltaZulu.Platform.Domain.Analytics.Observability
+@using DeltaZulu.Platform.Web.AgentManagement.ViewModels
+@inject AgentService AgentService
+@inject AgentGroupService GroupService
+@inject IOperationalMetricsReader MetricsReader
+
+<PageTitle>Fleet Health</PageTitle>
+
+<DzPageHeader Eyebrow="Monitoring"
+              Title="Fleet Health"
+              Description="Aggregate agent health by group, version, and policy so remediation can be prioritized fleet-wide.">
+    <Actions>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Outlined.Refresh" OnClick="LoadAsync">
+            Refresh
+        </MudButton>
+    </Actions>
+</DzPageHeader>
+
+@if (_loading)
+{
+    <DzLoadingState Text="Loading fleet health..." />
+}
+else if (_rows.Count == 0)
+{
+    <DzEmptyState Title="No agents enrolled"
+                  Description="Fleet rollups appear once agents enroll and report health."
+                  Icon="@Icons.Material.Outlined.Groups" />
+}
+else
+{
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Fleet Size"
+                          Value="@_rows.Count.ToString()"
+                          Icon="@Icons.Material.Outlined.Memory"
+                          Label="Enrolled agents" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Healthy"
+                          Value="@_rows.Count(r => r.HealthStatus == "Online").ToString()"
+                          Icon="@Icons.Material.Outlined.CheckCircleOutline"
+                          Label="Online and nominal"
+                          Tone="success" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Needs Attention"
+                          Value="@_rows.Count(r => r.HealthStatus is "Degraded" or "Stale" or "Offline").ToString()"
+                          Icon="@Icons.Material.Outlined.Warning"
+                          Label="Degraded, stale, or offline"
+                          Tone="@(_rows.Any(r => r.HealthStatus is "Degraded" or "Stale" or "Offline") ? "error" : "neutral")" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <DzMetricTile Eyebrow="Config Drift"
+                          Value="@_rows.Count(r => r.ConfigDrift || r.HasConfigDrift).ToString()"
+                          Icon="@Icons.Material.Outlined.Rule"
+                          Label="Desired and applied differ"
+                          Tone="@(_rows.Any(r => r.ConfigDrift || r.HasConfigDrift) ? "warning" : "neutral")" />
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="6">
+            <DzPanel Eyebrow="By group">
+                @if (_groupRollups.Count == 0)
+                {
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        No groups with members yet. Ungrouped agents appear under "Ungrouped".
+                    </MudText>
+                }
+                <RollupTable Rollups="_groupRollups" />
+            </DzPanel>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <DzPanel Eyebrow="By agent version">
+                <RollupTable Rollups="_versionRollups" />
+            </DzPanel>
+        </MudItem>
+        <MudItem xs="12">
+            <DzPanel Eyebrow="By desired policy bundle">
+                <RollupTable Rollups="_bundleRollups" />
+            </DzPanel>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private bool _loading = true;
+    private List<AgentInventoryRow> _rows = [];
+    private List<FleetRollup> _groupRollups = [];
+    private List<FleetRollup> _versionRollups = [];
+    private List<FleetRollup> _bundleRollups = [];
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var agents = await AgentService.ListByTenantAsync(TenantId.Default);
+            var telemetry = await Task.Run(() => MetricsReader.ReadLatestAgents());
+            _rows = AgentInventoryRow.Merge(agents, telemetry).ToList();
+            var rowsByAgent = _rows.ToDictionary(r => r.AgentId);
+
+            // Group rollups from explicit membership; agents in no group land in "Ungrouped".
+            var groups = await GroupService.ListByTenantAsync(TenantId.Default);
+            var grouped = new HashSet<AgentId>();
+            _groupRollups = [];
+            foreach (var group in groups)
+            {
+                var memberIds = await GroupService.ListMemberAgentIdsAsync(group.Id);
+                var members = memberIds
+                    .Where(rowsByAgent.ContainsKey)
+                    .Select(id => rowsByAgent[id])
+                    .ToList();
+                foreach (var id in memberIds)
+                    grouped.Add(id);
+                if (members.Count > 0)
+                    _groupRollups.Add(FleetRollup.From(group.Name, members));
+            }
+            var ungrouped = _rows.Where(r => !grouped.Contains(r.AgentId)).ToList();
+            if (ungrouped.Count > 0)
+                _groupRollups.Add(FleetRollup.From("Ungrouped", ungrouped));
+
+            _versionRollups = _rows
+                .GroupBy(r => r.AgentVersion ?? "unknown")
+                .Select(g => FleetRollup.From(g.Key, g.ToList()))
+                .OrderByDescending(r => r.Total)
+                .ToList();
+
+            _bundleRollups = _rows
+                .GroupBy(r => r.DesiredBundleId?.Value.ToString("D")[..8] ?? "unassigned")
+                .Select(g => FleetRollup.From(g.Key, g.ToList()))
+                .OrderByDescending(r => r.Total)
+                .ToList();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    public sealed record FleetRollup(
+        string Label, int Total, int Healthy, int Degraded, int StaleOrOffline, int Drifted)
+    {
+        public static FleetRollup From(string label, IReadOnlyList<AgentInventoryRow> rows) => new(
+            label,
+            rows.Count,
+            rows.Count(r => r.HealthStatus == "Online"),
+            rows.Count(r => r.HealthStatus == "Degraded"),
+            rows.Count(r => r.HealthStatus is "Stale" or "Offline" or "Disabled"),
+            rows.Count(r => r.ConfigDrift || r.HasConfigDrift));
+    }
+}

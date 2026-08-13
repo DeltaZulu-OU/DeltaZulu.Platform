@@ -1,4 +1,5 @@
 using System.Reflection;
+using DeltaZulu.Platform.Web.AgentManagement;
 using DeltaZulu.Platform.Web.Analytics;
 using DeltaZulu.Platform.Web.Governance;
 using DeltaZulu.Platform.Web.Platform;
@@ -14,6 +15,7 @@ public sealed class PlatformCompositionTests
     [
         new AnalyticsModule(),
         new GovernanceModule(),
+        new AgentManagementModule(),
     ];
 
     [TestMethod]
@@ -111,6 +113,7 @@ public sealed class PlatformCompositionTests
             "css/analytics-app.css",
             "css/kql-helper-drawer.css",
             "css/governance-app.css",
+            "css/agent-management-app.css",
             "css/platform.css");
     }
 
