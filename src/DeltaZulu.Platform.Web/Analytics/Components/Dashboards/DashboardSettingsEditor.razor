@@ -4,7 +4,7 @@
 @if (IsOpen && Dashboard is not null)
 {
     <div class="dashboard-editor-backdrop" role="presentation">
-        <section class="dashboard-editor-dialog dashboard-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="dashboard-settings-editor-title">
+        <aside class="dashboard-editor-dialog dashboard-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="dashboard-settings-editor-title">
             <header class="dashboard-editor-header">
                 <div>
                     <p class="dashboard-eyebrow">Dashboard</p>
@@ -53,7 +53,7 @@
                 <button class="hunt-btn" @onclick="CancelAsync">Cancel</button>
                 <button class="hunt-btn dashboard-primary-action" @onclick="SaveAsync">Save dashboard</button>
             </footer>
-        </section>
+        </aside>
     </div>
 }
 
