@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Extended by [ADR 0014](0014-type-fidelity-registry-and-avro-arrow-ingestion.md) for ingestion type fidelity across Proton and DuckDB.
+Accepted. Extended by [ADR 0014](0014-deltazulu-forward-type-fidelity-registry.md) for ingestion type fidelity across Proton and DuckDB.
 
 ## Context
 

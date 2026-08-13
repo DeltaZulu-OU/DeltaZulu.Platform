@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This review compares the current documentation claims against the repository implementation after ADR 0014 introduced the type-fidelity registry and Avro/Arrow ingestion target. The goal is to keep the project honest: target architecture remains useful only when current implementation gaps are explicit, prioritized, and not described as already complete.
+This review compares the current documentation claims against the repository implementation after ADR 0014 introduced the type-fidelity registry and DeltaZulu.Forward/Arrow ingestion target. The goal is to keep the project honest: target architecture remains useful only when current implementation gaps are explicit, prioritized, and not described as already complete.
 
 ## Method
 
@@ -12,7 +12,7 @@ The review was a static repository audit using ripgrep and targeted file reads a
 
 The documentation direction is sound, but several documents mixed target state, recently completed storage migration, and residual implementation gaps. The most important corrections are:
 
-1. ADR 0014 is a target decision, not implemented code. The only implemented raw-log transport remains `RawLogEnvelope` plus `RawLogNdjsonCodec`; there is no Avro, Arrow, or schema-registry implementation yet.
+1. ADR 0014 is a target decision, not implemented code. The only implemented raw-log transport remains `RawLogEnvelope` plus `RawLogNdjsonCodec`; there is no DeltaZulu.Forward envelope, Arrow, or schema-registry implementation yet.
 2. Phase 3B's storage migration is materially complete for the alert write path: app-state attachments no longer include `alerts`/`alert_entities`, lake writers exist, and `AlertEvent`/`AlertEntity` approved views exist. Older roadmap/review text still described the pre-migration SQLite alert state and needed correction.
 3. Phase 3B did **not** initially complete the full alert model. This follow-up now removes mutable-looking `Status`/`UpdatedAtUtc` fields from immutable alert evidence and adds evidence hash, materialization, rule-hash, suppression, and entity-contract fields to the domain records and lake schemas.
 4. Detection runs are still application-state SQLite records, despite the architecture target that completed runs are append-only lake records written once at completion.
@@ -24,7 +24,7 @@ The documentation direction is sound, but several documents mixed target state, 
 
 | ID | Documentation area | Code reality | Documentation action taken | Implementation follow-up |
 |---|---|---|---|---|
-| G1 | ADR 0014 / ingestion transport | `DeltaZulu.Platform.Ingestion` implements `RawLogEnvelope`, `RawLogBatch`, pub-sub, and `RawLogNdjsonCodec`; no Avro schema generation, Arrow batches, or schema registry exists. | Keep ADR 0014 proposed/blocking; architecture and ingestion README now call this a target and mark NDJSON as transitional. | Build Phase 3C registry, Avro wire, server Arrow fan-out, and no-NDJSON-fallback spooling behavior. |
+| G1 | ADR 0014 / ingestion transport | `DeltaZulu.Platform.Ingestion` implements `RawLogEnvelope`, `RawLogBatch`, pub-sub, and `RawLogNdjsonCodec`; no DeltaZulu.Forward envelope schema generation, Arrow batches, or schema registry exists. | Keep ADR 0014 proposed/blocking; architecture and ingestion README now call this a target and mark NDJSON as transitional. | Build Phase 3C registry, DeltaZulu.Forward wire, server Arrow fan-out, and no-NDJSON-fallback spooling behavior. |
 | G2 | ADR 0007 medallion target | Code uses source-family Bronze tables (`windows_sysmon_event`, `windows_security_event`, `dns_server_event`), event-specific Silver parser contributors, and Golden `Dns`/`NetworkSession`/`ProcessEvent` compatibility names. | ADR 0007 already marks this as current implementation gap; this review keeps it visible as a cross-phase prerequisite. | Add `RawEventEnvelope`/`RawEvent`, grouped source-family Silver records, and target Golden activity names with lineage. |
 | G3 | Alert storage migration | App-state views no longer include `alerts` or `alert_entities`; `DuckDbAlertLakeWriter` and `DuckDbAlertEntityLakeWriter` write lake tables; `AlertEvent`/`AlertEntity` approved views exist. | Correct older roadmap and production-gap text that still claimed alerts were SQLite app-state records. | Treat storage migration as closed, but keep model hardening in Phase 5. |
 | G4 | Alert model hardening | Fixed in follow-up: `AlertRecord` no longer includes `Status`/`UpdatedAtUtc`; alert/entity lake schemas and approved view contracts now include evidence hash, materialization key/mode, rule hash, suppression marker, entity value JSON, and entity type contract fields. | Mark alert evidence model hardening as closed for this slice; keep detection-run ownership and runtime deduplication as remaining Phase 5/6 work. | Keep operational status/triage state outside immutable alert evidence; add durable deduplication/cursor semantics around the generated materialization keys. |
@@ -40,7 +40,7 @@ The documentation direction is sound, but several documents mixed target state, 
 
 Implemented code is JSON-shaped and development-oriented: `RawLogEnvelope` carries channel, ingest time, source/provider/host, raw JSON text, and raw text. `RawLogNdjsonCodec` reads/writes those envelopes and pools low-cardinality metadata. DuckDB Bronze ingestion builds SQL inserts into configured Bronze tables and casts `raw_log` to DuckDB `JSON`.
 
-Target code is registry-governed and typed: Avro on the agent wire, Arrow record batches inside the server, generated DuckDB/Proton DDL, generated KQL metadata, and governed JSON/NDJSON edges only.
+Target code is registry-governed and typed: DeltaZulu.Forward envelopes on the agent wire, Arrow record batches inside the server, generated DuckDB/Proton DDL, generated KQL metadata, and governed JSON/NDJSON edges only.
 
 ### Schema and query contracts
 
