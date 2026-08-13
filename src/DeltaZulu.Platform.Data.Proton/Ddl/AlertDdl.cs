@@ -27,7 +27,8 @@ public sealed class AlertDdl
         _name = name;
     }
 
-    public AlertDdl IfNotExists(bool value = true) { _ifNotExists = value; return this; }
+    public AlertDdl IfNotExists(bool value = true)
+    { _ifNotExists = value; return this; }
 
     /// <summary>
     /// Configures event batching. The UDF is invoked when <paramref name="n"/> events accumulate
@@ -54,28 +55,44 @@ public sealed class AlertDdl
     }
 
     /// <summary>Specifies the Python UDF to invoke when the alert fires.</summary>
-    public AlertDdl Call(string udfName) { _udfName = udfName; return this; }
+    public AlertDdl Call(string udfName)
+    { _udfName = udfName; return this; }
 
     /// <summary>The streaming SELECT query that feeds the alert. Must be a simple stream SELECT.</summary>
-    public AlertDdl As(string selectSql) { _selectSql = selectSql; return this; }
+    public AlertDdl As(string selectSql)
+    { _selectSql = selectSql; return this; }
 
     /// <summary>Builds and returns the <c>CREATE ALERT</c> DDL statement.</summary>
     public string Build()
     {
         if (_batchEvents <= 0 || _batchTimeout is null)
+        {
             throw new InvalidOperationException("Batch configuration is required — call BatchEvents(...).");
+        }
+
         if (string.IsNullOrWhiteSpace(_udfName))
+        {
             throw new InvalidOperationException("UDF name is required — call Call(...).");
+        }
+
         if (string.IsNullOrWhiteSpace(_selectSql))
+        {
             throw new InvalidOperationException("SELECT query is required — call As(...).");
+        }
 
         var sb = new StringBuilder("CREATE ALERT ");
-        if (_ifNotExists) sb.Append("IF NOT EXISTS ");
+        if (_ifNotExists)
+        {
+            sb.Append("IF NOT EXISTS ");
+        }
+
         sb.Append(QuoteName(_name));
         sb.Append($"\nBATCH {_batchEvents} EVENTS WITH TIMEOUT {_batchTimeout}");
 
         if (_limitAlerts > 0 && _limitPer is not null)
+        {
             sb.Append($"\nLIMIT {_limitAlerts} ALERTS PER {_limitPer}");
+        }
 
         sb.Append($"\nCALL {QuoteIdentifier(_udfName!)}");
         sb.Append($"\nAS\n{_selectSql}");

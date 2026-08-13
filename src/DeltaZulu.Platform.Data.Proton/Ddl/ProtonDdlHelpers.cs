@@ -9,7 +9,10 @@ internal static class ProtonDdlHelpers
     internal static string QuoteName(string name)
     {
         if (!name.Contains('.'))
+        {
             return QuoteIdentifier(name);
+        }
+
         var dot = name.IndexOf('.');
         return $"{QuoteIdentifier(name[..dot])}.{QuoteIdentifier(name[(dot + 1)..])}";
     }
@@ -17,7 +20,10 @@ internal static class ProtonDdlHelpers
     internal static string QuoteIdentifier(string id)
     {
         if (id.Length > 0 && id.All(c => char.IsAsciiLetterOrDigit(c) || c == '_'))
+        {
             return id;
+        }
+
         return $"`{id.Replace("`", "``")}`";
     }
 

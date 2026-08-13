@@ -19,10 +19,14 @@ public readonly struct ProtonInterval
     }
 
     public static ProtonInterval Seconds(int n) => new(n, "s");
+
     public static ProtonInterval Minutes(int n) => new(n, "m");
-    public static ProtonInterval Hours(int n)   => new(n, "h");
-    public static ProtonInterval Days(int n)    => new(n, "d");
-    public static ProtonInterval Weeks(int n)   => new(n, "w");
+
+    public static ProtonInterval Hours(int n) => new(n, "h");
+
+    public static ProtonInterval Days(int n) => new(n, "d");
+
+    public static ProtonInterval Weeks(int n) => new(n, "w");
 
     public override string ToString() => $"{_value}{_unit}";
 }

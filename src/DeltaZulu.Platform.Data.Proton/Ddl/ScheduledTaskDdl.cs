@@ -22,22 +22,40 @@ public sealed class ScheduledTaskDdl
         _name = name;
     }
 
-    public ScheduledTaskDdl Schedule(ProtonInterval interval) { _schedule = interval; return this; }
-    public ScheduledTaskDdl Timeout(ProtonInterval interval)  { _timeout = interval; return this; }
-    public ScheduledTaskDdl Into(string targetStream)         { _targetStream = targetStream; return this; }
-    public ScheduledTaskDdl As(string selectSql)              { _selectSql = selectSql; return this; }
+    public ScheduledTaskDdl Schedule(ProtonInterval interval)
+    { _schedule = interval; return this; }
+
+    public ScheduledTaskDdl Timeout(ProtonInterval interval)
+    { _timeout = interval; return this; }
+
+    public ScheduledTaskDdl Into(string targetStream)
+    { _targetStream = targetStream; return this; }
+
+    public ScheduledTaskDdl As(string selectSql)
+    { _selectSql = selectSql; return this; }
 
     /// <summary>Builds and returns the <c>CREATE OR REPLACE TASK</c> DDL statement.</summary>
     public string Build()
     {
         if (_schedule is null)
+        {
             throw new InvalidOperationException("Schedule interval is required — call Schedule(...).");
+        }
+
         if (_timeout is null)
+        {
             throw new InvalidOperationException("Timeout interval is required — call Timeout(...).");
+        }
+
         if (string.IsNullOrWhiteSpace(_targetStream))
+        {
             throw new InvalidOperationException("Target stream is required — call Into(...).");
+        }
+
         if (string.IsNullOrWhiteSpace(_selectSql))
+        {
             throw new InvalidOperationException("SELECT query is required — call As(...).");
+        }
 
         return $"""
             CREATE OR REPLACE TASK {QuoteName(_name)}
