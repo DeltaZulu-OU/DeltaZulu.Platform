@@ -124,16 +124,8 @@ public sealed class AcceptedContentReadService(
 
     private static string? ToLogicalPath(string detectionPrefix, string repositoryPath)
     {
-        var yamlPath = detectionPrefix + ".yaml";
-        if (string.Equals(repositoryPath, yamlPath, StringComparison.Ordinal))
-        {
-            return "detection.yaml";
-        }
-
-        var flatPrefix = detectionPrefix + "-";
-        return repositoryPath.StartsWith(flatPrefix, StringComparison.Ordinal)
-            ? repositoryPath[flatPrefix.Length..]
-            : null;
+        var detectionSlug = detectionPrefix["detections/".Length..];
+        return CanonicalPathResolver.TryGetLogicalPath(detectionSlug, repositoryPath);
     }
 }
 

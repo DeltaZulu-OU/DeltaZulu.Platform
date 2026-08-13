@@ -111,8 +111,8 @@ public sealed class VersionService(
 
         var beforeFiles = beforeVersion is null
             ? []
-            : await contentStore.ListFilesAtCommitAsync(prefix, beforeVersion.GitCommitSha, ct);
-        var afterFiles = await contentStore.ListFilesAtCommitAsync(prefix, afterVersion.GitCommitSha, ct);
+            : await ListDetectionFilesAtCommitAsync(detection.Slug, beforeVersion.GitCommitSha, ct);
+        var afterFiles = await ListDetectionFilesAtCommitAsync(detection.Slug, afterVersion.GitCommitSha, ct);
 
         var beforeByPath = ToLogicalPathMap(prefix, beforeFiles);
         var afterByPath = ToLogicalPathMap(prefix, afterFiles);
@@ -126,6 +126,14 @@ public sealed class VersionService(
             .ToArray();
 
         return new VersionComparison(detection, beforeVersion, afterVersion, diffs);
+    }
+
+    private async Task<IReadOnlyList<ContentFile>> ListDetectionFilesAtCommitAsync(string detectionSlug, string commitSha, CancellationToken ct)
+    {
+        var files = await contentStore.ListFilesAtCommitAsync("detections", commitSha, ct);
+        return files
+            .Where(file => CanonicalPathResolver.TryGetLogicalPath(detectionSlug, file.RepositoryPath) is not null)
+            .ToArray();
     }
 
     private async Task EnsureVersionCommitExistsAsync(DetectionVersion version, CancellationToken ct)
@@ -142,8 +150,7 @@ public sealed class VersionService(
 
     private static Dictionary<string, ContentFile> ToLogicalPathMap(string detectionPrefix, IReadOnlyList<ContentFile> files)
     {
-        var prefix = detectionPrefix.TrimEnd('/') + "/";
-        return files.ToDictionary(file => ToLogicalPath(prefix, file.RepositoryPath), StringComparer.Ordinal);
+        return files.ToDictionary(file => ToLogicalPath(detectionPrefix, file.RepositoryPath), StringComparer.Ordinal);
     }
 
     private static bool IsBefore(DetectionVersion candidate, DetectionVersion afterVersion) => candidate.Id == afterVersion.Id
@@ -151,9 +158,12 @@ public sealed class VersionService(
             : candidate.AcceptedAt < afterVersion.AcceptedAt
             || (candidate.AcceptedAt == afterVersion.AcceptedAt && candidate.SequenceNumber < afterVersion.SequenceNumber);
 
-    private static string ToLogicalPath(string prefix, string repositoryPath) => !repositoryPath.StartsWith(prefix, StringComparison.Ordinal)
-            ? throw new DomainException("version.path_outside_detection", $"Accepted content path '{repositoryPath}' is outside the detection package.")
-            : repositoryPath[prefix.Length..];
+    private static string ToLogicalPath(string detectionPrefix, string repositoryPath)
+    {
+        var detectionSlug = detectionPrefix["detections/".Length..];
+        return CanonicalPathResolver.TryGetLogicalPath(detectionSlug, repositoryPath)
+            ?? throw new DomainException("version.path_outside_detection", $"Accepted content path '{repositoryPath}' is outside the detection package.");
+    }
 
     private static VersionFileDiff CreateDiff(string logicalPath, ContentFile? before, ContentFile? after)
     {
