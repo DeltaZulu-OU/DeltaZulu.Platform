@@ -75,3 +75,15 @@ public sealed record CanonicalViewDef(
     IReadOnlyList<ColumnDef> Columns,
     string? Description = null)
     : SchemaObjectDef(Schema, Name, Columns, Description);
+
+/// <summary>
+/// A raw-SQL internal view (e.g. internal.v_source_latest).
+/// Not user-queryable; used for OLAP aggregation within the lake.
+/// </summary>
+public sealed record InternalViewDef(
+    string Schema,
+    string Name,
+    string SqlBody,
+    IReadOnlyList<ColumnDef> Columns,
+    string? Description = null)
+    : SchemaObjectDef(Schema, Name, Columns, Description);

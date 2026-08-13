@@ -6,6 +6,7 @@ using DeltaZulu.Platform.Data.Sqlite.Analytics.CuratedAnalytics;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.DetectionRuns;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Detections;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Nrt;
+using DeltaZulu.Platform.Data.Sqlite.Analytics.Observability;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.QueryHistory;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.SavedQueries;
 using DeltaZulu.Platform.Data.Sqlite.Analytics.Settings;
@@ -17,6 +18,7 @@ using DeltaZulu.Platform.Domain.Analytics.CuratedAnalytics;
 using DeltaZulu.Platform.Domain.Analytics.DetectionRuns;
 using DeltaZulu.Platform.Domain.Analytics.Detections;
 using DeltaZulu.Platform.Domain.Analytics.Nrt;
+using DeltaZulu.Platform.Domain.Analytics.Observability;
 using DeltaZulu.Platform.Domain.Analytics.QueryHistory;
 using DeltaZulu.Platform.Domain.Analytics.SavedQueries;
 using DeltaZulu.Platform.Domain.Analytics.Visualizations;
@@ -55,6 +57,7 @@ public static class ApplicationPersistenceServiceCollectionExtensions
         AddApplicationRepository<IIncidentCandidateRepository, DapperIncidentCandidateRepository>(services);
         AddApplicationRepository<ICandidateEvidenceRepository, DapperCandidateEvidenceRepository>(services);
         AddApplicationRepository<INrtRuleRepository, DapperNrtRuleRepository>(services);
+        AddApplicationRepository<ISourceObservationRepository, DapperSourceObservationRepository>(services);
     }
 
     private static void AddApplicationRepository<TRepository, TImplementation>(IServiceCollection services)

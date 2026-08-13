@@ -1,6 +1,9 @@
 using DeltaZulu.Platform.Data.DuckDb;
+using DeltaZulu.Platform.Data.DuckDb.Ingestion;
 using DeltaZulu.Platform.Data.Seeding;
 using DeltaZulu.Platform.Data.Sqlite.Analytics;
+using DeltaZulu.Platform.Data.Sqlite.Analytics.Observability;
+using DeltaZulu.Platform.Domain.Analytics.Observability;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 
 namespace DeltaZulu.Platform.Web.Analytics.Hosting;
@@ -24,6 +27,24 @@ public static partial class AnalyticsModuleBootstrapExtensions
         {
             await BootstrapSchemaAsync(app, options.SeedDevelopmentMedallionSources);
         }
+
+        if (options.SeedDevelopmentMedallionSources)
+        {
+            var observationRepo = app.Services.GetRequiredService<ISourceObservationRepository>();
+            await SourceObservationSeeder.SeedIfEmptyAsync(observationRepo);
+
+            var applier = app.Services.GetRequiredService<SchemaApplier>();
+            var lakeRows = applier.QueryScalar("SELECT count(*) FROM internal.source_observations");
+            if (lakeRows == 0)
+            {
+                var snapshots = await observationRepo.ListLatestAsync();
+                if (snapshots.Count > 0)
+                {
+                    var lakeWriter = app.Services.GetRequiredService<DuckDbSourceObservationWriter>();
+                    await lakeWriter.AppendBatchAsync(snapshots);
+                }
+            }
+        }
     }
 
     private static async Task BootstrapSchemaAsync(WebApplication app, bool seedDevelopmentMedallionSources) => await Task.Run(() => {
@@ -32,9 +53,10 @@ public static partial class AnalyticsModuleBootstrapExtensions
 
         var ddl = emitter.EmitAll(
             rawTables: SchemaConventions.RawTables,
-            internalTables: [],
+            internalTables: SchemaConventions.InternalTables,
             parserViews: SchemaConventions.ParserViews,
-            canonicalViews: SchemaConventions.CanonicalViews);
+            canonicalViews: SchemaConventions.CanonicalViews,
+            internalViews: SchemaConventions.InternalViews);
 
         applier.ApplyStatements(ddl);
         applier.ExecuteRaw($"SET schema = '{SchemaConventions.GoldenSchema}'");
