@@ -4,6 +4,8 @@
 
 Accepted.
 
+The agent this control plane manages is `DeltaZulu.Forward`, named as the collector in [ADR 0014](0014-http-ingestion-type-fidelity-registry.md). This ADR governs its control plane (enrollment, check-in, policy delivery); ADR 0014 governs its ingestion output.
+
 ## Context
 
 The agent management roadmap (P0) requires a minimum viable control plane: automated enrollment,
