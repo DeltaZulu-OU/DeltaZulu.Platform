@@ -60,7 +60,7 @@
         }
         else if (Result.HasRenderableChart)
         {
-            <DashboardChartWidget Result="Result" Width="@ChartWidth" Height="@ChartHeight" />
+            <DashboardChartWidget Result="Result" Height="@ChartHeight" />
         }
         else
         {
@@ -138,9 +138,6 @@
 
     private string WidgetActionLabel
         => $"{Widget.Title} actions";
-
-    private string ChartWidth
-        => $"{Math.Max(520, Widget.Layout.Width * 132 - 40)}px";
 
     private string ChartHeight
     {

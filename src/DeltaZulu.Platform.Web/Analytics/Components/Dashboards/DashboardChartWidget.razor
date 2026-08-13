@@ -1,10 +1,11 @@
 @namespace DeltaZulu.Platform.Web.Analytics.Components.Dashboards
+@using DeltaZulu.Blazor.Interop
 @using DeltaZulu.Platform.Web.Analytics.Dashboards.Runtime
 @inject IJSRuntime JS
 @inject ILogger<DashboardChartWidget> Logger
 @implements IAsyncDisposable
 
-<div id="@_surfaceId" class="dashboard-chart-widget">
+<div id="@_surfaceId" class="dashboard-chart-widget" @ref="_surfaceHost">
     @if (Result is null || Result.Status == DashboardWidgetRunStatus.NotRun)
     {
         <div class="dashboard-chart-state">
@@ -53,7 +54,7 @@
     else
     {
         <div class="dashboard-chart-surface" style="height:@Height">
-            <Vizor.ECharts.EChart Options="Result.ChartOptions" Width="@Width" Height="@Height" />
+            <Vizor.ECharts.EChart @key="_chartRenderKey" Options="Result.ChartOptions" Width="@EffectiveWidth" Height="@Height" />
         </div>
         @if (!string.IsNullOrWhiteSpace(Result.Chart?.Warning))
         {
@@ -64,7 +65,11 @@
 
 @code {
     private readonly string _surfaceId = $"dashboard-chart-{Guid.NewGuid():N}";
+    private ElementReference _surfaceHost;
     private bool _resizeRegistered;
+    private int _chartRenderKey;
+    private int _lastMeasuredWidthPx;
+    private string? _measuredWidth;
 
     [Parameter]
     public DashboardWidgetRunResult? Result { get; set; }
@@ -74,6 +79,9 @@
 
     [Parameter]
     public string Height { get; set; } = "240px";
+
+    private string EffectiveWidth
+        => _measuredWidth ?? Width;
 
     private bool HasRenderableChart
         => Result?.HasRenderableChart == true;
@@ -90,11 +98,31 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!HasRenderableChart || _resizeRegistered)
+        if (!HasRenderableChart)
         {
             return;
         }
 
-        _resizeRegistered = await JS.TryInvokeVoidAsync("huntingDashboardCharts.observe", _surfaceId);
+        if (!_resizeRegistered)
+        {
+            _resizeRegistered = await JS.TryInvokeVoidAsync("huntingDashboardCharts.observe", _surfaceId);
+        }
+
+        await UpdateMeasuredWidthAsync();
+    }
+
+    private async Task UpdateMeasuredWidthAsync()
+    {
+        var rect = await _surfaceHost.GetBoundingClientRectAsync(JS);
+        var widthPx = (int)Math.Round(rect.Width, MidpointRounding.AwayFromZero);
+        if (widthPx <= 1 || widthPx == _lastMeasuredWidthPx)
+        {
+            return;
+        }
+
+        _lastMeasuredWidthPx = widthPx;
+        _measuredWidth = $"{widthPx}px";
+        _chartRenderKey++;
+        StateHasChanged();
     }
 }
