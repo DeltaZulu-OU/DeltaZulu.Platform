@@ -1,0 +1,26 @@
+namespace DeltaZulu.Platform.Domain.Analytics.Observability;
+
+public sealed record AgentLatestRow(
+    DateTime ObservedAt,
+    string TenantId,
+    string AgentId,
+    string HostId,
+    string Hostname,
+    string Platform,
+    string AgentVersion,
+    bool IsEnabled,
+    string ReportedStatus,
+    string HealthStatus,
+    string ConnectivityStatus,
+    string PipelineStatus,
+    DateTime? LastSeenAt,
+    double BufferPressure,
+    long QueueDepth,
+    long DroppedCount,
+    long ForwardFailedCount,
+    string ConfigDriftStatus,
+    bool ConfigDrift,
+    string? DesiredConfigVersionId,
+    string? AppliedConfigVersionId,
+    string? DesiredProfileVersionId,
+    string? AppliedProfileVersionId);

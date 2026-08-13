@@ -15,4 +15,13 @@ public sealed record SourceLatestRow(
     long ForwardedCount,
     long ForwardFailedCount,
     string HealthStatus,
-    double DiscardRatio);
+    double DiscardRatio,
+    string TenantId = "default",
+    string SourceIdentity = "",
+    string? SourceInstanceId = null,
+    string? ResourceFamily = null,
+    string? Provider = null,
+    string? ProfileId = null,
+    string? ProfileVersionId = null,
+    DateTime? LastReadAt = null,
+    string? LastError = null);

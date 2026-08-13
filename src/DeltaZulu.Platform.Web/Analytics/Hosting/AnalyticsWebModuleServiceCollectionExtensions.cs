@@ -72,6 +72,8 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
             plannerMaxIterations: options.PlannerMaxIterations));
         services.AddSingleton<IAnalyticsQueryExecutor, AnalyticsQueryExecutor>();
         services.AddSingleton<DuckDbSourceObservationWriter>();
+        services.AddSingleton<DuckDbAgentObservationWriter>();
+        services.AddSingleton<IOperationalMetricsReader, DuckDbOperationalMetricsReader>();
         services.AddSingleton<ISourceMetricsReader, DuckDbSourceMetricsReader>();
         services.AddSingleton<QueryService>();
 

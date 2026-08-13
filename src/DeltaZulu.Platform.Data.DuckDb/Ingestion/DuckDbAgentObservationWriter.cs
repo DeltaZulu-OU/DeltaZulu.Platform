@@ -4,21 +4,21 @@ using DeltaZulu.Platform.Domain.Analytics.Observability;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Ingestion;
 
-public sealed class DuckDbSourceObservationWriter : IDisposable
+public sealed class DuckDbAgentObservationWriter : IDisposable
 {
-    private const string TableName = "internal.SourceObservations";
-    private const string ColumnList = "ObservedAt, WindowStart, WindowEnd, TenantId, AgentId, HostId, SourceInstanceId, SourceType, ResourceFamily, Provider, Channel, ProfileId, ProfileVersionId, IsEnabled, CanRead, LastReadAt, ReadErrorCount, LastError, ReadCount, KeptAfterFilterCount, DiscardedCount, ForwardedCount, ForwardFailedCount";
+    private const string TableName = "internal.AgentObservations";
+    private const string ColumnList = "ObservedAt, TenantId, AgentId, HostId, Hostname, Platform, AgentVersion, LastSeenAt, IsEnabled, ReportedStatus, BufferPressure, QueueDepth, DroppedCount, ForwardFailedCount, DesiredConfigVersionId, AppliedConfigVersionId, DesiredProfileVersionId, AppliedProfileVersionId";
 
     private readonly SchemaApplier _applier;
     private readonly SemaphoreSlim _writeGate = new(1, 1);
 
-    public DuckDbSourceObservationWriter(SchemaApplier applier)
+    public DuckDbAgentObservationWriter(SchemaApplier applier)
     {
         ArgumentNullException.ThrowIfNull(applier);
         _applier = applier;
     }
 
-    public async Task AppendAsync(SourceObservationSnapshot snapshot, CancellationToken cancellationToken = default)
+    public async Task AppendAsync(AgentObservationSnapshot snapshot, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         await _writeGate.WaitAsync(cancellationToken);
@@ -32,7 +32,7 @@ public sealed class DuckDbSourceObservationWriter : IDisposable
         }
     }
 
-    public async Task AppendBatchAsync(IReadOnlyList<SourceObservationSnapshot> snapshots, CancellationToken cancellationToken = default)
+    public async Task AppendBatchAsync(IReadOnlyList<AgentObservationSnapshot> snapshots, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(snapshots);
         if (snapshots.Count == 0) return;
@@ -50,7 +50,7 @@ public sealed class DuckDbSourceObservationWriter : IDisposable
 
     public void Dispose() => _writeGate.Dispose();
 
-    private static string BuildInsertSql(SourceObservationSnapshot s)
+    private static string BuildInsertSql(AgentObservationSnapshot s)
     {
         var sb = new StringBuilder(768);
         sb.Append($"INSERT INTO {TableName} ({ColumnList}) VALUES (");
@@ -59,7 +59,7 @@ public sealed class DuckDbSourceObservationWriter : IDisposable
         return sb.ToString();
     }
 
-    private static string BuildBatchInsertSql(IReadOnlyList<SourceObservationSnapshot> snapshots)
+    private static string BuildBatchInsertSql(IReadOnlyList<AgentObservationSnapshot> snapshots)
     {
         var sb = new StringBuilder(256 + snapshots.Count * 384);
         sb.AppendLine($"INSERT INTO {TableName} ({ColumnList}) VALUES");
@@ -76,13 +76,9 @@ public sealed class DuckDbSourceObservationWriter : IDisposable
         return sb.ToString();
     }
 
-    private static void AppendRow(StringBuilder sb, SourceObservationSnapshot s)
+    private static void AppendRow(StringBuilder sb, AgentObservationSnapshot s)
     {
         AppendTimestamp(sb, s.ObservedAtUtc);
-        sb.Append(", ");
-        AppendNullableTimestamp(sb, s.WindowStartUtc);
-        sb.Append(", ");
-        AppendNullableTimestamp(sb, s.WindowEndUtc);
         sb.Append(", ");
         AppendString(sb, s.TenantId);
         sb.Append(", ");
@@ -90,39 +86,33 @@ public sealed class DuckDbSourceObservationWriter : IDisposable
         sb.Append(", ");
         AppendString(sb, s.HostId);
         sb.Append(", ");
-        AppendNullableString(sb, s.SourceInstanceId);
+        AppendString(sb, s.Hostname);
         sb.Append(", ");
-        AppendString(sb, s.SourceType);
+        AppendString(sb, s.Platform);
         sb.Append(", ");
-        AppendNullableString(sb, s.ResourceFamily);
+        AppendString(sb, s.AgentVersion);
         sb.Append(", ");
-        AppendNullableString(sb, s.Provider);
-        sb.Append(", ");
-        AppendString(sb, s.Channel);
-        sb.Append(", ");
-        AppendNullableString(sb, s.ProfileId);
-        sb.Append(", ");
-        AppendNullableString(sb, s.ProfileVersionId);
+        AppendNullableTimestamp(sb, s.LastSeenAtUtc);
         sb.Append(", ");
         sb.Append(s.IsEnabled ? "true" : "false");
         sb.Append(", ");
-        sb.Append(s.CanRead ? "true" : "false");
+        AppendString(sb, s.ReportedStatus);
         sb.Append(", ");
-        AppendNullableTimestamp(sb, s.LastReadAtUtc);
+        sb.Append(s.BufferPressure.ToString(CultureInfo.InvariantCulture));
         sb.Append(", ");
-        sb.Append(s.ReadErrorCount.ToString(CultureInfo.InvariantCulture));
+        sb.Append(s.QueueDepth.ToString(CultureInfo.InvariantCulture));
         sb.Append(", ");
-        AppendNullableString(sb, s.LastError);
-        sb.Append(", ");
-        sb.Append(s.ReadCount.ToString(CultureInfo.InvariantCulture));
-        sb.Append(", ");
-        sb.Append(s.KeptAfterFilterCount.ToString(CultureInfo.InvariantCulture));
-        sb.Append(", ");
-        sb.Append(s.DiscardedCount.ToString(CultureInfo.InvariantCulture));
-        sb.Append(", ");
-        sb.Append(s.ForwardedCount.ToString(CultureInfo.InvariantCulture));
+        sb.Append(s.DroppedCount.ToString(CultureInfo.InvariantCulture));
         sb.Append(", ");
         sb.Append(s.ForwardFailedCount.ToString(CultureInfo.InvariantCulture));
+        sb.Append(", ");
+        AppendNullableString(sb, s.DesiredConfigVersionId);
+        sb.Append(", ");
+        AppendNullableString(sb, s.AppliedConfigVersionId);
+        sb.Append(", ");
+        AppendNullableString(sb, s.DesiredProfileVersionId);
+        sb.Append(", ");
+        AppendNullableString(sb, s.AppliedProfileVersionId);
     }
 
     private static void AppendTimestamp(StringBuilder sb, DateTime utc)

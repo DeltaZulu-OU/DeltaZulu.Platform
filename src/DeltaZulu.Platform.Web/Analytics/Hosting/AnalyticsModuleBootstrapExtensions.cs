@@ -34,7 +34,7 @@ public static partial class AnalyticsModuleBootstrapExtensions
             await SourceObservationSeeder.SeedIfEmptyAsync(observationRepo);
 
             var applier = app.Services.GetRequiredService<SchemaApplier>();
-            var lakeRows = applier.QueryScalar("SELECT count(*) FROM internal.source_observations");
+            var lakeRows = applier.QueryScalar("SELECT count(*) FROM internal.SourceObservations");
             if (lakeRows == 0)
             {
                 var snapshots = await observationRepo.ListLatestAsync();

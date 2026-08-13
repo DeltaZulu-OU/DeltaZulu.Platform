@@ -77,7 +77,7 @@ public sealed record CanonicalViewDef(
     : SchemaObjectDef(Schema, Name, Columns, Description);
 
 /// <summary>
-/// A raw-SQL internal view (e.g. internal.v_source_latest).
+/// A raw-SQL internal view (e.g. internal.SourceLatest).
 /// Not user-queryable; used for OLAP aggregation within the lake.
 /// </summary>
 public sealed record InternalViewDef(

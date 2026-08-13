@@ -10,4 +10,7 @@ public sealed record SourceHealthSummary(
     long TotalForwarded,
     long TotalDiscarded,
     long TotalForwardFailed,
-    long TotalRead);
+    long TotalRead,
+    long TotalKept = 0,
+    double OverallDiscardRatio = 0,
+    string TenantId = "default");
