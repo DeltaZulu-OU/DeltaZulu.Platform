@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Domain.Governance.Common;
+namespace DeltaZulu.Platform.Domain.Common;
 
 /// <summary>
 /// Thrown when a domain invariant is violated. Application services translate this into

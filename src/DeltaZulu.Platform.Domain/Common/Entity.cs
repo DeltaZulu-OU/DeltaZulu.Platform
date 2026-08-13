@@ -1,4 +1,4 @@
-namespace DeltaZulu.Platform.Domain.Governance.Common;
+namespace DeltaZulu.Platform.Domain.Common;
 
 /// <summary>
 /// Minimal entity base. Equality is by identifier only; subclasses are responsible for

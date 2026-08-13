@@ -1,9 +1,12 @@
 using DeltaZulu.Blazor.Interop;
+using DeltaZulu.Platform.Application.AgentManagement;
 using DeltaZulu.Platform.Application.Governance;
 using DeltaZulu.Platform.Application.Governance.Validation;
 using DeltaZulu.Platform.Application.Governance.Workflow;
+using DeltaZulu.Platform.Data.AgentManagement;
 using DeltaZulu.Platform.Data.Git;
 using DeltaZulu.Platform.Data.Seeding;
+using DeltaZulu.Platform.Data.Sqlite.AgentManagement;
 using DeltaZulu.Platform.Data.Sqlite.Governance;
 using DeltaZulu.Platform.Web.Analytics;
 using DeltaZulu.Platform.Web.Analytics.Hosting;
@@ -81,6 +84,13 @@ builder.Services.AddAnalyticsWebModule(new AnalyticsModuleOptions {
     RegisterMudServices = false,
 });
 
+// --- Agent Management ---
+var agentManagementConnectionString = builder.Configuration.GetConnectionString("AgentManagement")
+    ?? "Data Source=agent-management.db";
+builder.Services.AddAgentManagementSqlitePersistence(agentManagementConnectionString);
+builder.Services.AddAgentManagementApplication();
+builder.Services.AddAgentManagementValidation();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -100,6 +110,10 @@ await app.BootstrapAnalyticsModuleAsync(new AnalyticsModuleOptions {
     BootstrapApplicationPersistence = true,
     SeedDevelopmentMedallionSources = app.Environment.IsDevelopment(),
 });
+
+// Bootstrap Agent Management module (schema initialization)
+var agentManagementBootstrapper = app.Services.GetRequiredService<IAgentManagementPersistenceBootstrapper>();
+await agentManagementBootstrapper.EnsureInitializedAsync();
 
 app.MapRazorComponents<DeltaZulu.Platform.Web.App>()
     .AddInteractiveServerRenderMode();

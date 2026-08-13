@@ -1,4 +1,4 @@
-using DeltaZulu.Platform.Domain.Governance.Common;
+using DeltaZulu.Platform.Domain.Common;
 
 namespace DeltaZulu.Platform.Domain.Governance.Issues;
 
