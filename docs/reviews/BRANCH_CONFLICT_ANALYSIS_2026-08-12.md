@@ -143,13 +143,13 @@ alongside the parity harness that would consume it.
 **Both documents were relocated.** `COMPARISON.md` sat under `src/`, against the documentation
 cleanup policy → `docs/analytics/kql-duckdb-comparison-register.md`. The review doc was registered
 as "binding" while proposing two things that contradict accepted decisions → **ADR 0016
-(Proposed)**, with both recorded as unresolved conflicts:
+(Proposed)**:
 
-1. **A live Kusto cluster as the parity oracle.** ADR 0002 makes DuckDB the execution backend;
-   the platform has no Kusto cluster. This adds an Azure Data Explorer dependency with credential,
-   cost, and CI-availability consequences, and makes an external service the arbiter of
-   correctness.
-2. **A separate `DeltaZulu.Transpiler.Benchmark` project.** Roadmap P8 says to expand
+1. **A live Kusto cluster as the parity oracle.** **Resolved: rejected.** There is no Kusto
+   cluster and none is planned — DuckLake is the durable analytical backend, and ADR 0002 makes
+   KQL the analyst-facing surface language, not a backend the platform talks to. The oracle is a
+   human-reviewed locked corpus executed against DuckDB.
+2. **A separate `DeltaZulu.Transpiler.Benchmark` project.** Still open. Roadmap P8 says to expand
    `DeltaZulu.Platform.Tests` rather than add per-module test projects; ADR 0001 fixes the project
    list. Also directly contradicted by the sibling branch that was *reducing* project count.
 
@@ -192,18 +192,38 @@ and should survive.
 
 The Forward decision made the existing ADR text wrong. It banned Arrow, Avro, and
 DeltaZulu.Forward in one sentence, conflating two separate questions: what internal exchange
-representation the platform uses, and what produces raw events at the edge.
+representation the platform uses, and what produces raw events at the edge. A first pass at the
+amendment then made a second error, treating `DeltaZulu.Forward` as the collector itself. Both
+are now corrected:
 
-`DeltaZulu.Forward` is now named as **the collector** — the agent-side producer that ADR 0010 and
-ADR 0012 referred to only as "the Agent". It consumes the registry and validates against it, but
-is **not** a fourth `RegistryProjectionTarget`; the targets stay DuckDB, Proton, KQL. Its envelope
-encoding is internal to the collector. Arrow and Avro remain excluded as internal exchange
-formats. Cross-referenced from ADR 0010, ADR 0012, and the `ARCHITECTURE.md` ingestion section.
+- **`DeltaZulu.Agent`** is the collector program. Like fluentd, one binary is both sender and
+  receiver — edge instances collect and forward, a server-side instance receives and fans out to
+  configured sinks.
+- **`DeltaZulu.Forward`** is the wire protocol between those instances. A transport, not a store.
 
-> **Open for confirmation:** whether `RegistryProjectionTarget` should later regain a
-> `ForwardEnvelope` member so the agent wire contract is generated from the registry like the
-> other targets. Implemented here as consumer-not-target, which preserves the three-target
-> invariant the realignment established.
+Arrow and Avro remain excluded as internal exchange formats. Cross-referenced from ADR 0010,
+ADR 0012, and the `ARCHITECTURE.md` ingestion section.
+
+**Quack is Agent-side, not platform-side.** The ADR previously described migrating the platform's
+lake adapter to a Quack HTTP client. That was wrong in kind: Quack is an output sink *on the
+Agent*, HTTP-shaped like its ClickHouse sink, so the server-side Agent writes DuckLake directly.
+What retires is platform-side ingestion *writing*, not platform-side lake access — `Data.DuckDb`
+keeps DuckDB.NET for query execution against DuckLake regardless.
+
+### Why the Agent is not a `RegistryProjectionTarget`
+
+Recorded in full in ADR 0014. In short: a projection target answers "what physical type name does
+system X use for this logical field", which presupposes a system with columns. Forward frames
+events and has no type system; the Agent has no single type system either — it has the union of
+its sinks'. A target for either would be an identity mapping that can never fail a drift check, or
+a fourth copy of the DuckDB/Proton mappings that can drift from them. It is structurally the same
+mistake as Arrow and Avro: a projection for an intermediate representation rather than a
+destination.
+
+The real need underneath — the server-side Agent knowing which schema to write per sink — is an
+**export over the existing targets**, not a new enum member. When the Quack sink lands, the
+platform should generate a per-sink schema descriptor from the `DuckDb` and `Proton` mappings it
+already owns.
 
 ## Test results
 

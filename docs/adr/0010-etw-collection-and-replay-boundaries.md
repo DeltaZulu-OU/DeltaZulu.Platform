@@ -6,7 +6,7 @@ Accepted as an architectural guardrail. Implementation contracts and tests are s
 
 Extends [ADR 0007](0007-schema-medallion-and-proton-alignment.md) for replayable Bronze evidence and [ADR 0009](0009-collection-coverage-evaluation-boundaries.md) for the Agent-vs-Platform coverage boundary.
 
-The Agent referred to throughout this ADR is `DeltaZulu.Forward`, named as the collector in [ADR 0014](0014-http-ingestion-type-fidelity-registry.md).
+The Agent referred to throughout this ADR is `DeltaZulu.Agent`, named as the collector in [ADR 0014](0014-http-ingestion-type-fidelity-registry.md); `DeltaZulu.Forward` is the protocol it speaks.
 
 ## Context
 

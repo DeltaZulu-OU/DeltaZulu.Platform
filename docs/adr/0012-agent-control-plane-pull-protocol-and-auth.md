@@ -4,7 +4,7 @@
 
 Accepted.
 
-The agent this control plane manages is `DeltaZulu.Forward`, named as the collector in [ADR 0014](0014-http-ingestion-type-fidelity-registry.md). This ADR governs its control plane (enrollment, check-in, policy delivery); ADR 0014 governs its ingestion output.
+The agent this control plane manages is `DeltaZulu.Agent`, named as the collector in [ADR 0014](0014-http-ingestion-type-fidelity-registry.md); `DeltaZulu.Forward` is the protocol it speaks to other Agent instances. This ADR governs the control plane (enrollment, check-in, policy delivery); ADR 0014 governs ingestion output and sink routing.
 
 ## Context
 

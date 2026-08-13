@@ -6,14 +6,16 @@ risks and the evidence required to accept a workaround.
 
 ## Comparison policy
 
-- The oracle is the result returned by live Kusto for a locked benchmark query and fixture,
-  not a hand-authored expected result.
+- The oracle is a human-reviewed expected result, locked per benchmark query and fixture, and
+  executed against DuckDB. There is no live Kusto cluster to compare against and none is planned
+  (see [ADR 0016](../adr/0016-external-validation-and-transpiler-parity.md)). Documented Kusto
+  semantics — not a running Kusto — are the reference for what the expected result should be.
 - Compare typed values, column order and names, row multiplicity, and ordering only where
   the KQL query explicitly establishes an order.
 - Normalize transport representations without erasing type or semantic differences.
 - Changes to the benchmark corpus or this exception register require human review.
 - A new mismatch must be fixed or recorded with a reproducible query, affected types,
-  observed Kusto and DuckDB behavior, and an explicit disposition.
+  documented Kusto semantics versus observed DuckDB behavior, and an explicit disposition.
 
 ## Known semantic edges
 
