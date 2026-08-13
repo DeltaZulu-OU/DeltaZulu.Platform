@@ -35,7 +35,7 @@ public sealed class CheckPipelineRunnerTests : IDisposable
             await svc.UpsertDraftFileAsync(changeId, "detection.yaml", DraftContentType.DetectionMetadata,
                 "id: check-det\ntitle: Check Test\ndescription: Tests checks\nseverity: high\n", Author, TestContext.CancellationToken);
             await svc.UpsertDraftFileAsync(changeId, "rule.kql", DraftContentType.AnalyticsQuery,
-                "SigninLogs | where ResultType != 0", Author, TestContext.CancellationToken);
+                "SigninLogs | where TimeGenerated > ago(1h) and ResultType != 0", Author, TestContext.CancellationToken);
         }
 
         // Run pipeline.
@@ -294,7 +294,7 @@ public sealed class CheckPipelineRunnerTests : IDisposable
             await svc.UpsertDraftFileAsync(changeId, "detection.yaml", DraftContentType.DetectionMetadata,
                 "id: rerun-det\ntitle: Fixed\ndescription: Now complete\nseverity: low\n", Author, TestContext.CancellationToken);
             await svc.UpsertDraftFileAsync(changeId, "rule.kql", DraftContentType.AnalyticsQuery,
-                "SigninLogs | take 1", Author, TestContext.CancellationToken);
+                "SigninLogs | where TimeGenerated > ago(1h) | take 1", Author, TestContext.CancellationToken);
         }
 
         // Second run: should pass — old failed check must not block.

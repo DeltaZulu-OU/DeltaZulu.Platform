@@ -16,6 +16,7 @@ public static class ValidationServiceCollectionExtensions
         services.TryAddSingleton<IQuerySyntaxValidator, NonEmptyQuerySyntaxValidator>();
         services.AddSingleton<ICheck, PackageSchemaCheck>();
         services.AddSingleton<ICheck, QuerySyntaxCheck>();
+        services.AddSingleton<ICheck, StaticKqlCostShapeCheck>();
         services.AddSingleton<ICheck, FixtureParseCheck>();
         services.AddSingleton<ICheck, TestDefinitionCheck>();
         services.AddSingleton<ICheck, NoteFrontmatterCheck>();
