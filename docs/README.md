@@ -1,45 +1,38 @@
-# DeltaZulu Platform documentation
+# DeltaZulu.Platform — documentation
 
-This directory is the authoritative documentation entry point for the current DeltaZulu Platform repository. It intentionally keeps only current architecture, roadmap, product, and active domain-reference material. Completed consolidation/audit/import-retirement records have been removed so contributors are not sent through obsolete Hunting/Workbench-era planning documents.
+Architecture, Decisions, Constraints and roadmaps for the DeltaZulu estate live
+in **[`DeltaZulu-OU/docs`](https://github.com/DeltaZulu-OU/docs)**, not here.
 
-## Current status
-
-DeltaZulu is a full-cycle security analytics platform built as a single Clean Architecture-oriented solution. Analytics and Detection Content Governance are usable inside the unified Blazor host. The primary remaining production-v1 gaps are Operations, executable detection projection, append-only alert storage, scheduled/NRT execution, production identity, migrations, and operational hardening.
-
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) for project ownership, dependency direction, layer responsibilities, and module boundaries. See [`ROADMAP.md`](ROADMAP.md) for the current gap analysis and [`reviews/PRODUCTION_V1_GAP_ANALYSIS.md`](reviews/PRODUCTION_V1_GAP_ANALYSIS.md) for production-v1 release blockers.
-
-## Authoritative documents
-
-| Document | Purpose |
+| Looking for | Go to |
 |---|---|
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Current system architecture, project boundaries, runtime ownership, module boundaries, storage ownership, and workflow orchestration. |
-| [`ROADMAP.md`](ROADMAP.md) | Current target state, implementation phases, and active priorities. |
-| [`TARGET_USER_STORIES.md`](TARGET_USER_STORIES.md) | Target product-level user stories for the full-cycle security analytics platform. |
-| [`reviews/PRODUCTION_V1_GAP_ANALYSIS.md`](reviews/PRODUCTION_V1_GAP_ANALYSIS.md) | Production-v1 readiness review, blocker list, and milestone checklist. |
-| [`reviews/DOCUMENTATION_CODE_GAP_ANALYSIS_2026-07-19.md`](reviews/DOCUMENTATION_CODE_GAP_ANALYSIS_2026-07-19.md) | Current documentation/code gap analysis for ingestion, medallion schema, alerts, Operations, and Proton runtime. |
-| [`reviews/BRANCH_CONFLICT_ANALYSIS_2026-08-12.md`](reviews/BRANCH_CONFLICT_ANALYSIS_2026-08-12.md) | Review of the open unmerged branches against the ADRs and roadmap, with merge dispositions and open items. |
-| [`design/PRODUCT_IDENTITY.md`](design/PRODUCT_IDENTITY.md) | Product identity and binding UI language/design rules for Phase 1A. |
-| [`adr/README.md`](adr/README.md) | Current centralized ADR set converted from still-relevant historical decisions. |
+| Decisions governing this repository | [`architecture/GOVERNING-DECISIONS.md`](https://github.com/DeltaZulu-OU/docs/blob/main/architecture/GOVERNING-DECISIONS.md) |
+| The estate-wide pipeline architecture | [`architecture/PIPELINE.md`](https://github.com/DeltaZulu-OU/docs/blob/main/architecture/PIPELINE.md) — read with `PIPELINE-ERRATA.md` |
+| Facts the estate does not control | [`constraints/`](https://github.com/DeltaZulu-OU/docs/tree/main/constraints) |
+| This repository's historical ADRs | [`archive/DeltaZulu.Platform/`](https://github.com/DeltaZulu-OU/docs/tree/main/archive/DeltaZulu.Platform) |
+| Roadmaps | [`roadmaps/`](https://github.com/DeltaZulu-OU/docs/tree/main/roadmaps) |
+| Verification evidence | [`reports/`](https://github.com/DeltaZulu-OU/docs/tree/main/reports) |
 
-## Active domain references
+Decisions are numbered globally across the estate. The per-repository scheme this
+replaced produced collisions that citations could not resolve — `DeltaZulu.Agent`
+ADR 0014 and `DeltaZulu.Platform` ADR 0014 decide opposite things, and the Agent
+carried two different ADR 0003 documents, so "ADR 0003" did not resolve even
+within one repository.
 
-These documents are still useful for detailed domain rules. They are subordinate to the central architecture and roadmap when implementation structure differs.
+## What remains here
 
-| Area | Document | Status |
-|---|---|---|
-| Analytics | [`analytics/KQL-to-DuckDB-translation-spec.md`](analytics/KQL-to-DuckDB-translation-spec.md) | Active translation semantics reference. |
-| Analytics | [`analytics/kql-duckdb-comparison-register.md`](analytics/kql-duckdb-comparison-register.md) | Human-reviewed KQL-to-DuckDB semantic edge-case register. |
-| Analytics | [`analytics/kql-syntax-coverage-checklist.md`](analytics/kql-syntax-coverage-checklist.md) | Active supported-KQL coverage tracker. |
-| Analytics | [`analytics/README.md`](analytics/README.md) | Index for active Analytics references. |
-| ADRs | [`adr/README.md`](adr/README.md) | Current centralized decision records. |
-| ADRs | [`adr/0014-http-ingestion-type-fidelity-registry.md`](adr/0014-http-ingestion-type-fidelity-registry.md) | Accepted HTTP-ingestion and type-fidelity decision: DuckDB.NET transitions to Quack, Proton uses HTTP, and the shared registry drives destination types without an intermediate wire format. |
-| Reviews | [`reviews/DOCUMENTATION_CODE_GAP_ANALYSIS_2026-07-19.md`](reviews/DOCUMENTATION_CODE_GAP_ANALYSIS_2026-07-19.md) | Current documentation/code gap analysis for ingestion, medallion schema, alerts, Operations, and Proton runtime. |
+`ARCHITECTURE.md`, `TARGET_USER_STORIES.md`, and the `analytics/`,
+`architecture/`, `design/` and `reviews/` directories.
 
-## Documentation rules
+`ROADMAP.md` and `AGENT_MANAGEMENT_ROADMAP.md` have moved to the docs repository
+and gained review triggers.
 
-1. Update `docs/ARCHITECTURE.md` for changes to project boundaries, dependency direction, runtime ownership, module ownership, routing, storage ownership, workflow orchestration, or safety invariants.
-2. Update `docs/ROADMAP.md` for target changes, priority changes, phase completion, active priority changes, or design-system remediation order changes.
-3. Update `docs/TARGET_USER_STORIES.md` for product-level user story changes, new user stories, or acceptance criteria updates.
-4. Do not add new consolidation retrospectives, import-retirement notes, obsolete standalone-host redirects, or broad historical ADR dumps. Convert still-relevant historical decisions into concise centralized ADRs under `docs/adr/`.
-5. If a domain reference conflicts with central docs, treat the central docs as authoritative and fix or delete the stale reference in the same change.
-6. User story IDs referenced in `ROADMAP.md` phases must exist in `TARGET_USER_STORIES.md`. If a phase references a story that does not exist, add the story or fix the reference before merging.
+One amendment recorded against the archived Platform ADRs: **ADR 0007's clause
+stating that agents do not map into Silver or enrichments is struck** by
+`DEC-0005`, which makes agent extraction authoritative for Silver.
+
+Before acting on §11.1 of `PIPELINE.md`, read
+`reports/2026-08-16-schema-divergence-verification.md` in the docs repository.
+Seven of its thirteen divergences are refuted against current code, so
+implementing the list as written would mean changing correct code. The defect
+that matters most is not on it: `ILogicalSchemaRegistry` has no implementation
+anywhere under `src/`.
