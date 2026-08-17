@@ -191,13 +191,13 @@ public sealed record LogicalFieldType(
         ],
         LogicalFieldFamily.Uuid =>
         [
-            new(RegistryProjectionTarget.DuckDb, DuckDbType.Varchar.ToSql()),
+            new(RegistryProjectionTarget.DuckDb, DuckDbType.Uuid.ToSql()),
             new(RegistryProjectionTarget.Proton, "uuid"),
             new(RegistryProjectionTarget.Kql, KustoType.Guid.ToKustoName())
         ],
         LogicalFieldFamily.IpAddress =>
         [
-            new(RegistryProjectionTarget.DuckDb, DuckDbType.Varchar.ToSql()),
+            new(RegistryProjectionTarget.DuckDb, DuckDbType.Inet.ToSql(), "IPv4 and IPv6 in one native column"),
             new(RegistryProjectionTarget.Proton, "ipv6", "IPv4 stored as IPv4-mapped IPv6"),
             new(RegistryProjectionTarget.Kql, KustoType.String.ToKustoName())
         ],

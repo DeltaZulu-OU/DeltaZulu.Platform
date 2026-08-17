@@ -121,7 +121,13 @@ public static class LogicalSchemaProjection
         LogicalFieldFamily.Timestamp => DuckDbType.Timestamp,
         LogicalFieldFamily.Dynamic or LogicalFieldFamily.Nested => DuckDbType.Json,
         LogicalFieldFamily.Decimal => DuckDbType.Decimal,
-        LogicalFieldFamily.String or LogicalFieldFamily.Uuid or LogicalFieldFamily.IpAddress => DuckDbType.Varchar,
+        LogicalFieldFamily.String => DuckDbType.Varchar,
+        // Uuid and IpAddress were both VARCHAR here while Proton used native uuid/ipv6, so
+        // equality, ordering and comparison differed per engine for the same logical field.
+        // DuckDB has native UUID and INET, so the divergence was a mapping choice, not a
+        // platform limit.
+        LogicalFieldFamily.Uuid => DuckDbType.Uuid,
+        LogicalFieldFamily.IpAddress => DuckDbType.Inet,
         LogicalFieldFamily.Binary or LogicalFieldFamily.Array or LogicalFieldFamily.Map =>
             throw new NotSupportedException(
                 $"Logical family '{family}' has no declared DuckDB representation. " +

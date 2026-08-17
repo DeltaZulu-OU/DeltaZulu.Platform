@@ -110,7 +110,10 @@ public static class ProtonTypeExtensions
         DuckDbType.Date => "date32",
         DuckDbType.Json => "string",
         DuckDbType.Blob => "string",
-        _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+        // Native on both sides now that DuckDB carries UUID/INET rather than VARCHAR, so
+        // this legacy path no longer degrades them to "string".
+        DuckDbType.Uuid => "uuid",
+        DuckDbType.Inet => "ipv6",
     };
 
     /// <summary>Returns the full Proton column declaration type, wrapping nullable columns in <c>nullable(...)</c>.</summary>

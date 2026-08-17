@@ -49,7 +49,7 @@ public static class KustoTypeExtensions
         KustoType.DateTime => DuckDbType.Timestamp,
         KustoType.Timespan => DuckDbType.BigInt,      // stored as microseconds
         KustoType.Dynamic => DuckDbType.Json,
-        KustoType.Guid => DuckDbType.Varchar,
+        KustoType.Guid => DuckDbType.Uuid,
         KustoType.Decimal => DuckDbType.Decimal,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown Kusto type")
     };
