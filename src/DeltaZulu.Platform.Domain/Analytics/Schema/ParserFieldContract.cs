@@ -82,7 +82,38 @@ public static class LogicalSchemaProjection
         return new ColumnDef(field.Name, ToDuckDbType(field.Type.Family), ToKustoType(field.Type.Family), field.Type.Nullable, field.Description, duck.TypeName, proton.TypeName, field.Type);
     }
 
-    private static LogicalFieldBackendMapping Mapping(LogicalFieldType type, RegistryProjectionTarget target) => type.BackendMappings.Single(m => m.Target == target);
+    /// <summary>
+    /// Resolves the backend mapping a logical type declares for one projection target.
+    /// </summary>
+    /// <remarks>
+    /// This used <c>Single(...)</c>, which reports a missing mapping as
+    /// <i>"Sequence contains no matching element"</i> — a message that names neither
+    /// the type nor the target, so the actual fault has to be rediscovered every time.
+    /// </remarks>
+    private static LogicalFieldBackendMapping Mapping(LogicalFieldType type, RegistryProjectionTarget target)
+    {
+        var matches = type.BackendMappings.Where(m => m.Target == target).ToArray();
+        return matches.Length switch
+        {
+            1 => matches[0],
+            0 => throw new InvalidOperationException(
+                $"Logical family '{type.Family}' declares no backend mapping for target " +
+                $"'{target}'. Declared targets: " +
+                $"{string.Join(", ", type.BackendMappings.Select(m => m.Target))}."),
+            _ => throw new InvalidOperationException(
+                $"Logical family '{type.Family}' declares {matches.Length} backend mappings " +
+                $"for target '{target}'; exactly one is required."),
+        };
+    }
+
+    // The arms below are exhaustive over LogicalFieldFamily, with no `_ =>` default.
+    // A closed estate enum must not have a fallthrough: with one, adding a member is a
+    // runtime surprise on whichever record first uses it; without one, the compiler
+    // reports the gap (CS8509) at the point the member is added. Binary, Array and Map
+    // are listed as explicit rejections rather than mapped, because choosing their
+    // physical types is a contract decision and inventing one here would be worse than
+    // refusing.
+
     private static DuckDbType ToDuckDbType(LogicalFieldFamily family) => family switch {
         LogicalFieldFamily.Boolean => DuckDbType.Boolean,
         LogicalFieldFamily.Integer or LogicalFieldFamily.Duration => DuckDbType.BigInt,
@@ -91,7 +122,12 @@ public static class LogicalSchemaProjection
         LogicalFieldFamily.Dynamic or LogicalFieldFamily.Nested => DuckDbType.Json,
         LogicalFieldFamily.Decimal => DuckDbType.Decimal,
         LogicalFieldFamily.String or LogicalFieldFamily.Uuid or LogicalFieldFamily.IpAddress => DuckDbType.Varchar,
-        _ => throw new ArgumentOutOfRangeException(nameof(family), family, "Logical family has no ColumnDef representation.") };
+        LogicalFieldFamily.Binary or LogicalFieldFamily.Array or LogicalFieldFamily.Map =>
+            throw new NotSupportedException(
+                $"Logical family '{family}' has no declared DuckDB representation. " +
+                "Choosing one is a contract decision, not a default."),
+    };
+
     private static KustoType ToKustoType(LogicalFieldFamily family) => family switch {
         LogicalFieldFamily.String or LogicalFieldFamily.IpAddress => KustoType.String,
         LogicalFieldFamily.Boolean => KustoType.Bool,
@@ -102,7 +138,11 @@ public static class LogicalSchemaProjection
         LogicalFieldFamily.Duration => KustoType.Timespan,
         LogicalFieldFamily.Uuid => KustoType.Guid,
         LogicalFieldFamily.Dynamic or LogicalFieldFamily.Nested => KustoType.Dynamic,
-        _ => throw new ArgumentOutOfRangeException(nameof(family), family, "Logical family has no KQL scalar mapping.") };
+        LogicalFieldFamily.Binary or LogicalFieldFamily.Array or LogicalFieldFamily.Map =>
+            throw new NotSupportedException(
+                $"Logical family '{family}' has no KQL scalar mapping. Coercing it to " +
+                "string would be the silent type loss the wire contract forbids."),
+    };
 }
 
 public enum AgentOutputSink { Quack, Proton }
