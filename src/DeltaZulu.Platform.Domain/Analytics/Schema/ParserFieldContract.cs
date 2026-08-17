@@ -67,6 +67,29 @@ public static class LogicalSchemaProjection
         return new InternalTableDef("silver", $"{schema.ProducerFamily}_{schema.SchemaName}_v{schema.Version}", columns, $"Registry projection of {schema.RegistryKey}.");
     }
 
+    /// <summary>
+    /// Projects the SELECT list that reads <paramref name="sourceObject" /> and applies every
+    /// declared <see cref="ParserCanonicalization" />.
+    /// </summary>
+    /// <remarks>
+    /// This is the step that was missing: the canonicalisation was declared on the field and
+    /// validated for consistency, but nothing rendered it, so it never ran. Top-level fields are
+    /// selected on the same rule <see cref="ToSilverTable" /> uses, so the projection and the
+    /// table it feeds cannot disagree about which columns exist.
+    /// </remarks>
+    public static CanonicalizedProjection ToCanonicalizedProjection(LogicalSchemaVersion schema, string sourceObject)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceObject);
+        LogicalSchemaValidator.Validate(schema);
+
+        var columns = schema.Fields
+            .Where(f => f.Parser?.Placement == ParserFieldPlacement.TopLevel)
+            .Select(f => new CanonicalizedColumn(f.Name, ParserCanonicalizer.ToDuckDbExpression(f), f.Type))
+            .ToArray();
+
+        return new CanonicalizedProjection(schema.RegistryKey, sourceObject, columns);
+    }
+
     public static AgentSinkSchema ToAgentSink(LogicalSchemaVersion schema, AgentOutputSink sink)
     {
         LogicalSchemaValidator.Validate(schema);
