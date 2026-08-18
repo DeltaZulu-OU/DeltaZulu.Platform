@@ -16,7 +16,7 @@
     <PackageVersion Include="MudBlazor" Version="9.8.0" />
     <!-- Testing -->
     <PackageVersion Include="bunit" Version="2.9.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <PackageVersion Include="MSTest.TestAdapter" Version="4.3.3" />
     <PackageVersion Include="MSTest.TestFramework" Version="4.3.3" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
