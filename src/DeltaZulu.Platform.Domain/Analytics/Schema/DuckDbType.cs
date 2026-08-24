@@ -15,11 +15,21 @@ public enum DuckDbType
     Timestamp,
     Date,
     Json,
-    Blob
+    Blob,
+
+    // Appended rather than inserted so existing ordinals stay stable.
+    // DuckDB's native UUID is core; INET comes from the `inet` extension, which
+    // DuckDbConnectionFactory installs and loads on every connection.
+    Uuid,
+    Inet
 }
 
 public static class DuckDbTypeExtensions
 {
+    // Exhaustive over DuckDbType with no `_ =>` default. The default arm was removed
+    // when Uuid and Inet were added: a fallthrough over a closed estate enum defers to
+    // runtime what exhaustive listing catches at compile time (CS8509), and adding a
+    // member is exactly when that distinction costs something.
     public static string ToSql(this DuckDbType type) => type switch {
         DuckDbType.Varchar => "VARCHAR",
         DuckDbType.BigInt => "BIGINT",
@@ -31,6 +41,7 @@ public static class DuckDbTypeExtensions
         DuckDbType.Date => "DATE",
         DuckDbType.Json => "JSON",
         DuckDbType.Blob => "BLOB",
-        _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown DuckDB type")
+        DuckDbType.Uuid => "UUID",
+        DuckDbType.Inet => "INET",
     };
 }

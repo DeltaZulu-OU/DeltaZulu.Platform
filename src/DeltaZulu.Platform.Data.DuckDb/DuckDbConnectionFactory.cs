@@ -38,8 +38,14 @@ public sealed class DuckDbConnectionFactory : IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
         _connectionString = connectionString;
+        // TimeZone is pinned because DuckDB reads OFFSETLESS timestamp text in the session
+        // timezone: the same literal was measured yielding 12:00:00 under UTC and 17:00:00 under
+        // America/New_York. CON-0001 makes KQL datetime UTC-only, so a session inheriting the
+        // host's zone would silently shift every offsetless timestamp by the host's offset. The
+        // default happened to be Etc/UTC on this machine, which is not something to depend on.
         _startupSql = startupSql ?? [
-            "INSTALL inet;LOAD inet;"];
+            "INSTALL inet;LOAD inet;",
+            "SET TimeZone='UTC';"];
         _attachedDatabases = attachedDatabases ?? [];
 
         ValidateAttachedDatabases(_attachedDatabases);
