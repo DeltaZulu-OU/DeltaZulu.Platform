@@ -29,8 +29,6 @@ Operations boundary note: the alert/candidate operations boundary is design docu
 
 Translator decomposition is also structural only: public `KustoToRelational` remains the compatibility adapter over internal `KustoQueryTranslator`. Document analysis, management-command guarding, approved-table policy, Kusto SDK syntax adaptation, projection naming, function validation, and integer-literal reading are isolated internal services. This refactor does not change construct coverage or translation semantics.
 
-KQL→RelNode translation now lives in the shared `DeltaZulu.Kql` package (`DeltaZulu.Kql.Compilation.KqlRelationalCompiler`), not in Platform. `KustoQueryCompiler`/`KustoToRelational` in `Application.Analytics.Translation` are thin compatibility facades that delegate to it via `ApprovedViewCatalogSchemaAdapter` and `KqlDiagnosticAdapter` (both in Domain). This is an ownership move, not a semantics change: every construct this checklist marks supported remains supported, with test coverage migrated to `DeltaZulu.Kql.Tests`; Platform's own translator tests now cover only what is genuinely Platform-specific (SQL emission, approved-table policy content) rather than duplicating translator-semantics assertions. Coverage status below is unchanged.
-
 
 Validation adapter note: reusable query validation is now structural only and does not change KQL construct coverage. `DeltaZulu.Platform.Domain.Validation.IQuerySyntaxValidator` runs the approved-catalog translator path and returns `QueryDiagnostic` results without executing DuckDB SQL or referencing `DeltaZulu.Platform.Web`.
 
