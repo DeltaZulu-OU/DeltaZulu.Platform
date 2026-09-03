@@ -4,6 +4,7 @@
     <AssemblyName>DeltaZulu.Platform.Application</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="DeltaZulu.Kql" />
     <PackageReference Include="Elsa" />
     <PackageReference Include="Kusto.Toolkit" />
     <PackageReference Include="Microsoft.Azure.Kusto.Language" />

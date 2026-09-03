@@ -875,6 +875,7 @@
       "deltazulu.platform.application": {
         "type": "Project",
         "dependencies": {
+          "DeltaZulu.Kql": "[1.2.0-preview.1, )",
           "DeltaZulu.Platform.Domain": "[1.0.0, )",
           "Elsa": "[3.7.1, )",
           "Kusto.Toolkit": "[2.2.0, )",
@@ -894,6 +895,7 @@
       "deltazulu.platform.domain": {
         "type": "Project",
         "dependencies": {
+          "DeltaZulu.Kql": "[1.2.0-preview.1, )",
           "Kusto.Toolkit": "[2.2.0, )",
           "Microsoft.Azure.Kusto.Language": "[12.4.1, )"
         }
@@ -909,6 +911,15 @@
         "requested": "[8.4.2, )",
         "resolved": "8.4.2",
         "contentHash": "2hmtrrU18x6NL3mbuAqwy0KpnoEEJOuK6sH5RKQfD/jHijn2pqvqBUC7WGy9dgNBL9BDA7eOC0kirsNPMp2f4Q=="
+      },
+      "DeltaZulu.Kql": {
+        "type": "CentralTransitive",
+        "requested": "[1.2.0-preview.1, )",
+        "resolved": "1.2.0-preview.1",
+        "contentHash": "CWzUUoYxfpq9NDM2b0rGs9zxdocIcRwotsWrbS/ZBnpqDQvw9uBUOyGU7tkQeTLRWw4H+LxxPEqivMb+vgg9Sg==",
+        "dependencies": {
+          "Microsoft.Azure.Kusto.Language": "9.2.0"
+        }
       },
       "Elsa": {
         "type": "CentralTransitive",

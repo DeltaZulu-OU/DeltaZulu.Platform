@@ -2,6 +2,15 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
+      "DeltaZulu.Kql": {
+        "type": "Direct",
+        "requested": "[1.2.0-preview.1, )",
+        "resolved": "1.2.0-preview.1",
+        "contentHash": "CWzUUoYxfpq9NDM2b0rGs9zxdocIcRwotsWrbS/ZBnpqDQvw9uBUOyGU7tkQeTLRWw4H+LxxPEqivMb+vgg9Sg==",
+        "dependencies": {
+          "Microsoft.Azure.Kusto.Language": "9.2.0"
+        }
+      },
       "Kusto.Toolkit": {
         "type": "Direct",
         "requested": "[2.2.0, )",
