@@ -875,8 +875,8 @@ public sealed class ProtonSqlQueryEmitter : IRelationalQueryEmitter
             $"(now() - {args[0]})";
 
         /// <summary>
-        /// extract(regularExpression, captureGroup, source[, typeLiteral]). KustoFunctionArgumentValidator
-        /// guarantees captureGroup is a literal int/long. Proton's extract() only ever returns the first
+        /// extract(regularExpression, captureGroup, source[, typeLiteral]). DeltaZulu.Kql's
+        /// KustoFunctionArgumentValidator guarantees captureGroup is a literal int/long. Proton's extract() only ever returns the first
         /// captured group, so captureGroup 1 maps directly; group 0 (full-match semantics) requires
         /// wrapping a literal pattern in its own capture group; any other group index needs
         /// extractGroups(), which returns all groups of the first match as a 1-based array.
