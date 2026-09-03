@@ -6,7 +6,7 @@ using DeltaZulu.Platform.Domain.Analytics.Catalog;
 using DeltaZulu.Platform.Domain.Analytics.Compilation;
 using DeltaZulu.Platform.Domain.Analytics.Execution;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
-using DeltaZulu.Platform.Domain.Analytics.QueryModel;
+using DeltaZulu.Kql.Relational;
 using DuckDB.NET.Data;
 
 namespace DeltaZulu.Platform.Data.DuckDb;

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using DeltaZulu.Platform.Domain.Analytics.Compilation;
-using DeltaZulu.Platform.Domain.Analytics.QueryModel;
+using DeltaZulu.Kql.Relational;
 
 namespace DeltaZulu.Platform.Data.DuckDb.Sql;
 

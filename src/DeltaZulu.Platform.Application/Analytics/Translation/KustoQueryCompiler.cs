@@ -1,12 +1,15 @@
-﻿using DeltaZulu.Platform.Domain.Analytics.Catalog;
+using DeltaZulu.Kql.Compilation;
+using DeltaZulu.Kql.Relational;
+using DeltaZulu.Platform.Domain.Analytics.Catalog;
 using DeltaZulu.Platform.Domain.Analytics.Compilation;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
-using DeltaZulu.Platform.Domain.Analytics.QueryModel;
 
 namespace DeltaZulu.Platform.Application.Analytics.Translation;
 
 public sealed class KustoQueryCompiler : IQueryCompiler
 {
+    private static readonly KqlRelationalCompiler Compiler = new();
+
     private readonly ApprovedViewCatalog _approvedViews;
 
     public KustoQueryCompiler(ApprovedViewCatalog catalog)
@@ -20,6 +23,8 @@ public sealed class KustoQueryCompiler : IQueryCompiler
     public RelNode? Compile(string queryText, DiagnosticBag diagnostics)
     {
         ArgumentNullException.ThrowIfNull(diagnostics);
-        return new KustoToRelational(_approvedViews, diagnostics).Translate(queryText);
+        var result = Compiler.Compile(queryText, new ApprovedViewCatalogSchemaAdapter(_approvedViews));
+        KqlDiagnosticAdapter.CopyInto(result.Diagnostics, diagnostics);
+        return result.Root;
     }
 }

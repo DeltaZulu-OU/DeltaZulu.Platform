@@ -1,6 +1,6 @@
 using System.Globalization;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
-using DeltaZulu.Platform.Domain.Analytics.QueryModel;
+using DeltaZulu.Kql.Relational;
 using DuckDB.NET.Data;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Emitter;

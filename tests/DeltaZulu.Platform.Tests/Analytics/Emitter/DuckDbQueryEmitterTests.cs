@@ -4,7 +4,7 @@ using DeltaZulu.Platform.Application.Analytics.Translation;
 using DeltaZulu.Platform.Data.DuckDb.Sql;
 using DeltaZulu.Platform.Domain.Analytics.Catalog;
 using DeltaZulu.Platform.Domain.Analytics.Policy;
-using DeltaZulu.Platform.Domain.Analytics.QueryModel;
+using DeltaZulu.Kql.Relational;
 using DeltaZulu.Platform.Domain.Analytics.Schema;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Emitter;

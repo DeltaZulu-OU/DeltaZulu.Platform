@@ -176,7 +176,7 @@
         "type": "CentralTransitive",
         "requested": "[1.2.0-preview.1, )",
         "resolved": "1.2.0-preview.1",
-        "contentHash": "CWzUUoYxfpq9NDM2b0rGs9zxdocIcRwotsWrbS/ZBnpqDQvw9uBUOyGU7tkQeTLRWw4H+LxxPEqivMb+vgg9Sg==",
+        "contentHash": "kaDYzAj+a+Ny4mrcIc3q5JgTI4f6HlDs9U2qZJSuP4ZA6unPBaHGvndO3iLsp1McgRcbSRNgsMsTCVHuWDW0xw==",
         "dependencies": {
           "Microsoft.Azure.Kusto.Language": "9.2.0"
         }

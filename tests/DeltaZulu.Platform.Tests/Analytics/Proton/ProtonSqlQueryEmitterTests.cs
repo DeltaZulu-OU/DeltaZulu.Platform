@@ -1,5 +1,5 @@
 using DeltaZulu.Platform.Data.Proton.Sql;
-using DeltaZulu.Platform.Domain.Analytics.QueryModel;
+using DeltaZulu.Kql.Relational;
 
 namespace DeltaZulu.Platform.Tests.Analytics.Proton;
 

@@ -1,7 +1,7 @@
 using DeltaZulu.Platform.Data.Proton.Ddl;
 using DeltaZulu.Platform.Data.Proton.Sql;
 using DeltaZulu.Platform.Domain.Analytics.Detection;
-using DeltaZulu.Platform.Domain.Analytics.QueryModel;
+using DeltaZulu.Kql.Relational;
 
 namespace DeltaZulu.Platform.Data.Proton;
 

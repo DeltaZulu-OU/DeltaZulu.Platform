@@ -1,5 +1,5 @@
 ﻿using DeltaZulu.Platform.Domain.Analytics.Policy;
-using DeltaZulu.Platform.Domain.Analytics.QueryModel;
+using DeltaZulu.Kql.Relational;
 
 namespace DeltaZulu.Platform.Domain.Analytics.Compilation;
 
