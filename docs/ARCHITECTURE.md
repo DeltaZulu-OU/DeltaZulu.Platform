@@ -322,9 +322,11 @@ Design-system enforcement rules:
 Analytics owns query, dashboard, library, curated-analytic, and investigation workflows. Its core rules are:
 
 - Analysts query governed Golden contracts, not internal Bronze/Silver/runtime tables.
-- KQL is parsed with Microsoft Kusto tooling and translated through a controlled relational
-  intermediate model before target SQL is emitted. DuckDB SQL is emitted for threat hunting and
-  historical analytics; Proton SQL is emitted for detection execution (both NRT and scheduled).
+- KQL is parsed and translated into a relational IR (`RelNode`) by the shared
+  `DeltaZulu.Kql` package, not by Platform code — Platform owns the DuckDB and Proton SQL
+  emitters, the planner, and detection deployment that consume that IR, not the translator
+  itself. DuckDB SQL is emitted for threat hunting and historical analytics; Proton SQL is
+  emitted for detection execution (both NRT and scheduled).
 - Unsupported KQL constructs are rejected with structured diagnostics rather than silently
   approximated.
 - Runtime SQL is transient execution detail, not source-controlled detection content.
@@ -371,8 +373,9 @@ views (`AlertEvent` and `AlertEntity` exist), no Operations UI, and no enrichmen
 
 All detection execution — both near-real-time and scheduled — runs on Timeplus Proton. DuckDB is the
 threat-hunting and historical-analytics engine only; it is not part of the detection execution path.
-The two engines share KQL as the analyst-facing language and the RelNode IR as the internal
-representation, but they target different SQL dialects and serve different purposes.
+The two engines share KQL as the analyst-facing language and `DeltaZulu.Kql`'s `RelNode` IR
+(`DeltaZulu.Kql.Relational`, not a Platform-owned type) as the internal representation, but they
+target different SQL dialects and serve different purposes.
 
 ### Data model: lake vs operational state
 
@@ -534,11 +537,14 @@ flowchart LR
 The detection compiler reuses the same KQL parsing and RelNode IR that powers interactive DuckDB
 queries, but emits Proton/ClickHouse-dialect SQL instead of DuckDB SQL. Typed DDL builders then
 wrap that SQL in the appropriate Proton artifact without any raw string interpolation.
+`KustoQueryCompiler` (Application) is now a thin facade: it delegates to the shared
+`DeltaZulu.Kql` package's `KqlRelationalCompiler` for the actual KQL→RelNode translation, via
+`ApprovedViewCatalogSchemaAdapter` (Domain) and `KqlDiagnosticAdapter` (Domain).
 
 ```mermaid
 flowchart TD
-    KQL["KQL query text"] --> KC["KustoQueryCompiler<br/>(Application)"]
-    KC --> RN["RelNode IR<br/>(Domain)"]
+    KQL["KQL query text"] --> KC["KustoQueryCompiler<br/>(Application, delegates to DeltaZulu.Kql)"]
+    KC --> RN["RelNode IR<br/>(DeltaZulu.Kql.Relational)"]
     RN --> BE["IDetectionCompilationBackend<br/>(Domain)"]
     BE --> PE["ProtonSqlQueryEmitter<br/>(Data.Proton)"]
     PE --> SQL["Proton SELECT SQL"]
@@ -629,7 +635,7 @@ flowchart TB
     subgraph Application["Application — orchestration and translation"]
         Service["NrtRuleService<br/>(Analytics.Nrt)"]
         Compiler["NrtRuleCompiler<br/>(Analytics.Nrt)"]
-        KqlCompiler["KustoQueryCompiler<br/>(Analytics.Translation)"]
+        KqlCompiler["KustoQueryCompiler<br/>(Analytics.Translation, delegates to DeltaZulu.Kql)"]
     end
     subgraph DataProton["Data.Proton — Proton backend"]
         ProtonBackend["ProtonDetectionCompilationBackend"]
