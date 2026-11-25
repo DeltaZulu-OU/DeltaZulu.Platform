@@ -7,9 +7,12 @@ on:
       - '.github/workflows/*.yml'
       - 'Directory.Build.props'
       - 'Directory.Packages.props'
+      - 'NuGet.config'
+      - 'global.json'
       - '*.slnx'              # Triggers on any solution file changes without hardcoding the name
       - 'src/**'
       - 'tests/**'
+      - 'tools/**'
   push:
     branches: [ main, master ]
     paths:
@@ -17,9 +20,12 @@ on:
       - '.github/workflows/*.yml'
       - 'Directory.Build.props'
       - 'Directory.Packages.props'
+      - 'NuGet.config'
+      - 'global.json'
       - '*.slnx'
       - 'src/**'
       - 'tests/**'
+      - 'tools/**'
   workflow_dispatch:
 
 permissions:
@@ -51,8 +57,13 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Report restore environment
+        run: |
+          dotnet --info
+          dotnet nuget list source
+
       - name: Restore packages
-        run: dotnet restore --locked-mode
+        run: dotnet restore --locked-mode --verbosity normal
 
       - name: Build
         run: dotnet build --configuration Release --no-restore
