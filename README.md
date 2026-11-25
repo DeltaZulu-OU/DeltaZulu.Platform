@@ -75,7 +75,7 @@ Start with the centralized docs:
 
 - [Documentation index](docs/README.md)
 - [Current architecture](docs/ARCHITECTURE.md)
-- [Current roadmap](docs/ROADMAP.md) — includes the active design-system remediation track and Operations sequence.
+- [Current roadmap](https://github.com/DeltaZulu-OU/docs/blob/master/roadmaps/CONSISTENCY-CORRECTNESS-ROADMAP.md) — tracks Platform product verification under C16.
 - [Production v1 gap analysis](docs/reviews/PRODUCTION_V1_GAP_ANALYSIS.md) — summarizes blockers and milestone gates for production v1.
 
 ## License

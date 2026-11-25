@@ -66,5 +66,5 @@ DeltaZulu Platform is one product with three module boundaries inside the unifie
 ## Source of truth
 
 - Architecture and ownership: [`ARCHITECTURE.md`](ARCHITECTURE.md)
-- Sequencing and priorities: [`ROADMAP.md`](ROADMAP.md)
+- Sequencing and priorities: [consolidated roadmap](https://github.com/DeltaZulu-OU/docs/blob/master/roadmaps/CONSISTENCY-CORRECTNESS-ROADMAP.md)
 - Production blockers and release gates: [`reviews/PRODUCTION_V1_GAP_ANALYSIS.md`](reviews/PRODUCTION_V1_GAP_ANALYSIS.md)

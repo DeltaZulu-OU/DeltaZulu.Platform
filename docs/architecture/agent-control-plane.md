@@ -2,8 +2,7 @@
 
 The agent control plane delivers group-policy-style configuration to DeltaZulu agents over a
 pull-based HTTPS protocol and feeds agent health into the operational lake. Decisions are recorded
-in [ADR 0012](../adr/0012-agent-control-plane-pull-protocol-and-auth.md); the capability targets
-the P0 rows of [`AGENT_MANAGEMENT_ROADMAP.md`](../AGENT_MANAGEMENT_ROADMAP.md).
+in [ADR 0012](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0012-agent-control-plane-pull-protocol-and-auth.md); the original requirements appear in [`AGENT_MANAGEMENT_ROADMAP.md`](https://github.com/DeltaZulu-OU/docs/blob/master/roadmaps/DeltaZulu.Platform-AGENT_MANAGEMENT_ROADMAP.md).
 
 This document describes the Platform side of the protocol. For what the `DeltaZulu.Agent` daemon
 itself is responsible for implementing against this protocol — identity/credential recovery,

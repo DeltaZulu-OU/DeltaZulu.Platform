@@ -4,23 +4,23 @@ This is the implementation spec for `DeltaZulu.Agent` — the endpoint daemon. I
 a project in this solution yet; only its dev stand-in, `tools/DeltaZulu.Agent.Simulator`, and its
 platform-side counterpart, the [agent control plane](agent-control-plane.md), are implemented
 today. This document consolidates decisions already made across
-[ADR 0009](../adr/0009-collection-coverage-evaluation-boundaries.md),
-[ADR 0010](../adr/0010-etw-collection-and-replay-boundaries.md),
-[ADR 0011](../adr/0011-rpc-correlation-evidence-architecture.md),
-[ADR 0012](../adr/0012-agent-control-plane-pull-protocol-and-auth.md),
-[ADR 0013](../adr/0013-constrained-agent-command-queue.md), and
-[ADR 0015](../adr/0015-tuf-agent-content-signing.md), plus the wire contracts the platform already
+[ADR 0009](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0009-collection-coverage-evaluation-boundaries.md),
+[ADR 0010](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0010-etw-collection-and-replay-boundaries.md),
+[ADR 0011](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0011-rpc-correlation-evidence-architecture.md),
+[ADR 0012](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0012-agent-control-plane-pull-protocol-and-auth.md),
+[ADR 0013](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0013-constrained-agent-command-queue.md), and
+[ADR 0015](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0015-tuf-agent-content-signing.md), plus the wire contracts the platform already
 implements and tests server-side, into one place to build `DeltaZulu.Agent` against. It does not
 introduce new decisions; where it states a requirement, that requirement traces to one of the
 documents above or to shipped, tested platform code. It does not mandate a language or runtime —
-see [§10 Open questions](#10-open-questions--explicitly-deferred).
+see [§12 Open questions](#12-open-questions--explicitly-deferred).
 
 ## 1. What the Agent is, and isn't
 
 One process per managed host, enrolled once against exactly one tenant under one hostname
 identity. Its job is bounded and mechanical: **read local sources, apply local filters, buffer,
 forward, and report facts.** Everything stateful, interpretive, or fleet-wide is Platform-owned.
-[ADR 0009](../adr/0009-collection-coverage-evaluation-boundaries.md#responsibility-boundary) states
+[ADR 0009](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/README.md) states
 this as a governing principle:
 
 ```text
@@ -66,7 +66,7 @@ tenant-scoped `AgentId` and a per-agent bearer secret (`dz-as-*`). The Agent's r
   credential — the revoke itself is the authorization to reissue). If that also fails, or no token
   is available, stop and surface the failure; do not retry the enroll endpoint on a fixed interval
   — it is rate-limited to 10 requests per remote address per minute
-  ([ADR 0012](../adr/0012-agent-control-plane-pull-protocol-and-auth.md)), and a dead bootstrap
+  ([ADR 0012](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0012-agent-control-plane-pull-protocol-and-auth.md)), and a dead bootstrap
   token will not start working on its own. This exact recovery flow is implemented in
   `tools/DeltaZulu.Agent.Simulator/Program.cs` as a reference.
 - **Rotate on every successful (re-)enroll.** The server always issues a fresh secret; the old one
@@ -76,7 +76,7 @@ tenant-scoped `AgentId` and a per-agent bearer secret (`dz-as-*`). The Agent's r
 
 ## 3. The pull loop
 
-There is no push channel and never will be — [ADR 0012](../adr/0012-agent-control-plane-pull-protocol-and-auth.md)
+There is no push channel and never will be — [ADR 0012](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0012-agent-control-plane-pull-protocol-and-auth.md)
 is explicit that the Platform never connects to Agents. The loop, once enrolled:
 
 ```text
@@ -107,7 +107,7 @@ heartbeat (report health + last applied bundle)
   - `RolledBack` — the Agent reverted to a previous configuration after an `Applied` bundle proved
     bad locally (e.g. failed a post-apply health check). This status exists in the domain today;
     the Agent-side trigger for it (what "proved bad" means, whether it's automatic or
-    operator-driven) is not yet specified anywhere and is open work — see [§10](#10-open-questions--explicitly-deferred).
+    operator-driven) is not yet specified anywhere and is open work — see [§12](#12-open-questions--explicitly-deferred).
 
 ## 4. Bundle content and local application
 
@@ -126,7 +126,7 @@ to:
 | `ResourceDescriptor{Platform,Family,Service,Channel,Session,Provider,RecordTypes}` | Which local source: `Family` is one of `EventLog`/`Evtx`/`Etl`/`Etw`/`Syslog`/`Auditd`; the rest narrow it (event-log channel, ETW session/provider, etc). |
 | `InputContract{Table,Schema}` | The logical shape records from this source are expected to land as, for downstream mapping. |
 | `OutputContract{Mode,Format,PreserveOriginalFieldNames,PreserveRawEvent,MetadataEnvelope,EventEnvelope,OnNoMatch}` | How to package a record before forwarding: keep/drop originals and raw payload, envelope shape, and what to do when a record matches no known mapping (`Keep` or `Drop`). |
-| `KqlFilter{Language,Query}` (optional) | A **raw-value** local filter — e.g. `EventId == 4688`, `Status == 0xC000006A`. Evaluate it locally against each raw record before forwarding. Never requires a semantic/`_resolved` lookup; if a filter would need one, it was authored wrong upstream, not something the Agent should try to compensate for ([ADR 0009](../adr/0009-collection-coverage-evaluation-boundaries.md#agent-emitted-facts)). |
+| `KqlFilter{Language,Query}` (optional) | A **raw-value** local filter — e.g. `EventId == 4688`, `Status == 0xC000006A`. Evaluate it locally against each raw record before forwarding. Never requires a semantic/`_resolved` lookup; if a filter would need one, it was authored wrong upstream, not something the Agent should try to compensate for ([ADR 0009](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/README.md)). |
 | `HostConditions[]` (`{Type: Wmi, Query, Mandatory, ScopePath}`, currently WMI-only) | Local gating: evaluate each condition against the host; if a `Mandatory` condition fails, the profile does not apply to this host — do not attach a collector for it, and do not report it as a failure. |
 | `Enabled`, `Mandatory` | `Mandatory` profiles must not be silently dropped for convenience (resource pressure, a transient local error) — surface the problem (`Failed` ack / local error state) rather than pretending they were applied. |
 
@@ -139,9 +139,9 @@ what to collect:
 |---|---|---|
 | `Pipeline` | `InputMode/FilterMode/OutputMode: Forward\|Console\|File`, `FilePath` | Each stage can be redirected to `Console`/`File` for local diagnostics instead of the real path. Validated server-side: `OutputMode: Forward` always has ≥1 RELP endpoint; `OutputMode: File` always has a `FilePath` — the Agent can rely on these invariants without re-validating them. |
 | `Buffer` | `Path`, `MaxDiskBytes`, `MaxMemoryBytes`, `MaxChunkRecords/Bytes/AgeSeconds`, `FullPolicy: Block\|Drop`, `RetryExhaustedPolicy: Drop\|DeadLetter`, `MaxRetryAttempts`, `RetryBaseDelaySeconds`, `RetryMaxDelaySeconds` | The Agent's local durability contract. `Block` must apply real backpressure to collection, not spin-drop silently; `DeadLetter` must actually persist retry-exhausted records somewhere inspectable rather than discarding them unmarked. |
-| `Relp` | `UseTls`, `Endpoints[]{Host,Port}`, `Encoding`, `Transport` | **The forward transport is RELP**, not the control-plane's HTTP API — see [§6](#6-two-separate-wire-paths-dont-conflate-them). |
+| `Relp` | `UseTls`, `Endpoints[]{Host,Port}`, `Encoding`, `Transport` | **The forward transport is RELP**, not the control-plane's HTTP API — see [§6](#6-two-separate-wire-paths--dont-conflate-them). |
 | `Tls` | `UseTls`, `ValidationMode: System\|Thumbprint\|None`, `Thumbprints[]`, `UseClientCertificate`, cert/key/CA paths | Governs the RELP connection's TLS behavior, including optional mutual TLS. |
-| `Diagnostics` | `Enabled`, `IntervalSeconds`, `OutputMode` | Self-diagnostics cadence and where they go — see [§8](#8-observability-of-the-agent-itself). |
+| `Diagnostics` | `Enabled`, `IntervalSeconds`, `OutputMode` | Self-diagnostics cadence and where they go — see [§10](#10-observability-of-the-agent-itself). |
 
 ### Apply must be atomic and crash-safe
 
@@ -158,13 +158,13 @@ treat it as if it were. `PolicyBundle.ContentHash` is a dedup key over which ver
 contributed to a resolution, not a hash of the transmitted bytes; `ResourceProfileVersion.ContentHash`
 and `DaemonConfigVersion.ContentHash` are caller-supplied strings nothing computes or verifies. No
 signature exists anywhere in the pull protocol. This is the accepted state for POC/MVP
-([ADR 0015](../adr/0015-tuf-agent-content-signing.md)) — document it plainly in the Agent's own
+([ADR 0015](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0015-tuf-agent-content-signing.md)) — document it plainly in the Agent's own
 release notes and threat model rather than letting silence read as a finished security posture.
 
 **Build the bundle-apply path with the verification hook already wired in, even before the
 Platform-side signing exists**, so shipping TUF later doesn't mean retrofitting trust logic into
 Agents that have spent months trusting unsigned content. When
-[ADR 0015](../adr/0015-tuf-agent-content-signing.md)'s targets/timestamp/snapshot/root signing
+[ADR 0015](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0015-tuf-agent-content-signing.md)'s targets/timestamp/snapshot/root signing
 ships Platform-side, the Agent's apply path must:
 
 - Perform full TUF client verification (root of trust → timestamp freshness → snapshot consistency
@@ -187,7 +187,7 @@ ships Platform-side, the Agent's apply path must:
 | Status | Implemented, tested | The documented, validated transport today |
 
 A future HTTP-based raw-event ingestion path is tracked separately
-([ADR 0014](../adr/0014-http-ingestion-type-fidelity-registry.md)) but **is not implemented as a
+([ADR 0014](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0014-http-ingestion-type-fidelity-registry.md)) but **is not implemented as a
 Platform.Web endpoint today** — only an in-memory pub-sub (`RawLogEnvelope`/`RawLogBatch` in
 `DeltaZulu.Platform.Ingestion`) fed by development seeders exists, and a custom wire protocol for
 it (`DeltaZulu.Forward`) was explicitly considered and rejected in favor of plain HTTP. If and when
@@ -200,7 +200,7 @@ Delivered inline in the heartbeat response (`commands[]`), never pushed separate
 is closed (`AgentCommandType`) — there is no parameterized shell, script, or query payload, and
 adding an operation requires a new enum member on the Platform side plus explicit Agent support,
 never an ad hoc extension on the Agent alone
-([ADR 0013](../adr/0013-constrained-agent-command-queue.md)):
+([ADR 0013](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0013-constrained-agent-command-queue.md)):
 
 | Command | Expected Agent behavior |
 |---|---|
@@ -219,7 +219,7 @@ retrying indefinitely.
 
 ## 8. Health and telemetry reporting — facts only
 
-[ADR 0009](../adr/0009-collection-coverage-evaluation-boundaries.md#agent-emitted-facts) draws a
+[ADR 0009](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/README.md) draws a
 hard line: the Agent emits bounded local facts; it never emits final evaluation claims. The shipped
 wire fields and the ADR's conceptual names don't always match one-to-one — use the field names
 below, which are what the server actually accepts (`HeartbeatReport`, `SourceHealthReport`):
@@ -247,18 +247,18 @@ below, which are what the server actually accepts (`HeartbeatReport`, `SourceHea
   `collector.audit_policy.state`, `collector.event_channel.state`, `collector.event_provider.state`.
 - **ETW specifically**: contracts (`EtwRawEventEnvelope`, `EtwProviderProfile`,
   `EtwCollectionPolicy`, `EtwDecodeResult`, `EtwSessionHealthEvent`) are decided in
-  [ADR 0010](../adr/0010-etw-collection-and-replay-boundaries.md) but not yet implemented anywhere.
+  [ADR 0010](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0010-etw-collection-and-replay-boundaries.md) but not yet implemented anywhere.
   Don't invent an ETW envelope shape ad hoc — follow ADR 0010 when that slice starts, and keep ETW
   collection filters as raw-value collection filters, exactly like every other source type.
 - **Volatile endpoint context** (open handles, live process/socket ownership, in-memory pointers)
   and RPC UUID/opnum hints are a narrow, deliberate exception to the "no locally-resolved fields"
-  rule — see [ADR 0011](../adr/0011-rpc-correlation-evidence-architecture.md). They use distinct
+  rule — see [ADR 0011](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0011-rpc-correlation-evidence-architecture.md). They use distinct
   `Rpc.*`-style field names, never the `_resolved` suffix, and remain provisional hints; Platform
   Silver still independently re-resolves them as the authoritative source.
 
 ## 9. Resilience and resource bounding
 
-- **Collection is a hot path.** [ADR 0010](../adr/0010-etw-collection-and-replay-boundaries.md)
+- **Collection is a hot path.** [ADR 0010](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0010-etw-collection-and-replay-boundaries.md)
   frames Agent collection as needing to bound CPU, memory, buffering, event loss, backpressure,
   callback failures, and filter cost — this applies to every source type, not only ETW. The Agent
   must not compete unboundedly with the workload running on the host it monitors.

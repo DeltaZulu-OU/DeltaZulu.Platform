@@ -8,7 +8,7 @@ risks and the evidence required to accept a workaround.
 
 - The oracle is a human-reviewed expected result, locked per benchmark query and fixture, and
   executed against DuckDB. There is no live Kusto cluster to compare against and none is planned
-  (see [ADR 0016](../adr/0016-external-validation-and-transpiler-parity.md)). Documented Kusto
+  (see [ADR 0016](https://github.com/DeltaZulu-OU/docs/blob/master/archive/DeltaZulu.Platform/0016-external-validation-and-transpiler-parity.md)). Documented Kusto
   semantics — not a running Kusto — are the reference for what the expected result should be.
 - Compare typed values, column order and names, row multiplicity, and ordering only where
   the KQL query explicitly establishes an order.
