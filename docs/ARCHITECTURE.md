@@ -1,5 +1,8 @@
 # DeltaZulu Platform architecture
 
+> **Authority and status note — 2026-11-25.** Current estate target: [NRT pipeline / DEC-0033](https://github.com/DeltaZulu-OU/docs/blob/master/architecture/NRT-PIPELINE.md) and ASIM-first Gold (DEC-0013). Statements below that assign production NRT/scheduled detections to Proton, direct Quack/Proton sinks to Agent, or dual-engine canonical projections are superseded target descriptions, not active requirements. Scheduled detection remains deferred under DEC-0026. Legacy `Data.Proton` source still exists; collector host, KQL→LocalStream.Query, Gold and alert lake integration are not established. Local module/storage/control-plane descriptions remain useful implementation references but require source/test validation. Use the [central roadmap](https://github.com/DeltaZulu-OU/docs/blob/master/roadmaps/CONSISTENCY-CORRECTNESS-ROADMAP.md) for planning.
+
+
 DeltaZulu Platform is a local, schema-governed, full-cycle security analytics platform. It connects
 interactive analytics, detection content governance, scheduled detection execution, alerting,
 enrichment, incident-candidate correlation, triage, and feedback into detection improvement. The
