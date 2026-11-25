@@ -63,23 +63,13 @@ jobs:
           dotnet nuget list source
 
       - name: Restore packages
-        id: restore
         run: dotnet restore --locked-mode --verbosity normal
 
-      # A failed locked restore stays failed. Generate reviewable candidate
-      # lockfiles on one runner only; never build or test the unlocked graph.
-      - name: Generate candidate lockfiles after restore failure
-        id: candidate-locks
-        if: failure() && steps.restore.conclusion == 'failure' && matrix.os == 'ubuntu-latest'
-        run: dotnet restore --force-evaluate --verbosity normal
-
-      - name: Upload candidate lockfiles
-        if: failure() && steps.candidate-locks.conclusion == 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: candidate-lockfiles
-          path: '**/packages.lock.json'
-          if-no-files-found: error
+      - name: Verify restore did not create or change lockfiles
+        shell: pwsh
+        run: |
+          $changes = git status --porcelain --untracked-files=all -- ':(glob)**/packages*.lock.json'
+          if ($changes) { $changes | Write-Output; throw 'Restore changed the committed dependency locks.' }
 
       - name: Build
         run: dotnet build --configuration Release --no-restore
