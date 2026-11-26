@@ -506,9 +506,13 @@ execution natively. The current code provides a runtime scaffold for this integr
 
 Both modes share the same compilation pipeline (KQL → RelNode → ProtonSQL) and the same detection metadata model (YAML). The alert materialization path into the DuckDB alert lake is scaffolded and remains target streaming ETL work until cursor persistence, DLQ/replay, and deterministic deduplication are implemented.
 
-### Schema medallion and Proton alignment
+### Schema medallion — historical Proton alignment
 
-DeltaZulu uses one logical schema model across two physical execution environments. DuckDB/DuckLake is the durable lake for replay, hunting, scheduled analytics, and evidence reconstruction. Timeplus Proton is the near-real-time detection engine and should run against Golden-compatible streams or materialized views, not a long-retention duplicate of the full lake. ADR 0007 is authoritative for medallion semantics; ADR 0014 adds the type-fidelity rule that this logical schema must be a producer-agnostic registry projected into DuckDB, Proton, KQL metadata, and translator policy while both storage legs communicate over HTTP.
+The following Proton design is retained as historical context. DEC-0033
+supersedes its runtime and dual-engine requirements. DEC-0038 governs canonical naming;
+[DEC-0034](https://github.com/DeltaZulu-OU/docs/blob/4de05f87bc802d7ebbb9ab2898a8052970e89958/decisions/DEC-0034-mvp-asim-tables-and-views.md) governs MVP scope.
+
+DeltaZulu uses one logical schema model across two physical execution environments. DuckDB/DuckLake is the durable lake for replay, hunting, scheduled analytics, and evidence reconstruction. Timeplus Proton is the near-real-time detection engine and should run against Golden-compatible streams or materialized views, not a long-retention duplicate of the full lake. Historical ADR 0007 described medallion semantics; ADR 0014 adds the type-fidelity rule that this logical schema must be a producer-agnostic registry projected into DuckDB, Proton, KQL metadata, and translator policy while both storage legs communicate over HTTP.
 
 Current platform code scaffolds Proton schemas, detection materialized views, development publishers, and alert subscriptions. Those publishers are compatibility/test infrastructure, not the production telemetry route. Production collection delivery moves to DeltaZulu.Agent output sinks for Quack and Proton. The lake query path currently uses DuckDB.NET. Live sink validation, durable agent delivery/replay, generated target schemas, and registry-backed physical-schema drift checks are still required before this path is complete.
 
@@ -528,7 +532,7 @@ flowchart LR
 
 **Silver.** Silver is parsed, source-native, and grouped by source family and payload shape. Windows Security and Sysmon should use grouped records with common promoted fields plus `EventDataJson`; event-ID-specific views are transitional implementation details, not the default schema rule.
 
-**Golden.** Golden is the default analyst and detection schema. The target activity names are DeltaZulu-owned PascalCase names such as `Authentication`, `ProcessActivity`, `NetworkActivity`, `DnsActivity`, `FileActivity`, `RegistryActivity`, and `AlertActivity`, and carry lineage back to Bronze/Silver evidence. Current code (see `GoldenEventContracts.cs`) still uses earlier names (`Dns`, `NetworkSession`, `ProcessEvent`); migration to the target activity names is tracked in ADR 0007.
+**Gold (current naming).** Gold is the analyst-facing and detection layer. DEC-0038 governs DeltaZulu-owned singular PascalCase canonical identifiers; DEC-0034 governs MVP scope. Public KQL names are unqualified; SQL views use the `golden` schema. The current telemetry contracts (`GoldenEventContracts.cs`) are `Dns`, `NetworkSession`, `ProcessEvent` and `Authentication`. The approved MVP adds `FileEvent`, `UserManagement`, `RegistryEvent` and `AuditEvent`; these four are not implemented merely by approval. `AlertEvent` and `AlertEntity` are the two existing DeltaZulu operational contracts, backed by `lake.alert_events` and `lake.alert_entities`. The archived ADR 0007 `*Activity` naming target is superseded. Do not treat native Microsoft table names, parser function names or backing-table names as public canonical identifiers. Gold terminology does not imply renaming the `golden` SQL schema. Preserve lineage to Bronze and Silver evidence.
 
 **Proton.** Proton implements the streaming projection of Golden. It may keep short-lived ingestion/staging streams, but detection content should operate on Golden-compatible streams/materialized views and emit alert or incident-candidate records that link back to lake-retained evidence. Proton retention is driven by detection windows, not evidence-retention policy.
 

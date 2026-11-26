@@ -2,6 +2,8 @@
 
 ## Preface
 
+**Catalogue scope:** The SQL and KQL names used in translation examples (including `SecurityEvent`, `SigninLogs`, `DnsEvents`, `SecurityAlert` and `SecurityIncident`) are illustrative source symbols, not approved DeltaZulu Gold views. DEC-0038 and [DEC-0034](https://github.com/DeltaZulu-OU/docs/blob/4de05f87bc802d7ebbb9ab2898a8052970e89958/decisions/DEC-0034-mvp-asim-tables-and-views.md) govern the actual MVP names: singular PascalCase, unqualified in KQL and qualified by `golden` in SQL. Resolve real queries through the C# `ApprovedViewCatalog`; do not register aliases or additional views merely because they appear in examples.
+
 This document defines a translation specification for converting a practical subset of Kusto Query Language (KQL) into DuckDB SQL. It is written for a DuckDB-backed security analytics environment where KQL-like syntax is used as an analyst-facing query layer, while DuckDB executes the translated relational plan over registered views, normalized log tables, and JSON-backed sources.
 
 The purpose of this dictionary is not to provide a superficial operator cheat sheet. A direct syntactic mapping from KQL to SQL is often insufficient. KQL has pipeline semantics, tabular operators, dynamic values, token-aware string predicates, serialized row functions, special aggregation defaults, rich join flavors, visualization metadata, management commands, and plugin boundaries. DuckDB has a different execution model, SQL syntax, type system, JSON model, nested data support, extension system, and runtime behavior. A correct converter must therefore translate meaning, not just tokens.

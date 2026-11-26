@@ -14,6 +14,6 @@ Estate-wide architectural policy, Constraints, the current target and planning a
 
 ## Local scope
 
-Local module, user-story, analytics, design and control-plane documents describe implementation or earlier plans. DEC-0033 replaces Proton and direct Agent lake/Proton sink plans with Platform collector, LocalStream/Query and DuckLake; DEC-0013 adopts ASIM-first Gold. Existing Proton code is legacy, not an active target. Historical source verification is dated evidence, not current build status. Use central work items for scheduling.
+Local module, user-story, analytics, design and control-plane documents describe implementation or earlier plans. DEC-0033 replaces Proton and direct Agent lake/Proton sink plans with Platform collector, LocalStream/Query and DuckLake; DEC-0038 adopts DeltaZulu-owned canonical Gold names with ASIM reference alignment. [DEC-0034](https://github.com/DeltaZulu-OU/docs/blob/4de05f87bc802d7ebbb9ab2898a8052970e89958/decisions/DEC-0034-mvp-asim-tables-and-views.md) records the eight telemetry and two operational MVP view names: singular PascalCase, unqualified in KQL and in the `golden` SQL namespace. The historical `*Activity` naming target is superseded. Existing Proton code is legacy, not an active target. Historical source verification is dated evidence, not current build status. Use central work items for scheduling.
 
 Only tested behavior is verified; a target architecture or historical report is not proof of current runtime conformance.
