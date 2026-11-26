@@ -73,7 +73,7 @@ public static class SilverParserContributors
 
         Map("ReportId", Fn(
             "COALESCE",
-            JsonText(Col("raw_log"), "$.EventRecordID"),
+            WindowsRecordId(),
             JsonText(Col("raw_log"), "$.RecordId"),
             JsonText(Col("raw_log"), "$.EventID"))),
 
@@ -102,7 +102,7 @@ public static class SilverParserContributors
             Map("SrcIpAddr", Lit(null)),
             Map("SrcPortNumber", Lit(null)),
             Map("Protocol", Lit(null)),
-            Map("ReportId", JsonText(Col("raw_log"), "$.EventRecordID")),
+            Map("ReportId", WindowsRecordId()),
             Map("AdditionalFields", Col("raw_log"))
         ],
         description: "Sysmon Event ID 22 contributor for Dns.");
@@ -134,7 +134,7 @@ public static class SilverParserContributors
             Map("InitiatingProcessCommandLine", Lit(null)),
             Map("InitiatingProcessAccountName", Lit(null)),
             Map("InitiatingProcessSHA256", Lit(null)),
-            Map("ReportId", JsonText(Col("raw_log"), "$.EventRecordID"))
+            Map("ReportId", WindowsRecordId())
         ],
         description: "Windows Security 5156 contributor for NetworkSession.");
 
@@ -165,7 +165,7 @@ public static class SilverParserContributors
             Map("InitiatingProcessCommandLine", Lit(null)),
             Map("InitiatingProcessAccountName", JsonText(Col("raw_log"), "$.User")),
             Map("InitiatingProcessSHA256", JsonText(Col("raw_log"), "$.Hashes")),
-            Map("ReportId", JsonText(Col("raw_log"), "$.EventRecordID"))
+            Map("ReportId", WindowsRecordId())
         ],
         description: "Sysmon Event ID 3 contributor for NetworkSession.");
 
@@ -191,7 +191,7 @@ public static class SilverParserContributors
             Map("AccountName", JsonText(Col("raw_log"), "$.SubjectUserName")),
             Map("InitiatingProcessFileName", RegexExtract(JsonText(Col("raw_log"), "$.ParentProcessName"), @"[^\\]+$", 0)),
             Map("InitiatingProcessCommandLine", Lit(null)),
-            Map("ReportId", JsonText(Col("raw_log"), "$.EventRecordID")),
+            Map("ReportId", WindowsRecordId()),
             Map("AdditionalFields", Col("raw_log"))
         ],
         description: "Windows Security 4688 contributor for ProcessEvent.");
@@ -218,7 +218,7 @@ public static class SilverParserContributors
             Map("AccountName", JsonText(Col("raw_log"), "$.User")),
             Map("InitiatingProcessFileName", RegexExtract(JsonText(Col("raw_log"), "$.ParentImage"), @"[^\\]+$", 0)),
             Map("InitiatingProcessCommandLine", JsonText(Col("raw_log"), "$.ParentCommandLine")),
-            Map("ReportId", JsonText(Col("raw_log"), "$.EventRecordID")),
+            Map("ReportId", WindowsRecordId()),
             Map("AdditionalFields", Col("raw_log"))
         ],
         description: "Sysmon Event ID 1 contributor for ProcessEvent.");
@@ -236,7 +236,7 @@ public static class SilverParserContributors
             ..EventTimeProjections("$.TimeCreated"),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("LogonSuccess")),
-            Map("EventId", JsonText(Col("raw_log"), "$.EventID")),
+            Map("EventId", WindowsEventId()),
             Map("AccountName", JsonText(Col("raw_log"), "$.TargetUserName")),
             Map("AccountDomain", JsonText(Col("raw_log"), "$.TargetDomainName")),
             Map("SubjectUserName", JsonText(Col("raw_log"), "$.SubjectUserName")),
@@ -254,7 +254,7 @@ public static class SilverParserContributors
             Map("AuthenticationPackageName", JsonText(Col("raw_log"), "$.AuthenticationPackageName")),
             Map("FailureReason", Lit(null)),
             Map("FailureReason_resolved", Lit(null)),
-            Map("ReportId", JsonText(Col("raw_log"), "$.EventRecordID")),
+            Map("ReportId", WindowsRecordId()),
             Map("AdditionalFields", Col("raw_log"))
         ],
         description: "Windows Security 4624 contributor for Authentication.");
@@ -272,7 +272,7 @@ public static class SilverParserContributors
             ..EventTimeProjections("$.TimeCreated"),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("LogonFailure")),
-            Map("EventId", JsonText(Col("raw_log"), "$.EventID")),
+            Map("EventId", WindowsEventId()),
             Map("AccountName", JsonText(Col("raw_log"), "$.TargetUserName")),
             Map("AccountDomain", JsonText(Col("raw_log"), "$.TargetDomainName")),
             Map("SubjectUserName", JsonText(Col("raw_log"), "$.SubjectUserName")),
@@ -287,7 +287,7 @@ public static class SilverParserContributors
             Map("WorkstationName", JsonText(Col("raw_log"), "$.WorkstationName")),
             Map("AuthenticationPackageName", JsonText(Col("raw_log"), "$.AuthenticationPackageName")),
             ..MapWithResolved("FailureReason", JsonText(Col("raw_log"), "$.FailureReason"), MessageResourceIdLookup.Values),
-            Map("ReportId", JsonText(Col("raw_log"), "$.EventRecordID")),
+            Map("ReportId", WindowsRecordId()),
             Map("AdditionalFields", Col("raw_log"))
         ],
         description: "Windows Security 4625 contributor for Authentication.");
@@ -315,9 +315,13 @@ public static class SilverParserContributors
             Description: description);
 
     private static ExprDef EventIdEquals(string eventId) =>
-        And(
-            JsonExists(Col("raw_log"), "$.EventID"),
-            Eq(JsonText(Col("raw_log"), "$.EventID"), Lit(eventId)));
+        Eq(WindowsEventId(), Lit(eventId));
+
+    private static ExprDef WindowsEventId() =>
+        Fn("COALESCE", JsonText(Col("raw_log"), "$.EventId"), JsonText(Col("raw_log"), "$.EventID"));
+
+    private static ExprDef WindowsRecordId() =>
+        Fn("COALESCE", JsonText(Col("raw_log"), "$.RecordId"), JsonText(Col("raw_log"), "$.EventRecordID"));
 
     private static ProjectionDef[] EventTimeProjections(string path, bool sourceDefinesUtc = false, string? alternatePath = null)
     {
