@@ -326,6 +326,20 @@ public sealed class SchemaEmitter
         return sb.ToString();
     }
 
+    private string EmitObservedTimestamp(ObservedTimestampExpr timestamp)
+    {
+        var input = EmitMappingExpr(timestamp.Input);
+        var clock = ObservedTimestampExpr.Clock;
+        var zone = ObservedTimestampExpr.Zone;
+        var zoned = timestamp.SourceDefinesUtc
+            ? $"CASE WHEN regexp_full_match({input}, '{clock}') THEN {input} || 'Z' ELSE {input} END"
+            : input;
+        var instant = $"timezone('UTC', TRY_CAST({zoned} AS TIMESTAMPTZ))";
+        var pattern = timestamp.SourceDefinesUtc ? $"{clock}{zone}?" : $"{clock}{zone}";
+        return $"CASE WHEN regexp_full_match({input}, '{pattern}') " +
+            $"AND {instant} >= TIMESTAMP '0001-01-01' AND {instant} < TIMESTAMP '10000-01-01' THEN {instant} END";
+    }
+
     private string EmitMappingExpr(ExprDef expr) => expr switch
     {
         ColumnExpr col => DuckDbSqlText.EscapeIdent(col.Name),
@@ -333,6 +347,8 @@ public sealed class SchemaEmitter
         JsonTextExpr json => $"json_extract_string({EmitMappingExpr(json.JsonColumn)}, '{SqlLiteralEscaping.EscapeSingleQuotes(json.Path)}')",
         JsonExistsExpr json => $"json_exists({EmitMappingExpr(json.JsonColumn)}, '{SqlLiteralEscaping.EscapeSingleQuotes(json.Path)}')",
         RegexExtractExpr re => $"regexp_extract({EmitMappingExpr(re.Input)}, '{SqlLiteralEscaping.EscapeSingleQuotes(re.Pattern)}', {re.Group})",
+        IsNullExpr check => $"({EmitMappingExpr(check.Input)} IS {(check.Negated ? "NOT NULL" : "NULL")})",
+        ObservedTimestampExpr timestamp => EmitObservedTimestamp(timestamp),
         CastExpr cast => $"CAST({EmitMappingExpr(cast.Input)} AS {cast.TargetType.ToSql()})",
         TryCastExpr cast => $"TRY_CAST({EmitMappingExpr(cast.Input)} AS {cast.TargetType.ToSql()})",
         FunctionExpr fn => $"{fn.Name}({string.Join(", ", fn.Args.Select(EmitMappingExpr))})",

@@ -138,9 +138,10 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
         sb.Append(QuoteName(targetStream));
         sb.Append("\nAS\nSELECT\n");
 
-        for (var i = 0; i < view.Mapping.Projections.Count; i++)
+        var projections = view.Mapping.Projections.Where(p => !p.SilverOnly).ToArray();
+        for (var i = 0; i < projections.Length; i++)
         {
-            var proj = view.Mapping.Projections[i];
+            var proj = projections[i];
             sb.Append("    ");
 
             if (proj.Expression is LiteralExpr { Value: null }
@@ -157,7 +158,7 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
 
             sb.Append(" AS ");
             sb.Append(QuoteIdentifier(proj.TargetColumn));
-            if (i < view.Mapping.Projections.Count - 1)
+            if (i < projections.Length - 1)
             {
                 sb.Append(',');
             }
@@ -187,12 +188,21 @@ public sealed class ProtonSchemaEmitter : ISchemaEmitter
     // Mapping expression → Proton SQL
     // -------------------------------------------------------------------------
 
+    private string EmitObservedTimestamp(ObservedTimestampExpr timestamp)
+    {
+        var input = EmitExpr(timestamp.Input);
+        var pattern = ObservedTimestampExpr.Clock + ObservedTimestampExpr.Zone + (timestamp.SourceDefinesUtc ? "?" : "");
+        return $"if(match({input}, '^{pattern}$'), parseDateTime64BestEffortOrNull({input}, 6, 'UTC'), NULL)";
+    }
+
     private string EmitExpr(ExprDef expr) => expr switch {
         ColumnExpr col => QuoteIdentifier(col.Name),
         LiteralExpr lit => EmitLiteral(lit),
         JsonTextExpr json => $"JSON_VALUE({EmitExpr(json.JsonColumn)}, '{SqlLiteralEscaping.EscapeSingleQuotes(json.Path)}')",
         JsonExistsExpr json => $"isNotNull(JSON_VALUE({EmitExpr(json.JsonColumn)}, '{SqlLiteralEscaping.EscapeSingleQuotes(json.Path)}'))",
         RegexExtractExpr re => EmitRegexExtract(re),
+        IsNullExpr check => $"{(check.Negated ? "isNotNull" : "isNull")}({EmitExpr(check.Input)})",
+        ObservedTimestampExpr timestamp => EmitObservedTimestamp(timestamp),
         CastExpr cast => $"CAST({EmitExpr(cast.Input)}, '{SqlLiteralEscaping.EscapeSingleQuotes(cast.TargetType.ToProtonSql())}')",
         TryCastExpr cast => $"accurateCastOrNull({EmitExpr(cast.Input)}, '{SqlLiteralEscaping.EscapeSingleQuotes(cast.TargetType.ToProtonSql())}')",
         FunctionExpr fn => $"{fn.Name}({string.Join(", ", fn.Args.Select(EmitExpr))})",

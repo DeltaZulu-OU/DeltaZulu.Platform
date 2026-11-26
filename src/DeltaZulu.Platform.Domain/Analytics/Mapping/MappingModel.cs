@@ -13,6 +13,13 @@ public sealed record JsonExistsExpr(ExprDef JsonColumn, string Path) : ExprDef;
 public sealed record RegexExtractExpr(ExprDef Input, string Pattern, int Group) : ExprDef;
 public sealed record CastExpr(ExprDef Input, DuckDbType TargetType) : ExprDef;
 public sealed record TryCastExpr(ExprDef Input, DuckDbType TargetType) : ExprDef;
+/// <summary>Accept a zone-free clock only when its source field explicitly defines UTC.</summary>
+public sealed record ObservedTimestampExpr(ExprDef Input, bool SourceDefinesUtc) : ExprDef
+{
+    public const string Clock = @"[0-9]{4}-[0-9]{2}-[0-9]{2}[T ]([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]([.][0-9]{1,9})?";
+    public const string Zone = @"(Z|[+-]((0[0-9]|1[0-3]):?[0-5][0-9]|14:?00))";
+}
+public sealed record IsNullExpr(ExprDef Input, bool Negated = false) : ExprDef;
 public sealed record CaseExpr(IReadOnlyList<CaseBranch> Branches, ExprDef Else) : ExprDef;
 public sealed record FunctionExpr(string Name, IReadOnlyList<ExprDef> Args) : ExprDef;
 public sealed record BinaryExpr(ExprDef Left, BinaryOp Op, ExprDef Right) : ExprDef;
@@ -28,7 +35,10 @@ public enum BinaryOp
 
 #region Projection and query model
 
-public sealed record ProjectionDef(string TargetColumn, ExprDef Expression);
+public sealed record ProjectionDef(string TargetColumn, ExprDef Expression)
+{
+    public bool SilverOnly { get; init; }
+}
 
 public sealed record MappingQueryDef(
     string SourceObject,

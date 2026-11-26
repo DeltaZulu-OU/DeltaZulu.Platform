@@ -25,11 +25,7 @@ public static class SilverParserContributors
      columns: GoldenEventContracts.DnsColumns,
      projections:
      [
-         Map("Timestamp", Fn(
-            "COALESCE",
-            TryCast(JsonText(Col("raw_log"), "$.TimeCreated"), DuckDbType.Timestamp),
-            TryCast(JsonText(Col("raw_log"), "$.EventTime"), DuckDbType.Timestamp),
-            Col("ingest_time"))),
+        ..EventTimeProjections("$.TimeCreated", alternatePath: "$.EventTime"),
 
         Map("DeviceName", Col("host")),
 
@@ -95,7 +91,7 @@ public static class SilverParserContributors
         columns: GoldenEventContracts.DnsColumns,
         projections:
         [
-            Map("Timestamp", EventTimestamp("$.UtcTime")),
+            ..EventTimeProjections("$.UtcTime", sourceDefinesUtc: true),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("DnsQuery")),
             Map("QueryName", JsonText(Col("raw_log"), "$.QueryName")),
@@ -121,7 +117,7 @@ public static class SilverParserContributors
         columns: GoldenEventContracts.NetworkSessionColumns,
         projections:
         [
-            Map("Timestamp", EventTimestamp("$.TimeCreated")),
+            ..EventTimeProjections("$.TimeCreated"),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("ConnectionAllowed")),
             Map("LocalIP", JsonText(Col("raw_log"), "$.SourceAddress")),
@@ -152,7 +148,7 @@ public static class SilverParserContributors
         columns: GoldenEventContracts.NetworkSessionColumns,
         projections:
         [
-            Map("Timestamp", EventTimestamp("$.UtcTime")),
+            ..EventTimeProjections("$.UtcTime", sourceDefinesUtc: true),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("ConnectionSuccess")),
             Map("LocalIP", JsonText(Col("raw_log"), "$.SourceIp")),
@@ -183,7 +179,7 @@ public static class SilverParserContributors
         columns: GoldenEventContracts.ProcessEventColumns,
         projections:
         [
-            Map("Timestamp", EventTimestamp("$.TimeCreated")),
+            ..EventTimeProjections("$.TimeCreated"),
             Map("DeviceId", Lit(null)),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("ProcessCreated")),
@@ -210,7 +206,7 @@ public static class SilverParserContributors
         columns: GoldenEventContracts.ProcessEventColumns,
         projections:
         [
-            Map("Timestamp", EventTimestamp("$.UtcTime")),
+            ..EventTimeProjections("$.UtcTime", sourceDefinesUtc: true),
             Map("DeviceId", Lit(null)),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("ProcessCreated")),
@@ -237,7 +233,7 @@ public static class SilverParserContributors
         columns: GoldenEventContracts.AuthenticationColumns,
         projections:
         [
-            Map("Timestamp", EventTimestamp("$.TimeCreated")),
+            ..EventTimeProjections("$.TimeCreated"),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("LogonSuccess")),
             Map("EventId", JsonText(Col("raw_log"), "$.EventID")),
@@ -273,7 +269,7 @@ public static class SilverParserContributors
         columns: GoldenEventContracts.AuthenticationColumns,
         projections:
         [
-            Map("Timestamp", EventTimestamp("$.TimeCreated")),
+            ..EventTimeProjections("$.TimeCreated"),
             Map("DeviceName", Col("host")),
             Map("ActionType", Lit("LogonFailure")),
             Map("EventId", JsonText(Col("raw_log"), "$.EventID")),
@@ -315,7 +311,7 @@ public static class SilverParserContributors
                 SourceObject: sourceObject,
                 Filter: filter,
                 Projections: projections),
-            Columns: columns,
+            Columns: [..columns, new("TimestampNullReason", DuckDbType.Varchar, KustoType.String)],
             Description: description);
 
     private static ExprDef EventIdEquals(string eventId) =>
@@ -323,11 +319,37 @@ public static class SilverParserContributors
             JsonExists(Col("raw_log"), "$.EventID"),
             Eq(JsonText(Col("raw_log"), "$.EventID"), Lit(eventId)));
 
-    private static ExprDef EventTimestamp(string jsonPath) =>
-            Fn(
-            "COALESCE",
-            TryCast(JsonText(Col("raw_log"), jsonPath), DuckDbType.Timestamp),
-            Col("ingest_time"));
+    private static ProjectionDef[] EventTimeProjections(string path, bool sourceDefinesUtc = false, string? alternatePath = null)
+    {
+        var payload = Col("raw_log");
+        ExprDef raw = JsonText(payload, path);
+        ExprDef supplied = JsonExists(payload, path);
+        ExprDef observed = new ObservedTimestampExpr(raw, sourceDefinesUtc);
+        if (alternatePath is not null)
+        {
+            var alternate = JsonText(payload, alternatePath);
+            supplied = Or(supplied, JsonExists(payload, alternatePath));
+            observed = Fn("COALESCE", observed, new ObservedTimestampExpr(alternate, sourceDefinesUtc));
+            raw = Fn("COALESCE", raw, alternate);
+        }
+
+        var unavailable = new IsNullExpr(observed);
+        var branches = new List<CaseBranch>
+        {
+            new(And(new IsNullExpr(raw), supplied), Lit("Null")),
+            new(new IsNullExpr(raw), Lit("Missing"))
+        };
+        if (!sourceDefinesUtc)
+        {
+            // A valid local clock with no offset is distinguishable from a
+            // malformed value. Never use this diagnostic probe as event time.
+            var localProbe = new ObservedTimestampExpr(raw, SourceDefinesUtc: true);
+            branches.Add(new(And(unavailable, new IsNullExpr(localProbe, Negated: true)), Lit("MissingOffset")));
+        }
+        branches.Add(new(unavailable, Lit("Invalid")));
+        var reason = new CaseExpr(branches, Lit(null));
+        return [Map("Timestamp", observed), Map("TimestampNullReason", reason) with { SilverOnly = true }];
+    }
 
     private static ExprDef WindowsDnsServerEvtxQuerySelector() =>
             Or(
