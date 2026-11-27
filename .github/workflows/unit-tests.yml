@@ -30,6 +30,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -56,6 +57,14 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
+
+      - name: Authenticate GitHub NuGet feed
+        shell: bash
+        env:
+          GH_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_PACKAGES_USER: ${{ github.actor }}
+        run: |
+          dotnet nuget update source deltazulu-github --username "$GH_PACKAGES_USER" --password "$GH_PACKAGES_TOKEN" --store-password-in-clear-text --configfile NuGet.config
 
       - name: Report restore environment
         run: |

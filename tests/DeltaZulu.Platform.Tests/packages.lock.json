@@ -1314,7 +1314,8 @@
       "deltazulu.platform.ingestion": {
         "type": "Project",
         "dependencies": {
-          "CommunityToolkit.HighPerformance": "[8.4.2, )"
+          "CommunityToolkit.HighPerformance": "[8.4.2, )",
+          "DeltaZulu.LocalStream": "[1.0.0, )"
         }
       },
       "deltazulu.platform.web": {
@@ -1361,6 +1362,15 @@
         "requested": "[2.1.79, )",
         "resolved": "2.1.79",
         "contentHash": "8YijbzgTfmqmQOnVNorYM6K++pxqnW3nJ4aC1sRHzxUA2CcuoJ9gsTem3kgBnPRMc38zZHl4Esb6hAezXIEEuw=="
+      },
+      "DeltaZulu.LocalStream": {
+        "type": "CentralTransitive",
+        "requested": "[1.0.0, )",
+        "resolved": "1.0.0",
+        "contentHash": "xDKPTJzuQJvOzWsKsq75Zqvx3oZR7kdZz8NoHAWY++xFYMhR5pfeODfq+O9THOau67vcCzhA96B7LZ9mNPANbA==",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.10"
+        }
       },
       "DuckDB.NET.Bindings.Full": {
         "type": "CentralTransitive",
