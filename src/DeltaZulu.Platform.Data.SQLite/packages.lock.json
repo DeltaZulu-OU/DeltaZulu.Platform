@@ -935,6 +935,7 @@
       "deltazulu.platform.application": {
         "type": "Project",
         "dependencies": {
+          "DeltaZulu.LocalStream.Query": "[1.1.0, )",
           "DeltaZulu.Platform.Domain": "[1.0.0, )",
           "Elsa": "[3.8.0, )",
           "Kusto.Toolkit": "[2.2.0, )",
@@ -962,7 +963,7 @@
         "type": "Project",
         "dependencies": {
           "CommunityToolkit.HighPerformance": "[8.4.2, )",
-          "DeltaZulu.LocalStream": "[1.0.0, )"
+          "DeltaZulu.LocalStream": "[1.1.0, )"
         }
       },
       "CommunityToolkit.HighPerformance": {
@@ -973,11 +974,20 @@
       },
       "DeltaZulu.LocalStream": {
         "type": "CentralTransitive",
-        "requested": "[1.0.0, )",
-        "resolved": "1.0.0",
-        "contentHash": "xDKPTJzuQJvOzWsKsq75Zqvx3oZR7kdZz8NoHAWY++xFYMhR5pfeODfq+O9THOau67vcCzhA96B7LZ9mNPANbA==",
+        "requested": "[1.1.0, )",
+        "resolved": "1.1.0",
+        "contentHash": "drmwXsQYdQMpd/J8eCC5TqB/QZBqe2AaLQwPdnEni5M5cKkVoCg9fjpbQJFk8QG2rB8Jz4gbVfmJ2IW0QxOjTQ==",
         "dependencies": {
-          "Microsoft.Extensions.Logging.Abstractions": "10.0.10"
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.11"
+        }
+      },
+      "DeltaZulu.LocalStream.Query": {
+        "type": "CentralTransitive",
+        "requested": "[1.1.0, )",
+        "resolved": "1.1.0",
+        "contentHash": "DRFxeMTErILz4hSe5dKhgbsnOp/fbAPvEcYoCxqFM7LhwkuXtT9obqJgPyKJ/6KzqsF1LTDycJsMOQ7DLV8ScA==",
+        "dependencies": {
+          "DeltaZulu.LocalStream": "1.1.0"
         }
       },
       "Elsa": {
