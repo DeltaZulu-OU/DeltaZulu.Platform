@@ -40,11 +40,11 @@ public sealed class AuthenticationSourceCompatibilityTests
 
         Assert.AreEqual(1L, applier.QueryScalar("SELECT count(*) FROM bronze.windows_security_event"));
         Assert.AreEqual(1L, applier.QueryScalar("SELECT count(*) FROM golden.Authentication"));
-        Assert.AreEqual(action, applier.QueryScalar("SELECT ActionType FROM golden.Authentication"));
-        Assert.AreEqual("alice", applier.QueryScalar("SELECT AccountName FROM golden.Authentication"));
-        Assert.AreEqual("test-host", applier.QueryScalar("SELECT DeviceName FROM golden.Authentication"));
-        Assert.AreEqual("192.0.2.10", applier.QueryScalar("SELECT SourceIP FROM golden.Authentication"));
-        Assert.AreEqual("42", applier.QueryScalar("SELECT ReportId FROM golden.Authentication"));
+        Assert.AreEqual(action, Convert.ToString(applier.QueryScalar("SELECT ActionType FROM golden.Authentication")));
+        Assert.AreEqual("alice", Convert.ToString(applier.QueryScalar("SELECT AccountName FROM golden.Authentication")));
+        Assert.AreEqual("test-host", Convert.ToString(applier.QueryScalar("SELECT DeviceName FROM golden.Authentication")));
+        Assert.AreEqual("192.0.2.10", Convert.ToString(applier.QueryScalar("SELECT SourceIP FROM golden.Authentication")));
+        Assert.AreEqual("42", Convert.ToString(applier.QueryScalar("SELECT ReportId FROM golden.Authentication")));
     }
 
     public TestContext TestContext { get; set; }
