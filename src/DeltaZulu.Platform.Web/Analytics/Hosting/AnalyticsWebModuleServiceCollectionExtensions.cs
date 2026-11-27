@@ -1,3 +1,5 @@
+using DeltaZulu.LocalStream;
+using DeltaZulu.Platform.Ingestion.PubSub;
 using DeltaZulu.Platform.Application.Analytics.Mediation;
 using DeltaZulu.Platform.Application.Analytics.Nrt;
 using DeltaZulu.Platform.Application.Analytics.Scheduled;
@@ -137,6 +139,30 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         services.AddScoped<WidgetEditorInterop>();
         services.AddScoped<DashboardTransferInterop>();
         services.AddScoped<MitreAttackCatalogService>();
+
+        services.AddSingleton(_ => new LocalStreamHost(new LocalStreamOptions
+        {
+            StoragePath = options.LocalStreamPath ?? options.LakeDbPath + ".stream",
+            Topics = { new TopicOptions { Name = "agent.raw" } },
+            Subscriptions = { new SubscriptionOptions { Id = "lake.bronze", Topic = "agent.raw", Required = true } }
+        }));
+        services.AddSingleton<IRawLogPublisher>(sp =>
+            new LocalStreamRawLogPublisher(sp.GetRequiredService<LocalStreamHost>(), "agent.raw"));
+        // The background writer must not share the interactive query connection.
+        services.AddKeyedSingleton<DuckDbConnectionFactory>("bronze-ingestion",
+            (_, _) => new DuckDbConnectionFactory($"DataSource={options.LakeDbPath}"));
+        services.AddSingleton(sp => new DuckDbRawLogSubscriber(
+            new SchemaApplier(sp.GetRequiredKeyedService<DuckDbConnectionFactory>("bronze-ingestion")),
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["raw.security"] = "bronze.windows_security_event",
+                ["raw.sysmon"] = "bronze.windows_sysmon_event",
+                ["raw.dns"] = "bronze.dns_server_event"
+            }));
+        services.AddSingleton(sp => new LocalStreamBronzeConsumer(
+            sp.GetRequiredService<LocalStreamHost>(),
+            sp.GetRequiredService<DuckDbRawLogSubscriber>(), "agent.raw", "lake.bronze"));
+        services.AddHostedService<LocalStreamIngestionService>();
 
         services.AddProtonDetectionBackend();
         services.AddProtonStreaming();

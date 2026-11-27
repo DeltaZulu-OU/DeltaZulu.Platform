@@ -13,6 +13,7 @@ public sealed record AnalyticsModuleOptions
     /// separate from mutable application and Operations SQLite state.
     /// </summary>
     public string LakeDbPath { get; init; } = "analytics.db";
+    public string? LocalStreamPath { get; init; }
     public string AppDbPath { get; init; } = "settings.db";
     /// <summary>Dedicated SQLite database for mutable incident-candidate state.</summary>
     public string OperationsDbPath { get; init; } = "operations.db";

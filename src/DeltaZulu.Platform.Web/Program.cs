@@ -86,6 +86,10 @@ builder.Services.AddAnalyticsWebModule(new AnalyticsModuleOptions {
         builder.Configuration["Analytics:LakeDbPath"],
         builder.Environment.ContentRootPath,
         "analytics.db"),
+    LocalStreamPath = ResolveConfiguredPath(
+        builder.Configuration["Analytics:LocalStreamPath"],
+        builder.Environment.ContentRootPath,
+        "analytics.stream"),
     AppDbPath = ResolveConfiguredPath(
         builder.Configuration["Analytics:AppDbPath"],
         builder.Environment.ContentRootPath,
