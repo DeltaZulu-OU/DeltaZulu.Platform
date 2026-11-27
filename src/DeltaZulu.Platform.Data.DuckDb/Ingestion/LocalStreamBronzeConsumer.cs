@@ -8,15 +8,14 @@ namespace DeltaZulu.Platform.Data.DuckDb.Ingestion;
 /// offsets are committed only after the corresponding lake write succeeds.
 /// </summary>
 /// <remarks>
-/// LocalStream has at-least-once semantics: a crash after lake insertion but
-/// before the checkpoint can replay a row. Until an atomic source-identity
-/// deduplication contract is implemented, this consumer does not claim exactly
-/// once Bronze persistence.
+/// LocalStream has at-least-once delivery semantics. The transactional writer
+/// deduplicates replayed stream occurrences; the generic subscriber overload
+/// does not guarantee idempotent persistence. Neither deduplicates source events.
 /// </remarks>
 public sealed class LocalStreamBronzeConsumer
 {
     private readonly LocalStreamHost _host;
-    private readonly IRawLogSubscriber _lake;
+    private readonly Func<StreamRecord<RawLogEnvelope>, CancellationToken, ValueTask> _write;
     private readonly string _topic;
     private readonly string _subscriptionId;
 
@@ -27,7 +26,19 @@ public sealed class LocalStreamBronzeConsumer
         string subscriptionId)
     {
         _host = host ?? throw new ArgumentNullException(nameof(host));
-        _lake = lake ?? throw new ArgumentNullException(nameof(lake));
+        ArgumentNullException.ThrowIfNull(lake);
+        _write = (entry, ct) => lake.HandleAsync(new RawLogBatch(entry.EventId, entry.Payload.Channel, [entry.Payload]), ct);
+        ArgumentException.ThrowIfNullOrWhiteSpace(topic);
+        ArgumentException.ThrowIfNullOrWhiteSpace(subscriptionId);
+        _topic = topic;
+        _subscriptionId = subscriptionId;
+    }
+
+    public LocalStreamBronzeConsumer(LocalStreamHost host, LocalStreamBronzeWriter writer, string topic, string subscriptionId)
+    {
+        _host = host ?? throw new ArgumentNullException(nameof(host));
+        ArgumentNullException.ThrowIfNull(writer);
+        _write = writer.WriteAsync;
         ArgumentException.ThrowIfNullOrWhiteSpace(topic);
         ArgumentException.ThrowIfNullOrWhiteSpace(subscriptionId);
         _topic = topic;
@@ -43,10 +54,7 @@ public sealed class LocalStreamBronzeConsumer
         // evidence would violate the required Bronze evidence path.
         await foreach (var entry in consumer.ReadAsync(_topic, cancellationToken: cancellationToken))
         {
-            var payload = entry.Payload.Normalize();
-            await _lake.HandleAsync(
-                new RawLogBatch(entry.EventId, payload.Channel, [payload]),
-                cancellationToken).ConfigureAwait(false);
+            await _write(entry, cancellationToken).ConfigureAwait(false);
             await consumer.CommitAsync(entry.Position, cancellationToken).ConfigureAwait(false);
             count++;
         }

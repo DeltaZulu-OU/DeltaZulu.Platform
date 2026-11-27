@@ -151,8 +151,8 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
         // The background writer must not share the interactive query connection.
         services.AddKeyedSingleton<DuckDbConnectionFactory>("bronze-ingestion",
             (_, _) => new DuckDbConnectionFactory($"DataSource={options.LakeDbPath}"));
-        services.AddSingleton(sp => new DuckDbRawLogSubscriber(
-            new SchemaApplier(sp.GetRequiredKeyedService<DuckDbConnectionFactory>("bronze-ingestion")),
+        services.AddSingleton(sp => new LocalStreamBronzeWriter(
+            sp.GetRequiredKeyedService<DuckDbConnectionFactory>("bronze-ingestion"),
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["raw.security"] = "bronze.windows_security_event",
@@ -161,7 +161,7 @@ public static class AnalyticsWebModuleServiceCollectionExtensions
             }));
         services.AddSingleton(sp => new LocalStreamBronzeConsumer(
             sp.GetRequiredService<LocalStreamHost>(),
-            sp.GetRequiredService<DuckDbRawLogSubscriber>(), "agent.raw", "lake.bronze"));
+            sp.GetRequiredService<LocalStreamBronzeWriter>(), "agent.raw", "lake.bronze"));
         services.AddHostedService<LocalStreamIngestionService>();
 
         services.AddProtonDetectionBackend();
