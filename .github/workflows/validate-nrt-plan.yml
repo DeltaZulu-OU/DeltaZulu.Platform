@@ -1,0 +1,83 @@
+name: Validate LocalStream NRT plan
+
+on:
+  push:
+    branches: [ feat/localstream-nrt-plan ]
+    paths:
+      - '.github/*.yml'
+      - '.github/workflows/*.yml'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'NuGet.config'
+      - 'global.json'
+      - '*.slnx'
+      - 'src/**'
+      - 'tests/**'
+      - 'tools/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  unit-tests:
+    name: ${{ matrix.os }} unit tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Authenticate GitHub NuGet feed
+        shell: bash
+        env:
+          GH_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_PACKAGES_USER: ${{ github.actor }}
+        run: |
+          dotnet nuget update source deltazulu-github --username "$GH_PACKAGES_USER" --password "$GH_PACKAGES_TOKEN" --store-password-in-clear-text --configfile NuGet.config
+
+      - name: Report restore environment
+        run: |
+          dotnet --info
+          dotnet nuget list source
+
+      - name: Restore packages
+        run: dotnet restore --locked-mode --verbosity normal
+
+      - name: Verify restore did not create or change lockfiles
+        shell: pwsh
+        run: |
+          $changes = git status --porcelain --untracked-files=all -- ':(glob)**/packages*.lock.json'
+          if ($changes) { $changes | Write-Output; throw 'Restore changed the committed dependency locks.' }
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: TestResults/**/*.trx
+          if-no-files-found: ignore
