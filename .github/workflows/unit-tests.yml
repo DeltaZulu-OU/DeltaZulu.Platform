@@ -30,6 +30,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -61,6 +62,13 @@ jobs:
         run: |
           dotnet --info
           dotnet nuget list source
+
+      - name: Authenticate DeltaZulu GitHub Packages source
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet nuget update source deltazulu-github --username "${{ github.actor }}" --password "$env:GITHUB_TOKEN" --store-password-in-clear-text --configfile NuGet.config
 
       - name: Restore packages
         run: dotnet restore --locked-mode --verbosity normal
