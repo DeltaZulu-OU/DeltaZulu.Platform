@@ -23,23 +23,31 @@ public static class DuckDbValueReader
             return null;
         }
 
+        // DuckDB.NET exposes the native type ID as an enum name, not a SQL type declaration.
         var typeName = reader.GetDataTypeName(ordinal);
-        if (string.Equals(typeName, "Decimal", StringComparison.OrdinalIgnoreCase))
+        if (!Enum.TryParse<DuckDBType>(typeName, out var type) || type.ToString() != typeName)
         {
-            return ReadExactDecimal(reader.GetFieldValue<DuckDBDecimal>(ordinal));
+            throw new NotSupportedException($"Unrecognised DuckDB result type '{typeName}'.");
         }
 
-        if (string.Equals(typeName, "Interval", StringComparison.OrdinalIgnoreCase))
+        return type switch
         {
-            return (TimeSpan)reader.GetFieldValue<DuckDBInterval>(ordinal);
-        }
+            DuckDBType.Decimal => ReadExactDecimal(reader.GetFieldValue<DuckDBDecimal>(ordinal)),
+            DuckDBType.Interval => (TimeSpan)reader.GetFieldValue<DuckDBInterval>(ordinal),
+            DuckDBType.Uuid => reader.GetGuid(ordinal),
+            DuckDBType.TimestampTz => reader.GetFieldValue<DateTimeOffset>(ordinal).UtcDateTime,
+            DuckDBType.Struct => ReadNestedValueAsString(reader, ordinal, allowLegacyInet: true),
+            DuckDBType.List or DuckDBType.Array or DuckDBType.Map => ReadNestedValueAsString(reader, ordinal, allowLegacyInet: false),
+            _ => ReadNonNullValue(reader, ordinal)
+        };
+    }
 
-        if (RequiresStringNormalization(typeName))
-        {
-            return ReadProviderValueAsString(reader, ordinal);
-        }
-
-        return reader.GetValue(ordinal);
+    private static object ReadNonNullValue(DbDataReader reader, int ordinal)
+    {
+        var value = reader.GetValue(ordinal);
+        return value is null or DBNull
+            ? throw new InvalidCastException($"Non-null DuckDB column '{reader.GetName(ordinal)}' returned no value.")
+            : value;
     }
 
     private static decimal ReadExactDecimal(DuckDBDecimal value)
@@ -62,89 +70,17 @@ public static class DuckDbValueReader
             unchecked((int)(magnitude >> 64)), mantissa < 0, scale);
     }
 
-    private static string? ReadProviderValueAsString(DbDataReader reader, int ordinal)
+    // Temporary presentation compatibility. Nested fidelity requires a separate typed read path.
+    private static string ReadNestedValueAsString(DbDataReader reader, int ordinal, bool allowLegacyInet)
     {
-        object? value;
-
-        try
-        {
-            value = reader.GetValue(ordinal);
-        }
-        catch (Exception ex) when (IsProviderMaterializationFailure(ex))
-        {
-            return ReadStringFallback(reader, ordinal);
-        }
-
-        if (value is null || value is DBNull)
-        {
-            return null;
-        }
-
-        if (value is string text)
-        {
-            return text;
-        }
-
-        if (TryFormatInet(value, out var formattedInet))
+        var value = ReadNonNullValue(reader, ordinal);
+        if (allowLegacyInet && TryFormatInet(value, out var formattedInet))
         {
             return formattedInet;
         }
 
-        if (value is IFormattable formattable && IsScalarLike(value.GetType()))
-        {
-            return formattable.ToString(null, CultureInfo.InvariantCulture);
-        }
-
-        try
-        {
-            return JsonSerializer.Serialize(value);
-        }
-        catch (NotSupportedException)
-        {
-            return Convert.ToString(value, CultureInfo.InvariantCulture);
-        }
-    }
-
-    private static string? ReadStringFallback(DbDataReader reader, int ordinal)
-    {
-        try
-        {
-            return reader.GetString(ordinal);
-        }
-        catch (Exception ex) when (IsProviderMaterializationFailure(ex))
-        {
-            try
-            {
-                return Convert.ToString(reader.GetValue(ordinal), CultureInfo.InvariantCulture);
-            }
-            catch (Exception inner) when (IsProviderMaterializationFailure(inner))
-            {
-                throw new InvalidCastException("DuckDB value could not be materialized without loss.", inner);
-            }
-        }
-    }
-
-    private static bool RequiresStringNormalization(string? typeName)
-    {
-        if (string.IsNullOrWhiteSpace(typeName))
-        {
-            return false;
-        }
-
-        var normalized = typeName.Trim().ToUpperInvariant();
-
-        if (normalized is "JSON" or "UUID" or "INET" or "IPADDR" or "CIDR")
-        {
-            return true;
-        }
-
-        return normalized.StartsWith("STRUCT", StringComparison.Ordinal)
-            || normalized.StartsWith("MAP", StringComparison.Ordinal)
-            || normalized.StartsWith("UNION", StringComparison.Ordinal)
-            || normalized.EndsWith("[]", StringComparison.Ordinal)
-            || normalized.Contains("LIST", StringComparison.Ordinal)
-            || normalized.Contains("STRUCT(", StringComparison.Ordinal)
-            || normalized.Contains("MAP(", StringComparison.Ordinal);
+        // Materialization and serialization errors must propagate, never become text or SQL NULL.
+        return JsonSerializer.Serialize(value);
     }
 
     private static bool TryFormatInet(object value, out string formatted)
@@ -329,13 +265,4 @@ public static class DuckDbValueReader
         }
     }
 
-    private static bool IsScalarLike(Type type) => type.IsPrimitive
-            || type == typeof(decimal)
-            || type == typeof(DateTime)
-            || type == typeof(DateTimeOffset)
-            || type == typeof(Guid);
-
-    private static bool IsProviderMaterializationFailure(Exception ex) => ex is InvalidCastException
-            or NotSupportedException
-            or MissingMethodException;
 }
