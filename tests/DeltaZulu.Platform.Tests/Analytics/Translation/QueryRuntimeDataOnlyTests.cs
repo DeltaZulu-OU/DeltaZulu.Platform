@@ -112,6 +112,86 @@ public sealed class QueryRuntimeDataOnlyTests
         Assert.IsFalse(result.Success, "The legacy runtime execution method must no longer strip render directives.");
     }
 
+    [TestMethod]
+    public void ExecuteDataOnly_RejectsLossyDecimalOnColdAndCachedPaths()
+    {
+        var runtime = new QueryRuntime(CreateMedallionCatalog(), _factory,
+            emitterFactory: new ConstantRelationalEmitterFactory("duckdb",
+                "SELECT CAST('0.000000000000000000000000000001' AS DECIMAL(38,30)) AS Value"));
+        const string kql = "ProcessEvent | take 1";
+        var result = runtime.ExecuteDataOnly(kql);
+        Assert.IsFalse(result.Success);
+        Assert.AreEqual(0, result.RowCount);
+        Assert.IsTrue(result.Diagnostics.HasErrors);
+
+        // A streamed execution caches the SQL before the callback is invoked.
+        var streamed = runtime.ExecuteStreamedDataOnly(kql, reader =>
+        {
+            _ = DuckDbValueReader.ReadValue(reader, 0);
+            return true;
+        });
+        Assert.IsFalse(streamed.Success);
+        Assert.IsTrue(streamed.Diagnostics.HasErrors);
+
+        result = runtime.ExecuteDataOnly(kql);
+        Assert.IsFalse(result.Success);
+        Assert.AreEqual(0, result.RowCount);
+        Assert.IsTrue(result.Diagnostics.HasErrors);
+    }
+
+    [TestMethod]
+    public void ExecuteDataOnly_PreservesExactDecimalAndUtcOnColdAndCachedPaths()
+    {
+        var runtime = new QueryRuntime(CreateMedallionCatalog(), _factory,
+            emitterFactory: new ConstantRelationalEmitterFactory("duckdb",
+                "SELECT CAST('79228162514264337593543950335' AS DECIMAL(38,0)) AS Amount, TIMESTAMPTZ '2026-01-01 02:00:00.123456+02:00' AS Instant"));
+        const string kql = "ProcessEvent | take 1";
+        for (var i = 0; i < 2; i++)
+        {
+            var result = runtime.ExecuteDataOnly(kql);
+            AssertSuccess(result);
+            Assert.AreEqual(decimal.MaxValue, result.GetValue(0, 0));
+            var instant = (DateTime)result.GetValue(0, 1)!;
+            Assert.AreEqual(DateTimeKind.Utc, instant.Kind);
+            Assert.AreEqual(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddTicks(1234560), instant);
+        }
+    }
+
+    [TestMethod]
+    [DataRow(1234560L)]
+    [DataRow(-1234560L)]
+    public void EmitTemporalLiterals_PreservesMicroseconds(long ticks)
+    {
+        var timestamp = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddTicks(ticks);
+        var duration = TimeSpan.FromTicks(ticks);
+        var plan = new ProjectNode(new SingletonRowNode(),
+            [new("Instant", new LiteralScalar(timestamp, LiteralKind.DateTime)),
+             new("Duration", new LiteralScalar(duration, LiteralKind.Timespan))]);
+        var sql = new DuckDbQueryEmitter(applyDefaultLimit: false).Emit(plan);
+        using var command = _factory.GetConnection().CreateCommand();
+        command.CommandText = sql;
+        using var reader = command.ExecuteReader();
+        Assert.IsTrue(reader.Read());
+        Assert.AreEqual(timestamp.Ticks, reader.GetDateTime(0).Ticks);
+        Assert.AreEqual(duration, DuckDbValueReader.ReadValue(reader, 1));
+    }
+
+    [TestMethod]
+    [DataRow(1L)]
+    [DataRow(-1L)]
+    public void EmitTemporalLiterals_RejectsSubmicrosecondPrecision(long ticks)
+    {
+        var timestamp = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddTicks(ticks);
+        var duration = TimeSpan.FromTicks(ticks);
+        var emitter = new DuckDbQueryEmitter(applyDefaultLimit: false);
+        foreach (var literal in new[] { new LiteralScalar(timestamp, LiteralKind.DateTime),
+                                        new LiteralScalar(duration, LiteralKind.Timespan) })
+        {
+            var plan = new ProjectNode(new SingletonRowNode(), [new("Value", literal)]);
+            Assert.ThrowsExactly<NotSupportedException>(() => emitter.Emit(plan));
+        }
+    }
+
     private static void AssertSuccess(QueryResult result)
     {
         if (!result.Success)

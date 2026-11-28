@@ -74,6 +74,38 @@ public sealed class DuckDbValueReaderTests
     }
 
     [TestMethod]
+    [DataRow("1 month")]
+    [DataRow("-1 month")]
+    [DataRow("20000000 days")]
+    [DataRow("-20000000 days")]
+    public void ReadValue_RejectsCalendarOrOutOfRangeIntervals(string interval)
+    {
+        using var connection = new DuckDBConnection("DataSource=:memory:");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT INTERVAL '{interval}'";
+        using var reader = command.ExecuteReader();
+        Assert.IsTrue(reader.Read());
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => DuckDbValueReader.ReadValue(reader, 0));
+    }
+
+    [TestMethod]
+    [DataRow("1 day -1 microsecond", 863999999990L)]
+    [DataRow("-1 day 1 microsecond", -863999999990L)]
+    [DataRow("1 microsecond", 10L)]
+    [DataRow("-1 microsecond", -10L)]
+    public void ReadValue_PreservesMixedSignIntervals(string interval, long ticks)
+    {
+        using var connection = new DuckDBConnection("DataSource=:memory:");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT INTERVAL '{interval}'";
+        using var reader = command.ExecuteReader();
+        Assert.IsTrue(reader.Read());
+        Assert.AreEqual(TimeSpan.FromTicks(ticks), DuckDbValueReader.ReadValue(reader, 0));
+    }
+
+    [TestMethod]
     public void ReadValue_PreservesPrimitiveTypes()
     {
         using var connection = new DuckDBConnection("DataSource=:memory:");

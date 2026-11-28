@@ -405,18 +405,23 @@ internal sealed class DuckDbScalarEmitter
     /// </summary>
     private static string EmitTimespan(object value)
     {
-        var ts = value.ToString()!;
+        var ts = Convert.ToString(value, CultureInfo.InvariantCulture)!;
 
         // .NET TimeSpan.ToString() format: [-][d.]hh:mm:ss[.fffffff]
         if (ts.Contains(':'))
         {
-            if (TimeSpan.TryParse(ts, out var parsed))
+            if (TimeSpan.TryParse(ts, CultureInfo.InvariantCulture, out var parsed))
             {
                 // Decompose to DuckDB-compatible parts. Each component keeps its own
                 // sign: for a negative TimeSpan the .NET components are individually
                 // negative, and DuckDB parses an INTERVAL string per-unit. A single
                 // leading "-" would negate only the first unit, so e.g. -00:01:30
                 // would become "-1 minutes 30 seconds" = -30s instead of -90s.
+                if (parsed.Ticks % TimeSpan.TicksPerMicrosecond != 0)
+                {
+                    throw new NotSupportedException("DuckDB INTERVAL cannot represent a submicrosecond TimeSpan exactly.");
+                }
+
                 var parts = new List<string>();
                 if (parsed.Days != 0)
                 {
@@ -441,6 +446,12 @@ internal sealed class DuckDbScalarEmitter
                 if (parsed.Milliseconds != 0)
                 {
                     parts.Add($"{parsed.Milliseconds} milliseconds");
+                }
+
+                var residualMicroseconds = parsed.Ticks % TimeSpan.TicksPerMillisecond / TimeSpan.TicksPerMicrosecond;
+                if (residualMicroseconds != 0)
+                {
+                    parts.Add($"{residualMicroseconds} microseconds");
                 }
 
                 if (parts.Count == 0)
@@ -535,8 +546,13 @@ internal sealed class DuckDbScalarEmitter
             _ => value
         };
 
+        if (utc.Ticks % TimeSpan.TicksPerMicrosecond != 0)
+        {
+            throw new NotSupportedException("DuckDB TIMESTAMP cannot represent a submicrosecond DateTime exactly.");
+        }
+
         return "TIMESTAMP '" +
-               utc.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) +
+               utc.ToString("yyyy-MM-dd HH:mm:ss.FFFFFF", CultureInfo.InvariantCulture) +
                "'";
     }
 

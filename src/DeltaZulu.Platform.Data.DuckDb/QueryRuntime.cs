@@ -221,28 +221,6 @@ public sealed partial class QueryRuntime
         return true;
     }
 
-    private static Func<DuckDBDataReader, int, object?>[] BuildTypedReaders(DuckDBDataReader reader)
-    {
-        var readers = new Func<DuckDBDataReader, int, object?>[reader.FieldCount];
-        for (var i = 0; i < reader.FieldCount; i++)
-        {
-            var fieldType = reader.GetFieldType(i);
-            readers[i] = fieldType == typeof(string) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetString(idx)
-                : fieldType == typeof(int) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetInt32(idx)
-                : fieldType == typeof(long) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetInt64(idx)
-                : fieldType == typeof(short) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetInt16(idx)
-                : fieldType == typeof(byte) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetByte(idx)
-                : fieldType == typeof(bool) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetBoolean(idx)
-                : fieldType == typeof(float) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetFloat(idx)
-                : fieldType == typeof(double) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetDouble(idx)
-                : fieldType == typeof(decimal) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetDecimal(idx)
-                : fieldType == typeof(DateTime) ? static (r, idx) => r.IsDBNull(idx) ? null : r.GetDateTime(idx)
-                : static (r, idx) => DuckDbValueReader.ReadValue(r, idx);
-        }
-
-        return readers;
-    }
-
     private static void CollectViewNames(RelNode node, HashSet<string> views)
     {
         switch (node)
@@ -380,7 +358,6 @@ public sealed partial class QueryRuntime
     private static List<object?>[] ReadAllColumns(DuckDBDataReader reader, int? maxRows)
     {
         var columns = CreateColumnData(reader.FieldCount);
-        var typedReaders = BuildTypedReaders(reader);
         for (var rowCount = 0; reader.Read(); rowCount++)
         {
             if (maxRows.HasValue && rowCount >= maxRows.Value)
@@ -389,7 +366,7 @@ public sealed partial class QueryRuntime
             }
             for (var i = 0; i < reader.FieldCount; i++)
             {
-                columns[i].Add(typedReaders[i](reader, i));
+                columns[i].Add(DuckDbValueReader.ReadValue(reader, i));
             }
         }
 
