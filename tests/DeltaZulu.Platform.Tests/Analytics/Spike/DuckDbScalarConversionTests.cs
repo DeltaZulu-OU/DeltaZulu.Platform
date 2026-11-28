@@ -222,6 +222,62 @@ public sealed class DuckDbScalarConversionTests
         }
     }
 
+    [TestMethod]
+    [DataRow("0.123456789012345", 15)]
+    [DataRow("-0.123456789012345", 15)]
+    [DataRow("999999999999999", 0)]
+    [DataRow("9999999999.99999", 5)]
+    [DataRow("0.000000000000001", 15)]
+    [DataRow("0.29", 2)]
+    public void NativeJsonPreservesNarrowDecimalTokens(string value, int scale)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT to_json({{'value': CAST('{value}' AS DECIMAL(15,{scale}))}})";
+        using var reader = command.ExecuteReader();
+        Assert.IsTrue(reader.Read());
+        using var json = System.Text.Json.JsonDocument.Parse(reader.GetString(0));
+        Assert.AreEqual(decimal.Parse(value, CultureInfo.InvariantCulture), json.RootElement.GetProperty("value").GetDecimal());
+    }
+
+    [TestMethod]
+    [DataRow(1L)]
+    [DataRow(-1L)]
+    [DataRow(9L)]
+    [DataRow(-9L)]
+    public void TemporalParameterCharacterizesSubmicrosecondPrecision(long ticks)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        var instant = DateTimeOffset.UnixEpoch.AddTicks(ticks);
+        var duration = TimeSpan.FromTicks(ticks);
+        command.CommandText = "SELECT CAST(? AS TIMESTAMPTZ), CAST(? AS INTERVAL)";
+        command.Parameters.Add(new DuckDBParameter(instant));
+        command.Parameters.Add(new DuckDBParameter(duration));
+        using var reader = command.ExecuteReader();
+        Assert.IsTrue(reader.Read());
+        var observedInstant = reader.GetFieldValue<DateTimeOffset>(0);
+        var observedDuration = reader.GetFieldValue<TimeSpan>(1);
+        Console.WriteLine($"Temporal parameter: input ticks={ticks}; instant delta ticks={(observedInstant - DateTimeOffset.UnixEpoch).Ticks}; duration ticks={observedDuration.Ticks}");
+    }
+
+    [TestMethod]
+    public void TimestampNsCharacterizesSubtickPrecision()
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT TIMESTAMP_NS '2026-01-01 00:00:00.123456789',
+                   CAST(TIMESTAMP_NS '2026-01-01 00:00:00.123456789' AS VARCHAR),
+                   TIMESTAMP_NS '1969-12-31 23:59:59.999999999',
+                   CAST(TIMESTAMP_NS '1969-12-31 23:59:59.999999999' AS VARCHAR)
+            """;
+        using var reader = command.ExecuteReader();
+        Assert.IsTrue(reader.Read());
+        Console.WriteLine($"TimestampNs: native={reader.GetString(1)}; managed={reader.GetDateTime(0):O}");
+        Console.WriteLine($"TimestampNs: native={reader.GetString(3)}; managed={reader.GetDateTime(2):O}");
+    }
+
     private static DuckDBConnection Open()
     {
         var connection = new DuckDBConnection("DataSource=:memory:");

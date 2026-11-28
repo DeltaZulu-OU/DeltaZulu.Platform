@@ -102,7 +102,7 @@ public static class DuckDbValueReader
     {
         // Conservative checks: JSON would expose INET internals or stringify non-string map keys.
         // Reject these declarations rather than invent a recursive conversion format.
-        if (Regex.IsMatch(logicalTypeName, @"\bINET\b|\bUNION\s*\(|\bMAP\s*\(\s*(?!VARCHAR\s*,)", RegexOptions.IgnoreCase))
+        if (Regex.IsMatch(logicalTypeName, @"\bINET\b|\bUNION\s*\(|\bMAP\s*\((?!\s*VARCHAR\s*,)", RegexOptions.IgnoreCase))
         {
             throw new NotSupportedException("Nested INET, UNION and non-string-keyed MAP values are not supported by JSON result presentation.");
         }
