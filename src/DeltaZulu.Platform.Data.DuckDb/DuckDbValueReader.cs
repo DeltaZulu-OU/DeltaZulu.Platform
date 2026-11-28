@@ -1,3 +1,4 @@
+using DuckDB.NET.Native;
 using System.Collections;
 using System.Data.Common;
 using System.Globalization;
@@ -22,12 +23,43 @@ public static class DuckDbValueReader
             return null;
         }
 
-        if (RequiresStringNormalization(reader.GetDataTypeName(ordinal)))
+        var typeName = reader.GetDataTypeName(ordinal);
+        if (string.Equals(typeName, "Decimal", StringComparison.OrdinalIgnoreCase))
+        {
+            return ReadExactDecimal(reader.GetFieldValue<DuckDBDecimal>(ordinal));
+        }
+
+        if (string.Equals(typeName, "Interval", StringComparison.OrdinalIgnoreCase))
+        {
+            return (TimeSpan)reader.GetFieldValue<DuckDBInterval>(ordinal);
+        }
+
+        if (RequiresStringNormalization(typeName))
         {
             return ReadProviderValueAsString(reader, ordinal);
         }
 
         return reader.GetValue(ordinal);
+    }
+
+    private static decimal ReadExactDecimal(DuckDBDecimal value)
+    {
+        var mantissa = value.Value.ToInt128();
+        var scale = value.Scale;
+        while (scale > 0 && mantissa % 10 == 0)
+        {
+            mantissa /= 10;
+            scale--;
+        }
+
+        var magnitude = (UInt128)(mantissa < 0 ? -mantissa : mantissa);
+        if (scale > 28 || magnitude > (((UInt128)1 << 96) - 1))
+        {
+            throw new OverflowException("DuckDB decimal cannot be represented exactly as System.Decimal.");
+        }
+
+        return new decimal(unchecked((int)magnitude), unchecked((int)(magnitude >> 32)),
+            unchecked((int)(magnitude >> 64)), mantissa < 0, scale);
     }
 
     private static string? ReadProviderValueAsString(DbDataReader reader, int ordinal)
@@ -87,7 +119,7 @@ public static class DuckDbValueReader
             }
             catch (Exception inner) when (IsProviderMaterializationFailure(inner))
             {
-                return null;
+                throw new InvalidCastException("DuckDB value could not be materialized without loss.", inner);
             }
         }
     }

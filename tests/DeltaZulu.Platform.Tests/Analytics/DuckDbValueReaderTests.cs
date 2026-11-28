@@ -7,6 +7,34 @@ namespace DeltaZulu.Platform.Tests.Analytics;
 public sealed class DuckDbValueReaderTests
 {
     [TestMethod]
+    [DataRow("0.000000000000000000000000000001", 30)]
+    [DataRow("79228162514264337593543950336", 0)]
+    public void ReadValue_RejectsUnrepresentableDecimal(string value, int scale)
+    {
+        using var connection = new DuckDBConnection("DataSource=:memory:");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT CAST('{value}' AS DECIMAL(38,{scale}))";
+        using var reader = command.ExecuteReader();
+        Assert.IsTrue(reader.Read());
+        Assert.ThrowsExactly<OverflowException>(() => DuckDbValueReader.ReadValue(reader, 0));
+    }
+
+    [TestMethod]
+    public void ReadValue_PreservesExactDecimalAndSignedInterval()
+    {
+        using var connection = new DuckDBConnection("DataSource=:memory:");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT 1.000000000000000000000000000000::DECIMAL(38,30), INTERVAL '-1 second', NULL::DECIMAL(38,30)";
+        using var reader = command.ExecuteReader();
+        Assert.IsTrue(reader.Read());
+        Assert.AreEqual(1m, DuckDbValueReader.ReadValue(reader, 0));
+        Assert.AreEqual(TimeSpan.FromSeconds(-1), DuckDbValueReader.ReadValue(reader, 1));
+        Assert.IsNull(DuckDbValueReader.ReadValue(reader, 2));
+    }
+
+    [TestMethod]
     public void ReadValue_PreservesPrimitiveTypes()
     {
         using var connection = new DuckDBConnection("DataSource=:memory:");
