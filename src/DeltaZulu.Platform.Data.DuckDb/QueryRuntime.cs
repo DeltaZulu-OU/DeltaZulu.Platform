@@ -416,21 +416,53 @@ public sealed partial class QueryRuntime
             : new PlannerGatewayDecision("run", "middle_shape_above_threshold", estimatedRows, joinCount);
     }
 
-    // DESCRIBE binds the emitted SELECT without materializing its rows. The managed
-    // provider exposes only physical type IDs, so extension aliases need this metadata.
-    private IReadOnlyList<string> DescribeResultTypes(DuckDBConnection connection, string sql)
+    // Bind the SELECT to obtain logical aliases and nested declarations. Convert
+    // only final result columns, after all query operations have been applied.
+    private string PrepareResultSql(DuckDBConnection connection, string sql, out IReadOnlyList<string> logicalTypes)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = "DESCRIBE " + sql;
-        command.CommandTimeout = _timeoutSeconds;
-        using var reader = command.ExecuteReader();
+        var names = new List<string>();
         var types = new List<string>();
-        while (reader.Read())
+        using (var command = connection.CreateCommand())
         {
-            types.Add(reader.GetString(1));
+            command.CommandText = "DESCRIBE " + sql;
+            command.CommandTimeout = _timeoutSeconds;
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                names.Add(reader.GetString(0));
+                types.Add(reader.GetString(1));
+            }
         }
 
-        return types;
+        logicalTypes = types;
+        var projections = new string[types.Count];
+        var aliases = new string[types.Count];
+        var needsProjection = false;
+        for (var i = 0; i < types.Count; i++)
+        {
+            // Positional aliases avoid ambiguity even when the original names repeat.
+            var alias = $"__dz_result_{i}";
+            aliases[i] = alias;
+            var presentationType = DuckDbValueReader.GetPresentationType(types[i]);
+            var expression = alias;
+            if (presentationType == "INET")
+            {
+                expression = $"CAST({alias} AS VARCHAR)";
+                needsProjection = true;
+            }
+            else if (presentationType is not null)
+            {
+                DuckDbValueReader.ValidateNestedPresentationType(types[i]);
+                expression = $"to_json({alias})";
+                needsProjection = true;
+            }
+
+            var quotedName = "\"" + names[i].Replace("\"", "\"\"") + "\"";
+            projections[i] = $"{expression} AS {quotedName}";
+        }
+
+        if (!needsProjection) return sql;
+        return $"SELECT {string.Join(", ", projections)} FROM ({sql.Trim().TrimEnd(';')}) AS __dz_result({string.Join(", ", aliases)})";
     }
 
     private static List<ResultColumn> ReadResultColumns(DuckDBDataReader reader, IReadOnlyList<string> logicalTypes)
@@ -444,7 +476,7 @@ public sealed partial class QueryRuntime
         for (var i = 0; i < reader.FieldCount; i++)
         {
             // Preserve existing result metadata for non-extension columns.
-            var typeName = logicalTypes[i] == "INET" ? "INET" : reader.GetDataTypeName(i);
+            var typeName = DuckDbValueReader.GetPresentationType(logicalTypes[i]) ?? reader.GetDataTypeName(i);
             columns.Add(new ResultColumn(reader.GetName(i), typeName));
         }
 
@@ -464,9 +496,9 @@ public sealed partial class QueryRuntime
         {
             var conn = _connectionFactory.GetConnection();
             debugTrace?.Add("Execute start");
-            var logicalTypes = DescribeResultTypes(conn, sql);
+            var resultSql = PrepareResultSql(conn, sql, out var logicalTypes);
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = sql;
+            cmd.CommandText = resultSql;
             cmd.CommandTimeout = _timeoutSeconds;
 
             using var reader = cmd.ExecuteReader(System.Data.CommandBehavior.Default);

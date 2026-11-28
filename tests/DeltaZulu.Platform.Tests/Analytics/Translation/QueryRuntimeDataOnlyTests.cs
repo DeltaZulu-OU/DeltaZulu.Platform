@@ -222,6 +222,86 @@ public sealed class QueryRuntimeDataOnlyTests
         Assert.AreEqual("{\"ip_type\":2,\"address\":1,\"mask\":64}", analytics.ColumnData[1][0]);
     }
 
+    [TestMethod]
+    public async Task Materialization_PreservesNestedDecimalsAndNullsAcrossExecutionPaths()
+    {
+        const string sql = """
+            SELECT i AS "duplicate", {'tiny': CAST('0.000000000000000000000000000001' AS DECIMAL(38,30)), 'items': [1, NULL, 3]} AS "duplicate",
+                   NULL::INTEGER[] AS "quoted""name", map(['x'], [i]) AS Bag
+            FROM range(3) t(i) ORDER BY i DESC
+            """;
+        var runtime = new QueryRuntime(CreateMedallionCatalog(), _factory,
+            emitterFactory: new ConstantRelationalEmitterFactory("duckdb", sql));
+        const string kql = "ProcessEvent | take 1";
+        const string expected = "{\"tiny\":0.000000000000000000000000000001,\"items\":[1,null,3]}";
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            var result = runtime.ExecuteDataOnly(kql);
+            AssertSuccess(result);
+            Assert.AreEqual(3, result.RowCount);
+            Assert.AreEqual("duplicate", result.Columns[0].Name);
+            Assert.AreEqual("duplicate", result.Columns[1].Name);
+            Assert.AreEqual("quoted\"name", result.Columns[2].Name);
+            Assert.AreEqual("Struct", result.Columns[1].TypeName);
+            for (var i = 0; i < 3; i++)
+            {
+                Assert.AreEqual(2L - i, result.GetValue(i, 0));
+                Assert.AreEqual(expected, result.GetValue(i, 1));
+                Assert.IsNull(result.GetValue(i, 2));
+                Assert.AreEqual($"{{\"x\":{2-i}}}", result.GetValue(i, 3));
+            }
+        }
+
+        var tabular = runtime.ExecuteTabular(kql);
+        Assert.IsTrue(tabular.Success);
+        Assert.AreEqual(expected, tabular.ColumnData[1][0]);
+        Assert.AreEqual(2L, tabular.ColumnData[0][0]);
+
+        using var executor = new DeltaZulu.Platform.Data.DuckDb.Execution.AnalyticsQueryExecutor(runtime,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<DeltaZulu.Platform.Data.DuckDb.Execution.AnalyticsQueryExecutor>.Instance);
+        var analytics = await executor.ExecuteAsync(AnalyticsQueryRequest.Interactive(kql));
+        Assert.IsTrue(analytics.Success);
+        Assert.AreEqual(expected, analytics.ColumnData[1][0]);
+    }
+
+    [TestMethod]
+    [DataRow("SELECT {'x': 'NaN'::DOUBLE}")]
+    [DataRow("SELECT map([1], ['x'])")]
+    [DataRow("SELECT {'ip': '2001:db8::1'::INET}")]
+    public void Materialization_RejectsUnsupportedNestedPresentation(string sql)
+    {
+        var runtime = new QueryRuntime(CreateMedallionCatalog(), _factory,
+            emitterFactory: new ConstantRelationalEmitterFactory("duckdb", sql));
+        const string kql = "ProcessEvent | take 1";
+        var result = runtime.ExecuteDataOnly(kql);
+        Assert.IsFalse(result.Success);
+        Assert.IsTrue(result.Diagnostics.HasErrors);
+        var seen = 0;
+        var streamed = runtime.ExecuteStreamedDataOnly(kql, _ => { seen++; return true; });
+        Assert.AreEqual(0, seen);
+        Assert.IsFalse(streamed.Success);
+        Assert.IsTrue(streamed.Diagnostics.HasErrors);
+        Assert.IsFalse(runtime.ExecuteTabular(kql).Success);
+    }
+
+    [TestMethod]
+    public void Materialization_ExecutesProjectedQueryOnlyOnce()
+    {
+        using var command = _factory.GetConnection().CreateCommand();
+        command.CommandText = "CREATE OR REPLACE SEQUENCE dz_conversion_probe START 1";
+        command.ExecuteNonQuery();
+        var runtime = new QueryRuntime(CreateMedallionCatalog(), _factory,
+            emitterFactory: new ConstantRelationalEmitterFactory("duckdb",
+                "SELECT {'n': nextval('dz_conversion_probe')} AS Value"));
+        const string kql = "ProcessEvent | take 1";
+        var first = runtime.ExecuteDataOnly(kql);
+        AssertSuccess(first);
+        Assert.AreEqual("{\"n\":1}", first.GetValue(0, 0));
+        var second = runtime.ExecuteDataOnly(kql);
+        AssertSuccess(second);
+        Assert.AreEqual("{\"n\":2}", second.GetValue(0, 0));
+    }
+
     private static void AssertSuccess(QueryResult result)
     {
         if (!result.Success)

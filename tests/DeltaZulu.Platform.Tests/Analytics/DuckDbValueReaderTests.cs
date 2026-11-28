@@ -132,16 +132,29 @@ public sealed class DuckDbValueReaderTests
             """
             SELECT
                 '{"x":1}'::JSON AS JsonValue,
-                {'a': 1, 'b': 'x'} AS StructValue,
-                [1, 2, 3] AS ListValue;
+                to_json({'a': 1, 'b': 'x'}) AS StructValue,
+                to_json([1, 2, 3]) AS ListValue;
             """;
 
         using var reader = command.ExecuteReader();
         Assert.IsTrue(reader.Read());
 
         Assert.IsInstanceOfType<string>(DuckDbValueReader.ReadValue(reader, 0));
-        Assert.IsInstanceOfType<string>(DuckDbValueReader.ReadValue(reader, 1));
-        Assert.IsInstanceOfType<string>(DuckDbValueReader.ReadValue(reader, 2));
+        Assert.AreEqual("{\"a\":1,\"b\":\"x\"}", DuckDbValueReader.ReadValue(reader, 1, "STRUCT(a INTEGER, b VARCHAR)"));
+        Assert.AreEqual("[1,2,3]", DuckDbValueReader.ReadValue(reader, 2, "INTEGER[]"));
+    }
+
+    [TestMethod]
+    public void ReadValue_RejectsUnprojectedNestedValues()
+    {
+        using var connection = new DuckDBConnection("DataSource=:memory:");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT {'x': 1}, [1, 2]";
+        using var reader = command.ExecuteReader();
+        Assert.IsTrue(reader.Read());
+        Assert.ThrowsExactly<NotSupportedException>(() => DuckDbValueReader.ReadValue(reader, 0));
+        Assert.ThrowsExactly<NotSupportedException>(() => DuckDbValueReader.ReadValue(reader, 1));
     }
 
     [TestMethod]
@@ -164,7 +177,7 @@ public sealed class DuckDbValueReaderTests
         install.ExecuteNonQuery();
 
         using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT '{address}'::INET AS IpAddress, NULL::INET";
+        command.CommandText = $"SELECT CAST('{address}'::INET AS VARCHAR) AS IpAddress, CAST(NULL::INET AS VARCHAR)";
 
         using var reader = command.ExecuteReader();
         Assert.IsTrue(reader.Read());

@@ -101,9 +101,9 @@ public sealed partial class QueryRuntime
         {
             var conn = _connectionFactory.GetConnection();
             debugTrace?.Add("Execute start");
-            var logicalTypes = DescribeResultTypes(conn, sql);
+            var resultSql = PrepareResultSql(conn, sql, out var logicalTypes);
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = sql;
+            cmd.CommandText = resultSql;
             cmd.CommandTimeout = _timeoutSeconds;
 
             using var reader = cmd.ExecuteReader(System.Data.CommandBehavior.Default);
@@ -147,7 +147,20 @@ public sealed partial class QueryRuntime
     public QueryStreamResult ExecuteStreamedDataOnly(string kql, Func<DuckDBDataReader, bool> onRow)
     {
         ArgumentNullException.ThrowIfNull(onRow);
-        return ExecuteStreamedDataOnly(kql, (reader, _) => onRow(reader));
+        return ExecuteStreamedDataOnly(kql, (reader, logicalTypes) =>
+        {
+            // The public raw-reader callback does not receive logical metadata.
+            // Validate projected nested JSON before handing it to that callback.
+            for (var i = 0; i < logicalTypes.Count; i++)
+            {
+                if (DuckDbValueReader.GetPresentationType(logicalTypes[i]) is not null)
+                {
+                    _ = DuckDbValueReader.ReadValue(reader, i, logicalTypes[i]);
+                }
+            }
+
+            return onRow(reader);
+        });
     }
 
     internal QueryStreamResult ExecuteStreamedDataOnly(string kql, Func<DuckDBDataReader, IReadOnlyList<string>, bool> onRow)
@@ -206,9 +219,9 @@ public sealed partial class QueryRuntime
         try
         {
             var conn = _connectionFactory.GetConnection();
-            var logicalTypes = DescribeResultTypes(conn, sql);
+            var resultSql = PrepareResultSql(conn, sql, out var logicalTypes);
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = sql;
+            cmd.CommandText = resultSql;
             cmd.CommandTimeout = _timeoutSeconds;
 
             List<ResultColumn> columns;

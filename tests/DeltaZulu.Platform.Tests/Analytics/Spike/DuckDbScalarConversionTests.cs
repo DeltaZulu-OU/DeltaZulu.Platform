@@ -182,6 +182,46 @@ public sealed class DuckDbScalarConversionTests
         Assert.IsTrue(reader.IsDBNull(1));
     }
 
+    [TestMethod]
+    [DataRow(1234560L)]
+    [DataRow(-1234560L)]
+    [DataRow(863999999990L)]
+    [DataRow(-863999999990L)]
+    public void TemporalParametersRoundTripAfterReopen(long ticks)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"dz-conversion-{Guid.NewGuid():N}.duckdb");
+        var instant = new DateTimeOffset(2026, 1, 1, 2, 0, 0, TimeSpan.FromHours(2)).AddTicks(ticks);
+        var duration = TimeSpan.FromTicks(ticks);
+        try
+        {
+            using (var connection = new DuckDBConnection($"DataSource={path}"))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "CREATE TABLE values_probe (instant TIMESTAMPTZ, duration INTERVAL)";
+                command.ExecuteNonQuery();
+                command.CommandText = "INSERT INTO values_probe VALUES (?, ?)";
+                command.Parameters.Add(new DuckDBParameter(instant));
+                command.Parameters.Add(new DuckDBParameter(duration));
+                command.ExecuteNonQuery();
+            }
+
+            using var reopened = new DuckDBConnection($"DataSource={path}");
+            reopened.Open();
+            using var read = reopened.CreateCommand();
+            read.CommandText = "SELECT instant, duration FROM values_probe";
+            using var reader = read.ExecuteReader();
+            Assert.IsTrue(reader.Read());
+            Assert.AreEqual(instant.UtcDateTime, DeltaZulu.Platform.Data.DuckDb.DuckDbValueReader.ReadValue(reader, 0));
+            Assert.AreEqual(duration, DeltaZulu.Platform.Data.DuckDb.DuckDbValueReader.ReadValue(reader, 1));
+        }
+        finally
+        {
+            File.Delete(path);
+            File.Delete(path + ".wal");
+        }
+    }
+
     private static DuckDBConnection Open()
     {
         var connection = new DuckDBConnection("DataSource=:memory:");
