@@ -3,7 +3,7 @@ on:
   push:
     branches: [build/qualify-duckdb-conversions]
 permissions:
-  contents: read
+  contents: write
   packages: read
 jobs:
   candidate:
@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          persist-credentials: false
+          persist-credentials: true
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
@@ -32,3 +32,13 @@ jobs:
         with:
           name: candidate-lock-files
           path: '**/packages.lock.json'
+      - name: Record regenerated dependency locks
+        shell: bash
+        run: |
+          git add -- '**/packages.lock.json'
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Refresh DuckDB.NET dependency locks"
+            git push origin HEAD:refs/heads/build/qualify-duckdb-conversions
+          fi
