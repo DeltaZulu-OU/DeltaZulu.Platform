@@ -25,7 +25,7 @@ jobs:
       - name: Collect lock changes
         shell: bash
         run: git diff -- '**/packages.lock.json'
-      - run: dotnet test tests/DeltaZulu.Platform.Tests/DeltaZulu.Platform.Tests.csproj -c Release --no-restore --filter FullyQualifiedName~DuckDbScalarConversionTests|FullyQualifiedName~DuckDbValueReaderTests --logger "console;verbosity=detailed"
+      - run: dotnet test tests/DeltaZulu.Platform.Tests/DeltaZulu.Platform.Tests.csproj -c Release --no-restore --filter "FullyQualifiedName~DuckDbScalarConversionTests|FullyQualifiedName~DuckDbValueReaderTests" --logger "console;verbosity=detailed"
       - uses: actions/upload-artifact@v7
         if: always()
         with:
