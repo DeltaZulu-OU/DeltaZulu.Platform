@@ -1,0 +1,24 @@
+name: DuckDB conversion qualification
+on:
+  push:
+    branches: [build/qualify-duckdb-conversions]
+permissions:
+  contents: read
+  packages: read
+jobs:
+  baseline:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Configure package source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: dotnet nuget add source https://nuget.pkg.github.com/deltazulu-ou/index.json --name deltazulu-github --username "$GITHUB_ACTOR" --password "$GH_TOKEN" --store-password-in-clear-text
+      - run: dotnet restore --locked-mode
+      - run: dotnet test tests/DeltaZulu.Platform.Tests/DeltaZulu.Platform.Tests.csproj -c Release --no-restore --filter FullyQualifiedName~DuckDbScalarConversionTests --logger "console;verbosity=detailed"
