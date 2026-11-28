@@ -53,7 +53,7 @@ public sealed partial class AnalyticsQueryExecutor : IAnalyticsQueryExecutor, ID
             var rowCount = 0;
             var streamResult = await Task.Run(() => _runtime.ExecuteStreamedDataOnly(
                 request.QueryText,
-                reader => {
+                (reader, logicalTypes) => {
                     if (rowCount >= maxRows)
                     {
                         return false;
@@ -62,7 +62,7 @@ public sealed partial class AnalyticsQueryExecutor : IAnalyticsQueryExecutor, ID
                     columnData ??= CreateColumnData(reader.FieldCount);
                     for (var i = 0; i < reader.FieldCount; i++)
                     {
-                        columnData[i].Add(DuckDbValueReader.ReadValue(reader, i));
+                        columnData[i].Add(DuckDbValueReader.ReadValue(reader, i, logicalTypes[i]));
                     }
 
                     rowCount++;

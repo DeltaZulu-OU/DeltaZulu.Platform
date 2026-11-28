@@ -192,6 +192,36 @@ public sealed class QueryRuntimeDataOnlyTests
         }
     }
 
+    [TestMethod]
+    public async Task Materialization_DistinguishesInetAndOrdinaryStructAcrossExecutionPaths()
+    {
+        var runtime = new QueryRuntime(CreateMedallionCatalog(), _factory,
+            emitterFactory: new ConstantRelationalEmitterFactory("duckdb",
+                "SELECT '2001:db8::1/64'::INET AS Address, {'ip_type': 2::UTINYINT, 'address': 1, 'mask': 64::USMALLINT} AS OrdinaryStruct"));
+        const string kql = "ProcessEvent | take 1";
+
+        for (var i = 0; i < 2; i++)
+        {
+            var result = runtime.ExecuteDataOnly(kql);
+            AssertSuccess(result);
+            Assert.AreEqual("INET", result.Columns[0].TypeName);
+            Assert.AreEqual("2001:db8::1/64", result.GetValue(0, 0));
+            Assert.AreEqual("{\"ip_type\":2,\"address\":1,\"mask\":64}", result.GetValue(0, 1));
+        }
+
+        var tabular = runtime.ExecuteTabular(kql);
+        Assert.IsTrue(tabular.Success);
+        Assert.AreEqual("2001:db8::1/64", tabular.ColumnData[0][0]);
+        Assert.AreEqual("{\"ip_type\":2,\"address\":1,\"mask\":64}", tabular.ColumnData[1][0]);
+
+        using var executor = new DeltaZulu.Platform.Data.DuckDb.Execution.AnalyticsQueryExecutor(runtime,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<DeltaZulu.Platform.Data.DuckDb.Execution.AnalyticsQueryExecutor>.Instance);
+        var analytics = await executor.ExecuteAsync(AnalyticsQueryRequest.Interactive(kql));
+        Assert.IsTrue(analytics.Success);
+        Assert.AreEqual("2001:db8::1/64", analytics.ColumnData[0][0]);
+        Assert.AreEqual("{\"ip_type\":2,\"address\":1,\"mask\":64}", analytics.ColumnData[1][0]);
+    }
+
     private static void AssertSuccess(QueryResult result)
     {
         if (!result.Success)

@@ -145,7 +145,16 @@ public sealed class DuckDbValueReaderTests
     }
 
     [TestMethod]
-    public void ReadValue_NormalizesInetExtensionValuesToStrings()
+    [DataRow("127.0.0.1")]
+    [DataRow("0.0.0.0/0")]
+    [DataRow("255.255.255.255/31")]
+    [DataRow("::")]
+    [DataRow("::/0")]
+    [DataRow("2001:db8::1/64")]
+    [DataRow("7fff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")]
+    [DataRow("8000::")]
+    [DataRow("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff/127")]
+    public void ReadValue_NormalizesInetExtensionValuesToStrings(string address)
     {
         using var connection = new DuckDBConnection("DataSource=:memory:");
         connection.Open();
@@ -155,14 +164,13 @@ public sealed class DuckDbValueReaderTests
         install.ExecuteNonQuery();
 
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT '127.0.0.1'::INET AS IpAddress";
+        command.CommandText = $"SELECT '{address}'::INET AS IpAddress, NULL::INET";
 
         using var reader = command.ExecuteReader();
         Assert.IsTrue(reader.Read());
 
-        var value = DuckDbValueReader.ReadValue(reader, 0);
-
-        Assert.IsInstanceOfType<string>(value);
-        Assert.Contains("127.0.0.1", (string)value!);
+        var value = DuckDbValueReader.ReadValue(reader, 0, "INET");
+        Assert.AreEqual(address, value);
+        Assert.IsNull(DuckDbValueReader.ReadValue(reader, 1, "INET"));
     }
 }

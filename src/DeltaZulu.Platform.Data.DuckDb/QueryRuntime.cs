@@ -133,9 +133,9 @@ public sealed partial class QueryRuntime
     public QueryTabularResult ExecuteTabular(string kql, int? maxRows = null)
     {
         List<object?>[]? columnData = null;
-        var streamed = ExecuteStreamed(
+        var streamed = ExecuteStreamedDataOnly(
             kql,
-            reader => {
+            (reader, logicalTypes) => {
                 if (maxRows.HasValue && columnData?.Length > 0 && columnData[0].Count >= maxRows.Value)
                 {
                     return false;
@@ -144,7 +144,7 @@ public sealed partial class QueryRuntime
                 columnData ??= CreateColumnData(reader.FieldCount);
                 for (var i = 0; i < reader.FieldCount; i++)
                 {
-                    columnData[i].Add(DuckDbValueReader.ReadValue(reader, i));
+                    columnData[i].Add(DuckDbValueReader.ReadValue(reader, i, logicalTypes[i]));
                 }
 
                 return true;
@@ -355,7 +355,7 @@ public sealed partial class QueryRuntime
         return $"Query execution failed: {message}";
     }
 
-    private static List<object?>[] ReadAllColumns(DuckDBDataReader reader, int? maxRows)
+    private static List<object?>[] ReadAllColumns(DuckDBDataReader reader, int? maxRows, IReadOnlyList<string> logicalTypes)
     {
         var columns = CreateColumnData(reader.FieldCount);
         for (var rowCount = 0; reader.Read(); rowCount++)
@@ -366,7 +366,7 @@ public sealed partial class QueryRuntime
             }
             for (var i = 0; i < reader.FieldCount; i++)
             {
-                columns[i].Add(DuckDbValueReader.ReadValue(reader, i));
+                columns[i].Add(DuckDbValueReader.ReadValue(reader, i, logicalTypes[i]));
             }
         }
 
@@ -416,6 +416,41 @@ public sealed partial class QueryRuntime
             : new PlannerGatewayDecision("run", "middle_shape_above_threshold", estimatedRows, joinCount);
     }
 
+    // DESCRIBE binds the emitted SELECT without materializing its rows. The managed
+    // provider exposes only physical type IDs, so extension aliases need this metadata.
+    private IReadOnlyList<string> DescribeResultTypes(DuckDBConnection connection, string sql)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "DESCRIBE " + sql;
+        command.CommandTimeout = _timeoutSeconds;
+        using var reader = command.ExecuteReader();
+        var types = new List<string>();
+        while (reader.Read())
+        {
+            types.Add(reader.GetString(1));
+        }
+
+        return types;
+    }
+
+    private static List<ResultColumn> ReadResultColumns(DuckDBDataReader reader, IReadOnlyList<string> logicalTypes)
+    {
+        if (reader.FieldCount != logicalTypes.Count)
+        {
+            throw new InvalidOperationException("DuckDB logical result metadata does not match the result column count.");
+        }
+
+        var columns = new List<ResultColumn>(reader.FieldCount);
+        for (var i = 0; i < reader.FieldCount; i++)
+        {
+            // Preserve existing result metadata for non-extension columns.
+            var typeName = logicalTypes[i] == "INET" ? "INET" : reader.GetDataTypeName(i);
+            columns.Add(new ResultColumn(reader.GetName(i), typeName));
+        }
+
+        return columns;
+    }
+
     private QueryResult ExecuteSql(
                                 string sql,
         int? maxRows,
@@ -429,19 +464,15 @@ public sealed partial class QueryRuntime
         {
             var conn = _connectionFactory.GetConnection();
             debugTrace?.Add("Execute start");
+            var logicalTypes = DescribeResultTypes(conn, sql);
             using var cmd = conn.CreateCommand();
             cmd.CommandText = sql;
             cmd.CommandTimeout = _timeoutSeconds;
 
             using var reader = cmd.ExecuteReader(System.Data.CommandBehavior.Default);
 
-            var columns = new List<ResultColumn>();
-            for (var i = 0; i < reader.FieldCount; i++)
-            {
-                columns.Add(new ResultColumn(reader.GetName(i), reader.GetDataTypeName(i)));
-            }
-
-            var columnData = ReadAllColumns(reader, maxRows);
+            var columns = ReadResultColumns(reader, logicalTypes);
+            var columnData = ReadAllColumns(reader, maxRows, logicalTypes);
 
             var exposedSql = _developerMode ? sql : null;
             debugTrace?.Add($"Execute complete: rows={(columnData.Length == 0 ? 0 : columnData[0].Count)}, columns={columns.Count}");

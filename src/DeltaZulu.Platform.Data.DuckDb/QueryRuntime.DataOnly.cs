@@ -101,19 +101,15 @@ public sealed partial class QueryRuntime
         {
             var conn = _connectionFactory.GetConnection();
             debugTrace?.Add("Execute start");
+            var logicalTypes = DescribeResultTypes(conn, sql);
             using var cmd = conn.CreateCommand();
             cmd.CommandText = sql;
             cmd.CommandTimeout = _timeoutSeconds;
 
             using var reader = cmd.ExecuteReader(System.Data.CommandBehavior.Default);
 
-            var columns = new List<ResultColumn>(reader.FieldCount);
-            for (var i = 0; i < reader.FieldCount; i++)
-            {
-                columns.Add(new ResultColumn(reader.GetName(i), reader.GetDataTypeName(i)));
-            }
-
-            var columnData = ReadAllColumns(reader, maxRows);
+            var columns = ReadResultColumns(reader, logicalTypes);
+            var columnData = ReadAllColumns(reader, maxRows, logicalTypes);
             var exposedSql = _developerMode ? sql : null;
             debugTrace?.Add($"Execute complete: rows={(columnData.Length == 0 ? 0 : columnData[0].Count)}, columns={columns.Count}");
 
@@ -149,6 +145,12 @@ public sealed partial class QueryRuntime
     }
 
     public QueryStreamResult ExecuteStreamedDataOnly(string kql, Func<DuckDBDataReader, bool> onRow)
+    {
+        ArgumentNullException.ThrowIfNull(onRow);
+        return ExecuteStreamedDataOnly(kql, (reader, _) => onRow(reader));
+    }
+
+    internal QueryStreamResult ExecuteStreamedDataOnly(string kql, Func<DuckDBDataReader, IReadOnlyList<string>, bool> onRow)
     {
         ArgumentNullException.ThrowIfNull(onRow);
 
@@ -204,6 +206,7 @@ public sealed partial class QueryRuntime
         try
         {
             var conn = _connectionFactory.GetConnection();
+            var logicalTypes = DescribeResultTypes(conn, sql);
             using var cmd = conn.CreateCommand();
             cmd.CommandText = sql;
             cmd.CommandTimeout = _timeoutSeconds;
@@ -212,16 +215,12 @@ public sealed partial class QueryRuntime
             var rowCount = 0;
             using (var reader = cmd.ExecuteReader(System.Data.CommandBehavior.SequentialAccess))
             {
-                columns = new List<ResultColumn>(reader.FieldCount);
-                for (var i = 0; i < reader.FieldCount; i++)
-                {
-                    columns.Add(new ResultColumn(reader.GetName(i), reader.GetDataTypeName(i)));
-                }
+                columns = ReadResultColumns(reader, logicalTypes);
 
                 while (reader.Read())
                 {
                     rowCount++;
-                    if (!onRow(reader))
+                    if (!onRow(reader, logicalTypes))
                     {
                         break;
                     }
