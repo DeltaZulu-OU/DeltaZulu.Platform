@@ -88,6 +88,100 @@ public sealed class DuckDbScalarConversionTests
         }
     }
 
+    [TestMethod]
+    public void NativeJsonPreservesWideDecimalTokensAndNulls()
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT to_json({
+                'tiny': CAST('0.000000000000000000000000000001' AS DECIMAL(38,30)),
+                'wide': CAST('99999999999999999999999999999999999999' AS DECIMAL(38,0)),
+                'items': [CAST('-0.000000000000000000000000000001' AS DECIMAL(38,30)), NULL],
+                'missing': NULL::INTEGER
+            }), to_json(NULL::STRUCT(x INTEGER))
+            """;
+        using var reader = command.ExecuteReader();
+        Assert.IsTrue(reader.Read());
+        using var json = System.Text.Json.JsonDocument.Parse(reader.GetString(0));
+        var root = json.RootElement;
+        Assert.AreEqual("0.000000000000000000000000000001", root.GetProperty("tiny").GetRawText());
+        Assert.AreEqual("99999999999999999999999999999999999999", root.GetProperty("wide").GetRawText());
+        Assert.AreEqual("-0.000000000000000000000000000001", root.GetProperty("items")[0].GetRawText());
+        Assert.AreEqual(System.Text.Json.JsonValueKind.Null, root.GetProperty("items")[1].ValueKind);
+        Assert.AreEqual(System.Text.Json.JsonValueKind.Null, root.GetProperty("missing").ValueKind);
+        Assert.IsTrue(reader.IsDBNull(1));
+    }
+
+    [TestMethod]
+    public void NativeJsonPreservesArrayAndStringKeyedMap()
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT to_json([1, NULL, 3]::INTEGER[3]),
+                   to_json(map(['a', 'b'], [CAST('0.000000000000000000000000000001' AS DECIMAL(38,30)), NULL]))
+            """;
+        using var reader = command.ExecuteReader();
+        Assert.IsTrue(reader.Read());
+        using var array = System.Text.Json.JsonDocument.Parse(reader.GetString(0));
+        Assert.AreEqual(1, array.RootElement[0].GetInt32());
+        Assert.AreEqual(System.Text.Json.JsonValueKind.Null, array.RootElement[1].ValueKind);
+        Assert.AreEqual(3, array.RootElement[2].GetInt32());
+        using var map = System.Text.Json.JsonDocument.Parse(reader.GetString(1));
+        Assert.AreEqual("0.000000000000000000000000000001", map.RootElement.GetProperty("a").GetRawText());
+        Assert.AreEqual(System.Text.Json.JsonValueKind.Null, map.RootElement.GetProperty("b").ValueKind);
+    }
+
+    [TestMethod]
+    public void NativeJsonCharacterizesNonJsonScalarTypes()
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "INSTALL inet; LOAD inet;";
+        command.ExecuteNonQuery();
+        command.CommandText = """
+            SELECT to_json({'x': 'NaN'::DOUBLE, 'y': 'Infinity'::DOUBLE, 'z': '-Infinity'::DOUBLE}),
+                   to_json({'ip': '2001:db8::1/64'::INET, 'id': '01234567-89ab-cdef-0123-456789abcdef'::UUID}),
+                   to_json({'t': TIMESTAMP_NS '2026-01-01 00:00:00.1234567', 'd': INTERVAL '-1 microsecond'}),
+                   to_json(map([1, 2], ['a', 'b']))
+            """;
+        using var reader = command.ExecuteReader();
+        Assert.IsTrue(reader.Read());
+        for (var i = 0; i < reader.FieldCount; i++)
+        {
+            var text = reader.GetString(i);
+            Console.WriteLine($"Native JSON {i}: {text}");
+            try
+            {
+                using var json = System.Text.Json.JsonDocument.Parse(text);
+                Console.WriteLine($"Native JSON {i}: valid strict JSON");
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                Console.WriteLine($"Native JSON {i}: not valid strict JSON");
+            }
+        }
+    }
+
+    [TestMethod]
+    [DataRow("127.0.0.1")]
+    [DataRow("2001:db8::1/64")]
+    [DataRow("::")]
+    [DataRow("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff/127")]
+    public void NativeInetCastPreservesAddress(string address)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "INSTALL inet; LOAD inet;";
+        command.ExecuteNonQuery();
+        command.CommandText = $"SELECT CAST('{address}'::INET AS VARCHAR), CAST(NULL::INET AS VARCHAR)";
+        using var reader = command.ExecuteReader();
+        Assert.IsTrue(reader.Read());
+        Assert.AreEqual(address, reader.GetString(0));
+        Assert.IsTrue(reader.IsDBNull(1));
+    }
+
     private static DuckDBConnection Open()
     {
         var connection = new DuckDBConnection("DataSource=:memory:");
